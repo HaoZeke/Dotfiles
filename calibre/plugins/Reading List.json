@@ -1,0 +1,35 @@
+{
+  "Devices": {
+    "a1b16e68-ccd3-44fa-a6b3-075a03195479": {
+      "location_code": "main", 
+      "collections": false, 
+      "active": true, 
+      "uuid": "a1b16e68-ccd3-44fa-a6b3-075a03195479", 
+      "kindle_col": false, 
+      "name": "Kobo Aura HD", 
+      "type": "Kobo Aura HD"
+    }, 
+    "978c30e7-413b-4910-8de2-b1d285a8fec0": {
+      "location_code": "main", 
+      "collections": false, 
+      "active": true, 
+      "uuid": "978c30e7-413b-4910-8de2-b1d285a8fec0", 
+      "kindle_col": false, 
+      "name": "Folder Device", 
+      "type": "Folder Device"
+    }, 
+    "d9ed95cc-fe82-45eb-ac6e-61263533211f": {
+      "location_code": "A", 
+      "collections": false, 
+      "active": true, 
+      "uuid": "d9ed95cc-fe82-45eb-ac6e-61263533211f", 
+      "kindle_col": false, 
+      "name": "Kobo Aura HD", 
+      "type": "Kobo Aura HD"
+    }
+  }, 
+  "SchemaVersion": 1.61, 
+  "Options": {
+    "removeDialog": true
+  }
+}

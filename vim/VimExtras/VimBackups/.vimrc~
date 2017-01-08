@@ -1,0 +1,262 @@
+" Python 2 Always
+"if !empty('~/.vim/plugged/vim-virtualenv')
+ autocmd VimEnter * VirtualEnvActivate python2
+"endif
+
+" Use Vim settings, rather then Vi settings (much better!).
+" This must be first, because it changes other options as a side effect.
+set nocompatible
+
+" ================ Plugins! ======================
+
+  if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall
+endif
+" function
+function! BuildYCM(info)
+  " info is a dictionary with 3 fields
+  " - name:   name of the plugin
+  " - status: 'installed', 'updated', or 'unchanged'
+  " - force:  set on PlugInstall! or PlugUpdate!
+  if a:info.status == 'installed' || a:info.force
+    !python2 ./install.py
+  endif
+endfunction
+    " :PlugInstall is required. Along with a source %
+    " Initialize List of plugins...
+call plug#begin()
+    " The basis."
+    Plug 'tpope/vim-sensible'
+    Plug 'vim-scripts/L9'
+
+    Plug 'Shougo/vimproc.vim', { 'do': 'make' } { 'for': 'cpp' }
+  "     { 'for': 'cpp' } WASTE. Python2 ONLY
+    Plug 'Valloric/YouCompleteMe', { 'do': function('BuildYCM') } | Plug 'l3nkz/ycmtex' 
+    autocmd! User YouCompleteMe call youcompleteme#Enable()
+
+    " NERD tree will be loaded on the first invocation of NERDTreeToggle command
+    Plug 'scrooloose/nerdtree'
+    Plug 'Xuyuanp/nerdtree-git-plugin'
+
+    " WebDev
+    Plug 'mohitleo9/vim-fidget' {  } 
+    " Loaded when clojure file is opened
+    Plug 'tpope/vim-fireplace', { 'for': 'clojure' }
+
+    " Group dependencies, vim-snippets depends on ultisnips
+    Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+      
+    " Awesome syntax checker.
+    " REQUIREMENTS: See :h syntastic-intro
+  function! Installjshint(info)
+    if a:info.status == 'installed' || a:info.force
+        !sudo npm install -g jshint
+      endif
+  endfunction
+  Plug 'scrooloose/syntastic', { 'do': function('Installjshint') }
+
+
+    " Markdown Auto View. VERY BAD!! BREAKS SYSTEM INTERMITTENTLY
+    " REQUIREMENTS: See :h syntastic-intro
+  function! Installinstamark(info)
+   if a:info.status == 'installed' || a:info.force
+        !sudo npm install -g instant-markdown-d
+      endif
+  endfunction
+  Plug 'suan/vim-instant-markdown', { 'do': function('Installinstamark') }
+
+    " Group dependencies, Pandoc doesn't depend but should.. Who uses this!?
+   " Plug 'vim-pandoc/vim-pandoc' | Plug 'vim-pandoc/vim-pandoc-syntax'
+      
+    " Easy motions.
+    Plug 'Lokaltog/vim-easymotion'
+
+    " Super easy commenting, toggle comments etc
+    Plug 'scrooloose/nerdcommenter'
+
+    " Autoclose (, " etc
+    Plug 'Townk/vim-autoclose'
+
+    " Git wrapper inside Vim
+    Plug 'tpope/vim-fugitive'
+
+    " Handle surround chars like ''
+    Plug 'tpope/vim-surround'
+
+    " Align your = etc.
+    Plug 'vim-scripts/Align'
+
+    " Better Minibuff Kinda Pointless?
+    " Plug 'weynhamz/vim-plugin-minibufexpl'
+
+    " Javascript
+    "Plug 'pangloss/vim-javascript'
+    Plug 'othree/javascript-libraries-syntax.vim'
+    Plug 'othree/yajs.vim'
+
+    " Css
+    Plug 'skammer/vim-css-color'
+
+    " Less
+    Plug 'groenewege/vim-less'
+
+    "Python
+    Plug 'klen/python-mode'
+    Plug 'jmcantrell/vim-virtualenv'  " This should fix the virtualenvs.
+
+    "Git Stuff
+    Plug 'airblade/vim-gitgutter'
+    Plug 'mattn/gist-vim'
+    Plug 'gregsexton/gitv'
+    " Latex!!!! Latex Box/atp_vim is obsoleted by vimtex.
+    " Plug 'vim-latex/vim-latex'
+    " Plug 'gerw/vim-latex-suite'
+     "Plug 'coot/atp_vim'
+    "Plug 'LaTeX-Box-Team/LaTeX-Box'
+     Plug 'gi1242/vim-tex-syntax'
+    Plug 'lervag/vimtex'
+
+    " Not that powerline isn't perfect... right?
+    Plug 'bling/vim-airline'
+
+    " Undo tree
+    Plug 'vim-scripts/Gundo'
+
+    " Apparently, gvim in vim
+    Plug 'vim-scripts/CSApprox'
+
+    " Why we theme
+    Plug 'tomasr/molokai'
+    Plug 'flazz/vim-colorschemes'
+    " File searching with faster matching
+    Plug 'kien/ctrlp.vim'
+    Plug 'FelikZ/ctrlp-py-matcher'
+
+    "More autocomplete
+    Plug 'tpope/vim-surround'
+
+    " Markdown
+    "Plug 'tpope/vim-markdown'
+    Plug 'plasticboy/vim-markdown'
+    
+    " Completion --> Obsoleted by YouCompleteMe
+   " Plug 'othree/vim-autocomplpop'
+   " Plug 'Shougo/neocomplete.vim'
+
+    " Closers
+    Plug 'Raimondi/delimitMate'
+
+    " Padding
+    Plug 'tpope/vim-sleuth'
+
+    " Tmux Love
+    Plug 'christoomey/vim-tmux-navigator'
+    Plug 'benmills/vimux'
+    " This in-case the status-bar gets too much..
+    Plug 'edkolev/tmuxline.vim'
+
+    " Prompt Love
+    Plug 'edkolev/promptline.vim'
+
+    " Ruby ending
+    Plug 'tpope/vim-endwise'
+
+    " Rails
+    Plug 'scrooloose/vim-rails'
+
+    " Pretty
+    Plug 'ryanoasis/vim-devicons'
+call plug#end()
+call plug#helptags()
+nnoremap ; :
+syntax on
+filetype plugin indent on
+filetype indent on
+" Probably NOT a good idea
+
+" setlocal spell spelllang=en_us
+set grepprg=grep\ -nH\ $*
+set showcmd        " display incomplete commands
+"set autoread       " reload files (no local changes only)
+set laststatus=2    " Always display the statusline in all windows
+set showtabline=2   " Always display the tabline, even if there is only one tab
+set noshowmode      " Hide the default mode text (e.g. -- INSERT -- below the statusline)
+set t_Co=256                 " force vim to use 256 colors
+set number                  "Show line numbers              
+set hidden                  "Buffers can exist in the background without being in a window.
+"set nobackup       "no backup files
+"set nowritebackup  "only in case you don't want a backup file while editing
+"set noswapfile     "no swap files
+" Too much ?
+autocmd TextChanged,TextChangedI <buffer> silent write
+set backupdir=~/.vim/VimExtras/VimBackups//,/tmp
+set directory=~/.vim/VimExtras/VimSwap//,/tmp
+set showmatch      "automatically highlight matching braces/brackets/etc.
+set history=1000         " remember more commands and search history
+set undolevels=1000      " use many muchos levels of undo
+set noerrorbells visualbell t_vb=
+autocmd GUIEnter * set visualbell t_vb=
+"set visualbell           " don't beep
+"set noerrorbells         " don't beep
+"Fake Sudo
+cmap w!! w !sudo tee % >/dev/null
+" Allow j and k to be more normal.
+nmap j gj         
+nmap k gk
+" Use Q for formatting the current paragraph (or selection)
+vmap Q gq
+nmap Q gqap
+
+" SET LEADER
+let mapleader=","
+let maplocalleader = "\\"
+map <leader>n :new<cr>
+map <leader>i I
+map <leader><c-p> :CtrlPBookmarkDir<CR>
+map <c-b> :CtrlPBuffer<CR>
+map <c-h> :CtrlPMRUFiles<CR>
+" ================ Indentation ======================
+
+" set autoindent "Set in vim-sensible
+"set smartindent       "Smart autoindenting on new line
+set nowrap                      " don't wrap lines
+set smarttab          "Respect space/tab settings
+set shiftwidth=2
+"set softtabstop=2
+set tabstop=2
+"set expandtab
+"set backspace=indent,eol,start     "allow backspacing everything in insert mode, also in vim-sensible
+set textwidth=70
+set formatoptions+=t 
+" ================ Folds ============================
+
+set foldmethod=syntax   "fold based on indent
+set foldnestmax=3       "deepest fold is 3 levels
+set nofoldenable        "dont fold by default
+set foldlevelstart=10   " fold very nested folds by default
+set foldnestmax=10      " allow up to 10 nested folds
+"nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
+"vnoremap <Space> zf
+
+" ================ Searches ============================
+set incsearch      " do incremental searching
+set hlsearch        " Highlight searches by default
+set ignorecase      " Ignore case when searching...
+set smartcase       " ...unless we type a capital
+map  / <Plug>(easymotion-sn)
+omap / <Plug>(easymotion-tn)
+
+" These `n` & `N` mappings are options. You do not have to map `n` & `N` to EasyMotion.
+" Without these mappings, `n` & `N` works fine. (These mappings just provide
+" different highlight method and have some other features )
+map  n <Plug>(easymotion-next)
+map  N <Plug>(easymotion-prev)
+
+
+" Ctrl P Stuff
+let g:ctrlp_user_command = 'ag %s -l --nocolor --hidden -g "" --ignore "\.git$\|\.hg$\|\.svn$"'
+let g:ctrlp_map = '<c-p>'
+let g:ctrlp_cmd = 'CtrlP'
+let g:ctrlp_root_markers = ['.ctrlp','.latexma

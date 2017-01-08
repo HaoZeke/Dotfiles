@@ -1,0 +1,68 @@
+<?xml encoding="UTF-8" version="1.0"?>
+<actions>
+<action>
+	<icon>karbon</icon>
+	<name>Install Apk</name>
+	<unique-id>1442527857621433-3</unique-id>
+	<command>apkinst %F</command>
+	<description></description>
+	<patterns>*.apk</patterns>
+	<startup-notify/>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>edit-find</icon>
+	<name>Search</name>
+	<unique-id>1443354769604481-4</unique-id>
+	<command>catfish %f</command>
+	<description>Use Catfish</description>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>smartphone</icon>
+	<name>Sideload</name>
+	<unique-id>1442587845124325-1</unique-id>
+	<command>adbsideload %F</command>
+	<description>Adb sideload files.</description>
+	<patterns>*.zip</patterns>
+	<startup-notify/>
+	<other-files/>
+</action>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Open Terminal</name>
+	<unique-id>1467327211864419-1</unique-id>
+	<command>terminix %d</command>
+	<description>Opens Terminix</description>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>drive-removable-media</icon>
+	<name>Adb Files</name>
+	<unique-id>1443194925259247-2</unique-id>
+	<command>aafm %d</command>
+	<description>Android File Manager</description>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+</actions>

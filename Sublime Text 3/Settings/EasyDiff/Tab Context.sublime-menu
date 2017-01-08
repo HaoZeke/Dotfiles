@@ -1,0 +1,107 @@
+[
+    { "caption": "-" },
+    {
+        "caption": "EasyDiff Set Left Side",
+        "children":
+        [
+            {
+                "caption": "View",
+                "command": "easy_diff_set_left",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Clipboard",
+                "command": "easy_diff_set_left_clipboard",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Selection",
+                "command": "easy_diff_set_left_selection",
+                "args": {"group": -1, "index": -1}
+            }
+        ]
+    },
+    {
+        "caption": "EasyDiff Compare with \"...\"",
+        "children":
+        [
+            {
+                "caption": "View",
+                "command": "easy_diff_compare_both_view",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Clipboard",
+                "command": "easy_diff_compare_both_clipboard",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Selection",
+                "command": "easy_diff_compare_both_selection",
+                "args": {"group": -1, "index": -1}
+            }
+        ]
+    },
+
+    {
+        "caption": "EasyDiff Version Control",
+        "children":
+        [
+
+            {
+                "caption": "SVN Diff",
+                "command": "easy_diff_svn",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "SVN Diff with Previous Revision",
+                "command": "easy_diff_svn",
+                "args": {"last": true, "group": -1, "index": -1}
+            },
+            {
+                "caption": "SVN Revert",
+                "command": "easy_diff_svn",
+                "args": {"revert": true, "group": -1, "index": -1}
+            },
+            { "caption": "-"},
+
+            {
+                "caption": "Git Diff",
+                "command": "easy_diff_git",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Git Diff with Previous Revision",
+                "command": "easy_diff_git",
+                "args": {"last": true, "group": -1, "index": -1}
+            },
+            {
+                "caption": "Git Revert",
+                "command": "easy_diff_git",
+                "args": {"revert": true, "group": -1, "index": -1}
+            },
+            { "caption": "-"},
+
+            {
+                "caption": "Mercurial Diff",
+                "command": "easy_diff_hg",
+                "args": {"group": -1, "index": -1}
+            },
+            {
+                "caption": "Mercurial Diff with Previous Revision",
+                "command": "easy_diff_hg",
+                "args": {"last": true, "group": -1, "index": -1}
+            },
+            {
+                "caption": "Mercurial Revert",
+                "command": "easy_diff_hg",
+                "args": {"revert": true, "group": -1, "index": -1}
+            },
+            { "caption": "-"}
+        ]
+    },
+
+    
+    
+    { "caption": "-"}
+]

@@ -1,0 +1,1139 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"cler",
+				"clearpage	latex-document"
+			],
+			[
+				"end",
+				"end{center}	report.tex"
+			],
+			[
+				"clear",
+				"clearpage	latex-document"
+			],
+			[
+				"addbib",
+				"addbibresource{bibliographic resource}	biblatex"
+			],
+			[
+				"usepacka",
+				"usepackage{package}	latex-document"
+			],
+			[
+				"subsec",
+				"subsection{title}	latex-document"
+			],
+			[
+				"hsp",
+				"hspace{length}	latex-document"
+			],
+			[
+				"hl",
+				"hlinefill	latex-document"
+			],
+			[
+				"sqrt",
+				"sqrt{arg}	latex-document"
+			],
+			[
+				"sq",
+				"sqrt{arg}	latex-document"
+			],
+			[
+				"ljjrs",
+				"ljjr_sig"
+			],
+			[
+				"box",
+				"box_length"
+			],
+			[
+				"l",
+				"ljja_sig"
+			],
+			[
+				"ex",
+				"expr"
+			],
+			[
+				"ljjs",
+				"ljja_shift"
+			],
+			[
+				"mol",
+				"molcount"
+			],
+			[
+				"com",
+				"compro"
+			],
+			[
+				"par",
+				"partid"
+			],
+			[
+				"co",
+				"counter"
+			],
+			[
+				"else",
+				"elseif"
+			],
+			[
+				"exc",
+				"exclusion_part"
+			],
+			[
+				"re",
+				"real"
+			],
+			[
+				"off",
+				"offline"
+			],
+			[
+				"n",
+				"n_janus"
+			],
+			[
+				"pos",
+				"pos_x"
+			],
+			[
+				"j",
+				"n_janus"
+			],
+			[
+				"cap",
+				"caplam"
+			],
+			[
+				"ca",
+				"caplam"
+			],
+			[
+				"inter",
+				"interactive"
+			],
+			[
+				"sph",
+				"sphz"
+			],
+			[
+				"sp",
+				"sphy"
+			],
+			[
+				"r",
+				"r"
+			],
+			[
+				"section",
+				"section{title}	latex-document"
+			],
+			[
+				"You",
+				"YouCompleteMe"
+			],
+			[
+				"a",
+				"agignore"
+			],
+			[
+				"C",
+				"CyanogenMod"
+			],
+			[
+				"input",
+				"input{file}	latex-document"
+			],
+			[
+				"chat",
+				"chapter{title}	latex-document"
+			],
+			[
+				"subse",
+				"subsection{title}	latex-document"
+			],
+			[
+				"hetero",
+				"heterogeneity"
+			],
+			[
+				"iff",
+				"iffalse	tex"
+			],
+			[
+				"usepa",
+				"usepackage{package}	latex-document"
+			],
+			[
+				"normal",
+				"normalsize	latex-document"
+			],
+			[
+				"sec",
+				"section{title}	latex-document"
+			],
+			[
+				"inpu",
+				"input{file}	latex-document"
+			],
+			[
+				"super",
+				"supercite{key}	biblatex"
+			],
+			[
+				"Okular",
+				"Okular"
+			],
+			[
+				"cite",
+				"cite[text]{keylist}	latex-document"
+			],
+			[
+				"enab",
+				"enable"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN/skills.tex",
+			"settings":
+			{
+				"buffer_size": 744,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/MUN_cv.tex",
+			"settings":
+			{
+				"buffer_size": 3451,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/run/media/haozeke/Storage/Games/Windows/Zoo Tycoon 2 Ultimate/CRACK+SAVES+EXTRAS_Zoo Tycoon 2_congtruongit.com/readme.txt",
+			"settings":
+			{
+				"buffer_size": 265,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/MUN_cover.tex",
+			"settings":
+			{
+				"buffer_size": 6475,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/LaTeXing/LaTeX.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/LaTeXing/LaTeX.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 401.0,
+		"last_filter": "Snippet: Bibtex ",
+		"selected_items":
+		[
+			[
+				"Snippet: Bibtex ",
+				"Snippet: BibTeX Article"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"packa",
+				"Package Control: Install Package"
+			],
+			[
+				"spe",
+				"Google Spell Check"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Upgrade Package"
+			],
+			[
+				"remo",
+				"Package Control: Remove Package"
+			],
+			[
+				"list",
+				"Package Control: List Packages"
+			],
+			[
+				"remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"pac",
+				"Package Control: Remove Package"
+			],
+			[
+				"bash",
+				"Set Syntax: Shell Script (Bash)"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"latexing ci",
+				"LaTeXing: Import Citation(s)"
+			],
+			[
+				"latexing ",
+				"LaTeXing: Open PDF"
+			],
+			[
+				"latex",
+				"LaTeXing: Import Citation(s)"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 538.0
+	},
+	"console":
+	{
+		"height": 195.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = 'eb2297e1a458f27d836c04bb0cbaf282' + 'd0e7a3098092775ccb37ca9d6b2e4b7d'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			" import urllib.request,os,hashlib; h = 'eb2297e1a458f27d836c04bb0cbaf282' + 'd0e7a3098092775ccb37ca9d6b2e4b7d'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by) "
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN"
+	],
+	"file_history":
+	[
+		"/run/media/haozeke/Storage/AndBuild/cm-13.0/.repo/local_manifests/z3_cm.xml",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN/committees.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/writing.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/education.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/committees.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/skills.tex",
+		"/home/haozeke/.config/sublime-text-3/Packages/User/Projects/MUN_Resume.sublime-project",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN_conf.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN_hon.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/extracurricular.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/honors.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN_exp.tex",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN_exp.aux",
+		"/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/experience.tex",
+		"/home/haozeke/Github/Latex/Working/MyReport.sublime-project",
+		"/home/haozeke/Github/Latex/Awesome-CV/examples/resume.tex",
+		"/home/haozeke/Github/Latex/Awesome-CV/examples/coverletter.tex",
+		"/home/haozeke/Github/Latex/Awesome-CV/awesome-cv.cls",
+		"/home/haozeke/Github/WebDev/MyArchBox(Resume)/index.html",
+		"/home/haozeke/Github/Latex/Awesome-CV/README.md",
+		"/home/haozeke/.config/sublime-text-3/Packages/User/LaTeXing.sublime-settings",
+		"/home/haozeke/Github/Latex/TheCuriosity/Xelatex/Tex/news.tex",
+		"/usr/share/texmf-dist/tex/latex/fontspec/fontspec.sty",
+		"/home/haozeke/Github/Latex/Awesome-CV/examples/cv/education.tex",
+		"/tmp/mozilla_haozeke0/resume-1.tex",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/sph.tcl",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/sph.tcl",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_energies.gpt",
+		"/tmp/mozilla_haozeke0/resume.tex",
+		"/home/haozeke/LabWork/IITB/Espresso/backbone.tcl",
+		"/home/haozeke/Github/Latex/Working/Tex/prob-definition.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/introduction.tex",
+		"/home/haozeke/Github/espresso/samples/msde",
+		"/home/haozeke/Github/espresso/samples/correlation.tcl",
+		"/home/haozeke/Github/espresso/samples/maggs.tcl",
+		"/home/haozeke/Documents/online.bib",
+		"/home/haozeke/Github/espresso/samples/tutorial.tcl",
+		"/home/haozeke/Github/Latex/Working/Tex/Interactions.tex",
+		"/home/haozeke/Github/espresso/doc/ug/ug.tex",
+		"/home/haozeke/Documents/extra.bib",
+		"/home/haozeke/Github/espresso/doc/ug/inter.tex",
+		"/home/haozeke/Github/espresso/doc/ug/features.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/Es_config.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/report.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/Espresso.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/System_Che.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/janus.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/conclusion.tex",
+		"/home/haozeke/Github/TheCuriosity/Xelatex/Tex/news.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/title.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/Server_details.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/Scales.tex",
+		"/home/haozeke/Github/espresso/doc/ug/introduction.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/Workflow.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/abstract.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/acknow.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/future-work.tex",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_rdf_warm.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_rdf_integ.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_energy_integ.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/Data/plot_energies.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_energy_warm.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_msd_warm.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/DreshPoly/freshpol.tcl",
+		"/home/haozeke/LabWork/IITB/Espresso/Factory/factory.tcl",
+		"/home/haozeke/Github/Latex/Working/Tex/server.tex",
+		"/home/haozeke/Github/espresso/myconfig.hpp",
+		"/home/haozeke/LabWork/IITB/Espresso/Lennard Jones/lj_liq_s1.config",
+		"/home/haozeke/Github/TheCuriosity/Xelatex/Tex/title.tex",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/300p/sph.tcl",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/30p/Data/plot_msd_integ.gpt",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/300p/lj_sph_s1.config",
+		"/home/haozeke/Github/espresso/samples/msd_file.dat",
+		"/home/haozeke/LabWork/IITB/Espresso/Sphere/msd.dat",
+		"/home/haozeke/Github/espresso/samples/poiseuille.tcl",
+		"/home/haozeke/Github/espresso/samples/python/lj_liquid.py",
+		"/home/haozeke/Github/espresso/samples/harmonic-oscillator.tcl",
+		"/home/haozeke/Github/espresso/samples/lj_gibbs_ensemble.tcl",
+		"/home/haozeke/Github/espresso/samples/pe_solution.tcl",
+		"/home/haozeke/Github/espresso/INSTALL",
+		"/home/haozeke/Github/espresso/Readme.md",
+		"/home/haozeke/LabWork/IITB/Espresso/Lennard Jones/LJ_func.tcl",
+		"/home/haozeke/Github/espresso/samples/pressure.tcl",
+		"/home/haozeke/Github/espresso/samples/cell_model.tcl",
+		"/home/haozeke/Github/espresso/samples/msd_man.dat",
+		"/tmp/mozilla_haozeke0/o.tex",
+		"/home/haozeke/Github/espresso/doc/ug/citations.bib",
+		"/home/haozeke/Github/Latex/Working/Tex/LJF_Sys.tex",
+		"/home/haozeke/ServerDump/Me/more_lscpu.txt",
+		"/home/haozeke/Github/espresso/doc/ug/firststeps.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/scales.tex",
+		"/home/haozeke/Github/Latex/Working/Tex/work-done.tex",
+		"/run/media/haozeke/Storage/AndBuild/cm-12.1/.repo/local_manifests/z3_cm.xml",
+		"/run/media/haozeke/Storage/AndBuild/cm-12.1/.repo/local_manifests/roomservice.xml",
+		"/home/haozeke/Github/Dotfiles/README.md",
+		"/home/haozeke/Github/Latex/Working/.gitignore",
+		"/home/haozeke/Github/Android/Apps/latex-it/app/src/main/AndroidManifest.xml",
+		"/home/haozeke/Github/Android/Apps/latex-it/app/src/main/java/me/albertonicoletti/utils/FilesUtils.java",
+		"/home/haozeke/Github/Android/Apps/latex-it/app/src/main/res/xml/preferences.xml",
+		"/home/haozeke/Github/Latex/Working/Tex/.agignore",
+		"/home/haozeke/Github/Dotfiles/.gitignore",
+		"/home/haozeke/Github/espresso/samples/2d-electrostatics.tcl",
+		"/home/haozeke/Github/Latex/Working/MyReport.sublime-workspace",
+		"/home/haozeke/Github/Android/Apps/latex-it/app/src/androidTest/java/me/albertonicoletti/latex/ApplicationTest.java",
+		"/home/haozeke/Github/Android/Apps/latex-it/app/src/main/java/me/albertonicoletti/latex/activities/AboutActivity.java",
+		"/home/haozeke/Github/Latex/Working/README.md",
+		"/home/haozeke/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml",
+		"/home/haozeke/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml",
+		"/home/haozeke/.config/xfce4/panel/windowck-plugin-4.rc",
+		"/home/haozeke/.config/xfce4/panel/cpugraph-16.rc",
+		"/home/haozeke/Github/Dotfiles/Thunar/renamerrc",
+		"/home/haozeke/Github/Dotfiles/Thunar/uca.xml",
+		"/home/haozeke/Github/Dotfiles/Thunar/accels.scm",
+		"/home/haozeke/Github/Dotfiles/Zsh/.shell_prompt.sh",
+		"/home/haozeke/LabWork/IITB/Espresso/NewPoly/mysecondpoly.tcl",
+		"/home/haozeke/LabWork/IITB/Espresso/Lennard trace/lj_trace.tcl",
+		"/home/haozeke/LabWork/Espresso/Factory/factory.tcl",
+		"/home/haozeke/LabWork/Espresso/backbone.tcl",
+		"/home/haozeke/LabWork/Espresso/Sphere/debug.txt",
+		"/home/haozeke/LabWork/Espresso/Sphere/sph.tcl",
+		"/home/haozeke/LabWork/Espresso/Janus/janus.tcl",
+		"/run/media/haozeke/Storage/AndBuild/Ryver/version",
+		"/run/media/haozeke/Storage/AndBuild/crdroid/.repo/manifest.xml",
+		"/run/media/haozeke/Storage/AndBuild/crdroid/.repo/local_manifests/roomservice.xml",
+		"/run/media/haozeke/Storage/AndBuild/crdroid/.repo/z3_crdroid.xml",
+		"/run/media/haozeke/Storage/AndBuild/cm-13.0/.repo/local_manifests/roomservice.xml",
+		"/home/haozeke/Github/espresso/samples/lj_liquid.tcl"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"committees",
+			"latex",
+			"xela",
+			"latexmk",
+			"espress",
+			"lj_sph_s1_integ.obs",
+			" \nlj_sph_s1_integ.obs",
+			" \n",
+			"300",
+			"run",
+			"analyze",
+			"autocite",
+			"]\n",
+			"}\n",
+			"VMD_LJF",
+			"Tables",
+			"es",
+			"Espresso",
+			"fene",
+			".\n",
+			"$ ",
+			"janu",
+			"curve",
+			"robust",
+			".",
+			"\\var",
+			"\\var{type",
+			"\\var",
+			"type",
+			"essyntax",
+			"243",
+			"real par",
+			"731",
+			"609",
+			"real par",
+			".\n",
+			"msd",
+			"351",
+			"set r",
+			"180",
+			"181",
+			"real ",
+			"78 ex",
+			"interactive",
+			"2",
+			"\n	",
+			"interactive",
+			"500",
+			" $",
+			"vs_auto_relate 26",
+			"shaded",
+			"pdf",
+			"espress",
+			"espressoweb",
+			"url",
+			"phantomsection",
+			"tag",
+			"expl",
+			"buf",
+			"tab",
+			"mode",
+			"  # Handle kernel CC flags by importing vendor/sm strings ",
+			"nvi",
+			"label",
+			"mar",
+			"bib",
+			"mende",
+			"peer",
+			"icon",
+			"%\\",
+			"ltx",
+			"globa",
+			"opacit",
+			"wlp"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"lj_sph_s1warm.obs",
+			"\\es",
+			"Janu",
+			"vs_auto_relate 0",
+			"phantomsection{}"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/cv/MUN/skills.tex",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 744,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								699,
+								699
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCountSyntax": "latex",
+							"bh_regions":
+							[
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content"
+							],
+							"side_bar_folders_auto_load_folder": 1,
+							"syntax": "Packages/LaTeXing/support/LaTeX.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 235.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/MUN_cv.tex",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3451,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								592,
+								592
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCountSyntax": "latex",
+							"bh_regions":
+							[
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content"
+							],
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+								},
+								"icon":
+								{
+								},
+								"open":
+								{
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content"
+							],
+							"open_with_edit": true,
+							"side_bar_folders_auto_load_folder": 1,
+							"syntax": "Packages/LaTeXing/support/LaTeX.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 243.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/run/media/haozeke/Storage/Games/Windows/Zoo Tycoon 2 Ultimate/CRACK+SAVES+EXTRAS_Zoo Tycoon 2_congtruongit.com/readme.txt",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 265,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								265,
+								265
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCount":
+							{
+								"changes": 0,
+								"count": 0,
+								"modified": false,
+								"selection": false,
+								"status": -1,
+								"syntax": "plain text"
+							},
+							"WordCountSyntax": "plain text",
+							"bh_regions":
+							[
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content"
+							],
+							"bracket_highlighter.busy": false,
+							"intellitip_row": 0,
+							"side_bar_folders_auto_load_folder": 1,
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples/MUN_cover.tex",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6475,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3382,
+								3382
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCountSyntax": "plain text",
+							"bh_regions":
+							[
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content"
+							],
+							"side_bar_folders_auto_load_folder": 1,
+							"spell_check": true,
+							"syntax": "Packages/LaTeXing/support/LaTeX.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2962.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 35.0
+	},
+	"input":
+	{
+		"height": 42.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 118.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "MUN_Resume.sublime-project",
+	"replace":
+	{
+		"height": 66.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 501.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Settings.sublime-workspace"
+			]
+		],
+		"width": 381.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 176.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

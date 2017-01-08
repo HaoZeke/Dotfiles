@@ -1,0 +1,252 @@
+{
+	"folders":
+	[
+		{
+			"path": "/run/media/haozeke/Storage/AndBuild/Tools/pixN1_manifest/sonyaosp"
+		},
+		{
+			"path": "/run/media/haozeke/Storage/AndBuild/pixN1/kernel/sony/msm/include/linux/sched"
+		},
+		{
+			"path": "/run/media/haozeke/Storage/AndBuild/pixN1/device/sony/sumire"
+		},
+		{
+			"path": "/run/media/haozeke/Storage/AndBuild/pixN/frameworks/base/packages/SystemUI/src/com/android/systemui/statusbar/policy"
+		},
+		{
+			"path": "/run/media/haozeke/Storage/AndBuild/omni-7.1/external/kernel-headers/original"
+		},
+		{
+			"path": "/home/haozeke/Xda/.superhidden/Kernels"
+		},
+		{
+			"path": "/home/haozeke/Github/WebDev/CommaCentral/master"
+		},
+		{
+			"folder_exclude_patterns":
+			[
+				"node_modules"
+			],
+			"path": "/home/haozeke/Github/WebDev/CommaCentral/Clean"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.md",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx",
+				"*.fls",
+				"*.fdb_latexmk"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*"
+			],
+			"path": "/home/haozeke/Github/TheCuriosity/Newsletter"
+		},
+		{
+			"path": "/home/haozeke/Github/tempworm"
+		},
+		{
+			"path": "/home/haozeke/Github/Latex/Working/Tex"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.md",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx",
+				"*.fls",
+				"*.synctex",
+				"*.fdb_latexmk",
+				"Tex/report.tex.latexmain"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*",
+				"_*"
+			],
+			"path": "/home/haozeke/Github/Latex/Working"
+		},
+		{
+			"path": "/home/haozeke/Github/Latex/Resumes/MUN-Resume/examples"
+		},
+		{
+			"path": "/home/haozeke/Github/Latex/Resumes/MUN-Resume"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.aux",
+				"*.fls",
+				"*.log",
+				"*.fdb*",
+				"*.gz",
+				"*.blg",
+				"*.bbl"
+			],
+			"folder_exclude_patterns":
+			[
+				"node_modules"
+			],
+			"path": "/home/haozeke/Github/Latex/HBTI/Syllabus/"
+		},
+		{
+			"path": "/home/haozeke/Github/Latex/HBTI/Project/Tex"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.md",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx",
+				"*.fls",
+				"*.fdb_latexmk",
+				"*.synctex",
+				"Tex/report.tex.latexmain"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*"
+			],
+			"path": "/home/haozeke/Github/Latex/HBTI/Project"
+		},
+		{
+			"path": "/home/haozeke/Github/Latex/HBTI/Assignments/Tex"
+		},
+		{
+			"path": "/home/haozeke/Github/Dotfiles/vim/plugged"
+		},
+		{
+			"path": "/home/haozeke/Github"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx",
+				"*.fls",
+				"*.synctex",
+				"*.fdb_latexmk",
+				"Tex/report.tex.latexmain"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*",
+				"_*"
+			],
+			"path": "/home/haozeke/.config/sublime-text-3/Packages/User/Projects"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.md",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*"
+			],
+			"path": "/home/haozeke/.config"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".*",
+				"*.log",
+				"*.lof",
+				"*.swp",
+				"*.out",
+				"*.aux",
+				"*.gz",
+				"*.toc",
+				"*.md",
+				"*.bcf",
+				"*.bbl",
+				"*.blg",
+				"*.xml",
+				"*.lot",
+				"*.lbx"
+			],
+			"folder_exclude_patterns":
+			[
+				"tmp",
+				"log",
+				".*"
+			],
+			"path": "/home/haozeke"
+		}
+	]
+}

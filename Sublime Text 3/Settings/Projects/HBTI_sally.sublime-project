@@ -1,0 +1,14 @@
+{
+	"folders":
+	[
+		{
+			"file_exclude_patterns":
+			[".*", "*.aux", "*.fls", "*.log", "*.fdb*", "*.gz", "*.blg", "*.bbl"],
+			"folder_exclude_patterns":
+			[
+				"node_modules"
+			],
+			"path": "/home/haozeke/Github/Latex/HBTI/Syllabus/"
+		}
+	]
+}

@@ -1,0 +1,10 @@
+{
+  "additional_readers": [
+    "path/to/your/reader_class.py"
+  ], 
+  "HORIZONTAL_RULE": "<hr width='80%' />", 
+  "COMMENTS_DIVIDER": "&middot;  &middot;  &bull;  &middot;  &#x2726;  &middot;  &bull;  &middot; &middot;", 
+  "plugin_version": "1.4.7", 
+  "developer_mode": false, 
+  "cfg_news_clippings_lineEdit": "My News Clippings"
+}

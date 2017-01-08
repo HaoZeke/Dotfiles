@@ -1,0 +1,39 @@
+<roxterm_session id='2ff3d3fde-ebef-42ba-bf96-dd1758655be7'>
+  <window disp=':0.0'
+      geometry='80x24+81+235'
+      title_template='%s' font='DejaVu Sans Mono 11'
+      title_template_locked='0'
+      title='xterm' role='roxterm-913-faa0ba2-1'
+      shortcut_scheme='Default' show_menubar='1'
+      always_show_tabs='1' tab_pos='2'
+      show_add_tab_btn='1'      disable_menu_shortcuts='0' disable_tab_shortcuts='0'
+      maximised='0' fullscreen='0' zoom='1.000000'>
+    <tab profile='Greybird'
+        colour_scheme='Tango' cwd='/home/haozeke'
+        title_template='%s' window_title='xterm' icon_title='xterm'
+        title_template_locked='0'
+        encoding='UTF-8' current='0'>
+      <command argc='1'>
+        <arg s='/bin/zsh' />
+      </command>
+    </tab>
+    <tab profile='Greybird'
+        colour_scheme='Tango' cwd='/home/haozeke'
+        title_template='%s' window_title='xterm' icon_title='xterm'
+        title_template_locked='0'
+        encoding='UTF-8' current='1'>
+      <command argc='1'>
+        <arg s='/bin/zsh' />
+      </command>
+    </tab>
+    <tab profile='Greybird'
+        colour_scheme='Tango' cwd='/home/haozeke'
+        title_template='%s' window_title='xterm' icon_title='xterm'
+        title_template_locked='0'
+        encoding='UTF-8' current='0'>
+      <command argc='1'>
+        <arg s='/bin/zsh' />
+      </command>
+    </tab>
+  </window>
+</roxterm_session>

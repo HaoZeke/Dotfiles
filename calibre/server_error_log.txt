@@ -1,0 +1,1918 @@
+[16/Aug/2015:18:55:41] ENGINE Bus STARTING
+[16/Aug/2015:18:55:41] ENGINE Started monitor thread 'Autoreloader'.
+[16/Aug/2015:18:55:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Aug/2015:18:55:41] ENGINE Serving on 0.0.0.0:8264
+[16/Aug/2015:18:55:43] ENGINE Bus STARTED
+[17/Aug/2015:02:11:00] ENGINE Bus STARTING
+[17/Aug/2015:02:11:00] ENGINE Started monitor thread 'Autoreloader'.
+[17/Aug/2015:02:11:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Aug/2015:02:11:00] ENGINE Serving on 0.0.0.0:8264
+[17/Aug/2015:02:11:01] ENGINE Bus STARTED
+[21/Aug/2015:20:08:52] ENGINE Bus STARTING
+[21/Aug/2015:20:08:52] ENGINE Started monitor thread 'Autoreloader'.
+[21/Aug/2015:20:08:52] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Aug/2015:20:08:52] ENGINE Serving on 0.0.0.0:8264
+[21/Aug/2015:20:08:54] ENGINE Bus STARTED
+[23/Aug/2015:17:09:02] ENGINE Bus STARTING
+[23/Aug/2015:17:09:02] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:17:09:02] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:17:09:02] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:17:09:04] ENGINE Bus STARTED
+[23/Aug/2015:17:11:21] ENGINE Bus STARTING
+[23/Aug/2015:17:11:21] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:17:11:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:17:11:21] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:17:11:23] ENGINE Bus STARTED
+[23/Aug/2015:18:38:00] ENGINE Bus STARTING
+[23/Aug/2015:18:38:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:18:38:00] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:18:38:00] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:18:38:01] ENGINE Bus STARTED
+[23/Aug/2015:18:44:43] ENGINE Bus STARTING
+[23/Aug/2015:18:44:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:18:44:43] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:18:44:44] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:18:44:45] ENGINE Bus STARTED
+[23/Aug/2015:18:53:05] ENGINE Bus STARTING
+[23/Aug/2015:18:53:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:18:53:05] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:18:53:05] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:18:53:07] ENGINE Bus STARTED
+[23/Aug/2015:22:17:59] ENGINE Bus STARTING
+[23/Aug/2015:22:17:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:22:17:59] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:22:17:59] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:22:18:00] ENGINE Bus STARTED
+[23/Aug/2015:23:29:11] ENGINE Bus STARTING
+[23/Aug/2015:23:29:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:23:29:11] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:23:29:11] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:23:29:13] ENGINE Bus STARTED
+[23/Aug/2015:23:32:45] ENGINE Bus STARTING
+[23/Aug/2015:23:32:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:23:32:45] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:23:32:45] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:23:32:47] ENGINE Bus STARTED
+[23/Aug/2015:23:36:56] ENGINE Bus STARTING
+[23/Aug/2015:23:36:56] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Aug/2015:23:36:56] ENGINE Started monitor thread 'Autoreloader'.
+[23/Aug/2015:23:36:56] ENGINE Serving on 0.0.0.0:8264
+[23/Aug/2015:23:36:58] ENGINE Bus STARTED
+[24/Aug/2015:01:03:34] ENGINE Bus STARTING
+[24/Aug/2015:01:03:34] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:03:34] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:03:44] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f2a989311d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[24/Aug/2015:01:03:46] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[24/Aug/2015:01:03:46] ENGINE Bus STOPPING
+[24/Aug/2015:01:03:46] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[24/Aug/2015:01:03:46] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:01:03:46] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:01:03:46] ENGINE Bus STOPPED
+[24/Aug/2015:01:03:46] ENGINE Bus EXITING
+[24/Aug/2015:01:03:46] ENGINE Bus EXITED
+[24/Aug/2015:01:03:46]  Trying to bind to single interface: 192.168.1.4
+[24/Aug/2015:01:03:46] ENGINE Bus STARTING
+[24/Aug/2015:01:03:46] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:03:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:03:56] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f2a989311d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '192.168.1.4'
+
+[24/Aug/2015:01:03:58] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '192.168.1.4'",)
+
+[24/Aug/2015:01:03:58] ENGINE Bus STOPPING
+[24/Aug/2015:01:03:59] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('192.168.1.4', 8264)) already shut down
+[24/Aug/2015:01:03:59] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:01:03:59] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:01:03:59] ENGINE Bus STOPPED
+[24/Aug/2015:01:03:59] ENGINE Bus EXITING
+[24/Aug/2015:01:03:59] ENGINE Bus EXITED
+[24/Aug/2015:01:05:35] ENGINE Bus STARTING
+[24/Aug/2015:01:05:35] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:05:35] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:05:35] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:01:05:37] ENGINE Bus STARTED
+[24/Aug/2015:01:25:15] ENGINE Bus STARTING
+[24/Aug/2015:01:25:15] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:25:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:25:25] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7efd6d5ce1d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[24/Aug/2015:01:25:26] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[24/Aug/2015:01:25:26] ENGINE Bus STOPPING
+[24/Aug/2015:01:25:27] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[24/Aug/2015:01:25:27] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:01:25:27] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:01:25:27] ENGINE Bus STOPPED
+[24/Aug/2015:01:25:27] ENGINE Bus EXITING
+[24/Aug/2015:01:25:27] ENGINE Bus EXITED
+[24/Aug/2015:01:25:27]  Trying to bind to single interface: 192.168.1.4
+[24/Aug/2015:01:25:27] ENGINE Bus STARTING
+[24/Aug/2015:01:25:27] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:25:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:25:37] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7efd6d5ce1d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '192.168.1.4'
+
+[24/Aug/2015:01:25:38] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '192.168.1.4'",)
+
+[24/Aug/2015:01:25:38] ENGINE Bus STOPPING
+[24/Aug/2015:01:25:39] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('192.168.1.4', 8264)) already shut down
+[24/Aug/2015:01:25:39] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:01:25:39] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:01:25:39] ENGINE Bus STOPPED
+[24/Aug/2015:01:25:39] ENGINE Bus EXITING
+[24/Aug/2015:01:25:39] ENGINE Bus EXITED
+[24/Aug/2015:01:33:48] ENGINE Bus STARTING
+[24/Aug/2015:01:33:48] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:33:48] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:33:48] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:01:33:50] ENGINE Bus STARTED
+[24/Aug/2015:01:44:25] ENGINE Bus STARTING
+[24/Aug/2015:01:44:25] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:44:25] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:44:25] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:01:44:27] ENGINE Bus STARTED
+[24/Aug/2015:01:57:05] ENGINE Bus STARTING
+[24/Aug/2015:01:57:05] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:01:57:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:01:57:05] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:01:57:07] ENGINE Bus STARTED
+[24/Aug/2015:02:04:04] ENGINE Bus STARTING
+[24/Aug/2015:02:04:04] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:02:04:04] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:02:04:04] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:02:04:06] ENGINE Bus STARTED
+[24/Aug/2015:03:03:58] ENGINE Bus STARTING
+[24/Aug/2015:03:03:58] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:03:03:58] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:03:04:08] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f8b541d4190>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[24/Aug/2015:03:04:09] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[24/Aug/2015:03:04:09] ENGINE Bus STOPPING
+[24/Aug/2015:03:04:10] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[24/Aug/2015:03:04:10] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:10] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:03:04:10] ENGINE Bus STOPPED
+[24/Aug/2015:03:04:10] ENGINE Bus EXITING
+[24/Aug/2015:03:04:10] ENGINE Bus EXITED
+[24/Aug/2015:03:04:10]  Trying to bind to single interface: 192.168.1.4
+[24/Aug/2015:03:04:10] ENGINE Bus STARTING
+[24/Aug/2015:03:04:10] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:10] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:03:04:20] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f8b541d4190>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '192.168.1.4'
+
+[24/Aug/2015:03:04:21] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '192.168.1.4'",)
+
+[24/Aug/2015:03:04:21] ENGINE Bus STOPPING
+[24/Aug/2015:03:04:22] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('192.168.1.4', 8264)) already shut down
+[24/Aug/2015:03:04:22] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:22] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:03:04:22] ENGINE Bus STOPPED
+[24/Aug/2015:03:04:22] ENGINE Bus EXITING
+[24/Aug/2015:03:04:22] ENGINE Bus EXITED
+[24/Aug/2015:03:04:41] ENGINE Bus STARTING
+[24/Aug/2015:03:04:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:41] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:03:04:52] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fb305021190>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[24/Aug/2015:03:04:53] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[24/Aug/2015:03:04:53] ENGINE Bus STOPPING
+[24/Aug/2015:03:04:54] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[24/Aug/2015:03:04:54] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:54] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:03:04:54] ENGINE Bus STOPPED
+[24/Aug/2015:03:04:54] ENGINE Bus EXITING
+[24/Aug/2015:03:04:54] ENGINE Bus EXITED
+[24/Aug/2015:03:04:54]  Trying to bind to single interface: 192.168.1.4
+[24/Aug/2015:03:04:54] ENGINE Bus STARTING
+[24/Aug/2015:03:04:54] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:03:04:54] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:03:05:04] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fb305021190>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '192.168.1.4'
+
+[24/Aug/2015:03:05:05] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '192.168.1.4'",)
+
+[24/Aug/2015:03:05:05] ENGINE Bus STOPPING
+[24/Aug/2015:03:05:06] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('192.168.1.4', 8264)) already shut down
+[24/Aug/2015:03:05:06] ENGINE Stopped thread '_TimeoutMonitor'.
+[24/Aug/2015:03:05:06] ENGINE Stopped thread 'Autoreloader'.
+[24/Aug/2015:03:05:06] ENGINE Bus STOPPED
+[24/Aug/2015:03:05:06] ENGINE Bus EXITING
+[24/Aug/2015:03:05:06] ENGINE Bus EXITED
+[24/Aug/2015:03:15:03] ENGINE Bus STARTING
+[24/Aug/2015:03:15:04] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:03:15:04] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:03:15:04] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:03:15:06] ENGINE Bus STARTED
+[24/Aug/2015:18:10:22] ENGINE Bus STARTING
+[24/Aug/2015:18:10:22] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:18:10:22] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:18:10:22] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:18:10:24] ENGINE Bus STARTED
+[24/Aug/2015:18:14:17] ENGINE Bus STARTING
+[24/Aug/2015:18:14:17] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:18:14:17] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:18:14:17] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:18:14:19] ENGINE Bus STARTED
+[24/Aug/2015:18:23:07] ENGINE Bus STARTING
+[24/Aug/2015:18:23:07] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:18:23:07] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:18:23:07] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:18:23:09] ENGINE Bus STARTED
+[24/Aug/2015:19:09:43] ENGINE Bus STARTING
+[24/Aug/2015:19:09:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Aug/2015:19:09:43] ENGINE Started monitor thread 'Autoreloader'.
+[24/Aug/2015:19:09:43] ENGINE Serving on 0.0.0.0:8264
+[24/Aug/2015:19:09:45] ENGINE Bus STARTED
+[25/Aug/2015:02:03:14] ENGINE Bus STARTING
+[25/Aug/2015:02:03:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[25/Aug/2015:02:03:14] ENGINE Started monitor thread 'Autoreloader'.
+[25/Aug/2015:02:03:14] ENGINE Serving on 0.0.0.0:8264
+[25/Aug/2015:02:03:17] ENGINE Bus STARTED
+[25/Aug/2015:16:56:52] ENGINE Bus STARTING
+[25/Aug/2015:16:56:52] ENGINE Started monitor thread '_TimeoutMonitor'.
+[25/Aug/2015:16:56:52] ENGINE Started monitor thread 'Autoreloader'.
+[25/Aug/2015:16:56:52] ENGINE Serving on 0.0.0.0:8264
+[25/Aug/2015:16:56:54] ENGINE Bus STARTED
+[27/Aug/2015:01:44:00] ENGINE Bus STARTING
+[27/Aug/2015:01:44:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Aug/2015:01:44:00] ENGINE Started monitor thread 'Autoreloader'.
+[27/Aug/2015:01:44:00] ENGINE Serving on 0.0.0.0:8264
+[27/Aug/2015:01:44:02] ENGINE Bus STARTED
+[27/Aug/2015:13:41:41] ENGINE Bus STARTING
+[27/Aug/2015:13:41:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Aug/2015:13:41:41] ENGINE Started monitor thread 'Autoreloader'.
+[27/Aug/2015:13:41:41] ENGINE Serving on 0.0.0.0:8264
+[27/Aug/2015:13:41:43] ENGINE Bus STARTED
+[29/Aug/2015:02:00:24] ENGINE Bus STARTING
+[29/Aug/2015:02:00:24] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Aug/2015:02:00:24] ENGINE Started monitor thread 'Autoreloader'.
+[29/Aug/2015:02:00:25] ENGINE Serving on 0.0.0.0:8264
+[29/Aug/2015:02:00:26] ENGINE Bus STARTED
+[02/Sep/2015:16:54:24] ENGINE Bus STARTING
+[02/Sep/2015:16:54:24] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Sep/2015:16:54:24] ENGINE Started monitor thread 'Autoreloader'.
+[02/Sep/2015:16:54:24] ENGINE Serving on 0.0.0.0:8264
+[02/Sep/2015:16:54:25] ENGINE Bus STARTED
+[09/Sep/2015:07:24:42] ENGINE Bus STARTING
+[09/Sep/2015:07:24:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Sep/2015:07:24:42] ENGINE Started monitor thread 'Autoreloader'.
+[09/Sep/2015:07:24:42] ENGINE Serving on 0.0.0.0:8264
+[09/Sep/2015:07:24:44] ENGINE Bus STARTED
+[09/Sep/2015:18:58:44] ENGINE Bus STARTING
+[09/Sep/2015:18:58:44] ENGINE Started monitor thread 'Autoreloader'.
+[09/Sep/2015:18:58:44] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Sep/2015:18:58:44] ENGINE Serving on 0.0.0.0:8264
+[09/Sep/2015:18:58:47] ENGINE Bus STARTED
+[15/Sep/2015:15:17:03] ENGINE Bus STARTING
+[15/Sep/2015:15:17:03] ENGINE Started monitor thread 'Autoreloader'.
+[15/Sep/2015:15:17:03] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Sep/2015:15:17:03] ENGINE Serving on 0.0.0.0:8264
+[15/Sep/2015:15:17:05] ENGINE Bus STARTED
+[16/Sep/2015:16:07:12] ENGINE Bus STARTING
+[16/Sep/2015:16:07:12] ENGINE Started monitor thread 'Autoreloader'.
+[16/Sep/2015:16:07:12] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Sep/2015:16:07:12] ENGINE Serving on 0.0.0.0:8264
+[16/Sep/2015:16:07:14] ENGINE Bus STARTED
+[18/Sep/2015:13:19:46] ENGINE Bus STARTING
+[18/Sep/2015:13:19:46] ENGINE Started monitor thread 'Autoreloader'.
+[18/Sep/2015:13:19:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Sep/2015:13:19:46] ENGINE Serving on 0.0.0.0:8264
+[18/Sep/2015:13:19:48] ENGINE Bus STARTED
+[19/Sep/2015:03:03:27] ENGINE Bus STARTING
+[19/Sep/2015:03:03:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[19/Sep/2015:03:03:27] ENGINE Started monitor thread 'Autoreloader'.
+[19/Sep/2015:03:03:27] ENGINE Serving on 0.0.0.0:8264
+[19/Sep/2015:03:03:29] ENGINE Bus STARTED
+[22/Sep/2015:00:39:45] ENGINE Bus STARTING
+[22/Sep/2015:00:39:45] ENGINE Started monitor thread 'Autoreloader'.
+[22/Sep/2015:00:39:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Sep/2015:00:39:45] ENGINE Serving on 0.0.0.0:8264
+[22/Sep/2015:00:39:47] ENGINE Bus STARTED
+[22/Sep/2015:22:48:02] ENGINE Bus STARTING
+[22/Sep/2015:22:48:02] ENGINE Started monitor thread 'Autoreloader'.
+[22/Sep/2015:22:48:02] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Sep/2015:22:48:02] ENGINE Serving on 0.0.0.0:8264
+[22/Sep/2015:22:48:04] ENGINE Bus STARTED
+[24/Sep/2015:18:32:54] ENGINE Bus STARTING
+[24/Sep/2015:18:32:54] ENGINE Started monitor thread 'Autoreloader'.
+[24/Sep/2015:18:32:54] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Sep/2015:18:32:55] ENGINE Serving on 0.0.0.0:8264
+[24/Sep/2015:18:32:56] ENGINE Bus STARTED
+[26/Sep/2015:20:14:08] ENGINE Bus STARTING
+[26/Sep/2015:20:14:08] ENGINE Started monitor thread 'Autoreloader'.
+[26/Sep/2015:20:14:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[26/Sep/2015:20:14:08] ENGINE Serving on 0.0.0.0:8264
+[26/Sep/2015:20:14:09]  Failed to start BonJour:
+[26/Sep/2015:20:14:09]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[26/Sep/2015:20:14:09] ENGINE Bus STARTED
+[26/Sep/2015:20:50:36] ENGINE Bus STARTING
+[26/Sep/2015:20:50:36] ENGINE Started monitor thread 'Autoreloader'.
+[26/Sep/2015:20:50:36] ENGINE Started monitor thread '_TimeoutMonitor'.
+[26/Sep/2015:20:50:36] ENGINE Serving on 0.0.0.0:8264
+[26/Sep/2015:20:50:39] ENGINE Bus STARTED
+[27/Sep/2015:01:44:59] ENGINE Bus STARTING
+[27/Sep/2015:01:44:59] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:01:44:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:01:44:59] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:01:45:02] ENGINE Bus STARTED
+[27/Sep/2015:19:04:03] ENGINE Bus STARTING
+[27/Sep/2015:19:04:03] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:19:04:03] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:19:04:03] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:19:04:05] ENGINE Bus STARTED
+[27/Sep/2015:19:07:00] ENGINE Bus STARTING
+[27/Sep/2015:19:07:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:19:07:00] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:19:07:00] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:19:07:02] ENGINE Bus STARTED
+[27/Sep/2015:19:17:21] ENGINE Bus STARTING
+[27/Sep/2015:19:17:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:19:17:21] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:19:17:21] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:19:17:23] ENGINE Bus STARTED
+[27/Sep/2015:19:19:58] ENGINE Bus STARTING
+[27/Sep/2015:19:19:58] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:19:19:58] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:19:19:59] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:19:20:00] ENGINE Bus STARTED
+[27/Sep/2015:19:31:03] ENGINE Bus STARTING
+[27/Sep/2015:19:31:03] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Sep/2015:19:31:03] ENGINE Started monitor thread 'Autoreloader'.
+[27/Sep/2015:19:31:03] ENGINE Serving on 0.0.0.0:8264
+[27/Sep/2015:19:31:05] ENGINE Bus STARTED
+[27/Sep/2015:20:17:10] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/calibre/ebooks/html/to_zip.pyo changed.
+[27/Sep/2015:20:17:10] ENGINE Stopped thread 'Autoreloader'.
+[27/Sep/2015:20:17:10] ENGINE Bus STOPPING
+[27/Sep/2015:20:17:10] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[27/Sep/2015:20:17:10] ENGINE Stopped thread '_TimeoutMonitor'.
+[27/Sep/2015:20:17:10] ENGINE Bus STOPPED
+[27/Sep/2015:20:17:10] ENGINE Bus EXITING
+[27/Sep/2015:20:17:10] ENGINE Bus EXITED
+[27/Sep/2015:20:17:10] ENGINE Waiting for child threads to terminate...
+[27/Sep/2015:20:17:10] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[28/Sep/2015:04:16:24] ENGINE Bus STARTING
+[28/Sep/2015:04:16:24] ENGINE Started monitor thread 'Autoreloader'.
+[28/Sep/2015:04:16:24] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Sep/2015:04:16:24] ENGINE Serving on 0.0.0.0:8264
+[28/Sep/2015:04:16:26] ENGINE Bus STARTED
+[29/Sep/2015:01:58:54] ENGINE Bus STARTING
+[29/Sep/2015:01:58:54] ENGINE Started monitor thread 'Autoreloader'.
+[29/Sep/2015:01:58:54] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Sep/2015:01:58:54] ENGINE Serving on 0.0.0.0:8264
+[29/Sep/2015:01:58:56] ENGINE Bus STARTED
+[29/Sep/2015:02:16:29] ENGINE Bus STARTING
+[29/Sep/2015:02:16:29] ENGINE Started monitor thread 'Autoreloader'.
+[29/Sep/2015:02:16:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Sep/2015:02:16:29] ENGINE Serving on 0.0.0.0:8264
+[29/Sep/2015:02:16:31] ENGINE Bus STARTED
+[29/Sep/2015:02:24:14] ENGINE Bus STARTING
+[29/Sep/2015:02:24:14] ENGINE Started monitor thread 'Autoreloader'.
+[29/Sep/2015:02:24:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Sep/2015:02:24:14] ENGINE Serving on 0.0.0.0:8264
+[29/Sep/2015:02:24:16] ENGINE Bus STARTED
+[29/Sep/2015:02:42:30] ENGINE Bus STARTING
+[29/Sep/2015:02:42:30] ENGINE Started monitor thread 'Autoreloader'.
+[29/Sep/2015:02:42:30] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Sep/2015:02:42:30] ENGINE Serving on 0.0.0.0:8264
+[29/Sep/2015:02:42:32] ENGINE Bus STARTED
+[01/Oct/2015:06:43:51] ENGINE Bus STARTING
+[01/Oct/2015:06:43:51] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:06:43:51] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:06:43:51] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:06:43:52] ENGINE Bus STARTED
+[01/Oct/2015:08:09:05] ENGINE Bus STARTING
+[01/Oct/2015:08:09:05] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:08:09:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:08:09:05] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:08:09:07] ENGINE Bus STARTED
+[01/Oct/2015:08:29:26] ENGINE Bus STARTING
+[01/Oct/2015:08:29:26] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:08:29:26] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:08:29:26] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:08:29:28] ENGINE Bus STARTED
+[01/Oct/2015:08:39:29] ENGINE Bus STARTING
+[01/Oct/2015:08:39:29] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:08:39:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:08:39:29] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:08:39:32] ENGINE Bus STARTED
+[01/Oct/2015:08:41:26] ENGINE Bus STARTING
+[01/Oct/2015:08:41:26] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:08:41:26] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:08:41:26] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:08:41:28] ENGINE Bus STARTED
+[01/Oct/2015:09:25:30] ENGINE Bus STARTING
+[01/Oct/2015:09:25:30] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:09:25:30] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:09:25:30] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:09:25:31] ENGINE Bus STARTED
+[01/Oct/2015:09:39:45] ENGINE Bus STARTING
+[01/Oct/2015:09:39:45] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:09:39:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:09:39:45] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:09:39:47] ENGINE Bus STARTED
+[01/Oct/2015:09:42:07] ENGINE Bus STARTING
+[01/Oct/2015:09:42:07] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:09:42:07] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:09:42:07] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:09:42:09] ENGINE Bus STARTED
+[01/Oct/2015:10:13:19] ENGINE Bus STARTING
+[01/Oct/2015:10:13:19] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:10:13:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:10:13:19] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:10:13:21] ENGINE Bus STARTED
+[01/Oct/2015:20:15:21] ENGINE Bus STARTING
+[01/Oct/2015:20:15:21] ENGINE Started monitor thread 'Autoreloader'.
+[01/Oct/2015:20:15:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Oct/2015:20:15:22] ENGINE Serving on 0.0.0.0:8264
+[01/Oct/2015:20:15:23] ENGINE Bus STARTED
+[02/Oct/2015:12:30:15] ENGINE Bus STARTING
+[02/Oct/2015:12:30:15] ENGINE Started monitor thread 'Autoreloader'.
+[02/Oct/2015:12:30:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Oct/2015:12:30:15] ENGINE Serving on 0.0.0.0:8264
+[02/Oct/2015:12:30:17] ENGINE Bus STARTED
+[02/Oct/2015:12:33:19] ENGINE Bus STARTING
+[02/Oct/2015:12:33:19] ENGINE Started monitor thread 'Autoreloader'.
+[02/Oct/2015:12:33:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Oct/2015:12:33:19] ENGINE Serving on 0.0.0.0:8264
+[02/Oct/2015:12:33:21] ENGINE Bus STARTED
+[02/Oct/2015:21:38:08] ENGINE Bus STARTING
+[02/Oct/2015:21:38:08] ENGINE Started monitor thread 'Autoreloader'.
+[02/Oct/2015:21:38:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Oct/2015:21:38:08] ENGINE Serving on 0.0.0.0:8264
+[02/Oct/2015:21:38:10] ENGINE Bus STARTED
+[02/Oct/2015:21:48:19] ENGINE Bus STARTING
+[02/Oct/2015:21:48:19] ENGINE Started monitor thread 'Autoreloader'.
+[02/Oct/2015:21:48:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Oct/2015:21:48:19] ENGINE Serving on 0.0.0.0:8264
+[02/Oct/2015:21:48:21] ENGINE Bus STARTED
+[02/Oct/2015:21:58:19] ENGINE Bus STARTING
+[02/Oct/2015:21:58:19] ENGINE Started monitor thread 'Autoreloader'.
+[02/Oct/2015:21:58:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Oct/2015:21:58:19] ENGINE Serving on 0.0.0.0:8264
+[02/Oct/2015:21:58:21] ENGINE Bus STARTED
+[06/Oct/2015:09:43:12] ENGINE Bus STARTING
+[06/Oct/2015:09:43:12] ENGINE Started monitor thread 'Autoreloader'.
+[06/Oct/2015:09:43:12] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Oct/2015:09:43:12] ENGINE Serving on 0.0.0.0:8264
+[06/Oct/2015:09:43:13] ENGINE Bus STARTED
+[08/Oct/2015:01:59:15] ENGINE Bus STARTING
+[08/Oct/2015:01:59:15] ENGINE Started monitor thread 'Autoreloader'.
+[08/Oct/2015:01:59:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Oct/2015:01:59:16] ENGINE Serving on 0.0.0.0:8264
+[08/Oct/2015:01:59:17] ENGINE Bus STARTED
+[08/Oct/2015:21:21:51] ENGINE Bus STARTING
+[08/Oct/2015:21:21:51] ENGINE Started monitor thread 'Autoreloader'.
+[08/Oct/2015:21:21:51] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Oct/2015:21:21:51] ENGINE Serving on 0.0.0.0:8264
+[08/Oct/2015:21:21:53] ENGINE Bus STARTED
+[08/Oct/2015:21:27:33] ENGINE Bus STARTING
+[08/Oct/2015:21:27:33] ENGINE Started monitor thread 'Autoreloader'.
+[08/Oct/2015:21:27:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Oct/2015:21:27:43] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fd61d2f61d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[08/Oct/2015:21:27:45] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[08/Oct/2015:21:27:45] ENGINE Bus STOPPING
+[08/Oct/2015:21:27:46] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[08/Oct/2015:21:27:46] ENGINE Stopped thread '_TimeoutMonitor'.
+[08/Oct/2015:21:27:46] ENGINE Stopped thread 'Autoreloader'.
+[08/Oct/2015:21:27:46] ENGINE Bus STOPPED
+[08/Oct/2015:21:27:46] ENGINE Bus EXITING
+[08/Oct/2015:21:27:46] ENGINE Bus EXITED
+[08/Oct/2015:21:27:46]  Trying to bind to single interface: 192.168.1.4
+[08/Oct/2015:21:27:46] ENGINE Bus STARTING
+[08/Oct/2015:21:27:46] ENGINE Started monitor thread 'Autoreloader'.
+[08/Oct/2015:21:27:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Oct/2015:21:27:56] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fd61d2f61d0>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '192.168.1.4'
+
+[08/Oct/2015:21:27:57] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '192.168.1.4'",)
+
+[08/Oct/2015:21:27:57] ENGINE Bus STOPPING
+[08/Oct/2015:21:27:58] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('192.168.1.4', 8264)) already shut down
+[08/Oct/2015:21:27:58] ENGINE Stopped thread '_TimeoutMonitor'.
+[08/Oct/2015:21:27:58] ENGINE Stopped thread 'Autoreloader'.
+[08/Oct/2015:21:27:58] ENGINE Bus STOPPED
+[08/Oct/2015:21:27:58] ENGINE Bus EXITING
+[08/Oct/2015:21:27:58] ENGINE Bus EXITED
+[08/Oct/2015:22:25:53] ENGINE Bus STARTING
+[08/Oct/2015:22:25:53] ENGINE Started monitor thread 'Autoreloader'.
+[08/Oct/2015:22:25:53] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Oct/2015:22:25:53] ENGINE Serving on 0.0.0.0:8264
+[08/Oct/2015:22:25:55] ENGINE Bus STARTED
+[11/Oct/2015:05:27:23] ENGINE Bus STARTING
+[11/Oct/2015:05:27:23] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Oct/2015:05:27:23] ENGINE Started monitor thread 'Autoreloader'.
+[11/Oct/2015:05:27:24] ENGINE Serving on 0.0.0.0:8264
+[11/Oct/2015:05:27:25] ENGINE Bus STARTED
+[11/Oct/2015:17:14:23] ENGINE Bus STARTING
+[11/Oct/2015:17:14:23] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Oct/2015:17:14:23] ENGINE Started monitor thread 'Autoreloader'.
+[11/Oct/2015:17:14:24] ENGINE Serving on 0.0.0.0:8264
+[11/Oct/2015:17:14:25] ENGINE Bus STARTED
+[20/Oct/2015:19:00:36] ENGINE Bus STARTING
+[20/Oct/2015:19:00:36] ENGINE Started monitor thread '_TimeoutMonitor'.
+[20/Oct/2015:19:00:36] ENGINE Started monitor thread 'Autoreloader'.
+[20/Oct/2015:19:00:36] ENGINE Serving on 0.0.0.0:8264
+[20/Oct/2015:19:00:38] ENGINE Bus STARTED
+[22/Oct/2015:02:20:56] ENGINE Bus STARTING
+[22/Oct/2015:02:20:56] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Oct/2015:02:20:56] ENGINE Started monitor thread 'Autoreloader'.
+[22/Oct/2015:02:20:56] ENGINE Serving on 0.0.0.0:8264
+[22/Oct/2015:02:20:58] ENGINE Bus STARTED
+[22/Oct/2015:21:25:43] ENGINE Bus STARTING
+[22/Oct/2015:21:25:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Oct/2015:21:25:43] ENGINE Started monitor thread 'Autoreloader'.
+[22/Oct/2015:21:25:44] ENGINE Serving on 0.0.0.0:8264
+[22/Oct/2015:21:25:45] ENGINE Bus STARTED
+[29/Oct/2015:04:05:55] ENGINE Bus STARTING
+[29/Oct/2015:04:05:55] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Oct/2015:04:05:55] ENGINE Started monitor thread 'Autoreloader'.
+[29/Oct/2015:04:05:55] ENGINE Serving on 0.0.0.0:8264
+[29/Oct/2015:04:05:57] ENGINE Bus STARTED
+[29/Oct/2015:06:03:55] ENGINE Bus STARTING
+[29/Oct/2015:06:03:55] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Oct/2015:06:03:55] ENGINE Started monitor thread 'Autoreloader'.
+[29/Oct/2015:06:03:55] ENGINE Serving on 0.0.0.0:8264
+[29/Oct/2015:06:03:57] ENGINE Bus STARTED
+[01/Nov/2015:02:57:08] ENGINE Bus STARTING
+[01/Nov/2015:02:57:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:02:57:08] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:02:57:08] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:02:57:09]  Failed to start BonJour:
+[01/Nov/2015:02:57:09]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[01/Nov/2015:02:57:09] ENGINE Bus STARTED
+[01/Nov/2015:06:56:50] ENGINE Bus STARTING
+[01/Nov/2015:06:56:50] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:06:56:50] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:06:56:50] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:06:56:51]  Failed to start BonJour:
+[01/Nov/2015:06:56:51]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[01/Nov/2015:06:56:51] ENGINE Bus STARTED
+[01/Nov/2015:07:04:21] ENGINE Bus STARTING
+[01/Nov/2015:07:04:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:07:04:21] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:07:04:21] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:07:04:22]  Failed to start BonJour:
+[01/Nov/2015:07:04:22]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[01/Nov/2015:07:04:22] ENGINE Bus STARTED
+[01/Nov/2015:07:05:42] ENGINE Bus STARTING
+[01/Nov/2015:07:05:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:07:05:42] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:07:05:42] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:07:05:43]  Failed to start BonJour:
+[01/Nov/2015:07:05:43]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[01/Nov/2015:07:05:43] ENGINE Bus STARTED
+[01/Nov/2015:07:14:14] ENGINE Bus STARTING
+[01/Nov/2015:07:14:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:07:14:14] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:07:14:14] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:07:14:15]  Failed to start BonJour:
+[01/Nov/2015:07:14:15]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[01/Nov/2015:07:14:15] ENGINE Bus STARTED
+[01/Nov/2015:07:17:50] ENGINE Bus STARTING
+[01/Nov/2015:07:17:50] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:07:17:50] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:07:17:50] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:07:17:52] ENGINE Bus STARTED
+[01/Nov/2015:07:20:21] ENGINE Bus STARTING
+[01/Nov/2015:07:20:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2015:07:20:21] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2015:07:20:22] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2015:07:20:23] ENGINE Bus STARTED
+[08/Nov/2015:18:12:46] ENGINE Bus STARTING
+[08/Nov/2015:18:12:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Nov/2015:18:12:46] ENGINE Started monitor thread 'Autoreloader'.
+[08/Nov/2015:18:12:46] ENGINE Serving on 0.0.0.0:8264
+[08/Nov/2015:18:12:48] ENGINE Bus STARTED
+[08/Nov/2015:23:54:01] ENGINE Bus STARTING
+[08/Nov/2015:23:54:01] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Nov/2015:23:54:01] ENGINE Started monitor thread 'Autoreloader'.
+[08/Nov/2015:23:54:01] ENGINE Serving on 0.0.0.0:8264
+[08/Nov/2015:23:54:03] ENGINE Bus STARTED
+[08/Nov/2015:23:56:23] ENGINE Bus STARTING
+[08/Nov/2015:23:56:23] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Nov/2015:23:56:23] ENGINE Started monitor thread 'Autoreloader'.
+[08/Nov/2015:23:56:23] ENGINE Serving on 0.0.0.0:8264
+[08/Nov/2015:23:56:25] ENGINE Bus STARTED
+[08/Nov/2015:23:58:31] ENGINE Bus STARTING
+[08/Nov/2015:23:58:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Nov/2015:23:58:31] ENGINE Started monitor thread 'Autoreloader'.
+[08/Nov/2015:23:58:31] ENGINE Serving on 0.0.0.0:8264
+[08/Nov/2015:23:58:33] ENGINE Bus STARTED
+[10/Nov/2015:13:04:49] ENGINE Bus STARTING
+[10/Nov/2015:13:04:49] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2015:13:04:49] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2015:13:04:49] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2015:13:04:51] ENGINE Bus STARTED
+[10/Nov/2015:21:51:22] ENGINE Bus STARTING
+[10/Nov/2015:21:51:22] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2015:21:51:22] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2015:21:51:22] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2015:21:51:24] ENGINE Bus STARTED
+[11/Nov/2015:12:43:50] ENGINE Bus STARTING
+[11/Nov/2015:12:43:50] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Nov/2015:12:43:50] ENGINE Started monitor thread 'Autoreloader'.
+[11/Nov/2015:12:43:50] ENGINE Serving on 0.0.0.0:8264
+[11/Nov/2015:12:43:52] ENGINE Bus STARTED
+[11/Nov/2015:22:35:49] ENGINE Bus STARTING
+[11/Nov/2015:22:35:49] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Nov/2015:22:35:49] ENGINE Started monitor thread 'Autoreloader'.
+[11/Nov/2015:22:35:49] ENGINE Serving on 0.0.0.0:8264
+[11/Nov/2015:22:35:51] ENGINE Bus STARTED
+[16/Nov/2015:00:11:16] ENGINE Bus STARTING
+[16/Nov/2015:00:11:16] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Nov/2015:00:11:16] ENGINE Started monitor thread 'Autoreloader'.
+[16/Nov/2015:00:11:16] ENGINE Serving on 0.0.0.0:8264
+[16/Nov/2015:00:11:18] ENGINE Bus STARTED
+[16/Nov/2015:20:15:07] ENGINE Bus STARTING
+[16/Nov/2015:20:15:07] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Nov/2015:20:15:07] ENGINE Started monitor thread 'Autoreloader'.
+[16/Nov/2015:20:15:07] ENGINE Serving on 0.0.0.0:8264
+[16/Nov/2015:20:15:09] ENGINE Bus STARTED
+[17/Nov/2015:03:52:57] ENGINE Bus STARTING
+[17/Nov/2015:03:52:57] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Nov/2015:03:52:57] ENGINE Started monitor thread 'Autoreloader'.
+[17/Nov/2015:03:52:57] ENGINE Serving on 0.0.0.0:8264
+[17/Nov/2015:03:52:59] ENGINE Bus STARTED
+[17/Nov/2015:16:19:40] ENGINE Bus STARTING
+[17/Nov/2015:16:19:40] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Nov/2015:16:19:40] ENGINE Started monitor thread 'Autoreloader'.
+[17/Nov/2015:16:19:40] ENGINE Serving on 0.0.0.0:8264
+[17/Nov/2015:16:19:42] ENGINE Bus STARTED
+[17/Nov/2015:17:28:31] ENGINE Bus STARTING
+[17/Nov/2015:17:28:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Nov/2015:17:28:31] ENGINE Started monitor thread 'Autoreloader'.
+[17/Nov/2015:17:28:32] ENGINE Serving on 0.0.0.0:8264
+[17/Nov/2015:17:28:34] ENGINE Bus STARTED
+[17/Nov/2015:17:34:28] ENGINE Bus STARTING
+[17/Nov/2015:17:34:28] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Nov/2015:17:34:28] ENGINE Started monitor thread 'Autoreloader'.
+[17/Nov/2015:17:34:28] ENGINE Serving on 0.0.0.0:8264
+[17/Nov/2015:17:34:30] ENGINE Bus STARTED
+[17/Nov/2015:17:43:32] ENGINE Bus STARTING
+[17/Nov/2015:17:43:32] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Nov/2015:17:43:32] ENGINE Started monitor thread 'Autoreloader'.
+[17/Nov/2015:17:43:32] ENGINE Serving on 0.0.0.0:8264
+[17/Nov/2015:17:43:34] ENGINE Bus STARTED
+[20/Nov/2015:07:59:53] ENGINE Bus STARTING
+[20/Nov/2015:07:59:53] ENGINE Started monitor thread '_TimeoutMonitor'.
+[20/Nov/2015:07:59:53] ENGINE Started monitor thread 'Autoreloader'.
+[20/Nov/2015:07:59:53] ENGINE Serving on 0.0.0.0:8264
+[20/Nov/2015:07:59:55] ENGINE Bus STARTED
+[20/Nov/2015:18:36:08] ENGINE Bus STARTING
+[20/Nov/2015:18:36:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[20/Nov/2015:18:36:08] ENGINE Started monitor thread 'Autoreloader'.
+[20/Nov/2015:18:36:09] ENGINE Serving on 0.0.0.0:8264
+[20/Nov/2015:18:36:10] ENGINE Bus STARTED
+[21/Nov/2015:12:14:40] ENGINE Bus STARTING
+[21/Nov/2015:12:14:40] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Nov/2015:12:14:40] ENGINE Started monitor thread 'Autoreloader'.
+[21/Nov/2015:12:14:40] ENGINE Serving on 0.0.0.0:8264
+[21/Nov/2015:12:14:41] ENGINE Bus STARTED
+[21/Nov/2015:15:13:19] ENGINE Bus STARTING
+[21/Nov/2015:15:13:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Nov/2015:15:13:19] ENGINE Started monitor thread 'Autoreloader'.
+[21/Nov/2015:15:13:19] ENGINE Serving on 0.0.0.0:8264
+[21/Nov/2015:15:13:20] ENGINE Bus STARTED
+[21/Nov/2015:20:55:48] ENGINE Bus STARTING
+[21/Nov/2015:20:55:48] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Nov/2015:20:55:48] ENGINE Started monitor thread 'Autoreloader'.
+[21/Nov/2015:20:55:48] ENGINE Serving on 0.0.0.0:8264
+[21/Nov/2015:20:55:49] ENGINE Bus STARTED
+[22/Nov/2015:16:36:13] ENGINE Bus STARTING
+[22/Nov/2015:16:36:13] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Nov/2015:16:36:13] ENGINE Started monitor thread 'Autoreloader'.
+[22/Nov/2015:16:36:13] ENGINE Serving on 0.0.0.0:8264
+[22/Nov/2015:16:36:15] ENGINE Bus STARTED
+[22/Nov/2015:22:25:58] ENGINE Bus STARTING
+[22/Nov/2015:22:25:58] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Nov/2015:22:25:58] ENGINE Started monitor thread 'Autoreloader'.
+[22/Nov/2015:22:25:59] ENGINE Serving on 0.0.0.0:8264
+[22/Nov/2015:22:26:00] ENGINE Bus STARTED
+[26/Nov/2015:18:32:21] ENGINE Bus STARTING
+[26/Nov/2015:18:32:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[26/Nov/2015:18:32:21] ENGINE Started monitor thread 'Autoreloader'.
+[26/Nov/2015:18:32:21] ENGINE Serving on 0.0.0.0:8264
+[26/Nov/2015:18:32:23] ENGINE Bus STARTED
+[27/Nov/2015:16:42:41] ENGINE Bus STARTING
+[27/Nov/2015:16:42:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Nov/2015:16:42:41] ENGINE Started monitor thread 'Autoreloader'.
+[27/Nov/2015:16:42:41] ENGINE Serving on 0.0.0.0:8264
+[27/Nov/2015:16:42:43] ENGINE Bus STARTED
+[27/Nov/2015:17:11:47] ENGINE Bus STARTING
+[27/Nov/2015:17:11:47] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Nov/2015:17:11:47] ENGINE Started monitor thread 'Autoreloader'.
+[27/Nov/2015:17:11:48] ENGINE Serving on 0.0.0.0:8264
+[27/Nov/2015:17:11:50] ENGINE Bus STARTED
+[27/Nov/2015:17:14:31] ENGINE Bus STARTING
+[27/Nov/2015:17:14:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Nov/2015:17:14:31] ENGINE Started monitor thread 'Autoreloader'.
+[27/Nov/2015:17:14:31] ENGINE Serving on 0.0.0.0:8264
+[27/Nov/2015:17:14:33] ENGINE Bus STARTED
+[29/Nov/2015:00:09:43] ENGINE Bus STARTING
+[29/Nov/2015:00:09:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Nov/2015:00:09:43] ENGINE Started monitor thread 'Autoreloader'.
+[29/Nov/2015:00:09:43] ENGINE Serving on 0.0.0.0:8264
+[29/Nov/2015:00:09:45] ENGINE Bus STARTED
+[30/Nov/2015:07:06:37] ENGINE Bus STARTING
+[30/Nov/2015:07:06:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[30/Nov/2015:07:06:37] ENGINE Started monitor thread 'Autoreloader'.
+[30/Nov/2015:07:06:37] ENGINE Serving on 0.0.0.0:8264
+[30/Nov/2015:07:06:39] ENGINE Bus STARTED
+[30/Nov/2015:15:44:27] ENGINE Bus STARTING
+[30/Nov/2015:15:44:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[30/Nov/2015:15:44:27] ENGINE Started monitor thread 'Autoreloader'.
+[30/Nov/2015:15:44:27] ENGINE Serving on 0.0.0.0:8264
+[30/Nov/2015:15:44:29] ENGINE Bus STARTED
+[01/Dec/2015:08:19:12] ENGINE Bus STARTING
+[01/Dec/2015:08:19:12] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Dec/2015:08:19:12] ENGINE Started monitor thread 'Autoreloader'.
+[01/Dec/2015:08:19:12] ENGINE Serving on 0.0.0.0:8264
+[01/Dec/2015:08:19:14] ENGINE Bus STARTED
+[01/Dec/2015:17:50:26] ENGINE Bus STARTING
+[01/Dec/2015:17:50:26] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Dec/2015:17:50:26] ENGINE Started monitor thread 'Autoreloader'.
+[01/Dec/2015:17:50:27] ENGINE Serving on 0.0.0.0:8264
+[01/Dec/2015:17:50:28] ENGINE Bus STARTED
+[01/Dec/2015:23:55:20] ENGINE Bus STARTING
+[01/Dec/2015:23:55:20] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Dec/2015:23:55:20] ENGINE Started monitor thread 'Autoreloader'.
+[01/Dec/2015:23:55:20] ENGINE Serving on 0.0.0.0:8264
+[01/Dec/2015:23:55:22] ENGINE Bus STARTED
+[02/Dec/2015:00:26:14] ENGINE Bus STARTING
+[02/Dec/2015:00:26:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Dec/2015:00:26:14] ENGINE Started monitor thread 'Autoreloader'.
+[02/Dec/2015:00:26:14] ENGINE Serving on 0.0.0.0:8264
+[02/Dec/2015:00:26:16] ENGINE Bus STARTED
+[02/Dec/2015:00:33:17] ENGINE Bus STARTING
+[02/Dec/2015:00:33:17] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Dec/2015:00:33:17] ENGINE Started monitor thread 'Autoreloader'.
+[02/Dec/2015:00:33:17] ENGINE Serving on 0.0.0.0:8264
+[02/Dec/2015:00:33:18]  Failed to start BonJour:
+[02/Dec/2015:00:33:18]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 148, in publish
+  File "site-packages/calibre/utils/mdns.py", line 103, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[02/Dec/2015:00:33:18] ENGINE Bus STARTED
+[02/Dec/2015:08:11:29] ENGINE Bus STARTING
+[02/Dec/2015:08:11:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Dec/2015:08:11:29] ENGINE Started monitor thread 'Autoreloader'.
+[02/Dec/2015:08:11:29] ENGINE Serving on 0.0.0.0:8264
+[02/Dec/2015:08:11:31] ENGINE Bus STARTED
+[02/Dec/2015:09:28:56] ENGINE Bus STARTING
+[02/Dec/2015:09:28:56] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Dec/2015:09:28:56] ENGINE Started monitor thread 'Autoreloader'.
+[02/Dec/2015:09:28:57] ENGINE Serving on 0.0.0.0:8264
+[02/Dec/2015:09:28:58] ENGINE Bus STARTED
+[03/Dec/2015:10:31:37] ENGINE Bus STARTING
+[03/Dec/2015:10:31:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Dec/2015:10:31:37] ENGINE Started monitor thread 'Autoreloader'.
+[03/Dec/2015:10:31:37] ENGINE Serving on 0.0.0.0:8264
+[03/Dec/2015:10:31:39] ENGINE Bus STARTED
+[03/Dec/2015:14:11:08] ENGINE Bus STARTING
+[03/Dec/2015:14:11:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Dec/2015:14:11:08] ENGINE Started monitor thread 'Autoreloader'.
+[03/Dec/2015:14:11:08] ENGINE Serving on 0.0.0.0:8264
+[03/Dec/2015:14:11:10] ENGINE Bus STARTED
+[03/Dec/2015:15:11:13] ENGINE Bus STARTING
+[03/Dec/2015:15:11:13] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Dec/2015:15:11:13] ENGINE Started monitor thread 'Autoreloader'.
+[03/Dec/2015:15:11:13] ENGINE Serving on 0.0.0.0:8264
+[03/Dec/2015:15:11:15] ENGINE Bus STARTED
+[03/Dec/2015:17:58:50] ENGINE Bus STARTING
+[03/Dec/2015:17:58:50] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Dec/2015:17:58:50] ENGINE Started monitor thread 'Autoreloader'.
+[03/Dec/2015:17:58:50] ENGINE Serving on 0.0.0.0:8264
+[03/Dec/2015:17:58:52] ENGINE Bus STARTED
+[12/Dec/2015:22:05:47] ENGINE Bus STARTING
+[12/Dec/2015:22:05:47] ENGINE Started monitor thread 'Autoreloader'.
+[12/Dec/2015:22:05:47] ENGINE Started monitor thread '_TimeoutMonitor'.
+[12/Dec/2015:22:05:47] ENGINE Serving on 0.0.0.0:8264
+[12/Dec/2015:22:05:49] ENGINE Bus STARTED
+[14/Dec/2015:16:13:57] ENGINE Bus STARTING
+[14/Dec/2015:16:13:58] ENGINE Started monitor thread 'Autoreloader'.
+[14/Dec/2015:16:13:58] ENGINE Started monitor thread '_TimeoutMonitor'.
+[14/Dec/2015:16:13:58] ENGINE Serving on 0.0.0.0:8264
+[14/Dec/2015:16:13:59] ENGINE Bus STARTED
+[16/Dec/2015:13:53:33] ENGINE Bus STARTING
+[16/Dec/2015:13:53:33] ENGINE Started monitor thread 'Autoreloader'.
+[16/Dec/2015:13:53:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Dec/2015:13:53:33] ENGINE Serving on 0.0.0.0:8264
+[16/Dec/2015:13:53:35] ENGINE Bus STARTED
+[16/Dec/2015:14:36:12] ENGINE Bus STARTING
+[16/Dec/2015:14:36:12] ENGINE Started monitor thread 'Autoreloader'.
+[16/Dec/2015:14:36:12] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Dec/2015:14:36:12] ENGINE Serving on 0.0.0.0:8264
+[16/Dec/2015:14:36:14] ENGINE Bus STARTED
+[18/Dec/2015:03:42:47] ENGINE Bus STARTING
+[18/Dec/2015:03:42:47] ENGINE Started monitor thread 'Autoreloader'.
+[18/Dec/2015:03:42:47] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Dec/2015:03:42:47] ENGINE Serving on 0.0.0.0:8264
+[18/Dec/2015:03:42:50] ENGINE Bus STARTED
+[18/Dec/2015:13:13:31] ENGINE Bus STARTING
+[18/Dec/2015:13:13:31] ENGINE Started monitor thread 'Autoreloader'.
+[18/Dec/2015:13:13:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Dec/2015:13:13:31] ENGINE Serving on 0.0.0.0:8264
+[18/Dec/2015:13:13:32] ENGINE Bus STARTED
+[23/Dec/2015:16:52:15] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/cherrypy/lib/auth_basic.pyo changed.
+[23/Dec/2015:16:52:15] ENGINE Stopped thread 'Autoreloader'.
+[23/Dec/2015:16:52:15] ENGINE Bus STOPPING
+[23/Dec/2015:16:52:16] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[23/Dec/2015:16:52:16] ENGINE Stopped thread '_TimeoutMonitor'.
+[23/Dec/2015:16:52:16] ENGINE Bus STOPPED
+[23/Dec/2015:16:52:16] ENGINE Bus EXITING
+[23/Dec/2015:16:52:16] ENGINE Bus EXITED
+[23/Dec/2015:16:52:16] ENGINE Waiting for child threads to terminate...
+[23/Dec/2015:16:52:16] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[24/Dec/2015:00:56:07] ENGINE Bus STARTING
+[24/Dec/2015:00:56:07] ENGINE Started monitor thread 'Autoreloader'.
+[24/Dec/2015:00:56:07] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Dec/2015:00:56:07] ENGINE Serving on 0.0.0.0:8264
+[24/Dec/2015:00:56:09] ENGINE Bus STARTED
+[26/Dec/2015:10:10:52] ENGINE Bus STARTING
+[26/Dec/2015:10:10:52] ENGINE Started monitor thread 'Autoreloader'.
+[26/Dec/2015:10:10:52] ENGINE Started monitor thread '_TimeoutMonitor'.
+[26/Dec/2015:10:10:52] ENGINE Serving on 0.0.0.0:8264
+[26/Dec/2015:10:10:54] ENGINE Bus STARTED
+[27/Dec/2015:08:23:05] ENGINE Bus STARTING
+[27/Dec/2015:08:23:05] ENGINE Started monitor thread 'Autoreloader'.
+[27/Dec/2015:08:23:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Dec/2015:08:23:05] ENGINE Serving on 0.0.0.0:8264
+[27/Dec/2015:08:23:07] ENGINE Bus STARTED
+[29/Dec/2015:15:53:13] ENGINE Bus STARTING
+[29/Dec/2015:15:53:13] ENGINE Started monitor thread 'Autoreloader'.
+[29/Dec/2015:15:53:13] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Dec/2015:15:53:13] ENGINE Serving on 0.0.0.0:8264
+[29/Dec/2015:15:53:15] ENGINE Bus STARTED
+[29/Dec/2015:15:58:22] ENGINE Bus STARTING
+[29/Dec/2015:15:58:22] ENGINE Started monitor thread 'Autoreloader'.
+[29/Dec/2015:15:58:22] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Dec/2015:15:58:22] ENGINE Serving on 0.0.0.0:8264
+[29/Dec/2015:15:58:24] ENGINE Bus STARTED
+[29/Dec/2015:19:12:02] ENGINE Bus STARTING
+[29/Dec/2015:19:12:02] ENGINE Started monitor thread 'Autoreloader'.
+[29/Dec/2015:19:12:02] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Dec/2015:19:12:02] ENGINE Serving on 0.0.0.0:8264
+[29/Dec/2015:19:12:03] ENGINE Bus STARTED
+[29/Dec/2015:19:17:33] ENGINE Bus STARTING
+[29/Dec/2015:19:17:33] ENGINE Started monitor thread 'Autoreloader'.
+[29/Dec/2015:19:17:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Dec/2015:19:17:33] ENGINE Serving on 0.0.0.0:8264
+[29/Dec/2015:19:17:35] ENGINE Bus STARTED
+[30/Dec/2015:20:23:14] ENGINE Bus STARTING
+[30/Dec/2015:20:23:14] ENGINE Started monitor thread 'Autoreloader'.
+[30/Dec/2015:20:23:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[30/Dec/2015:20:23:14] ENGINE Serving on 0.0.0.0:8264
+[30/Dec/2015:20:23:16] ENGINE Bus STARTED
+[30/Dec/2015:20:26:14] ENGINE Bus STARTING
+[30/Dec/2015:20:26:14] ENGINE Started monitor thread 'Autoreloader'.
+[30/Dec/2015:20:26:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[30/Dec/2015:20:26:14] ENGINE Serving on 0.0.0.0:8264
+[30/Dec/2015:20:26:16] ENGINE Bus STARTED
+[30/Dec/2015:20:27:59] ENGINE Bus STARTING
+[30/Dec/2015:20:27:59] ENGINE Started monitor thread 'Autoreloader'.
+[30/Dec/2015:20:27:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[30/Dec/2015:20:27:59] ENGINE Serving on 0.0.0.0:8264
+[30/Dec/2015:20:28:01] ENGINE Bus STARTED
+[03/Jan/2016:17:09:14] ENGINE Bus STARTING
+[03/Jan/2016:17:09:14] ENGINE Started monitor thread 'Autoreloader'.
+[03/Jan/2016:17:09:14] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Jan/2016:17:09:14] ENGINE Serving on 0.0.0.0:8264
+[03/Jan/2016:17:09:16] ENGINE Bus STARTED
+[04/Jan/2016:12:29:18] ENGINE Bus STARTING
+[04/Jan/2016:12:29:18] ENGINE Started monitor thread 'Autoreloader'.
+[04/Jan/2016:12:29:18] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Jan/2016:12:29:19] ENGINE Serving on 0.0.0.0:8264
+[04/Jan/2016:12:29:20] ENGINE Bus STARTED
+[07/Jan/2016:13:15:23] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/calibre/devices/kindle/driver.pyo changed.
+[07/Jan/2016:13:15:24] ENGINE Stopped thread 'Autoreloader'.
+[07/Jan/2016:13:15:24] ENGINE Bus STOPPING
+[07/Jan/2016:13:15:24] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[07/Jan/2016:13:15:24] ENGINE Stopped thread '_TimeoutMonitor'.
+[07/Jan/2016:13:15:24] ENGINE Bus STOPPED
+[07/Jan/2016:13:15:24] ENGINE Bus EXITING
+[07/Jan/2016:13:15:24] ENGINE Bus EXITED
+[07/Jan/2016:13:15:24] ENGINE Waiting for child threads to terminate...
+[07/Jan/2016:13:15:24] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[10/Jan/2016:13:03:02] ENGINE Bus STARTING
+[10/Jan/2016:13:03:02] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jan/2016:13:03:02] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jan/2016:13:03:02] ENGINE Serving on 0.0.0.0:8264
+[10/Jan/2016:13:03:04] ENGINE Bus STARTED
+[14/Jan/2016:12:06:19] ENGINE Bus STARTING
+[14/Jan/2016:12:06:19] ENGINE Started monitor thread 'Autoreloader'.
+[14/Jan/2016:12:06:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[14/Jan/2016:12:06:19] ENGINE Serving on 0.0.0.0:8264
+[14/Jan/2016:12:06:21] ENGINE Bus STARTED
+[16/Jan/2016:13:53:56] ENGINE Bus STARTING
+[16/Jan/2016:13:53:56] ENGINE Started monitor thread 'Autoreloader'.
+[16/Jan/2016:13:53:56] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Jan/2016:13:53:56] ENGINE Serving on 0.0.0.0:8264
+[16/Jan/2016:13:53:58] ENGINE Bus STARTED
+[18/Jan/2016:17:48:27] ENGINE Bus STARTING
+[18/Jan/2016:17:48:27] ENGINE Started monitor thread 'Autoreloader'.
+[18/Jan/2016:17:48:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Jan/2016:17:48:27] ENGINE Serving on 0.0.0.0:8264
+[18/Jan/2016:17:48:29] ENGINE Bus STARTED
+[19/Jan/2016:02:26:57] ENGINE Bus STARTING
+[19/Jan/2016:02:26:57] ENGINE Started monitor thread 'Autoreloader'.
+[19/Jan/2016:02:26:57] ENGINE Started monitor thread '_TimeoutMonitor'.
+[19/Jan/2016:02:26:57] ENGINE Serving on 0.0.0.0:8264
+[19/Jan/2016:02:26:59] ENGINE Bus STARTED
+[20/Jan/2016:19:07:59] ENGINE Bus STARTING
+[20/Jan/2016:19:07:59] ENGINE Started monitor thread 'Autoreloader'.
+[20/Jan/2016:19:07:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[20/Jan/2016:19:07:59] ENGINE Serving on 0.0.0.0:8264
+[20/Jan/2016:19:08:01] ENGINE Bus STARTED
+[23/Jan/2016:07:34:43] ENGINE Bus STARTING
+[23/Jan/2016:07:34:43] ENGINE Started monitor thread 'Autoreloader'.
+[23/Jan/2016:07:34:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Jan/2016:07:34:43] ENGINE Serving on 0.0.0.0:8264
+[23/Jan/2016:07:34:45] ENGINE Bus STARTED
+[23/Jan/2016:09:13:13] ENGINE Bus STARTING
+[23/Jan/2016:09:13:13] ENGINE Started monitor thread 'Autoreloader'.
+[23/Jan/2016:09:13:13] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Jan/2016:09:13:13] ENGINE Serving on 0.0.0.0:8264
+[23/Jan/2016:09:13:15] ENGINE Bus STARTED
+[23/Jan/2016:09:42:08] ENGINE Bus STARTING
+[23/Jan/2016:09:42:08] ENGINE Started monitor thread 'Autoreloader'.
+[23/Jan/2016:09:42:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Jan/2016:09:42:09] ENGINE Serving on 0.0.0.0:8264
+[23/Jan/2016:09:42:10] ENGINE Bus STARTED
+[23/Jan/2016:14:02:40] ENGINE Bus STARTING
+[23/Jan/2016:14:02:40] ENGINE Started monitor thread 'Autoreloader'.
+[23/Jan/2016:14:02:40] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Jan/2016:14:02:40] ENGINE Serving on 0.0.0.0:8264
+[23/Jan/2016:14:02:42] ENGINE Bus STARTED
+[06/Feb/2016:16:18:23] ENGINE Bus STARTING
+[06/Feb/2016:16:18:23] ENGINE Started monitor thread 'Autoreloader'.
+[06/Feb/2016:16:18:23] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Feb/2016:16:18:23] ENGINE Serving on 0.0.0.0:8264
+[06/Feb/2016:16:18:24] ENGINE Bus STARTED
+[06/Feb/2016:20:48:04] ENGINE Bus STARTING
+[06/Feb/2016:20:48:04] ENGINE Started monitor thread 'Autoreloader'.
+[06/Feb/2016:20:48:04] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Feb/2016:20:48:04] ENGINE Serving on 0.0.0.0:8264
+[06/Feb/2016:20:48:06] ENGINE Bus STARTED
+[06/Feb/2016:20:53:08] ENGINE Bus STARTING
+[06/Feb/2016:20:53:08] ENGINE Started monitor thread 'Autoreloader'.
+[06/Feb/2016:20:53:08] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Feb/2016:20:53:08] ENGINE Serving on 0.0.0.0:8264
+[06/Feb/2016:20:53:10] ENGINE Bus STARTED
+[10/Feb/2016:17:06:11] ENGINE Bus STARTING
+[10/Feb/2016:17:06:11] ENGINE Started monitor thread 'Autoreloader'.
+[10/Feb/2016:17:06:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Feb/2016:17:06:11] ENGINE Serving on 0.0.0.0:8264
+[10/Feb/2016:17:06:13] ENGINE Bus STARTED
+[13/Feb/2016:18:02:09] ENGINE Bus STARTING
+[13/Feb/2016:18:02:09] ENGINE Started monitor thread 'Autoreloader'.
+[13/Feb/2016:18:02:09] ENGINE Started monitor thread '_TimeoutMonitor'.
+[13/Feb/2016:18:02:09] ENGINE Serving on 0.0.0.0:8264
+[13/Feb/2016:18:02:11] ENGINE Bus STARTED
+[16/Feb/2016:12:08:55] ENGINE Bus STARTING
+[16/Feb/2016:12:08:55] ENGINE Started monitor thread 'Autoreloader'.
+[16/Feb/2016:12:08:55] ENGINE Started monitor thread '_TimeoutMonitor'.
+[16/Feb/2016:12:08:55] ENGINE Serving on 0.0.0.0:8264
+[16/Feb/2016:12:08:57] ENGINE Bus STARTED
+[18/Feb/2016:16:19:59] ENGINE Bus STARTING
+[18/Feb/2016:16:19:59] ENGINE Started monitor thread 'Autoreloader'.
+[18/Feb/2016:16:19:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Feb/2016:16:19:59] ENGINE Serving on 0.0.0.0:8264
+[18/Feb/2016:16:20:00] ENGINE Bus STARTED
+[19/Feb/2016:01:25:42] ENGINE Bus STARTING
+[19/Feb/2016:01:25:42] ENGINE Started monitor thread 'Autoreloader'.
+[19/Feb/2016:01:25:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[19/Feb/2016:01:25:42] ENGINE Serving on 0.0.0.0:8264
+[19/Feb/2016:01:25:43] ENGINE Bus STARTED
+[21/Feb/2016:21:48:21] ENGINE Bus STARTING
+[21/Feb/2016:21:48:21] ENGINE Started monitor thread 'Autoreloader'.
+[21/Feb/2016:21:48:21] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Feb/2016:21:48:22] ENGINE Serving on 0.0.0.0:8264
+[21/Feb/2016:21:48:23] ENGINE Bus STARTED
+[22/Feb/2016:01:38:20] ENGINE Bus STARTING
+[22/Feb/2016:01:38:20] ENGINE Started monitor thread 'Autoreloader'.
+[22/Feb/2016:01:38:20] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Feb/2016:01:38:20] ENGINE Serving on 0.0.0.0:8264
+[22/Feb/2016:01:38:22] ENGINE Bus STARTED
+[23/Feb/2016:09:15:31] ENGINE Bus STARTING
+[23/Feb/2016:09:15:31] ENGINE Started monitor thread 'Autoreloader'.
+[23/Feb/2016:09:15:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Feb/2016:09:15:32] ENGINE Serving on 0.0.0.0:8264
+[23/Feb/2016:09:15:33] ENGINE Bus STARTED
+[24/Feb/2016:10:28:53] ENGINE Bus STARTING
+[24/Feb/2016:10:28:53] ENGINE Started monitor thread 'Autoreloader'.
+[24/Feb/2016:10:28:53] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Feb/2016:10:28:53] ENGINE Serving on 0.0.0.0:8264
+[24/Feb/2016:10:28:55] ENGINE Bus STARTED
+[24/Feb/2016:15:04:17] ENGINE Bus STARTING
+[24/Feb/2016:15:04:17] ENGINE Started monitor thread 'Autoreloader'.
+[24/Feb/2016:15:04:17] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Feb/2016:15:04:17] ENGINE Serving on 0.0.0.0:8264
+[24/Feb/2016:15:04:19] ENGINE Bus STARTED
+[28/Feb/2016:13:18:35] ENGINE Bus STARTING
+[28/Feb/2016:13:18:35] ENGINE Started monitor thread 'Autoreloader'.
+[28/Feb/2016:13:18:35] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Feb/2016:13:18:35] ENGINE Serving on 0.0.0.0:8264
+[28/Feb/2016:13:18:36] ENGINE Bus STARTED
+[29/Feb/2016:00:35:59] ENGINE Bus STARTING
+[29/Feb/2016:00:35:59] ENGINE Started monitor thread 'Autoreloader'.
+[29/Feb/2016:00:35:59] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Feb/2016:00:35:59] ENGINE Serving on 0.0.0.0:8264
+[29/Feb/2016:00:36:01] ENGINE Bus STARTED
+[04/Mar/2016:04:51:15] ENGINE Bus STARTING
+[04/Mar/2016:04:51:15] ENGINE Started monitor thread 'Autoreloader'.
+[04/Mar/2016:04:51:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Mar/2016:04:51:15] ENGINE Serving on 0.0.0.0:8264
+[04/Mar/2016:04:51:16] ENGINE Bus STARTED
+[04/Mar/2016:05:02:21] ENGINE Restarting because /opt/calibre/lib/python2.7/unittest/signals.pyo changed.
+[04/Mar/2016:05:02:21] ENGINE Stopped thread 'Autoreloader'.
+[04/Mar/2016:05:02:21] ENGINE Bus STOPPING
+[04/Mar/2016:05:02:22] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[04/Mar/2016:05:02:22] ENGINE Stopped thread '_TimeoutMonitor'.
+[04/Mar/2016:05:02:22] ENGINE Bus STOPPED
+[04/Mar/2016:05:02:22] ENGINE Bus EXITING
+[04/Mar/2016:05:02:22] ENGINE Bus EXITED
+[04/Mar/2016:05:02:22] ENGINE Waiting for child threads to terminate...
+[04/Mar/2016:05:02:22] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[06/Mar/2016:09:11:27] ENGINE Bus STARTING
+[06/Mar/2016:09:11:28] ENGINE Started monitor thread 'Autoreloader'.
+[06/Mar/2016:09:11:28] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Mar/2016:09:11:28] ENGINE Serving on 0.0.0.0:8264
+[06/Mar/2016:09:11:30] ENGINE Bus STARTED
+[11/Mar/2016:03:48:36] ENGINE Bus STARTING
+[11/Mar/2016:03:48:36] ENGINE Started monitor thread 'Autoreloader'.
+[11/Mar/2016:03:48:36] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Mar/2016:03:48:36] ENGINE Serving on 0.0.0.0:8264
+[11/Mar/2016:03:48:37] ENGINE Bus STARTED
+[12/Mar/2016:10:51:13] ENGINE Bus STARTING
+[12/Mar/2016:10:51:13] ENGINE Started monitor thread 'Autoreloader'.
+[12/Mar/2016:10:51:13] ENGINE Started monitor thread '_TimeoutMonitor'.
+[12/Mar/2016:10:51:13] ENGINE Serving on 0.0.0.0:8264
+[12/Mar/2016:10:51:15] ENGINE Bus STARTED
+[13/Mar/2016:11:34:33] ENGINE Bus STARTING
+[13/Mar/2016:11:34:33] ENGINE Started monitor thread 'Autoreloader'.
+[13/Mar/2016:11:34:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[13/Mar/2016:11:34:33] ENGINE Serving on 0.0.0.0:8264
+[13/Mar/2016:11:34:36] ENGINE Bus STARTED
+[15/Mar/2016:12:43:06] ENGINE Bus STARTING
+[15/Mar/2016:12:43:06] ENGINE Started monitor thread 'Autoreloader'.
+[15/Mar/2016:12:43:06] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Mar/2016:12:43:06] ENGINE Serving on 0.0.0.0:8264
+[15/Mar/2016:12:43:08] ENGINE Bus STARTED
+[15/Mar/2016:18:47:17] ENGINE Bus STARTING
+[15/Mar/2016:18:47:17] ENGINE Started monitor thread 'Autoreloader'.
+[15/Mar/2016:18:47:17] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Mar/2016:18:47:17] ENGINE Serving on 0.0.0.0:8264
+[15/Mar/2016:18:47:19] ENGINE Bus STARTED
+[15/Mar/2016:20:20:27] ENGINE Bus STARTING
+[15/Mar/2016:20:20:27] ENGINE Started monitor thread 'Autoreloader'.
+[15/Mar/2016:20:20:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Mar/2016:20:20:27] ENGINE Serving on 0.0.0.0:8264
+[15/Mar/2016:20:20:29] ENGINE Bus STARTED
+[19/Mar/2016:17:06:38] ENGINE Bus STARTING
+[19/Mar/2016:17:06:38] ENGINE Started monitor thread 'Autoreloader'.
+[19/Mar/2016:17:06:38] ENGINE Started monitor thread '_TimeoutMonitor'.
+[19/Mar/2016:17:06:38] ENGINE Serving on 0.0.0.0:8264
+[19/Mar/2016:17:06:40] ENGINE Bus STARTED
+[22/Mar/2016:11:17:05] ENGINE Bus STARTING
+[22/Mar/2016:11:17:05] ENGINE Started monitor thread 'Autoreloader'.
+[22/Mar/2016:11:17:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Mar/2016:11:17:05] ENGINE Serving on 0.0.0.0:8264
+[22/Mar/2016:11:17:07] ENGINE Bus STARTED
+[26/Mar/2016:23:07:22] ENGINE Restarting because /opt/calibre/lib/python2.7/ctypes/util.pyo changed.
+[26/Mar/2016:23:07:22] ENGINE Stopped thread 'Autoreloader'.
+[26/Mar/2016:23:07:22] ENGINE Bus STOPPING
+[26/Mar/2016:23:07:23] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[26/Mar/2016:23:07:23] ENGINE Stopped thread '_TimeoutMonitor'.
+[26/Mar/2016:23:07:23] ENGINE Bus STOPPED
+[26/Mar/2016:23:07:23] ENGINE Bus EXITING
+[26/Mar/2016:23:07:23] ENGINE Bus EXITED
+[26/Mar/2016:23:07:23] ENGINE Waiting for child threads to terminate...
+[26/Mar/2016:23:07:23] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[27/Mar/2016:08:15:16] ENGINE Bus STARTING
+[27/Mar/2016:08:15:16] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Mar/2016:08:15:16] ENGINE Started monitor thread 'Autoreloader'.
+[27/Mar/2016:08:15:17] ENGINE Serving on 0.0.0.0:8264
+[27/Mar/2016:08:15:18] ENGINE Bus STARTED
+[02/Apr/2016:17:46:58] ENGINE Bus STARTING
+[02/Apr/2016:17:46:58] ENGINE Started monitor thread 'Autoreloader'.
+[02/Apr/2016:17:46:58] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Apr/2016:17:46:58] ENGINE Serving on 0.0.0.0:8264
+[02/Apr/2016:17:46:59]  Failed to start BonJour:
+[02/Apr/2016:17:46:59]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[02/Apr/2016:17:46:59] ENGINE Bus STARTED
+[08/Apr/2016:02:15:06] ENGINE Bus STARTING
+[08/Apr/2016:02:15:06] ENGINE Started monitor thread 'Autoreloader'.
+[08/Apr/2016:02:15:06] ENGINE Started monitor thread '_TimeoutMonitor'.
+[08/Apr/2016:02:15:06] ENGINE Serving on 0.0.0.0:8264
+[08/Apr/2016:02:15:08] ENGINE Bus STARTED
+[28/Apr/2016:22:09:01] ENGINE Bus STARTING
+[28/Apr/2016:22:09:01] ENGINE Started monitor thread 'Autoreloader'.
+[28/Apr/2016:22:09:01] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Apr/2016:22:09:01] ENGINE Serving on 0.0.0.0:8264
+[28/Apr/2016:22:09:03] ENGINE Bus STARTED
+[29/Apr/2016:20:39:45] ENGINE Bus STARTING
+[29/Apr/2016:20:39:45] ENGINE Started monitor thread 'Autoreloader'.
+[29/Apr/2016:20:39:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Apr/2016:20:39:45] ENGINE Serving on 0.0.0.0:8264
+[29/Apr/2016:20:39:47] ENGINE Bus STARTED
+[29/Apr/2016:20:47:45] ENGINE Bus STARTING
+[29/Apr/2016:20:47:45] ENGINE Started monitor thread 'Autoreloader'.
+[29/Apr/2016:20:47:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Apr/2016:20:47:45] ENGINE Serving on 0.0.0.0:8264
+[29/Apr/2016:20:47:48] ENGINE Bus STARTED
+[01/May/2016:14:02:31] ENGINE Bus STARTING
+[01/May/2016:14:02:31] ENGINE Started monitor thread 'Autoreloader'.
+[01/May/2016:14:02:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/May/2016:14:02:31] ENGINE Serving on 0.0.0.0:8264
+[01/May/2016:14:02:33] ENGINE Bus STARTED
+[23/May/2016:09:01:10] ENGINE Bus STARTING
+[23/May/2016:09:01:10] ENGINE Started monitor thread 'Autoreloader'.
+[23/May/2016:09:01:10] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/May/2016:09:01:10] ENGINE Serving on 0.0.0.0:8264
+[23/May/2016:09:01:11] ENGINE Bus STARTED
+[23/May/2016:10:18:41] ENGINE Bus STARTING
+[23/May/2016:10:18:41] ENGINE Started monitor thread 'Autoreloader'.
+[23/May/2016:10:18:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/May/2016:10:18:41] ENGINE Serving on 0.0.0.0:8264
+[23/May/2016:10:18:43] ENGINE Bus STARTED
+[23/May/2016:23:56:01] ENGINE Bus STARTING
+[23/May/2016:23:56:01] ENGINE Started monitor thread 'Autoreloader'.
+[23/May/2016:23:56:01] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/May/2016:23:56:02] ENGINE Serving on 0.0.0.0:8264
+[23/May/2016:23:56:03] ENGINE Bus STARTED
+[25/May/2016:22:34:28] ENGINE Bus STARTING
+[25/May/2016:22:34:28] ENGINE Started monitor thread 'Autoreloader'.
+[25/May/2016:22:34:28] ENGINE Started monitor thread '_TimeoutMonitor'.
+[25/May/2016:22:34:28] ENGINE Serving on 0.0.0.0:8264
+[25/May/2016:22:34:29] ENGINE Bus STARTED
+[01/Jun/2016:21:27:37] ENGINE Bus STARTING
+[01/Jun/2016:21:27:37] ENGINE Started monitor thread 'Autoreloader'.
+[01/Jun/2016:21:27:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Jun/2016:21:27:37] ENGINE Serving on 0.0.0.0:8264
+[01/Jun/2016:21:27:39] ENGINE Bus STARTED
+[04/Jun/2016:08:45:42] ENGINE Bus STARTING
+[04/Jun/2016:08:45:42] ENGINE Started monitor thread 'Autoreloader'.
+[04/Jun/2016:08:45:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Jun/2016:08:45:42] ENGINE Serving on 0.0.0.0:8264
+[04/Jun/2016:08:45:44] ENGINE Bus STARTED
+[04/Jun/2016:17:09:09] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/calibre/ebooks/oeb/polish/errors.pyo changed.
+[04/Jun/2016:17:09:09] ENGINE Stopped thread 'Autoreloader'.
+[04/Jun/2016:17:09:09] ENGINE Bus STOPPING
+[04/Jun/2016:17:09:09] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[04/Jun/2016:17:09:09] ENGINE Stopped thread '_TimeoutMonitor'.
+[04/Jun/2016:17:09:09] ENGINE Bus STOPPED
+[04/Jun/2016:17:09:09] ENGINE Bus EXITING
+[04/Jun/2016:17:09:09] ENGINE Bus EXITED
+[04/Jun/2016:17:09:09] ENGINE Waiting for child threads to terminate...
+[04/Jun/2016:17:09:09] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[06/Jun/2016:16:12:03] ENGINE Bus STARTING
+[06/Jun/2016:16:12:03] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Jun/2016:16:12:03] ENGINE Started monitor thread 'Autoreloader'.
+[06/Jun/2016:16:12:03] ENGINE Serving on 0.0.0.0:8264
+[06/Jun/2016:16:12:04] ENGINE Bus STARTED
+[06/Jun/2016:20:56:29] ENGINE Bus STARTING
+[06/Jun/2016:20:56:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Jun/2016:20:56:29] ENGINE Started monitor thread 'Autoreloader'.
+[06/Jun/2016:20:56:30] ENGINE Serving on 0.0.0.0:8264
+[06/Jun/2016:20:56:31] ENGINE Bus STARTED
+[06/Jun/2016:21:06:41] ENGINE Bus STARTING
+[06/Jun/2016:21:06:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Jun/2016:21:06:41] ENGINE Started monitor thread 'Autoreloader'.
+[06/Jun/2016:21:06:42] ENGINE Serving on 0.0.0.0:8264
+[06/Jun/2016:21:06:43] ENGINE Bus STARTED
+[17/Jun/2016:23:33:24] ENGINE Bus STARTING
+[17/Jun/2016:23:33:24] ENGINE Started monitor thread 'Autoreloader'.
+[17/Jun/2016:23:33:24] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Jun/2016:23:33:34] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f9527d3f590>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[17/Jun/2016:23:33:36] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[17/Jun/2016:23:33:36] ENGINE Bus STOPPING
+[17/Jun/2016:23:33:36] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[17/Jun/2016:23:33:36] ENGINE Stopped thread '_TimeoutMonitor'.
+[17/Jun/2016:23:33:36] ENGINE Stopped thread 'Autoreloader'.
+[17/Jun/2016:23:33:36] ENGINE Bus STOPPED
+[17/Jun/2016:23:33:36] ENGINE Bus EXITING
+[17/Jun/2016:23:33:36] ENGINE Bus EXITED
+[17/Jun/2016:23:33:36]  Trying to bind to single interface: 192.168.31.4
+[17/Jun/2016:23:33:36] ENGINE Bus STARTING
+[17/Jun/2016:23:33:36] ENGINE Started monitor thread 'Autoreloader'.
+[17/Jun/2016:23:33:36] ENGINE Started monitor thread '_TimeoutMonitor'.
+[17/Jun/2016:23:33:46] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7f9527d3f590>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on u'192.168.31.4'
+
+[17/Jun/2016:23:33:48] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on u'192.168.31.4'",)
+
+[17/Jun/2016:23:33:48] ENGINE Bus STOPPING
+[17/Jun/2016:23:33:48] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer((u'192.168.31.4', 8264)) already shut down
+[17/Jun/2016:23:33:48] ENGINE Stopped thread '_TimeoutMonitor'.
+[17/Jun/2016:23:33:48] ENGINE Stopped thread 'Autoreloader'.
+[17/Jun/2016:23:33:48] ENGINE Bus STOPPED
+[17/Jun/2016:23:33:48] ENGINE Bus EXITING
+[17/Jun/2016:23:33:48] ENGINE Bus EXITED
+[21/Jun/2016:00:43:50] ENGINE Bus STARTING
+[21/Jun/2016:00:43:50] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Jun/2016:00:43:50] ENGINE Started monitor thread 'Autoreloader'.
+[21/Jun/2016:00:43:50] ENGINE Serving on 0.0.0.0:8264
+[21/Jun/2016:00:43:53] ENGINE Bus STARTED
+[25/Jun/2016:19:38:27] ENGINE Bus STARTING
+[25/Jun/2016:19:38:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[25/Jun/2016:19:38:27] ENGINE Started monitor thread 'Autoreloader'.
+[25/Jun/2016:19:38:27] ENGINE Serving on 0.0.0.0:8264
+[25/Jun/2016:19:38:29] ENGINE Bus STARTED
+[01/Jul/2016:06:01:20] ENGINE Bus STARTING
+[01/Jul/2016:06:01:20] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Jul/2016:06:01:20] ENGINE Started monitor thread 'Autoreloader'.
+[01/Jul/2016:06:01:20] ENGINE Serving on 0.0.0.0:8264
+[01/Jul/2016:06:01:22] ENGINE Bus STARTED
+[01/Jul/2016:06:35:22] ENGINE Bus STARTING
+[01/Jul/2016:06:35:22] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Jul/2016:06:35:22] ENGINE Started monitor thread 'Autoreloader'.
+[01/Jul/2016:06:35:22] ENGINE Serving on 0.0.0.0:8264
+[01/Jul/2016:06:35:24] ENGINE Bus STARTED
+[02/Jul/2016:01:49:38] ENGINE Restarting because /opt/calibre/lib/python2.7/lib-dynload/select.so changed.
+[02/Jul/2016:01:49:38] ENGINE Stopped thread 'Autoreloader'.
+[02/Jul/2016:01:49:38] ENGINE Bus STOPPING
+[02/Jul/2016:01:49:38] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[02/Jul/2016:01:49:38] ENGINE Stopped thread '_TimeoutMonitor'.
+[02/Jul/2016:01:49:38] ENGINE Bus STOPPED
+[02/Jul/2016:01:49:38] ENGINE Bus EXITING
+[02/Jul/2016:01:49:38] ENGINE Bus EXITED
+[02/Jul/2016:01:49:38] ENGINE Waiting for child threads to terminate...
+[02/Jul/2016:01:49:38] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[05/Jul/2016:14:26:57] ENGINE Bus STARTING
+[05/Jul/2016:14:26:57] ENGINE Started monitor thread '_TimeoutMonitor'.
+[05/Jul/2016:14:26:57] ENGINE Started monitor thread 'Autoreloader'.
+[05/Jul/2016:14:26:57] ENGINE Serving on 0.0.0.0:8264
+[05/Jul/2016:14:26:59] ENGINE Bus STARTED
+[07/Jul/2016:15:30:25] ENGINE Bus STARTING
+[07/Jul/2016:15:30:25] ENGINE Started monitor thread '_TimeoutMonitor'.
+[07/Jul/2016:15:30:25] ENGINE Started monitor thread 'Autoreloader'.
+[07/Jul/2016:15:30:25] ENGINE Serving on 0.0.0.0:8264
+[07/Jul/2016:15:30:27] ENGINE Bus STARTED
+[09/Jul/2016:16:45:18] ENGINE Bus STARTING
+[09/Jul/2016:16:45:18] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Jul/2016:16:45:18] ENGINE Started monitor thread 'Autoreloader'.
+[09/Jul/2016:16:45:18] ENGINE Serving on 0.0.0.0:8264
+[09/Jul/2016:16:45:20] ENGINE Bus STARTED
+[10/Jul/2016:12:47:48] ENGINE Bus STARTING
+[10/Jul/2016:12:47:48] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:12:47:48] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:12:47:48] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:12:47:50] ENGINE Bus STARTED
+[10/Jul/2016:12:56:00] ENGINE Bus STARTING
+[10/Jul/2016:12:56:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:12:56:00] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:12:56:00] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:12:56:02] ENGINE Bus STARTED
+[10/Jul/2016:13:20:45] ENGINE Bus STARTING
+[10/Jul/2016:13:20:45] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:13:20:45] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:13:20:46] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:13:20:47] ENGINE Bus STARTED
+[10/Jul/2016:13:28:56] ENGINE Bus STARTING
+[10/Jul/2016:13:28:56] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:13:28:56] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:13:28:56] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:13:28:58] ENGINE Bus STARTED
+[10/Jul/2016:13:51:47] ENGINE Bus STARTING
+[10/Jul/2016:13:51:47] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:13:51:47] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:13:51:47] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:13:51:49] ENGINE Bus STARTED
+[10/Jul/2016:15:02:33] ENGINE Bus STARTING
+[10/Jul/2016:15:02:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:15:02:33] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:15:02:33] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:15:02:35] ENGINE Bus STARTED
+[10/Jul/2016:15:05:54] ENGINE Bus STARTING
+[10/Jul/2016:15:05:54] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:15:05:54] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:15:05:54] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:15:05:56] ENGINE Bus STARTED
+[10/Jul/2016:18:49:37] ENGINE Bus STARTING
+[10/Jul/2016:18:49:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:18:49:37] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:18:49:37] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:18:49:39] ENGINE Bus STARTED
+[10/Jul/2016:19:35:30] ENGINE Bus STARTING
+[10/Jul/2016:19:35:30] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:19:35:30] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:19:35:40] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7ff2f31fc310>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[10/Jul/2016:19:35:42] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[10/Jul/2016:19:35:42] ENGINE Bus STOPPING
+[10/Jul/2016:19:35:42] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[10/Jul/2016:19:35:42] ENGINE Stopped thread '_TimeoutMonitor'.
+[10/Jul/2016:19:35:42] ENGINE Stopped thread 'Autoreloader'.
+[10/Jul/2016:19:35:42] ENGINE Bus STOPPED
+[10/Jul/2016:19:35:42] ENGINE Bus EXITING
+[10/Jul/2016:19:35:42] ENGINE Bus EXITED
+[10/Jul/2016:19:35:42]  Trying to bind to single interface: 192.168.31.4
+[10/Jul/2016:19:35:42] ENGINE Bus STARTING
+[10/Jul/2016:19:35:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:19:35:42] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:19:35:53] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7ff2f31fc310>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on u'192.168.31.4'
+
+[10/Jul/2016:19:35:54] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on u'192.168.31.4'",)
+
+[10/Jul/2016:19:35:54] ENGINE Bus STOPPING
+[10/Jul/2016:19:35:55] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer((u'192.168.31.4', 8264)) already shut down
+[10/Jul/2016:19:35:55] ENGINE Stopped thread '_TimeoutMonitor'.
+[10/Jul/2016:19:35:55] ENGINE Stopped thread 'Autoreloader'.
+[10/Jul/2016:19:35:55] ENGINE Bus STOPPED
+[10/Jul/2016:19:35:55] ENGINE Bus EXITING
+[10/Jul/2016:19:35:55] ENGINE Bus EXITED
+[10/Jul/2016:20:08:30] ENGINE Bus STARTING
+[10/Jul/2016:20:08:30] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Jul/2016:20:08:30] ENGINE Started monitor thread 'Autoreloader'.
+[10/Jul/2016:20:08:30] ENGINE Serving on 0.0.0.0:8264
+[10/Jul/2016:20:08:32] ENGINE Bus STARTED
+[10/Jul/2016:20:55:35] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/calibre/devices/edge/driver.pyo changed.
+[10/Jul/2016:20:55:35] ENGINE Stopped thread 'Autoreloader'.
+[10/Jul/2016:20:55:35] ENGINE Bus STOPPING
+[10/Jul/2016:20:55:36] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[10/Jul/2016:20:55:36] ENGINE Stopped thread '_TimeoutMonitor'.
+[10/Jul/2016:20:55:36] ENGINE Bus STOPPED
+[10/Jul/2016:20:55:36] ENGINE Bus EXITING
+[10/Jul/2016:20:55:36] ENGINE Bus EXITED
+[10/Jul/2016:20:55:36] ENGINE Waiting for child threads to terminate...
+[10/Jul/2016:20:55:36] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[11/Jul/2016:18:12:31] ENGINE Bus STARTING
+[11/Jul/2016:18:12:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Jul/2016:18:12:31] ENGINE Started monitor thread 'Autoreloader'.
+[11/Jul/2016:18:12:31] ENGINE Serving on 0.0.0.0:8264
+[11/Jul/2016:18:12:33] ENGINE Bus STARTED
+[11/Jul/2016:19:10:41] ENGINE Bus STARTING
+[11/Jul/2016:19:10:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Jul/2016:19:10:41] ENGINE Started monitor thread 'Autoreloader'.
+[11/Jul/2016:19:10:41] ENGINE Serving on 0.0.0.0:8264
+[11/Jul/2016:19:10:43] ENGINE Bus STARTED
+[11/Jul/2016:20:24:54] ENGINE Bus STARTING
+[11/Jul/2016:20:24:54] ENGINE Started monitor thread 'Autoreloader'.
+[11/Jul/2016:20:24:54] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Jul/2016:20:25:04] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fb93f4ab350>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on '0.0.0.0'
+
+[11/Jul/2016:20:25:05] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on '0.0.0.0'",)
+
+[11/Jul/2016:20:25:05] ENGINE Bus STOPPING
+[11/Jul/2016:20:25:06] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) already shut down
+[11/Jul/2016:20:25:06] ENGINE Stopped thread '_TimeoutMonitor'.
+[11/Jul/2016:20:25:06] ENGINE Stopped thread 'Autoreloader'.
+[11/Jul/2016:20:25:06] ENGINE Bus STOPPED
+[11/Jul/2016:20:25:06] ENGINE Bus EXITING
+[11/Jul/2016:20:25:06] ENGINE Bus EXITED
+[11/Jul/2016:20:25:06]  Trying to bind to single interface: 192.168.31.4
+[11/Jul/2016:20:25:06] ENGINE Bus STARTING
+[11/Jul/2016:20:25:06] ENGINE Started monitor thread 'Autoreloader'.
+[11/Jul/2016:20:25:06] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Jul/2016:20:25:16] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x7fb93f4ab350>>
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 197, in publish
+  File "site-packages/cherrypy/_cpserver.py", line 151, in start
+  File "site-packages/cherrypy/process/servers.py", line 167, in start
+  File "site-packages/cherrypy/process/servers.py", line 410, in wait_for_free_port
+IOError: Port 8264 not free on u'192.168.31.4'
+
+[11/Jul/2016:20:25:18] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "site-packages/cherrypy/process/wspbus.py", line 235, in start
+  File "site-packages/cherrypy/process/wspbus.py", line 215, in publish
+ChannelFailures: IOError("Port 8264 not free on u'192.168.31.4'",)
+
+[11/Jul/2016:20:25:18] ENGINE Bus STOPPING
+[11/Jul/2016:20:25:18] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer((u'192.168.31.4', 8264)) already shut down
+[11/Jul/2016:20:25:18] ENGINE Stopped thread '_TimeoutMonitor'.
+[11/Jul/2016:20:25:18] ENGINE Stopped thread 'Autoreloader'.
+[11/Jul/2016:20:25:18] ENGINE Bus STOPPED
+[11/Jul/2016:20:25:18] ENGINE Bus EXITING
+[11/Jul/2016:20:25:18] ENGINE Bus EXITED
+[12/Jul/2016:12:55:05] ENGINE Bus STARTING
+[12/Jul/2016:12:55:05] ENGINE Started monitor thread '_TimeoutMonitor'.
+[12/Jul/2016:12:55:05] ENGINE Started monitor thread 'Autoreloader'.
+[12/Jul/2016:12:55:05] ENGINE Serving on 0.0.0.0:8264
+[12/Jul/2016:12:55:07] ENGINE Bus STARTED
+[15/Jul/2016:23:53:16] ENGINE Bus STARTING
+[15/Jul/2016:23:53:16] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Jul/2016:23:53:16] ENGINE Started monitor thread 'Autoreloader'.
+[15/Jul/2016:23:53:16] ENGINE Serving on 0.0.0.0:8264
+[15/Jul/2016:23:53:18] ENGINE Bus STARTED
+[01/Aug/2016:20:49:49] ENGINE Bus STARTING
+[01/Aug/2016:20:49:49] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Aug/2016:20:49:49] ENGINE Started monitor thread 'Autoreloader'.
+[01/Aug/2016:20:49:49] ENGINE Serving on 0.0.0.0:8264
+[01/Aug/2016:20:49:50] ENGINE Bus STARTED
+[09/Aug/2016:20:51:27] ENGINE Bus STARTING
+[09/Aug/2016:20:51:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Aug/2016:20:51:27] ENGINE Started monitor thread 'Autoreloader'.
+[09/Aug/2016:20:51:28] ENGINE Serving on 0.0.0.0:8264
+[09/Aug/2016:20:51:29] ENGINE Bus STARTED
+[28/Aug/2016:19:33:54] ENGINE Restarting because /opt/calibre/lib/python2.7/site-packages/calibre/ebooks/metadata/opf2.pyo changed.
+[28/Aug/2016:19:33:54] ENGINE Stopped thread 'Autoreloader'.
+[28/Aug/2016:19:33:54] ENGINE Bus STOPPING
+[28/Aug/2016:19:33:55] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[28/Aug/2016:19:33:55] ENGINE Stopped thread '_TimeoutMonitor'.
+[28/Aug/2016:19:33:55] ENGINE Bus STOPPED
+[28/Aug/2016:19:33:55] ENGINE Bus EXITING
+[28/Aug/2016:19:33:55] ENGINE Bus EXITED
+[28/Aug/2016:19:33:55] ENGINE Waiting for child threads to terminate...
+[28/Aug/2016:19:33:55] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[04/Sep/2016:22:58:16] ENGINE Bus STARTING
+[04/Sep/2016:22:58:16] ENGINE Started monitor thread 'Autoreloader'.
+[04/Sep/2016:22:58:16] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Sep/2016:22:58:16] ENGINE Serving on 0.0.0.0:8264
+[04/Sep/2016:22:58:18] ENGINE Bus STARTED
+[06/Sep/2016:18:08:20] ENGINE Bus STARTING
+[06/Sep/2016:18:08:20] ENGINE Started monitor thread 'Autoreloader'.
+[06/Sep/2016:18:08:20] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Sep/2016:18:08:20] ENGINE Serving on 0.0.0.0:8264
+[06/Sep/2016:18:08:22] ENGINE Bus STARTED
+[09/Sep/2016:17:20:00] ENGINE Bus STARTING
+[09/Sep/2016:17:20:00] ENGINE Started monitor thread 'Autoreloader'.
+[09/Sep/2016:17:20:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Sep/2016:17:20:01] ENGINE Serving on 0.0.0.0:8264
+[09/Sep/2016:17:20:02] ENGINE Bus STARTED
+[23/Sep/2016:15:02:43] ENGINE Bus STARTING
+[23/Sep/2016:15:02:43] ENGINE Started monitor thread 'Autoreloader'.
+[23/Sep/2016:15:02:43] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Sep/2016:15:02:43] ENGINE Serving on 0.0.0.0:8264
+[23/Sep/2016:15:02:44] ENGINE Bus STARTED
+[14/Oct/2016:00:49:26] ENGINE Bus STARTING
+[14/Oct/2016:00:49:26] ENGINE Started monitor thread 'Autoreloader'.
+[14/Oct/2016:00:49:26] ENGINE Started monitor thread '_TimeoutMonitor'.
+[14/Oct/2016:00:49:26] ENGINE Serving on 0.0.0.0:8264
+[14/Oct/2016:00:49:27] ENGINE Bus STARTED
+[14/Oct/2016:01:03:18] ENGINE Bus STARTING
+[14/Oct/2016:01:03:18] ENGINE Started monitor thread 'Autoreloader'.
+[14/Oct/2016:01:03:18] ENGINE Started monitor thread '_TimeoutMonitor'.
+[14/Oct/2016:01:03:19] ENGINE Serving on 0.0.0.0:8264
+[14/Oct/2016:01:03:20] ENGINE Bus STARTED
+[18/Oct/2016:09:40:37] ENGINE Bus STARTING
+[18/Oct/2016:09:40:37] ENGINE Started monitor thread 'Autoreloader'.
+[18/Oct/2016:09:40:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[18/Oct/2016:09:40:37] ENGINE Serving on 0.0.0.0:8264
+[18/Oct/2016:09:40:39] ENGINE Bus STARTED
+[21/Oct/2016:17:37:11] ENGINE Bus STARTING
+[21/Oct/2016:17:37:11] ENGINE Started monitor thread 'Autoreloader'.
+[21/Oct/2016:17:37:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Oct/2016:17:37:11] ENGINE Serving on 0.0.0.0:8264
+[21/Oct/2016:17:37:13] ENGINE Bus STARTED
+[21/Oct/2016:18:19:39] ENGINE Bus STARTING
+[21/Oct/2016:18:19:39] ENGINE Started monitor thread 'Autoreloader'.
+[21/Oct/2016:18:19:39] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Oct/2016:18:19:39] ENGINE Serving on 0.0.0.0:8264
+[21/Oct/2016:18:19:41] ENGINE Bus STARTED
+[22/Oct/2016:01:29:20] ENGINE Bus STARTING
+[22/Oct/2016:01:29:20] ENGINE Started monitor thread 'Autoreloader'.
+[22/Oct/2016:01:29:20] ENGINE Started monitor thread '_TimeoutMonitor'.
+[22/Oct/2016:01:29:20] ENGINE Serving on 0.0.0.0:8264
+[22/Oct/2016:01:29:22] ENGINE Bus STARTED
+[23/Oct/2016:16:15:19] ENGINE Bus STARTING
+[23/Oct/2016:16:15:19] ENGINE Started monitor thread 'Autoreloader'.
+[23/Oct/2016:16:15:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[23/Oct/2016:16:15:19] ENGINE Serving on 0.0.0.0:8264
+[23/Oct/2016:16:15:21] ENGINE Bus STARTED
+[28/Oct/2016:20:55:33] ENGINE Bus STARTING
+[28/Oct/2016:20:55:33] ENGINE Started monitor thread 'Autoreloader'.
+[28/Oct/2016:20:55:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Oct/2016:20:55:34] ENGINE Serving on 0.0.0.0:8264
+[28/Oct/2016:20:55:35]  Failed to start BonJour:
+[28/Oct/2016:20:55:35]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[28/Oct/2016:20:55:35] ENGINE Bus STARTED
+[31/Oct/2016:17:24:27] ENGINE Bus STARTING
+[31/Oct/2016:17:24:27] ENGINE Started monitor thread 'Autoreloader'.
+[31/Oct/2016:17:24:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[31/Oct/2016:17:24:27] ENGINE Serving on 0.0.0.0:8264
+[31/Oct/2016:17:24:28]  Failed to start BonJour:
+[31/Oct/2016:17:24:28]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[31/Oct/2016:17:24:28] ENGINE Bus STARTED
+[31/Oct/2016:17:38:32] ENGINE Bus STARTING
+[31/Oct/2016:17:38:32] ENGINE Started monitor thread 'Autoreloader'.
+[31/Oct/2016:17:38:32] ENGINE Started monitor thread '_TimeoutMonitor'.
+[31/Oct/2016:17:38:32] ENGINE Serving on 0.0.0.0:8264
+[31/Oct/2016:17:38:33]  Failed to start BonJour:
+[31/Oct/2016:17:38:33]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[31/Oct/2016:17:38:33] ENGINE Bus STARTED
+[31/Oct/2016:19:04:44] ENGINE Bus STARTING
+[31/Oct/2016:19:04:44] ENGINE Started monitor thread 'Autoreloader'.
+[31/Oct/2016:19:04:44] ENGINE Started monitor thread '_TimeoutMonitor'.
+[31/Oct/2016:19:04:44] ENGINE Serving on 0.0.0.0:8264
+[31/Oct/2016:19:04:45]  Failed to start BonJour:
+[31/Oct/2016:19:04:45]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[31/Oct/2016:19:04:45] ENGINE Bus STARTED
+[31/Oct/2016:19:11:31] ENGINE Bus STARTING
+[31/Oct/2016:19:11:31] ENGINE Started monitor thread 'Autoreloader'.
+[31/Oct/2016:19:11:31] ENGINE Started monitor thread '_TimeoutMonitor'.
+[31/Oct/2016:19:11:31] ENGINE Serving on 0.0.0.0:8264
+[31/Oct/2016:19:11:33] ENGINE Bus STARTED
+[01/Nov/2016:14:35:46] ENGINE Bus STARTING
+[01/Nov/2016:14:35:46] ENGINE Started monitor thread 'Autoreloader'.
+[01/Nov/2016:14:35:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Nov/2016:14:35:46] ENGINE Serving on 0.0.0.0:8264
+[01/Nov/2016:14:35:48] ENGINE Bus STARTED
+[02/Nov/2016:01:33:11] ENGINE Bus STARTING
+[02/Nov/2016:01:33:11] ENGINE Started monitor thread 'Autoreloader'.
+[02/Nov/2016:01:33:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Nov/2016:01:33:11] ENGINE Serving on 0.0.0.0:8264
+[02/Nov/2016:01:33:13] ENGINE Bus STARTED
+[04/Nov/2016:01:38:27] ENGINE Bus STARTING
+[04/Nov/2016:01:38:27] ENGINE Started monitor thread 'Autoreloader'.
+[04/Nov/2016:01:38:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Nov/2016:01:38:27] ENGINE Serving on 0.0.0.0:8264
+[04/Nov/2016:01:38:29] ENGINE Bus STARTED
+[04/Nov/2016:22:10:47] ENGINE Bus STARTING
+[04/Nov/2016:22:10:47] ENGINE Started monitor thread 'Autoreloader'.
+[04/Nov/2016:22:10:47] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Nov/2016:22:10:47] ENGINE Serving on 0.0.0.0:8264
+[04/Nov/2016:22:10:49] ENGINE Bus STARTED
+[06/Nov/2016:13:06:33] ENGINE Bus STARTING
+[06/Nov/2016:13:06:33] ENGINE Started monitor thread 'Autoreloader'.
+[06/Nov/2016:13:06:33] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Nov/2016:13:06:33] ENGINE Serving on 0.0.0.0:8264
+[06/Nov/2016:13:06:35] ENGINE Bus STARTED
+[06/Nov/2016:13:12:41] ENGINE Bus STARTING
+[06/Nov/2016:13:12:41] ENGINE Started monitor thread 'Autoreloader'.
+[06/Nov/2016:13:12:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[06/Nov/2016:13:12:41] ENGINE Serving on 0.0.0.0:8264
+[06/Nov/2016:13:12:43] ENGINE Bus STARTED
+[09/Nov/2016:19:32:11] ENGINE Bus STARTING
+[09/Nov/2016:19:32:11] ENGINE Started monitor thread 'Autoreloader'.
+[09/Nov/2016:19:32:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[09/Nov/2016:19:32:11] ENGINE Serving on 0.0.0.0:8264
+[09/Nov/2016:19:32:13] ENGINE Bus STARTED
+[10/Nov/2016:00:26:49] ENGINE Bus STARTING
+[10/Nov/2016:00:26:49] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:00:26:49] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:00:26:49] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:00:26:51] ENGINE Bus STARTED
+[10/Nov/2016:11:47:15] ENGINE Bus STARTING
+[10/Nov/2016:11:47:15] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:11:47:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:11:47:15] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:11:47:17] ENGINE Bus STARTED
+[10/Nov/2016:16:11:18] ENGINE Bus STARTING
+[10/Nov/2016:16:11:18] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:11:18] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:11:19] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:11:21] ENGINE Bus STARTED
+[10/Nov/2016:16:15:15] ENGINE Bus STARTING
+[10/Nov/2016:16:15:15] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:15:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:15:15] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:15:16]  Failed to start BonJour:
+[10/Nov/2016:16:15:16]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[10/Nov/2016:16:15:16] ENGINE Bus STARTED
+[10/Nov/2016:16:17:49] ENGINE Bus STARTING
+[10/Nov/2016:16:17:49] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:17:49] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:17:49] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:17:51] ENGINE Bus STARTED
+[10/Nov/2016:16:28:10] ENGINE Bus STARTING
+[10/Nov/2016:16:28:10] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:28:10] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:28:10] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:28:12] ENGINE Bus STARTED
+[10/Nov/2016:16:31:07] ENGINE Bus STARTING
+[10/Nov/2016:16:31:07] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:31:07] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:31:07] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:31:08]  Failed to start BonJour:
+[10/Nov/2016:16:31:08]  Traceback (most recent call last):
+  File "site-packages/calibre/library/server/base.py", line 99, in start
+  File "site-packages/calibre/utils/mdns.py", line 152, in publish
+  File "site-packages/calibre/utils/mdns.py", line 107, in start_server
+  File "site-packages/calibre/utils/Zeroconf.py", line 1321, in __init__
+  File "socket.py", line 224, in meth
+error: [Errno 19] No such device
+
+[10/Nov/2016:16:31:08] ENGINE Bus STARTED
+[10/Nov/2016:16:39:19] ENGINE Bus STARTING
+[10/Nov/2016:16:39:19] ENGINE Started monitor thread 'Autoreloader'.
+[10/Nov/2016:16:39:19] ENGINE Started monitor thread '_TimeoutMonitor'.
+[10/Nov/2016:16:39:19] ENGINE Serving on 0.0.0.0:8264
+[10/Nov/2016:16:39:21] ENGINE Bus STARTED
+[14/Nov/2016:21:10:46] ENGINE Bus STARTING
+[14/Nov/2016:21:10:46] ENGINE Started monitor thread 'Autoreloader'.
+[14/Nov/2016:21:10:46] ENGINE Started monitor thread '_TimeoutMonitor'.
+[14/Nov/2016:21:10:47] ENGINE Serving on 0.0.0.0:8264
+[14/Nov/2016:21:10:49] ENGINE Bus STARTED
+[15/Nov/2016:15:43:27] ENGINE Bus STARTING
+[15/Nov/2016:15:43:27] ENGINE Started monitor thread 'Autoreloader'.
+[15/Nov/2016:15:43:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Nov/2016:15:43:28] ENGINE Serving on 0.0.0.0:8264
+[15/Nov/2016:15:43:29] ENGINE Bus STARTED
+[02/Dec/2016:21:42:27] ENGINE Bus STARTING
+[02/Dec/2016:21:42:27] ENGINE Started monitor thread 'Autoreloader'.
+[02/Dec/2016:21:42:27] ENGINE Started monitor thread '_TimeoutMonitor'.
+[02/Dec/2016:21:42:27] ENGINE Serving on 0.0.0.0:8264
+[02/Dec/2016:21:42:29] ENGINE Bus STARTED
+[03/Dec/2016:22:52:29] ENGINE Bus STARTING
+[03/Dec/2016:22:52:29] ENGINE Started monitor thread 'Autoreloader'.
+[03/Dec/2016:22:52:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[03/Dec/2016:22:52:29] ENGINE Serving on 0.0.0.0:8264
+[03/Dec/2016:22:52:31] ENGINE Bus STARTED
+[11/Dec/2016:02:02:29] ENGINE Bus STARTING
+[11/Dec/2016:02:02:29] ENGINE Started monitor thread 'Autoreloader'.
+[11/Dec/2016:02:02:29] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Dec/2016:02:02:29] ENGINE Serving on 0.0.0.0:8264
+[11/Dec/2016:02:02:30] ENGINE Bus STARTED
+[11/Dec/2016:03:13:18] ENGINE Bus STARTING
+[11/Dec/2016:03:13:18] ENGINE Started monitor thread 'Autoreloader'.
+[11/Dec/2016:03:13:18] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Dec/2016:03:13:18] ENGINE Serving on 0.0.0.0:8264
+[11/Dec/2016:03:13:20] ENGINE Bus STARTED
+[11/Dec/2016:03:52:15] ENGINE Bus STARTING
+[11/Dec/2016:03:52:15] ENGINE Started monitor thread 'Autoreloader'.
+[11/Dec/2016:03:52:15] ENGINE Started monitor thread '_TimeoutMonitor'.
+[11/Dec/2016:03:52:15] ENGINE Serving on 0.0.0.0:8264
+[11/Dec/2016:03:52:17] ENGINE Bus STARTED
+[12/Dec/2016:06:16:11] ENGINE Bus STARTING
+[12/Dec/2016:06:16:11] ENGINE Started monitor thread 'Autoreloader'.
+[12/Dec/2016:06:16:11] ENGINE Started monitor thread '_TimeoutMonitor'.
+[12/Dec/2016:06:16:11] ENGINE Serving on 0.0.0.0:8264
+[12/Dec/2016:06:16:12] ENGINE Bus STARTED
+[15/Dec/2016:12:40:26] ENGINE Bus STARTING
+[15/Dec/2016:12:40:26] ENGINE Started monitor thread 'Autoreloader'.
+[15/Dec/2016:12:40:26] ENGINE Started monitor thread '_TimeoutMonitor'.
+[15/Dec/2016:12:40:26] ENGINE Serving on 0.0.0.0:8264
+[15/Dec/2016:12:40:28] ENGINE Bus STARTED
+[21/Dec/2016:16:55:04] ENGINE Bus STARTING
+[21/Dec/2016:16:55:04] ENGINE Started monitor thread 'Autoreloader'.
+[21/Dec/2016:16:55:04] ENGINE Started monitor thread '_TimeoutMonitor'.
+[21/Dec/2016:16:55:04] ENGINE Serving on 0.0.0.0:8264
+[21/Dec/2016:16:55:06] ENGINE Bus STARTED
+[24/Dec/2016:17:06:23] ENGINE Bus STARTING
+[24/Dec/2016:17:06:23] ENGINE Started monitor thread 'Autoreloader'.
+[24/Dec/2016:17:06:23] ENGINE Started monitor thread '_TimeoutMonitor'.
+[24/Dec/2016:17:06:23] ENGINE Serving on 0.0.0.0:8264
+[24/Dec/2016:17:06:25] ENGINE Bus STARTED
+[27/Dec/2016:12:01:41] ENGINE Bus STARTING
+[27/Dec/2016:12:01:41] ENGINE Started monitor thread 'Autoreloader'.
+[27/Dec/2016:12:01:41] ENGINE Started monitor thread '_TimeoutMonitor'.
+[27/Dec/2016:12:01:41] ENGINE Serving on 0.0.0.0:8264
+[27/Dec/2016:12:01:43] ENGINE Bus STARTED
+[28/Dec/2016:02:19:01] ENGINE Bus STARTING
+[28/Dec/2016:02:19:01] ENGINE Started monitor thread 'Autoreloader'.
+[28/Dec/2016:02:19:01] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Dec/2016:02:19:01] ENGINE Serving on 0.0.0.0:8264
+[28/Dec/2016:02:19:03] ENGINE Bus STARTED
+[31/Dec/2016:00:23:31] ENGINE Restarting because /opt/calibre/lib/python2.7/unittest/signals.pyo changed.
+[31/Dec/2016:00:23:31] ENGINE Stopped thread 'Autoreloader'.
+[31/Dec/2016:00:23:31] ENGINE Bus STOPPING
+[31/Dec/2016:00:23:32] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8264)) shut down
+[31/Dec/2016:00:23:32] ENGINE Stopped thread '_TimeoutMonitor'.
+[31/Dec/2016:00:23:32] ENGINE Bus STOPPED
+[31/Dec/2016:00:23:32] ENGINE Bus EXITING
+[31/Dec/2016:00:23:32] ENGINE Bus EXITED
+[31/Dec/2016:00:23:32] ENGINE Waiting for child threads to terminate...
+[31/Dec/2016:00:23:32] ENGINE Re-spawning calibre-server --port 8264 --auto-reload --username haozeke --daemonize
+[01/Jan/2017:19:34:34] ENGINE Bus STARTING
+[01/Jan/2017:19:34:34] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Jan/2017:19:34:34] ENGINE Started monitor thread 'Autoreloader'.
+[01/Jan/2017:19:34:34] ENGINE Serving on 0.0.0.0:8264
+[01/Jan/2017:19:34:36] ENGINE Bus STARTED
+[04/Jan/2017:11:19:34] ENGINE Bus STARTING
+[04/Jan/2017:11:19:34] ENGINE Started monitor thread '_TimeoutMonitor'.
+[04/Jan/2017:11:19:34] ENGINE Started monitor thread 'Autoreloader'.
+[04/Jan/2017:11:19:34] ENGINE Serving on 0.0.0.0:8264
+[04/Jan/2017:11:19:36] ENGINE Bus STARTED

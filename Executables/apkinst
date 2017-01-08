@@ -1,0 +1,30 @@
+#!/bin/sh
+
+which adb || { notify-send 'Please install android-tools-adb before using this script.' ; exit 1; }
+
+echo "APK install log:" > /tmp/apk_batch_install_log
+echo "" >> /tmp/apk_batch_install_log
+
+count=1
+
+(
+    adb start-server
+    echo "#Waiting for device ..."
+    adb wait-for-device
+    for file in "$@"
+    do
+        echo "#Installing $count/$#: $(basename "$file")"
+        adb install "$file" 1>> /tmp/apk_batch_install_log
+        echo "" >> /tmp/apk_batch_install_log
+
+        count=$(( count+1 ))
+        echo "$(echo "scale=0; $count*100/$#" | bc)"
+    done
+) | zenity --progress  \
+  --title="APK installation" \
+  --text="Starting adb server ..." --percentage=0 --auto-close --no-cancel
+
+notify-send "APK installation completed"
+
+zenity --info --text="$(cat /tmp/apk_batch_install_log)"
+rm /tmp/apk_batch_install_log

@@ -1,0 +1,15 @@
+{
+"settings":
+{
+	    /*
+        Default python interpreter.
+
+        This can (and should) be overridden by project settings
+    */
+    "python_interpreter": "python2",
+        "pep257": false,
+    // Set this to false to turn pep8 checking off completely
+    "pep8": false,
+
+}
+}

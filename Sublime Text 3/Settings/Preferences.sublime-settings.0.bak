@@ -1,0 +1,60 @@
+{
+	"added_words":
+	[
+		"smectic",
+		"ferrofluids",
+		"centrosymmetry",
+		"centrosymmetric",
+		"cysteine",
+		"hydrophobins",
+		"hydrophobin",
+		"nanoparticles",
+		"polymeric–inorganic",
+		"polymerizable",
+		"functionalized",
+		"tetrahydrofuran",
+		"thiols",
+		"halogenoalkanes",
+		"bisisobutyronitrile",
+		"azo",
+		"redox",
+		"persulfate",
+		"monofunctional",
+		"mercaptoethanol",
+		"Copolymerization",
+		"copolymerization",
+		"dimerize",
+		"styrene–butadiene–styrene",
+		"triblock",
+		"butadiene",
+		"remoulded",
+		"difunctional",
+		"nucleophilic",
+		"alkoxide",
+		"Workflow",
+		"biomacromolecules",
+		"polysaccharides",
+		"monocytes",
+		"phagocytosis",
+		"Biopolymers",
+		"Steinhauser2009",
+		"rheological"
+	],
+	"color_scheme": "Packages/Monocyanide Colorscheme/Monocyanide ColorScheme - Constrasted Semi.tmTheme",
+	"font_face": "Meslo LG M DZ for Powerline PNF",
+	"font_size": 14,
+	"icon_file_type_enable": true,
+	"ignored_packages":
+	[
+	],
+	"ignored_words":
+	[
+		"Jiang2010",
+		"aniso",
+		"centroidal",
+		"dipolar",
+		"ie",
+		"radical–"
+	],
+	"theme": "Spacegray Eighties.sublime-theme"
+}

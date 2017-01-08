@@ -1,0 +1,20 @@
+{
+  "Users": {}, 
+  "Goodreads": {
+    "devkeySecret": "AwXtlLJJquCXa2O0L9W6g6MjCoHXEMPZ1eZT6K0Wo", 
+    "updateISBN": "NEVER", 
+    "dateReadColumn": "", 
+    "displayUpdateProgressMenu": true, 
+    "displayAddMenu": true, 
+    "tagMappingColumn": "tags", 
+    "swapAuthor": false, 
+    "displayRemoveMenu": true, 
+    "reviewTextColumn": "", 
+    "progressIsPercent": true, 
+    "readingProgressColumn": "", 
+    "displaySyncMenu": true, 
+    "ratingColumn": "", 
+    "devkeyToken": "UxvtOM3ogQWjfgiCnMleA"
+  }, 
+  "SchemaVersion": 1.68
+}

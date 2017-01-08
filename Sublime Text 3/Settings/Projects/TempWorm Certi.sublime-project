@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"path": "/home/haozeke/Github/tempworm"
+		}
+	],
+	"options":
+	{
+		"pdf": "Certificate",
+		"root": "certificate.tex"
+	}
+}

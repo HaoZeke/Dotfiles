@@ -1,0 +1,14 @@
+Use_Label=false
+Show_Values=true
+Show_Bars=false
+Colorize_Values=false
+Color_In=#FF4F00
+Color_Out=#FFE500
+Text=Test
+Network_Device=enp3s0
+Max_In=4096
+Max_Out=4096
+Auto_Max=true
+Update_Interval=1000
+Values_As_Bits=false
+
