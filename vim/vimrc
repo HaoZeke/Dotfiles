@@ -103,11 +103,14 @@ call plug#begin()
     " Less
     Plug 'groenewege/vim-less'
 
-    "Python
+    " Python
     Plug 'klen/python-mode'
     Plug 'jmcantrell/vim-virtualenv'  " This should fix the virtualenvs.
 
-    "Git Stuff
+    " Movement
+    Plug 'matze/vim-move'
+    
+    " Git Stuff
     Plug 'airblade/vim-gitgutter'
     Plug 'mattn/gist-vim'
     Plug 'gregsexton/gitv'
@@ -116,7 +119,7 @@ call plug#begin()
     " Plug 'gerw/vim-latex-suite'
      "Plug 'coot/atp_vim'
     "Plug 'LaTeX-Box-Team/LaTeX-Box'
-     Plug 'gi1242/vim-tex-syntax'
+    Plug 'gi1242/vim-tex-syntax'
     Plug 'lervag/vimtex'
 
     " Not that powerline isn't perfect... right?
