@@ -49,22 +49,22 @@ call plug#begin()
       
     " Awesome syntax checker.
     " REQUIREMENTS: See :h syntastic-intro
-  function! Installjshint(info)
-    if a:info.status == 'installed' || a:info.force
-        !sudo npm install -g jshint
-      endif
-  endfunction
-  Plug 'scrooloose/syntastic', { 'do': function('Installjshint') }
+"  function! Installjshint(info)
+"    if a:info.status == 'installed' || a:info.force
+"        !sudo npm install -g jshint
+"      endif
+"  endfunction
+"  Plug 'scrooloose/syntastic', { 'do': function('Installjshint') }
 
 
     " Markdown Auto View. VERY BAD!! BREAKS SYSTEM INTERMITTENTLY
     " REQUIREMENTS: See :h syntastic-intro
-  function! Installinstamark(info)
-   if a:info.status == 'installed' || a:info.force
-        !sudo npm install -g instant-markdown-d
-      endif
-  endfunction
-  Plug 'suan/vim-instant-markdown', { 'do': function('Installinstamark') }
+"  function! Installinstamark(info)
+"   if a:info.status == 'installed' || a:info.force
+"        !sudo npm install -g instant-markdown-d
+"      endif
+"  endfunction
+"  Plug 'suan/vim-instant-markdown', { 'do': function('Installinstamark') }
 
     " Group dependencies, Pandoc doesn't depend but should.. Who uses this!?
    " Plug 'vim-pandoc/vim-pandoc' | Plug 'vim-pandoc/vim-pandoc-syntax'
@@ -178,6 +178,10 @@ nnoremap ; :
 syntax on
 filetype plugin indent on
 filetype indent on
+" Behold paste indenting!
+nnoremap <F2> :set invpaste paste?<CR>
+set pastetoggle=<F2>
+set showmode
 " Probably NOT a good idea
 
 " setlocal spell spelllang=en_us

@@ -83,7 +83,58 @@
 	"icon_file_type_enable": true,
 	"ignored_packages":
 	[
-		"Makefile"
+		"AcademicMarkdown",
+		"AndroidImport",
+		"AngularJS",
+		"API Blueprint",
+		"ayu",
+		"Base16 Color Schemes",
+		"BeautifyLatex",
+		"BracketHighlighter",
+		"C++ Starting Kit",
+		"Clickable URLs",
+		"CSS Completions",
+		"CSS Unminifier",
+		"Diffy",
+		"DocPy",
+		"Dotfiles Syntax Highlighting",
+		"DoxyDoc",
+		"GitGutter",
+		"Google Search",
+		"Google Spell Check",
+		"HTML Boilerplate",
+		"HTML5",
+		"HTMLAttributes",
+		"HTMLBeautify",
+		"Javascript Beautify",
+		"Jekyll",
+		"JSONLint",
+		"LaTeX-cwl",
+		"LaTeXing",
+		"Makefile",
+		"Markdown Extended",
+		"MarkdownEditing",
+		"Monocyanide Colorscheme",
+		"Monokai - Spacegray",
+		"Monokai Extended",
+		"Origami",
+		"ProjectManager",
+		"Pug",
+		"Python 3",
+		"SCSS",
+		"SCSS Snippets",
+		"Seti_UI",
+		"Seti_UX",
+		"SideBarEnhancements",
+		"SqlBeautifier",
+		"SublimeLinter-contrib-sass-lint",
+		"SublimeLinter-json",
+		"Theme - Centurion",
+		"Theme - Spacegray",
+		"Tmux",
+		"Travis YML Lint",
+		"Vuejs Complete Package",
+		"Wombatish color scheme"
 	],
 	"ignored_words":
 	[
@@ -94,5 +145,19 @@
 		"ie",
 		"radical–"
 	],
+	"paths":
+	{
+		"linux":
+		[
+			"~/.node_modules/bin"
+		],
+		"osx":
+		[
+			"~/.rbenv/shims"
+		],
+		"windows":
+		[
+		]
+	},
 	"theme": "Spacegray Eighties.sublime-theme"
 }

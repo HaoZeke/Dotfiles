@@ -70,7 +70,9 @@ ccache -M 50G
 export MPD_HOST='192.168.31.4'
 export WINEPREFIX=$HOME/.wine/
 export WINEARCH=win32
-export QT_STYLE_OVERRIDE=gtk+
+export QT_STYLE_OVERRIDE=gtk2
+export QT_QPA_PLATFORMTHEME=gtk2
+export XDG_CURRENT_DESKTOP=KDE # this is a horrible hack but it keeps my themes working.
 export LD=ld.gold
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
@@ -81,7 +83,7 @@ export _JAVA_AWT_WM_NONREPARENTING=1 # Otherwise bspwm kinda kills java GUI's
 export PACMAN='powerpill'     # Gets powerpill to work with pacaur
 export QT_AUTO_SCREEN_SCALE_FACTOR=0
 alias FlashTool='sudo FlashTool'
-alias cantata='cantata -style=gtk+'
+alias cantata='cantata -style=gtk2'
 alias foldel='time rsync -avv --delete /home/$USER/blank/ '
 alias quup='time yaourt -Syua --noconfirm --devel'
 alias cpv="rsync -poghb --backup-dir=/tmp/rsync -e /dev/null --progress --"
@@ -381,7 +383,6 @@ source ~/Github/Dotfiles/Zsh/zgen/zgen.zsh
 # check if there's no init script
 if ! zgen saved; then
     echo "Creating a zgen save"
-
     zgen oh-my-zsh
 
     # plugins
@@ -461,3 +462,6 @@ source /etc/profile.d/vte.sh
 
 # NPM Stuff
 export npm_config_prefix=~/.node_modules
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$PATH:$HOME/.rvm/bin"

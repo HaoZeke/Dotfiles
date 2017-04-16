@@ -1,7 +1,7 @@
-only_maximized=false
+only_maximized=true
 show_on_desktop=false
 show_app_icon=true
-icon_on_right=true
+icon_on_right=false
 show_window_menu=true
 hide_title=false
 full_name=true

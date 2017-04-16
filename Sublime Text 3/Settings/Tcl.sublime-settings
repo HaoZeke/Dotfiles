@@ -1,0 +1,14 @@
+{
+	"extensions":
+	[
+		"lmp",
+		"dipole",
+		"settings",
+		"init",
+		"npt",
+		"data",
+		"nvt",
+		"lt",
+		"grawat"
+	]
+}

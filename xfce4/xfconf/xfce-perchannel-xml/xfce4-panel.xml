@@ -92,12 +92,14 @@
     </property>
     <property name="plugin-6" type="string" value="systray">
       <property name="names-visible" type="array">
+        <value type="string" value="stremio-runtime"/>
         <value type="string" value="cantata"/>
         <value type="string" value="task manager"/>
         <value type="string" value="deluge"/>
         <value type="string" value="firefox"/>
         <value type="string" value="gpick"/>
         <value type="string" value="smplayer"/>
+        <value type="string" value="electron"/>
         <value type="string" value="yakyak"/>
         <value type="string" value="guake"/>
         <value type="string" value="nylas"/>
@@ -106,6 +108,7 @@
         <value type="string" value="vlc"/>
         <value type="string" value="clementine"/>
         <value type="string" value="thunar"/>
+        <value type="string" value="odesk team"/>
         <value type="string" value="javaembeddedframe"/>
         <value type="string" value="google-chrome"/>
         <value type="string" value="korganizer reminder daemon"/>
@@ -113,22 +116,25 @@
         <value type="string" value="chromium"/>
         <value type="string" value="syncthing-gtk"/>
         <value type="string" value="kalarm"/>
+        <value type="string" value="simplescreenrecorder"/>
         <value type="string" value="synapse"/>
-        <value type="string" value="gnome encfs manager"/>
-        <value type="string" value="keybase"/>
         <value type="string" value="linuxdc++"/>
+        <value type="string" value="keybase"/>
         <value type="string" value="networkmanager applet"/>
         <value type="string" value="slack"/>
         <value type="string" value="audacious"/>
+        <value type="string" value="gnome encfs manager"/>
         <value type="string" value="everpad"/>
         <value type="string" value="thunderbird"/>
         <value type="string" value="ktimer"/>
         <value type="string" value="blueman-applet"/>
         <value type="string" value="hexchat"/>
+        <value type="string" value="pithos"/>
         <value type="string" value="enpass-desktop"/>
         <value type="string" value="notes"/>
         <value type="string" value="yad"/>
         <value type="string" value="gigolo"/>
+        <value type="string" value="blockify-ui"/>
         <value type="string" value="megasync"/>
       </property>
       <property name="size-max" type="uint" value="30"/>

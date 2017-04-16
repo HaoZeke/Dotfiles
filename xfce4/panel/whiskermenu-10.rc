@@ -1,5 +1,5 @@
 favorites=exo-terminal-emulator.desktop,exo-file-manager.desktop,exo-mail-reader.desktop,exo-web-browser.desktop
-recent=exo-file-manager.desktop,exo-terminal-emulator.desktop,chromium.desktop,playonlinux-Microsoft Excel 2010.desktop,cyberfox.desktop,exo-web-browser.desktop,sublime_text_3.desktop,smplayer.desktop,audacious.desktop,chromium-app-list.desktop
+recent=exo-file-manager.desktop,chromium-dev.desktop,exo-terminal-emulator.desktop,wine-Programs-Adobe Digital Editions 4.5.desktop,wine-Programs-Adobe-Adobe Digital Editions 4.5-Adobe Digital Editions 4.5.desktop,dontpanic.desktop,cyberfox.desktop,exo-web-browser.desktop,audacious.desktop,libreoffice-writer.desktop
 button-title=Applications
 button-icon=xfce4-whiskermenu
 button-single-row=false
@@ -10,6 +10,7 @@ launcher-show-description=true
 launcher-show-tooltip=true
 item-icon-size=2
 hover-switch-category=false
+category-show-name=true
 category-icon-size=1
 load-hierarchy=false
 recent-items-max=10
