@@ -143,7 +143,9 @@ call plug#begin()
 
     " Markdown
     "Plug 'tpope/vim-markdown'
-    Plug 'plasticboy/vim-markdown'
+    "Plug 'godlygeek/tabular'
+    "Plug 'plasticboy/vim-markdown'
+     Plug 'gabrielelana/vim-markdown'
     
     " Completion --> Obsoleted by YouCompleteMe
    " Plug 'othree/vim-autocomplpop'
