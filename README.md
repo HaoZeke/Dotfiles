@@ -42,7 +42,8 @@ $ ln -sf ~/Github/Dotfiles/tmux/tmuxlinesource ~/.tmuxline
 $ ln -sfd ~/Github/Dotfiles/vim ~/.vim
 $ ln -sfd ~/Github/Dotfiles/tilda ~/.config/tilda
 $ ln -sfd ~/Github/Dotfiles/Sublime\ Text\ 3/Settings ~/.config/sublime-text-3/Packages/User/
-$  ln -sfd ~/Github/Dotfiles/Thunar ~/.config/Thunar
+$ ln -sfd ~/Github/Dotfiles/Thunar ~/.config/Thunar
+$ ln -sf ~/Github/Dotfiles/.sass-lint.yml ~/.sass-lint.yml
 ```
 **Now get the submodules for zgen.**
 
