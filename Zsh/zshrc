@@ -463,5 +463,11 @@ source /etc/profile.d/vte.sh
 # NPM Stuff
 export npm_config_prefix=~/.node_modules
 
+# GRE  Word List
+$HOME/Github/Linux/gre-cli-words/random_gre.sh $HOME/Github/Linux/gre-cli-words/custom_gre_word_list
+
+# Termbin
+alias tb="nc termbin.com 9999"
+
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
