@@ -263,7 +263,7 @@ export WORKON_HOME=~/.virtualenvs
 VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 source /usr/bin/virtualenvwrapper.sh
 
-export PATH="$HOME/.node_modules/bin:$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
+export PATH="$HOME/Github/Dotfiles/Scripts:$HOME/.rvm/bin:$HOME/.node_modules/bin:$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
 
 # Add /usr/local/lib to libraries PATH
  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
@@ -463,5 +463,11 @@ source /etc/profile.d/vte.sh
 # NPM Stuff
 export npm_config_prefix=~/.node_modules
 
+# Add Miner Path.
+export PATH="$PATH:$HOME/Github/Linux/xmr-stak-cpu/bin"
+
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
+
+# For Amber
+test -f /home/haozeke/Github/amber16/amber.sh && source /home/haozeke/Github/amber16/amber.sh
