@@ -1,8 +1,8 @@
-only_maximized=false
+only_maximized=true
 show_on_desktop=false
 sync_wm_theme=true
 button_layout=C
-theme=Arc-Dark
+theme=Arc-Dark-Grey
 inactive_text_alpha=60
 inactive_text_shade=110
 

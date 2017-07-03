@@ -23,7 +23,7 @@
         <value type="int" value="11"/>
         <value type="int" value="6"/>
         <value type="int" value="2"/>
-        <value type="int" value="7"/>
+        <value type="int" value="13"/>
       </property>
       <property name="disable-struts" type="bool" value="false"/>
       <property name="autohide-behavior" type="uint" value="0"/>
@@ -132,6 +132,8 @@
         <value type="string" value="pithos"/>
         <value type="string" value="enpass-desktop"/>
         <value type="string" value="notes"/>
+        <value type="string" value="cutegram"/>
+        <value type="string" value="telegramdesktop"/>
         <value type="string" value="yad"/>
         <value type="string" value="gigolo"/>
         <value type="string" value="blockify-ui"/>
@@ -175,11 +177,11 @@
     </property>
     <property name="plugin-3" type="string" value="netload"/>
     <property name="plugin-4" type="string" value="windowck-plugin"/>
-    <property name="plugin-7" type="string" value="wckbuttons"/>
     <property name="plugin-11" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
     </property>
     <property name="plugin-18" type="string" value="windowck-plugin"/>
     <property name="plugin-20" type="string" value="wckbuttons"/>
+    <property name="plugin-13" type="string" value="wckbuttons"/>
   </property>
 </channel>

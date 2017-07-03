@@ -12,7 +12,7 @@ confirm_delete = False
  
 # main window geometry
 # Main window geometry
-main_window_geometry = cPickle.loads('\x80\x02csip\n_unpickle_type\nq\x01U\x0cPyQt5.QtCoreq\x02U\nQByteArrayU2\x01\xd9\xd0\xcb\x00\x02\x00\x00\x00\x00\x00\x0c\x00\x00\x00\x1c\x00\x00\x05I\x00\x00\x02\xf3\x00\x00\x00\x0e\x00\x00\x00\x1e\x00\x00\x05G\x00\x00\x02\xf1\x00\x00\x00\x00\x00\x00\x00\x00\x05V\x85\x87Rq\x03.')
+main_window_geometry = cPickle.loads('\x80\x02csip\n_unpickle_type\nq\x01U\x0cPyQt5.QtCoreq\x02U\nQByteArrayU2\x01\xd9\xd0\xcb\x00\x02\x00\x00\x00\x00\t\x1c\x00\x00\x00\x1c\x00\x00\x0c\xc9\x00\x00\x04\xa3\x00\x00\t\x1e\x00\x00\x00\x1e\x00\x00\x0c\xc7\x00\x00\x04\xa1\x00\x00\x00\x01\x00\x00\x00\x00\x07\x80\x85\x87Rq\x03.')
  
 # new version notification
 # Notify when a new version is available
@@ -39,7 +39,7 @@ cover_flow_queue_length = 6
 LRF_conversion_defaults = cPickle.loads('\x80\x02]q\x01.')
  
 # LRF ebook viewer options
-# Options for the LRF ebook viewer
+# Options for the LRF e-book viewer
 LRF_ebook_viewer_options = None
  
 # internally viewed formats
@@ -51,7 +51,7 @@ internally_viewed_formats = cPickle.loads('\x80\x02]q\x01(U\x03LRFq\x02U\x04EPUB
 column_map = cPickle.loads('\x80\x02]q\x01(U\x05titleq\x02U\x08ondeviceq\x03U\x07authorsq\x04U\x04sizeq\x05U\ttimestampq\x06U\x06ratingq\x07U\tpublisherq\x08U\x04tagsq\tU\x06seriesq\nU\x07pubdateq\x0be.')
  
 # autolaunch server
-# Automatically launch content server on application startup
+# Automatically launch Content server on application startup
 autolaunch_server = False
  
 # oldest news
@@ -79,7 +79,7 @@ separate_cover_flow = False
 disable_tray_notification = False
  
 # default send to device action
-# Default action to perform when send to device button is clicked
+# Default action to perform when the "Send to device" button is clicked
 default_send_to_device_action = 'DeviceAction:main::False:False'
  
 # asked library thing password
@@ -104,14 +104,14 @@ send_to_device_template_history = cPickle.loads('\x80\x02]q\x01.')
  
 # main search history
 # Search history for the main GUI
-main_search_history = cPickle.loads('\x80\x02]q\x01(X\x0c\x00\x00\x00james gleickq\x02X\x1a\x00\x00\x00authors:"=China Mi\xc3\xa9ville"q\x03X\x04\x00\x00\x00Tainq\x04X\x12\x00\x00\x00Christopher priestq\x05X\x12\x00\x00\x00Christopher preistq\x06X\x0b\x00\x00\x00Orson scottq\x07X\x04\x00\x00\x00hugoq\x08X\x0c\x00\x00\x00terry brooksq\tX\x0c\x00\x00\x00anubis gatesq\nX\r\x00\x00\x00wheel of timeq\x0bX\x15\x00\x00\x00the city and the cityq\x0cX\x0c\x00\x00\x00Paul Hoffmanq\rX\x0f\x00\x00\x00authors:"=Paul"q\x0eX\x12\x00\x00\x00authors:"=Hoffman"q\x0fX\x1b\x00\x00\x00authors:"=Anthony Horowitz"q\x10X\x16\x00\x00\x00authors:"=Naomi Novik"q\x11X\x0f\x00\x00\x00authors="Naomi"q\x12X\x15\x00\x00\x00authors="Naomi Novik"q\x13X\x15\x00\x00\x00authors="Naomi Npvik"q\x14X\x0f\x00\x00\x00tags:"=Fantasy"q\x15X\x07\x00\x00\x00scienceq\x16X\x08\x00\x00\x00Mievilleq\x17X\x07\x00\x00\x00Feynmanq\x18X\x15\x00\x00\x00pearl buck good earthq\x19X\x05\x00\x00\x00titleq\x1ae.')
+main_search_history = cPickle.loads('\x80\x02]q\x01(X\x07\x00\x00\x00suicideq\x02X\x08\x00\x00\x00ishiguroq\x03X\x0c\x00\x00\x00james gleickq\x04X\x1a\x00\x00\x00authors:"=China Mi\xc3\xa9ville"q\x05X\x04\x00\x00\x00Tainq\x06X\x12\x00\x00\x00Christopher priestq\x07X\x12\x00\x00\x00Christopher preistq\x08X\x0b\x00\x00\x00Orson scottq\tX\x04\x00\x00\x00hugoq\nX\x0c\x00\x00\x00terry brooksq\x0bX\x0c\x00\x00\x00anubis gatesq\x0cX\r\x00\x00\x00wheel of timeq\rX\x15\x00\x00\x00the city and the cityq\x0eX\x0c\x00\x00\x00Paul Hoffmanq\x0fX\x0f\x00\x00\x00authors:"=Paul"q\x10X\x12\x00\x00\x00authors:"=Hoffman"q\x11X\x1b\x00\x00\x00authors:"=Anthony Horowitz"q\x12X\x16\x00\x00\x00authors:"=Naomi Novik"q\x13X\x0f\x00\x00\x00authors="Naomi"q\x14X\x15\x00\x00\x00authors="Naomi Novik"q\x15X\x15\x00\x00\x00authors="Naomi Npvik"q\x16X\x0f\x00\x00\x00tags:"=Fantasy"q\x17X\x07\x00\x00\x00scienceq\x18X\x08\x00\x00\x00Mievilleq\x19X\x07\x00\x00\x00Feynmanq\x1ae.')
  
 # viewer search history
-# Search history for the ebook viewer
+# Search history for the e-book viewer
 viewer_search_history = cPickle.loads('\x80\x02]q\x01X\x11\x00\x00\x00temperature scaleq\x02a.')
  
 # viewer toc search history
-# Search history for the ToC in the ebook viewer
+# Search history for the ToC in the e-book viewer
 viewer_toc_search_history = cPickle.loads('\x80\x02]q\x01.')
  
 # lrf viewer search history
@@ -159,11 +159,11 @@ auto_download_cover = False
 enforce_cpu_limit = True
  
 # gui layout
-# The layout of the user interface. Wide has the book details panel on the right and narrow has it at the bottom.
+# The layout of the user interface. Wide has the Book details panel on the right and narrow has it at the bottom.
 gui_layout = 'wide'
  
 # show avg rating
-# Show the average rating per item indication in the tag browser
+# Show the average rating per item indication in the Tag browser
 show_avg_rating = True
  
 # disable animations

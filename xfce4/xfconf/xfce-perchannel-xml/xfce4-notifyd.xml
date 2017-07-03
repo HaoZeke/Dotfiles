@@ -9,6 +9,7 @@
       <value type="string" value="calibre"/>
       <value type="string" value="cantata"/>
       <value type="string" value="com.gexperts.Terminix"/>
+      <value type="string" value="com.gexperts.Tilix"/>
       <value type="string" value="Cyberfox"/>
       <value type="string" value="Deluge"/>
       <value type="string" value="Electron"/>
@@ -22,6 +23,10 @@
       <value type="string" value="Thunderbird"/>
       <value type="string" value="udiskie"/>
       <value type="string" value="Xfce volume control"/>
+      <value type="string" value="Xfce4-notifyd settings"/>
     </property>
   </property>
+  <property name="log-level" type="uint" value="0"/>
+  <property name="log-level-apps" type="uint" value="0"/>
+  <property name="primary-monitor" type="uint" value="0"/>
 </channel>

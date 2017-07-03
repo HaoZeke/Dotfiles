@@ -1,17 +1,12 @@
 {
-  "diff_dialog_geom": {
-    "__value__": "AdnQywACAAAAAAHjAAAAYgAABZwAAARNAAAB5QAAAGQAAAWaAAAESwAAAAAAAAAAB4A=", 
+  "metasingle_window_geometry3": {
+    "__value__": "AdnQywACAAAAAAbzAAAAxwAACzcAAAPnAAAG9QAAAMkAAAs1AAAD5QAAAAEAAAAAB4A=", 
     "__class__": "bytearray"
   }, 
-  "Prettify Cover plugin: cover options dialog": {
-    "__value__": "AdnQywACAAAAAAKNAAABFQAABO8AAAPgAAACjwAAARcAAATtAAAD3gAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "font": [
-    "Vollkorn", 
-    11, 
-    50, 
-    false
+  "bulk_metadata_window_tab": 0, 
+  "add_comments_to_email": true, 
+  "recently_used_languages": [
+    "English"
   ], 
   "book_info_dialog_layout": [
     {
@@ -23,25 +18,89 @@
       "__class__": "bytearray"
     }
   ], 
-  "single-cover-fetch-dialog-geometry": {
-    "__value__": "AdnQywACAAAAAAIVAAABKgAABWoAAAOFAAACFwAAASwAAAVoAAADgwAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "toolbar_icon_size": "small", 
   "tag_browser_splitter_horizontal_state": [
     true, 
     200
   ], 
-  "Plugin Updater plugin:plugin updater dialog": {
-    "__value__": "AdnQywACAAAAAAfSAAABkwAAClgAAAMbAAAH1AAAAZUAAApWAAADGQAAAAEAAAAAB4A=", 
-    "__class__": "bytearray"
+  "action-layout-menubar": [
+    "Walk Search History"
+  ], 
+  "library_usage_stats": {
+    "/run/media/haozeke/Storage/Library/Calibre": 57
   }, 
   "grid view visible": false, 
+  "plugin config dialog:User Interface Action:Goodreads Sync": {
+    "__value__": "AdnQywACAAAAAAHOAAAA/wAABbEAAAOvAAAB0AAAAQEAAAWvAAADrQAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
   "CustomProgressBar": {
     "__value__": "AdnQywACAAAAAANYAAACJwAABB8AAAKRAAADWAAAAicAAAQfAAACkQAAAAAAAAAAB4A=", 
     "__class__": "bytearray"
   }, 
-  "bulk_metadata_window_tab": 0, 
+  "manage_authors_table_widths": [
+    226, 
+    226, 
+    226
+  ], 
+  "search bar visible": true, 
+  "single-cover-fetch-dialog-geometry": {
+    "__value__": "AdnQywACAAAAAAIVAAABKgAABWoAAAOFAAACFwAAASwAAAVoAAADgwAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "quick_start_guide_added": true, 
+  "tag browser search box visible": false, 
+  "action-layout-toolbar": [
+    "Add Books", 
+    "Edit Metadata", 
+    null, 
+    "Convert Books", 
+    "View", 
+    null, 
+    "Store", 
+    "Fetch News", 
+    "Help", 
+    null, 
+    "Remove Books", 
+    "Choose Library", 
+    "Save To Disk", 
+    "Reading List", 
+    "Connect Share", 
+    "Tweak ePub", 
+    "Preferences", 
+    "Consolidate All Library Metadata", 
+    "KoboUtilities", 
+    "Prettify Cover", 
+    "Goodreads Sync", 
+    "Annotations", 
+    "Unplugged", 
+    "Walk Search History", 
+    "author_book_count_hierarchy", 
+    "Count Pages"
+  ], 
+  "jobs_dialog_geometry": {
+    "__value__": "AdnQywACAAAAAAKBAAABRwAABP0AAANoAAACgwAAAUkAAAT7AAADZgAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "choose-icon-theme-dialog-geometry": {
+    "__value__": "AdnQywACAAAAAAEQAAAATAAABJUAAAR3AAABEQAAAGwAAASUAAAEdgAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "diff_dialog_geom": {
+    "__value__": "AdnQywACAAAAAAHjAAAAYgAABZwAAARNAAAB5QAAAGQAAAWaAAAESwAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "jobs view column layout3": {
+    "__value__": "AAAA/wAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqgAAAAFAQEBAAAAAAAAAAAAAAAAAGT/////AAAAhAAAAAAAAAAFAAAAZAAAAAEAAAAAAAAA6gAAAAEAAAAAAAAAZAAAAAEAAAAAAAAAcwAAAAEAAAAAAAAAgwAAAAEAAAAAAAAD6AA=", 
+    "__class__": "bytearray"
+  }, 
+  "Plugin Updater plugin:plugin updater dialog": {
+    "__value__": "AdnQywACAAAAAAfSAAABkwAAClgAAAMbAAAH1AAAAZUAAApWAAADGQAAAAEAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "job-detail-view-dialog-geometry": {
+    "__value__": "AdnQywACAAAAAAQFAAABlwAABsQAAAOOAAAEBwAAAZkAAAbCAAADjAAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
   "action-layout-toolbar-device": [
     "Add Books", 
     "Edit Metadata", 
@@ -75,103 +134,148 @@
     "SmartEject", 
     "Count Pages"
   ], 
-  "quick_start_guide_added": true, 
+  "memory_view books view state": {
+    "column_alignment": {
+      "timestamp": "center", 
+      "size": "center"
+    }, 
+    "languages_injected": true, 
+    "sort_history": [
+      [
+        "timestamp", 
+        false
+      ]
+    ], 
+    "column_sizes": {
+      "size": 58, 
+      "authors": 99, 
+      "collections": 111, 
+      "inlibrary": 106, 
+      "title": 63, 
+      "timestamp": 75
+    }, 
+    "last_modified_injected": true, 
+    "hidden_columns": [], 
+    "column_positions": {
+      "size": 4, 
+      "authors": 2, 
+      "collections": 5, 
+      "inlibrary": 0, 
+      "title": 1, 
+      "timestamp": 3
+    }
+  }, 
+  "cover_browser_splitter_vertical_state": [
+    false, 
+    300
+  ], 
+  "show_emblems": false, 
   "plugin config dialog:User Interface Action:Reading List": {
     "__value__": "AdnQywACAAAAAAK1AAAA9AAABMkAAAO7AAACtwAAAPYAAATHAAADuQAAAAAAAAAAB4A=", 
     "__class__": "bytearray"
   }, 
-  "cover_grid_texture": null, 
   "card_b_view books view state": {
-    "column_sizes": {
-      "inlibrary": 106, 
-      "collections": 111, 
-      "title": 63, 
-      "authors": 99, 
-      "timestamp": 75, 
-      "size": 58
-    }, 
-    "column_positions": {
-      "inlibrary": 0, 
-      "collections": 5, 
-      "title": 1, 
-      "authors": 2, 
-      "timestamp": 3, 
-      "size": 4
-    }, 
-    "hidden_columns": [], 
     "column_alignment": {
-      "size": "center", 
-      "timestamp": "center"
+      "timestamp": "center", 
+      "size": "center"
     }, 
-    "last_modified_injected": true, 
+    "languages_injected": true, 
     "sort_history": [
       [
         "timestamp", 
         false
       ]
     ], 
-    "languages_injected": true
+    "column_sizes": {
+      "size": 58, 
+      "authors": 99, 
+      "collections": 111, 
+      "inlibrary": 106, 
+      "title": 63, 
+      "timestamp": 75
+    }, 
+    "last_modified_injected": true, 
+    "hidden_columns": [], 
+    "column_positions": {
+      "size": 4, 
+      "authors": 2, 
+      "collections": 5, 
+      "inlibrary": 0, 
+      "title": 1, 
+      "timestamp": 3
+    }
   }, 
-  "library_usage_stats": {
-    "/run/media/haozeke/Storage/Library/Calibre": 54
+  "manage_authors_dialog_geometry": {
+    "__value__": "AdnQywACAAAAAAAAAAAAAAAAAv8AAAFVAAAAAAAAAAAAAAL/AAABVQAAAAAAAAAABVY=", 
+    "__class__": "bytearray"
   }, 
-  "recently_used_languages": [
-    "English"
-  ], 
+  "bulk_metadata_window_geometry": {
+    "__value__": "AdnQywACAAAAAAHdAAABEwAABaIAAAObAAAB3wAAARUAAAWgAAADmQAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "font_stretch": 100, 
+  "previous_sort_order_BooksView": {
+    "ondevice": false, 
+    "authors": true, 
+    "timestamp": true, 
+    "pubdate": true, 
+    "title": true, 
+    "#ondevices": false
+  }, 
   "duplicates-question-dialog-geometry": {
     "__value__": "AdnQywACAAAAAAgGAAABlwAACiUAAAMXAAAICAAAAZkAAAojAAADFQAAAAEAAAAAB4A=", 
     "__class__": "bytearray"
   }, 
-  "metasingle_window_geometry3": {
-    "__value__": "AdnQywACAAAAAACI/////gAABMwAAAMeAAAAigAAAAAAAATKAAADHAAAAAAAAAAABVY=", 
-    "__class__": "bytearray"
-  }, 
-  "replace_scene_breaks_history": [
-    "", 
-    "<hr />", 
-    "\u2217 \u2217 \u2217", 
-    "\u2022 \u2022 \u2022", 
-    "\u2666 \u2666 \u2666", 
-    "\u2020 \u2020", 
-    "\u2021 \u2021 \u2021", 
-    "\u221e \u221e \u221e", 
-    "\u00a4 \u00a4 \u00a4"
+  "book_details_splitter_horizontal_state": [
+    true, 
+    200
   ], 
-  "jobs view column layout3": {
-    "__value__": "AAAA/wAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqgAAAAFAQEBAAAAAAAAAAAAAAAAAGT/////AAAAhAAAAAAAAAAFAAAAZAAAAAEAAAAAAAAA6gAAAAEAAAAAAAAAZAAAAAEAAAAAAAAAcwAAAAEAAAAAAAAAgwAAAAEAAAAAAAAD6AA=", 
-    "__class__": "bytearray"
-  }, 
-  "memory_view books view state": {
-    "column_sizes": {
-      "inlibrary": 106, 
-      "collections": 111, 
-      "title": 63, 
-      "authors": 99, 
-      "timestamp": 75, 
-      "size": 58
-    }, 
-    "column_positions": {
-      "inlibrary": 0, 
-      "collections": 5, 
-      "title": 1, 
-      "authors": 2, 
-      "timestamp": 3, 
-      "size": 4
-    }, 
-    "hidden_columns": [], 
+  "card_a_view books view state": {
     "column_alignment": {
-      "size": "center", 
-      "timestamp": "center"
+      "timestamp": "center", 
+      "size": "center"
     }, 
-    "last_modified_injected": true, 
+    "languages_injected": true, 
     "sort_history": [
       [
         "timestamp", 
         false
       ]
     ], 
-    "languages_injected": true
+    "column_sizes": {
+      "size": 58, 
+      "authors": 350, 
+      "collections": 111, 
+      "inlibrary": 106, 
+      "title": 350, 
+      "timestamp": 100
+    }, 
+    "last_modified_injected": true, 
+    "hidden_columns": [], 
+    "column_positions": {
+      "size": 4, 
+      "authors": 2, 
+      "collections": 5, 
+      "inlibrary": 0, 
+      "title": 1, 
+      "timestamp": 3
+    }
   }, 
+  "toolbar_icon_size": "small", 
+  "font": [
+    "Vollkorn", 
+    11, 
+    50, 
+    false
+  ], 
+  "metadata_single_gui_geom": {
+    "__value__": "AdnQywACAAAAAAdrAAABKgAACsAAAAOFAAAHbQAAASwAAAq+AAADgwAAAAEAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
+  "ask_to_manage_device": [
+    "BH907DAM1E", 
+    "EP7321863D"
+  ], 
   "custom_colors_for_color_dialog": [
     [
       255, 
@@ -270,123 +374,30 @@
       255
     ]
   ], 
+  "Prettify Cover plugin: cover options dialog": {
+    "__value__": "AdnQywACAAAAAAKNAAABFQAABO8AAAPgAAACjwAAARcAAATtAAAD3gAAAAAAAAAAB4A=", 
+    "__class__": "bytearray"
+  }, 
   "cover_grid_color": [
     80, 
     80, 
     80
   ], 
-  "action-layout-toolbar": [
-    "Add Books", 
-    "Edit Metadata", 
-    null, 
-    "Convert Books", 
-    "View", 
-    null, 
-    "Store", 
-    "Fetch News", 
-    "Help", 
-    null, 
-    "Remove Books", 
-    "Choose Library", 
-    "Save To Disk", 
-    "Reading List", 
-    "Connect Share", 
-    "Tweak ePub", 
-    "Preferences", 
-    "Consolidate All Library Metadata", 
-    "KoboUtilities", 
-    "Prettify Cover", 
-    "Goodreads Sync", 
-    "Annotations", 
-    "Unplugged", 
-    "Walk Search History", 
-    "author_book_count_hierarchy", 
-    "Count Pages"
+  "replace_scene_breaks_history": [
+    "", 
+    "<hr />", 
+    "\u2217 \u2217 \u2217", 
+    "\u2022 \u2022 \u2022", 
+    "\u2666 \u2666 \u2666", 
+    "\u2020 \u2020", 
+    "\u2021 \u2021 \u2021", 
+    "\u221e \u221e \u221e", 
+    "\u00a4 \u00a4 \u00a4"
   ], 
-  "action-layout-menubar": [
-    "Walk Search History"
-  ], 
-  "choose-icon-theme-dialog-geometry": {
-    "__value__": "AdnQywACAAAAAAEQAAAATAAABJUAAAR3AAABEQAAAGwAAASUAAAEdgAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "ask_to_manage_device": [
-    "BH907DAM1E", 
-    "EP7321863D"
-  ], 
-  "plugin config dialog:User Interface Action:Goodreads Sync": {
-    "__value__": "AdnQywACAAAAAAHOAAAA/wAABbEAAAOvAAAB0AAAAQEAAAWvAAADrQAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "bulk_metadata_window_geometry": {
-    "__value__": "AdnQywACAAAAAAHdAAABEwAABaIAAAObAAAB3wAAARUAAAWgAAADmQAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "add_comments_to_email": true, 
-  "font_stretch": 100, 
   "preferences dialog geometry": {
     "__value__": "AdnQywACAAAAAAHtAAAA7gAABZIAAAPBAAAB7wAAAPAAAAWQAAADvwAAAAAAAAAAB4A=", 
     "__class__": "bytearray"
   }, 
   "ui_style": "calibre", 
-  "jobs_dialog_geometry": {
-    "__value__": "AdnQywACAAAAAAKBAAABRwAABP0AAANoAAACgwAAAUkAAAT7AAADZgAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "job-detail-view-dialog-geometry": {
-    "__value__": "AdnQywACAAAAAAQFAAABlwAABsQAAAOOAAAEBwAAAZkAAAbCAAADjAAAAAAAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
-  "card_a_view books view state": {
-    "column_sizes": {
-      "inlibrary": 106, 
-      "collections": 111, 
-      "title": 350, 
-      "authors": 350, 
-      "timestamp": 100, 
-      "size": 58
-    }, 
-    "column_positions": {
-      "inlibrary": 0, 
-      "collections": 5, 
-      "title": 1, 
-      "authors": 2, 
-      "timestamp": 3, 
-      "size": 4
-    }, 
-    "hidden_columns": [], 
-    "column_alignment": {
-      "size": "center", 
-      "timestamp": "center"
-    }, 
-    "last_modified_injected": true, 
-    "sort_history": [
-      [
-        "timestamp", 
-        false
-      ]
-    ], 
-    "languages_injected": true
-  }, 
-  "show_emblems": false, 
-  "metadata_single_gui_geom": {
-    "__value__": "AdnQywACAAAAAAEAAAAAUgAABFUAAAKtAAABAgAAAFQAAARTAAACqwAAAAAAAAAABVY=", 
-    "__class__": "bytearray"
-  }, 
-  "previous_sort_order_BooksView": {
-    "#ondevices": false, 
-    "ondevice": false, 
-    "title": true, 
-    "pubdate": false, 
-    "timestamp": false, 
-    "authors": true
-  }, 
-  "book_details_splitter_horizontal_state": [
-    true, 
-    200
-  ], 
-  "cover_browser_splitter_vertical_state": [
-    false, 
-    300
-  ]
+  "cover_grid_texture": null
 }

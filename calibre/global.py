@@ -27,7 +27,7 @@ library_path = u'/run/media/haozeke/Storage/Library/Calibre'
 language = 'en'
  
 # output format
-# The default output format for ebook conversions.
+# The default output format for e-book conversions.
 output_format = 'epub'
  
 # input format order
@@ -71,7 +71,7 @@ mark_new_books = False
 saved_searches = cPickle.loads('\x80\x02}q\x01.')
  
 # user categories
-# User-created tag browser categories
+# User-created Tag browser categories
 user_categories = cPickle.loads('\x80\x02}q\x01.')
  
 # manage device metadata

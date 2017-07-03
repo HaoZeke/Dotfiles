@@ -1,5 +1,5 @@
 favorites=exo-terminal-emulator.desktop,exo-file-manager.desktop,exo-mail-reader.desktop,exo-web-browser.desktop
-recent=exo-file-manager.desktop,synapse.desktop,exo-terminal-emulator.desktop,exo-web-browser.desktop,gnome-calculator.desktop,smplayer.desktop,cyberfox.desktop,org.kde.okular.desktop,dontpanic.desktop,playonlinux-Microsoft Word 2010.desktop
+recent=smplayer.desktop,exo-file-manager.desktop,exo-terminal-emulator.desktop,cyberfox.desktop,xfce-ui-settings.desktop,xfce-settings-manager.desktop,xfce4-settings-editor.desktop,roxterm.desktop,exo-preferred-applications.desktop,thunar-settings.desktop
 button-title=Applications
 button-icon=xfce4-whiskermenu
 button-single-row=false
