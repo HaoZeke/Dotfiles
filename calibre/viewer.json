@@ -1,6 +1,7 @@
 {
-  "multiplier": 1.4000000953674316, 
   "viewer_open_history": [
+    "/run/media/haozeke/Storage/Library/Study/Octave Levenspiel Rambling Through Science and Technology_withTOC.epub", 
+    "/run/media/haozeke/Storage/Library/Calibre/Robert Jordan/The Shadow Rising (14386)/The Shadow Rising - Robert Jordan.mobi", 
     "/run/media/haozeke/Storage/Library/Calibre/Nick Lane/Power, Sex, Suicide_ Mitochondria and the meaning of life (10279)/Power, Sex, Suicide_ Mitochondria and the  - Nick Lane.epub", 
     "/run/media/haozeke/Storage/Temp/Hugo Award Winners 1953-2015/Hugo Award Winners/1963-Man in the High Castle, The - Philip K. Dick.epub", 
     "/run/media/haozeke/Storage/Temp/Hugo Award Winners 1953-2015/Hugo Award Winners/2003-Hominids - Robert J. Sawyer.epub", 
@@ -37,14 +38,9 @@
     "/home/haozeke/Downloads/Muscle M_ in 5 Weeks by John Kempf.epub", 
     "/run/media/haozeke/Storage/Library/Calibre/James Gleick/The Information_ A History, a Theory, a Flood (8941)/The Information_ A History, a Theory, a Fl - James Gleick.epub"
   ], 
-  "main_window_state": {
-    "__value__": "AAAA/wAAAAL9AAAAAwAAAAAAAAAAAAAAAPwCAAAAAfsAAAAQAHQAbwBjAC0AZABvAGMAawAAAAAA/////wAAAIwA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABwAYgBvAG8AawBtAGEAcgBrAHMALQBkAG8AYwBrAAAAAAD/////AAAA1wD///8AAAADAAADbgAAAN38AQAAAAH7AAAAHABmAG8AbwB0AG4AbwB0AGUAcwAtAGQAbwBjAGsAAAAAPAAAA24AAAA8AP///wAABygAAARdAAAAAQAAAAIAAAABAAAAAvwAAAACAAAAAAAAAAEAAAAQAHQAbwBvAGwAXwBiAGEAcgMAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAASAHQAbwBvAGwAXwBiAGEAcgAyAQAAAAD/////AAAAAAAAAAA=", 
-    "__class__": "bytearray"
-  }, 
-  "viewer_window_geometry": {
-    "__value__": "AdnQywACAAAAAAViAAAAHAAADMkAAASjAAAFZAAAAB4AAAzHAAAEoQAAAAEAAAAAB4A=", 
-    "__class__": "bytearray"
-  }, 
+  "multiplier": 1.4000000953674316, 
+  "in_paged_mode": true, 
+  "viewer_toc_isvisible": false, 
   "custom_colors_for_color_dialog": [
     [
       255, 
@@ -143,6 +139,12 @@
       255
     ]
   ], 
-  "viewer_toc_isvisible": false, 
-  "in_paged_mode": true
+  "viewer_window_geometry": {
+    "__class__": "bytearray", 
+    "__value__": "AdnQywACAAAAAAViAAAAHAAADMkAAASjAAAFZAAAAB4AAAzHAAAEoQAAAAEAAAAAB4A="
+  }, 
+  "main_window_state": {
+    "__class__": "bytearray", 
+    "__value__": "AAAA/wAAAAL9AAAAAwAAAAAAAAAAAAAAAPwCAAAAAfsAAAAQAHQAbwBjAC0AZABvAGMAawAAAAAA/////wAAAIwA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABwAYgBvAG8AawBtAGEAcgBrAHMALQBkAG8AYwBrAAAAAAD/////AAAA1wD///8AAAADAAADbgAAAN38AQAAAAH7AAAAHABmAG8AbwB0AG4AbwB0AGUAcwAtAGQAbwBjAGsAAAAAPAAAA24AAAA8AP///wAABygAAARdAAAAAQAAAAIAAAABAAAAAvwAAAACAAAAAAAAAAEAAAAQAHQAbwBvAGwAXwBiAGEAcgMAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAASAHQAbwBvAGwAXwBiAGEAcgAyAQAAAAD/////AAAAAAAAAAA="
+  }
 }

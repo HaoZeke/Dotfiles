@@ -1,10 +1,10 @@
 {
+  "cfg_news_clippings_lineEdit": "My News Clippings", 
+  "developer_mode": false, 
+  "COMMENTS_DIVIDER": "&middot;  &middot;  &bull;  &middot;  &#x2726;  &middot;  &bull;  &middot; &middot;", 
   "additional_readers": [
     "path/to/your/reader_class.py"
   ], 
-  "cfg_news_clippings_lineEdit": "My News Clippings", 
-  "HORIZONTAL_RULE": "<hr width='80%' />", 
   "plugin_version": "1.4.7", 
-  "COMMENTS_DIVIDER": "&middot;  &middot;  &bull;  &middot;  &#x2726;  &middot;  &bull;  &middot; &middot;", 
-  "developer_mode": false
+  "HORIZONTAL_RULE": "<hr width='80%' />"
 }
