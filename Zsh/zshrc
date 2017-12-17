@@ -60,18 +60,16 @@ if (( ${+terminfo[smkx]} )) && (( ${+terminfo[rmkx]} )); then
     zle -N zle-line-finish
 fi
 #        Custom
-alias bookserve='calibre-server --port 8264 --auto-reload --username $USER --daemonize'
 alias mediaserve='rygel --config=/home/$USER/.config/rygel.conf'
 alias pizza.py='~/Github/pizza-9Oct15/src/pizza.py'
 export EDITOR='vim'
 alias ratemi='sudo reflector --verbose  -l 20 -p http --sort rate --save /etc/pacman.d/mirrorlist' # --country 'India'
 export USE_CCACHE=1
-ccache -M 50G
+ccache -M 50G  >/dev/null
 export MPD_HOST='192.168.31.4'
 export WINEPREFIX=$HOME/.wine/
 export WINEARCH=win32
-export QT_STYLE_OVERRIDE=gtk2
-export QT_QPA_PLATFORMTHEME=gtk2
+export QT_QPA_PLATFORMTHEME=qt5ct
 export XDG_CURRENT_DESKTOP=KDE # this is a horrible hack but it keeps my themes working.
 export LD=ld.gold
 export LANG=en_US.UTF-8
@@ -259,11 +257,11 @@ export INFINALITY_FT_BRIGHTNESS="-10"
 export INFINALITY_FT_FILTER_PARAMS="16 20 28 20 16"
 
 # Fix virtual pythons
-export WORKON_HOME=~/.virtualenvs
-VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
-source /usr/bin/virtualenvwrapper.sh
+# export WORKON_HOME=~/.virtualenvs
+# VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
+# source /usr/bin/virtualenvwrapper.sh
 
-export PATH="$HOME/Github/Dotfiles/Scripts:$HOME/.rvm/bin:$HOME/.node_modules/bin:$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
+export PATH="$HOME/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
 
 # Add /usr/local/lib to libraries PATH
  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
@@ -479,5 +477,100 @@ alias tb="nc termbin.com 9999"
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
 
+# RVM Fixes (per https://github.com/rvm/rvm/issues/3212)
+# Squelch the warning by appending ' > /dev/null 2>&1' here
+[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" > /dev/null 2>&1
+
+# RVM fixes whatever it considers the problem to be, on its own, in `rvm use`.
+# It also prints some junk we don't care about, so we squelch its output in the same way.
+rvm use default > /dev/null 2>&1
+
 # For Amber
 test -f /home/haozeke/Github/amber16/amber.sh && source /home/haozeke/Github/amber16/amber.sh
+
+# Add snaps to the path
+export PATH="$PATH:/var/lib/snapd/snap/bin"
+
+# Add ruby gems to the path
+export PATH="$PATH:/$HOME/.gem/ruby/2.4.0/bin"
+
+# For direnv
+eval "$(direnv hook zsh)"
+
+# For Key signatures
+export GPG_TTY=$(tty)
+
+# For smarter ssh (dumb)
+# ssh(){ /usr/bin/ssh -t $@ "tmux attach || tmux new";} 
+
+# Stop breaking Wine
+export WINEARCH=win32
+
+smartresize() {
+   mogrify -path $3 -filter Triangle -define filter:support=2 -thumbnail $2 -unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 -quality 82 -define jpeg:fancy-upsampling=off -define png:compression-filter=5 -define png:compression-level=9 -define png:compression-strategy=1 -define png:exclude-chunk=all -interlace none -colorspace sRGB $1
+}
+
+libgen () {
+local args=$1
+local genio='http://libgen.io/book/index.php?md5='
+local genrus='http://gen.lib.rus.ec/book/index.php?md5='
+
+if [ -z "${args##*$genio*}" ] ;then
+  local cHashgenio=${@#$genio}
+  echo "[DEBUG] ARGS=${args}"
+  echo "[INFO] The hash will be extracted."
+  local MD5=${cHashgenio}
+elif [ -z "${args##*$genrus*}" ]; then
+  local cHashgenrus=${@#$genrus}
+  echo "[DEBUG] ARGS=${args}"
+  echo "[INFO] The hash will be extracted."
+  local MD5=${cHashgenrus}
+else
+  echo "[DEBUG] ARGS=${args}"
+  local MD5=${args}
+fi
+echo "[INFO] MD5=${MD5}"
+
+# The whole Key thing stops working
+# local URL='http://libgen.io/get.php?md5='
+# local KEY=$(curl -sL "${URL}${MD5}" | grep -oE "key=[^']*" | cut -d'=' -f2)
+# echo "[INFO] KEY=${KEY}"
+
+# local FURL="${URL}${MD5}&key=${KEY}"
+
+# Non-Key
+local altURL='http://libgen.io/ads.php?md5='
+local FURL="${altURL}${MD5}"
+
+# Use wget
+# wget -v -c "${FURL}" -O "${MD5}.libgen"
+# wget --trust-server-names -v -c "${FURL}"
+
+# Use cUrl
+# curl -L -J -O "${FURL}" --progress-bar
+
+# Use aria2c
+ aria2c -j2 "$FURL"
+
+
+# Check Hash
+# md5sum $file???? == $MD5
+}
+
+# Docker Aliases
+alias airsonicDocker='docker run -v /run/media/haozeke/Storage/Music:/airsonic/music -v /run/media/haozeke/Storage/Music/airsonicData:/airsonic/data -p 4050:4040 -d airsonic/airsonic'
+alias crdroidDocker='docker run -it -h crdroid -v /run/media/haozeke/Storage/AndBuild/:/home/build/Android -v /home/haozeke/.ccache/:/home/build/.ccache -v /home/haozeke/.cache/:/home/build/.cache crdroid'
+alias plexDocker='docker run plex'
+# Convert this!!
+alias calibreDocker='calibre-server --port 8264 --userdb /run/media/haozeke/Storage/Library/calServUsers.sqlite --enable-auth --daemonize --log=/home/haozeke/.calServLog'
+
+# Go dependent Aliases
+alias make=mmake
+
+# For Haskell Stack and Friends
+export PATH="$HOME/.local/bin:$PATH"
+# For Docker pushes
+export DOCKER_ID_USER=$USER
+
+# For nix
+. $HOME/.nix-profile/etc/profile.d/nix.sh
