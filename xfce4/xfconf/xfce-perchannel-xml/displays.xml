@@ -4,20 +4,20 @@
   <property name="Default" type="empty">
     <property name="DVI-0" type="string" value="2. Dell 24&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="Resolution" type="string" value="1280x1024"/>
-      <property name="RefreshRate" type="double" value="60.019740"/>
+      <property name="Resolution" type="string" value="1920x1200"/>
+      <property name="RefreshRate" type="double" value="59.950171"/>
       <property name="Rotation" type="int" value="0"/>
       <property name="Reflection" type="string" value="0"/>
       <property name="Primary" type="bool" value="false"/>
       <property name="Position" type="empty">
-        <property name="X" type="int" value="1280"/>
+        <property name="X" type="int" value="1366"/>
         <property name="Y" type="int" value="0"/>
       </property>
     </property>
     <property name="VGA-0" type="string" value="1. Hewlett Packard 19&quot;">
       <property name="Active" type="bool" value="true"/>
-      <property name="Resolution" type="string" value="1280x1024"/>
-      <property name="RefreshRate" type="double" value="60.019740"/>
+      <property name="Resolution" type="string" value="1366x768"/>
+      <property name="RefreshRate" type="double" value="59.789541"/>
       <property name="Rotation" type="int" value="0"/>
       <property name="Reflection" type="string" value="0"/>
       <property name="Primary" type="bool" value="true"/>

@@ -13,7 +13,6 @@
       <property name="plugin-ids" type="array">
         <value type="int" value="9"/>
         <value type="int" value="12"/>
-        <value type="int" value="1"/>
         <value type="int" value="8"/>
         <value type="int" value="4"/>
         <value type="int" value="15"/>
@@ -27,7 +26,7 @@
       </property>
       <property name="disable-struts" type="bool" value="false"/>
       <property name="autohide-behavior" type="uint" value="0"/>
-      <property name="background-style" type="uint" value="1"/>
+      <property name="background-style" type="uint" value="0"/>
       <property name="background-color" type="array">
         <value type="uint" value="7710"/>
         <value type="uint" value="7710"/>
@@ -47,7 +46,7 @@
       <property name="length" type="uint" value="100"/>
       <property name="disable-struts" type="bool" value="true"/>
       <property name="position-locked" type="bool" value="true"/>
-      <property name="background-style" type="uint" value="1"/>
+      <property name="background-style" type="uint" value="0"/>
       <property name="background-color" type="array">
         <value type="uint" value="7710"/>
         <value type="uint" value="7710"/>
@@ -92,59 +91,70 @@
     </property>
     <property name="plugin-6" type="string" value="systray">
       <property name="names-visible" type="array">
-        <value type="string" value="stremio-runtime"/>
-        <value type="string" value="cantata"/>
-        <value type="string" value="task manager"/>
-        <value type="string" value="deluge"/>
-        <value type="string" value="firefox"/>
-        <value type="string" value="gpick"/>
-        <value type="string" value="smplayer"/>
-        <value type="string" value="electron"/>
-        <value type="string" value="yakyak"/>
-        <value type="string" value="guake"/>
-        <value type="string" value="nylas"/>
-        <value type="string" value="tixati"/>
-        <value type="string" value="gnome-encfs-manager"/>
-        <value type="string" value="vlc"/>
-        <value type="string" value="clementine"/>
-        <value type="string" value="thunar"/>
-        <value type="string" value="odesk team"/>
-        <value type="string" value="javaembeddedframe"/>
-        <value type="string" value="google-chrome"/>
-        <value type="string" value="korganizer reminder daemon"/>
-        <value type="string" value="pidgin"/>
-        <value type="string" value="chromium"/>
-        <value type="string" value="syncthing-gtk"/>
-        <value type="string" value="kalarm"/>
-        <value type="string" value="simplescreenrecorder"/>
+        <value type="string" value="caja"/>
         <value type="string" value="synapse"/>
-        <value type="string" value="linuxdc++"/>
-        <value type="string" value="keybase"/>
+        <value type="string" value="teamviewer"/>
         <value type="string" value="networkmanager applet"/>
-        <value type="string" value="slack"/>
-        <value type="string" value="audacious"/>
-        <value type="string" value="gnome encfs manager"/>
-        <value type="string" value="everpad"/>
-        <value type="string" value="thunderbird"/>
-        <value type="string" value="ktimer"/>
-        <value type="string" value="blueman-applet"/>
-        <value type="string" value="hexchat"/>
-        <value type="string" value="pithos"/>
-        <value type="string" value="enpass-desktop"/>
-        <value type="string" value="notes"/>
-        <value type="string" value="cutegram"/>
-        <value type="string" value="telegramdesktop"/>
+        <value type="string" value="electron"/>
+        <value type="string" value="tixati"/>
         <value type="string" value="yad"/>
-        <value type="string" value="gigolo"/>
+        <value type="string" value="javaembeddedframe"/>
+        <value type="string" value="gpick"/>
+        <value type="string" value="clementine"/>
+        <value type="string" value="wally"/>
+        <value type="string" value="simplescreenrecorder"/>
+        <value type="string" value="chromium"/>
+        <value type="string" value="yakyak"/>
+        <value type="string" value="keybase"/>
+        <value type="string" value="slack"/>
+        <value type="string" value="vlc"/>
+        <value type="string" value="pithos"/>
+        <value type="string" value="pomodoneapp"/>
+        <value type="string" value="vericoin-qt"/>
+        <value type="string" value="cherrytree"/>
+        <value type="string" value="cutegram"/>
+        <value type="string" value="smplayer"/>
+        <value type="string" value="syncthing-gtk"/>
+        <value type="string" value="mailspring"/>
+        <value type="string" value="task manager"/>
+        <value type="string" value="guake"/>
+        <value type="string" value="hexchat"/>
         <value type="string" value="blockify-ui"/>
+        <value type="string" value="korganizer reminder daemon"/>
+        <value type="string" value="thunderbird"/>
+        <value type="string" value="chromium-dev"/>
+        <value type="string" value="sia-ui"/>
+        <value type="string" value="stremio-runtime"/>
+        <value type="string" value="pidgin"/>
+        <value type="string" value="enpass-desktop"/>
+        <value type="string" value="deluge"/>
+        <value type="string" value="amule"/>
+        <value type="string" value="gigolo"/>
+        <value type="string" value="audacious"/>
+        <value type="string" value="linuxdc++"/>
+        <value type="string" value="uget-gtk"/>
+        <value type="string" value="telegramdesktop"/>
+        <value type="string" value="firefox"/>
+        <value type="string" value="google-chrome"/>
+        <value type="string" value="notes"/>
+        <value type="string" value="everpad"/>
+        <value type="string" value="thunar"/>
+        <value type="string" value="gnome encfs manager"/>
+        <value type="string" value="nylas"/>
+        <value type="string" value="cantata"/>
+        <value type="string" value="seafile client"/>
+        <value type="string" value="ktimer"/>
+        <value type="string" value="gridcoin-qt"/>
+        <value type="string" value="gnome-encfs-manager"/>
         <value type="string" value="megasync"/>
+        <value type="string" value="mikidown"/>
+        <value type="string" value="kalarm"/>
+        <value type="string" value="odesk team"/>
+        <value type="string" value="verium-qt"/>
+        <value type="string" value="blueman-applet"/>
       </property>
       <property name="size-max" type="uint" value="30"/>
       <property name="show-frame" type="bool" value="false"/>
-    </property>
-    <property name="plugin-1" type="string" value="pager">
-      <property name="rows" type="uint" value="1"/>
-      <property name="miniature-view" type="bool" value="false"/>
     </property>
     <property name="plugin-8" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
@@ -162,6 +172,8 @@
       <property name="new-window" type="empty">
         <property name="always-on-top" type="bool" value="false"/>
         <property name="sticky" type="bool" value="true"/>
+        <property name="width" type="int" value="300"/>
+        <property name="height" type="int" value="375"/>
       </property>
     </property>
     <property name="plugin-10" type="string" value="whiskermenu"/>
@@ -179,6 +191,7 @@
     <property name="plugin-4" type="string" value="windowck-plugin"/>
     <property name="plugin-11" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
+      <property name="mpris-players" type="string" value=";audacious;smplayer;spotify;vlc"/>
     </property>
     <property name="plugin-18" type="string" value="windowck-plugin"/>
     <property name="plugin-20" type="string" value="wckbuttons"/>
