@@ -43,8 +43,8 @@
 <action>
 	<icon>utilities-terminal</icon>
 	<name>Open Terminal</name>
-	<unique-id>1467327211864419-1</unique-id>
-	<command>terminix %d</command>
+	<unique-id>1510592188640559-1</unique-id>
+	<command>tilix %d</command>
 	<description>Opens Terminix</description>
 	<patterns>*</patterns>
 	<startup-notify/>
