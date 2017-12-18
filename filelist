@@ -23,6 +23,34 @@ archlinux=common,linux,archLinux
 .config/sublime-text-3/Packages/User/Preferences.sublime-settings
 .config/sublime-text-3/Packages/User/Package Control.sublime-settings
 .config/sublime-text-3/Packages/User/SideBarEnhancements/Open With/Side Bar.sublime-menu
+.config/sublime-text-3/Packages/User/Markdown.sublime-settings
+.config/sublime-text-3/Packages/User/Jekyll.sublime-settings
+.config/sublime-text-3/Packages/User/Matlab.sublime-settings
+.config/sublime-text-3/Packages/User/Objective-C.sublime-settings
+.config/sublime-text-3/Packages/User/SassBeautify.sublime-settings
+.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap
+.config/sublime-text-3/Packages/User/SublimeLinter.sublime-settings
+.config/sublime-text-3/Packages/User/Markdown (Standard).sublime-settings
+.config/sublime-text-3/Packages/User/Automake.sublime-settings
+.config/sublime-text-3/Packages/User/Autoconf.sublime-settings
+.config/sublime-text-3/Packages/User/UnicodeMath.sublime-settings
+.config/sublime-text-3/Packages/User/Uncrustify.sublime-settings
+.config/sublime-text-3/Packages/User/Sass.sublime-settings
+.config/sublime-text-3/Packages/User/Pug.sublime-settings
+.config/sublime-text-3/Packages/User/PyPug.sublime-settings
+.config/sublime-text-3/Packages/User/Stylus.sublime-settings
+.config/sublime-text-3/Packages/User/MySnippets.sublime-settings
+.config/sublime-text-3/Packages/User/javascript.dom.sublime-settings
+.config/sublime-text-3/Packages/User/Perl.sublime-settings
+.config/sublime-text-3/Packages/User/HTMLPrettify.sublime-settings
+.config/sublime-text-3/Packages/User/.jsbeautifyrc
+.config/sublime-text-3/Packages/User/HTML(Nunjucks).sublime-settings
+.config/sublime-text-3/Packages/User/SCSS.sublime-settings
+.config/sublime-text-3/Packages/User/Nunjucks.sublime-settings
+.config/sublime-text-3/Packages/User/javascript.sublime-settings
+.config/sublime-text-3/Packages/User/JavaScript (Babel).sublime-settings
+.config/sublime-text-3/Packages/User/PKGBUILD.sublime-settings
+.config/sublime-text-3/Packages/User/Shell-Unix-Generic.sublime-settings
 
 # Linux
 #################

@@ -1,0 +1,4 @@
+{
+"allowed_file_extensions": ["htm", "html", "xhtml", "shtml", "xml", "svg","hbs"],
+"indent_handlebars": true, // e.g. {{#foo}}, {{/foo}}
+}
