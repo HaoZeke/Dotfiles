@@ -1,0 +1,253 @@
+{
+	"name": "FTP",
+	"type": 1,
+	"state": 0,
+	"info": {
+		"category": {
+			"hosts": [
+				".edu",
+				".idv"
+			],
+			"schemes": [
+				"ftps",
+				"magnet",
+				"ftp"
+			],
+			"file-exts": [
+				"torrent",
+				"metalink"
+			],
+			"active-limit": 20,
+			"finished-limit": 300,
+			"recycled-limit": 300
+		},
+		"http": {
+			"redirection-limit": 30
+		},
+		"proxy": {
+			"port": 80,
+			"type": 0
+		},
+		"common": {
+			"folder": "\/home\/haozeke\/Downloads",
+			"connect-timeout": 15,
+			"transmit-timeout": 30,
+			"retry-delay": 6,
+			"retry-limit": 99,
+			"retry-count": 0,
+			"max-connections": 16,
+			"max-upload-speed": 0,
+			"max-download-speed": 0,
+			"timestamp": 1
+		}
+	},
+	"children": [
+		{
+			"name": "[Soulreaperzone.com] Houseki no Kuni - 01 HD HS HEVC (h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 7,
+					"total": 7,
+					"elapsed": 2,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512740457,
+					"completed-time": 1513117699,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/userscloud.com\/nui9vybbf56k",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/d24.usercdn.com\/d\/5il47no7tv2fvxijk7azbfc6knsoy6hswh6qd2cpcgmlabsai6hbenm6dv3xs75ikbc4howg\/[Soulreaperzone.com]%20Houseki%20no%20Kuni%20-%2001%20HD%20HS%20HEVC%20(h265).mkv",
+					"file": "[Soulreaperzone.com] Houseki no Kuni - 01 HD HS HEVC (h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com] Houseki no Kuni - 01 HD HS HEVC (h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com] Houseki no Kuni - 01 HD HS HEVC (h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "manual.pdf",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 518091,
+					"total": 518091,
+					"elapsed": 4,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512656129,
+					"completed-time": 1512656133,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "https:\/\/scholar.google.co.in\/",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/6AAB576.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/ccse.jaea.go.jp\/ja\/download\/pimd\/doc\/manual.pdf",
+					"file": "manual.pdf",
+					"folder": "\/home\/haozeke\/Downloads",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/home\/haozeke\/Downloads\/manual.pdf",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/home\/haozeke\/Downloads\/manual.pdf.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "_Amir Faghri and Yuwen Zhang (Auth.)-Transport Phenomena in Multiphase Systems-Elsevier Academic Press (2006).pdf_",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 18421361,
+					"total": 18421361,
+					"elapsed": 417,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512632990,
+					"completed-time": 1512633407,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/libgen.io\/ads.php?md5=FF88D07002664504C8098560A8F552BB",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/226E7A81.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/libgen.io\/get.php?md5=FF88D07002664504C8098560A8F552BB&key=2KTMQN3BACMQF6NE",
+					"file": "_Amir Faghri and Yuwen Zhang (Auth.)-Transport Phenomena in Multiphase Systems-Elsevier Academic Press (2006).pdf_",
+					"folder": "\/home\/haozeke\/Downloads",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/home\/haozeke\/Downloads\/_Amir Faghri and Yuwen Zhang (Auth.)-Transport Phenomena in Multiphase Systems-Elsevier Academic Press (2006).pdf_",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/home\/haozeke\/Downloads\/_Amir Faghri and Yuwen Zhang (Auth.)-Transport Phenomena in Multiphase Systems-Elsevier Academic Press (2006).pdf_.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		}
+	]
+}
+

@@ -1,0 +1,2052 @@
+{
+	"name": "Anime",
+	"type": 1,
+	"state": 0,
+	"info": {
+		"category": {
+			"hosts": [
+				".edu",
+				".idv"
+			],
+			"schemes": [
+				"ftps",
+				"magnet",
+				"ftp"
+			],
+			"file-exts": [
+				"torrent",
+				"metalink"
+			],
+			"active-limit": 20,
+			"finished-limit": 300,
+			"recycled-limit": 300
+		},
+		"http": {
+			"redirection-limit": 30
+		},
+		"proxy": {
+			"port": 80,
+			"type": 0
+		},
+		"common": {
+			"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+			"connect-timeout": 15,
+			"transmit-timeout": 30,
+			"retry-delay": 6,
+			"retry-limit": 99,
+			"retry-count": 0,
+			"max-connections": 16,
+			"max-upload-speed": 0,
+			"max-download-speed": 0,
+			"timestamp": 1
+		}
+	},
+	"children": [
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_11_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 132287259,
+					"total": 132287259,
+					"elapsed": 227,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1513542497,
+					"completed-time": 1513542725,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/kDjNNMkBBV4Yv\/dl",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s01.solidfilesusercontent.com\/NzFjY2VmZDMzNDgyNGUwNzUwYTM2NDA2MmZhNTdhYTI5NzhhNGNlODoxZVFmZms6N3lHZEh5VGRyNVlLTFpfdlRwOFEtU3lkM1pj\/kDjNNMkBBV4Yv\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_11_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_11_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 3,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_11_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_11_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "_Tsuritama 2012 Dual Audio.torrent_",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 6162,
+					"total": 6162,
+					"elapsed": 2,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1513113520,
+					"completed-time": 1513113523,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "https:\/\/animetorrents.me\/torrent-details.php?torid=5659",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/44EA9506.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/animetorrents.me\/download.php?torid=00fbb8001de57c6f6fbdc81ed3fd6be466812945",
+					"file": "_Tsuritama 2012 Dual Audio.torrent_",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Collection",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Collection\/_Tsuritama 2012 Dual Audio.torrent_",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Collection\/_Tsuritama 2012 Dual Audio.torrent_.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 13 [10bit 720p] [2A0439D4].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 209801796,
+					"total": 209801796,
+					"elapsed": 258,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741879,
+					"completed-time": 1512944506,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2013%20[10bit%20720p]%20[2A0439D4].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 13 [10bit 720p] [2A0439D4].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 1,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 13 [10bit 720p] [2A0439D4].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 13 [10bit 720p] [2A0439D4].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 197226946,
+					"total": 197226946,
+					"elapsed": 256,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741842,
+					"completed-time": 1512944493,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2006%20[10bit%20720p]%20[DB9792B6].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].2.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].2.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 06 [10bit 720p] [DB9792B6].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 233765901,
+					"total": 233765901,
+					"elapsed": 232,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741880,
+					"completed-time": 1512944464,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2011%20[10bit%20720p]%20[E6FA0FE4].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 11 [10bit 720p] [E6FA0FE4].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_10_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 144929843,
+					"total": 144929843,
+					"elapsed": 128,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512944211,
+					"completed-time": 1512944339,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/Rja4zNWPZ4yy2\/dl",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/YmFjMmNjYmE2MDhlZGYzOGIxZTE4N2Q0MTVlODhkZTQxODgxZmRiZDoxZU85dFk6NWRnMmN3c1BicnRnVDQ5T2hmSzlOZkhIUE9z\/Rja4zNWPZ4yy2\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_10_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_10_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_10_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_10_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 07 [10bit 720p] [D01FA1DC].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 197367142,
+					"total": 197367142,
+					"elapsed": 547,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741843,
+					"completed-time": 1512759624,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2007%20[10bit%20720p]%20[D01FA1DC].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 07 [10bit 720p] [D01FA1DC].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 07 [10bit 720p] [D01FA1DC].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 07 [10bit 720p] [D01FA1DC].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 09 [10bit 720p] [7B953992].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 261115346,
+					"total": 261115346,
+					"elapsed": 547,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741841,
+					"completed-time": 1512759614,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2009%20[10bit%20720p]%20[7B953992].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 09 [10bit 720p] [7B953992].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 09 [10bit 720p] [7B953992].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 09 [10bit 720p] [7B953992].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 247592903,
+					"total": 247592903,
+					"elapsed": 382,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741840,
+					"completed-time": 1512759448,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/q5aqM6",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2010%20[10bit%20720p]%20[CA17D9EE].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 10 [10bit 720p] [CA17D9EE].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 234174344,
+					"total": 234174344,
+					"elapsed": 364,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741841,
+					"completed-time": 1512759431,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2004%20[10bit%20720p]%20[AD57D0DD].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].2.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].2.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 04 [10bit 720p] [AD57D0DD].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 199922037,
+					"total": 199922037,
+					"elapsed": 196,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741878,
+					"completed-time": 1512759263,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2014%20[10bit%20720p]%20[3C79A92C].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 14 [10bit 720p] [3C79A92C].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 15 [10bit 720p] [98AF7AAF].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 152876004,
+					"total": 152876004,
+					"elapsed": 422,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741871,
+					"completed-time": 1512747941,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2015%20[10bit%20720p]%20[98AF7AAF].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 15 [10bit 720p] [98AF7AAF].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 15 [10bit 720p] [98AF7AAF].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 15 [10bit 720p] [98AF7AAF].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 197066747,
+					"total": 197066747,
+					"elapsed": 306,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741832,
+					"completed-time": 1512747808,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2001%20[10bit%20720p]%20[D4362AD3].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 01 [10bit 720p] [D4362AD3].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 202275143,
+					"total": 202275143,
+					"elapsed": 218,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741832,
+					"completed-time": 1512747720,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/ceesty.com\/qNu6D5",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2002%20[10bit%20720p]%20[E2C3F5EE].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 02 [10bit 720p] [E2C3F5EE].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 208611429,
+					"total": 208611429,
+					"elapsed": 175,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741831,
+					"completed-time": 1512747677,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2003%20[10bit%20720p]%20[B9921FEB].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].1.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].1.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 03 [10bit 720p] [B9921FEB].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 12 [10bit 720p] [727F3FD2].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 215060486,
+					"total": 215060486,
+					"elapsed": 794,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741875,
+					"completed-time": 1512742670,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2012%20[10bit%20720p]%20[727F3FD2].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 12 [10bit 720p] [727F3FD2].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 12 [10bit 720p] [727F3FD2].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 12 [10bit 720p] [727F3FD2].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 19 [10bit 720p] [7925C957].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 155633693,
+					"total": 155633693,
+					"elapsed": 716,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741874,
+					"completed-time": 1512742591,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2019%20[10bit%20720p]%20[7925C957].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 19 [10bit 720p] [7925C957].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 19 [10bit 720p] [7925C957].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 19 [10bit 720p] [7925C957].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 17 [10bit 720p] [74029FE1].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 173810623,
+					"total": 173810623,
+					"elapsed": 692,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741875,
+					"completed-time": 1512742568,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2017%20[10bit%20720p]%20[74029FE1].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 17 [10bit 720p] [74029FE1].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 17 [10bit 720p] [74029FE1].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 17 [10bit 720p] [74029FE1].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 18 [10bit 720p] [29D366A5].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 182643287,
+					"total": 182643287,
+					"elapsed": 639,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741874,
+					"completed-time": 1512742514,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/destyy.com\/wqRyrz",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2018%20[10bit%20720p]%20[29D366A5].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 18 [10bit 720p] [29D366A5].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 18 [10bit 720p] [29D366A5].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 18 [10bit 720p] [29D366A5].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[project-gxs] Fate Apocrypha - 05 [10bit 720p] [4EF26A28].mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 164532631,
+					"total": 164532631,
+					"elapsed": 305,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741790,
+					"completed-time": 1512742096,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/festyy.com\/qMlfsp",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/data.project-gxs.com\/[project-gxs]%20Fate%20Apocrypha%20-%2005%20[10bit%20720p]%20[4EF26A28].mkv",
+					"file": "[project-gxs] Fate Apocrypha - 05 [10bit 720p] [4EF26A28].mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 05 [10bit 720p] [4EF26A28].mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Fate Apocrypha\/[project-gxs] Fate Apocrypha - 05 [10bit 720p] [4EF26A28].mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_08_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 169092919,
+					"total": 169092919,
+					"elapsed": 85,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741105,
+					"completed-time": 1512741191,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/PreZaRGyBPgN4\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/NzcwYWJhZmUxNjUzMzA0YWI4ZGI2OWNhYWYyYzFlZTIxYjAyYzg4ZjoxZU5KM1M6R2tSSXViQUptcnNnd21xZVdSVTRwMkdMV05B\/gR7LgY3BwYLLK\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_08_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_08_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_08_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_08_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_06_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 142950605,
+					"total": 142950605,
+					"elapsed": 73,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741110,
+					"completed-time": 1512741184,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/PreZaRGyBPgN4\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/YWIxMzM5MTM2NmM0YjNjYjE3ODFjZTZiNjI3N2VhM2Q2MjJmZDZhMDoxZU5KMXQ6dzNOOHhSaDRsNUFaUTdFbkluUGRlNW9PZmRN\/dkPGaDA3jGGWA\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_06_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_06_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_06_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_06_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_09_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 136544626,
+					"total": 136544626,
+					"elapsed": 70,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512741105,
+					"completed-time": 1512741175,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/wZMXeXV4x2Kn5\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/NmVhZDIwNzQ1NmJmZmRmYTIyYjRkZDQxNzU2YTMxY2E4NDMyMThiYjoxZU5KM2s6OE4zb0o1VFYtVHp1akVnR1FERThSQXBEaEpR\/wZMXeXV4x2Kn5\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_09_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_09_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_09_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_09_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_05_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 155671521,
+					"total": 155671521,
+					"elapsed": 81,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512740864,
+					"completed-time": 1512740947,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/PreZaRGyBPgN4\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/ZjIyOWZjMDFiZDI4MTg5NDc4YThlNjRhMGQwOTg2ZDRlODI0MDQyMzoxZU5JenQ6WXB5dHdCSGlydTRlR1ppb3c2QWtwNlcxUlBZ\/GKqwQygmVKBmj\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_05_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_05_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_05_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_05_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "UTF-8''[Soulreaperzone.com]_Houseki_no_Kuni_-_02_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 156272997,
+					"total": 156272997,
+					"elapsed": 365,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512740563,
+					"completed-time": 1512740928,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www44.zippyshare.com\/v\/PeJPzM5T\/file.html",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "http:\/\/www44.zippyshare.com\/d\/PeJPzM5T\/7886\/%5bSoulreaperzone.com%5d_Houseki_no_Kuni_-_02_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "UTF-8''[Soulreaperzone.com]_Houseki_no_Kuni_-_02_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/UTF-8''[Soulreaperzone.com]_Houseki_no_Kuni_-_02_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/UTF-8''[Soulreaperzone.com]_Houseki_no_Kuni_-_02_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_04_HD_HS_HEVC_(h265)_0.mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 132810801,
+					"total": 132810801,
+					"elapsed": 65,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512740825,
+					"completed-time": 1512740892,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/PreZaRGyBPgN4\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s01.solidfilesusercontent.com\/NjFiNGFiNmY0NWQ3MGM0MzI4ODEwNjYwYzZkZjUzNGFmZWQ3YmQ3ODoxZU5Jejg6TjlWTGpvd3JhVlgwRGZqZjVNRndKOFR0a3lB\/WdQ77gnw8ZZZ4\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_04_HD_HS_HEVC_%28h265%29_0.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_04_HD_HS_HEVC_(h265)_0.mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_04_HD_HS_HEVC_(h265)_0.mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_04_HD_HS_HEVC_(h265)_0.mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "[Soulreaperzone.com]_Houseki_no_Kuni_-_03_HD_HS_HEVC_(h265).mkv",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 131587188,
+					"total": 131587188,
+					"elapsed": 67,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512740700,
+					"completed-time": 1512740767,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "http:\/\/www.solidfiles.com\/v\/PreZaRGyBPgN4\/dl",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/7B8AFC88.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/s02.solidfilesusercontent.com\/OGZlOTgyOTgwNzkyOGVjYWE4MWE5NzIyYjFmOGZhOGJhMGI4MzUzMDoxZU5JeEk6NW82b0RJTndsVlNpLTlKcUxULS03SDJfUENF\/PreZaRGyBPgN4\/%5BSoulreaperzone.com%5D_Houseki_no_Kuni_-_03_HD_HS_HEVC_%28h265%29.mkv",
+					"file": "[Soulreaperzone.com]_Houseki_no_Kuni_-_03_HD_HS_HEVC_(h265).mkv",
+					"folder": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_03_HD_HS_HEVC_(h265).mkv",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/run\/media\/haozeke\/Storage\/Anime\/Ongoing\/Houseki no Kuni\/[Soulreaperzone.com]_Houseki_no_Kuni_-_03_HD_HS_HEVC_(h265).mkv.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		}
+	]
+}
+

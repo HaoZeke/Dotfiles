@@ -1,0 +1,91 @@
+#
+# bspwm hotkeys
+#
+
+super + alt + Escape
+	bspc quit
+
+super + w
+	bspc node -c
+
+super + n
+	bspc desktop -l next
+
+super + b
+	bspc desktop -B
+
+super + {t,p,s,f}
+	bspc node -t {tiled,pseudo_tiled,floating,fullscreen}
+
+super + {grave,Tab}
+	bspc {node,desktop} -f last
+
+super + apostrophe
+	bspc node -s last
+
+super + {o,i}
+	bspc wm --record-history off; \
+	bspc node {older,newer} -f; \
+	bspc wm --record-history on
+
+super + y
+	bspc node -n last.!automatic
+
+super + m
+	bspc node -s biggest
+
+super + {_,shift + }{h,j,k,l}
+	bspc node -{f,s} {west,south,north,east}
+
+super + {_,shift + }c
+	bspc node -f {next,prev}
+
+super + {comma,period}
+	node @DESKTOP_SEL:/ -C forward|backward
+	
+super + bracket{west,east}
+	bspc desktop -f {prev,next}
+
+super + ctrl + {h,j,k,l}
+	bspc node -p {west,south,north,east}
+
+super + ctrl + {_,shift + }space
+	bspc {node -p cancel,desktop -c}
+
+super + alt + {h,j,k,l}
+	bspc node -e {west -10,south +10,up -10,east +10}
+
+super + alt + shift + {h,j,k,l}
+	bspc node -e {east -10,up +10,south -10,west +10}
+
+super + ctrl + {1-9}
+	bspc node -r 0.{1-9}
+
+super + {_,shift + }{1-9,0}
+	bspc {desktop -f,node -d} ^{1-9,10}
+
+~button1
+	bspc pointer -g focus
+
+super + button{1-3}
+	bspc pointer -g {move,resize_side,resize_corner}
+
+super + !button{1-3}
+	bspc pointer -t %i %i
+
+super + @button{1-3}
+	bspc pointer -u
+
+#
+# wm independent hotkeys
+#
+
+super + Return
+	urxvt	
+
+super + space
+	dmenu_run
+
+# make sxhkd reload its configuration files:
+super + Escape
+	pkill -USR1 -x sxhkd

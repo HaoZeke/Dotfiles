@@ -1,0 +1,253 @@
+{
+	"name": "Books [Unsorted]",
+	"type": 1,
+	"state": 0,
+	"info": {
+		"category": {
+			"hosts": [
+				".edu",
+				".idv"
+			],
+			"schemes": [
+				"ftps",
+				"magnet",
+				"ftp"
+			],
+			"file-exts": [
+				"torrent",
+				"metalink"
+			],
+			"active-limit": 20,
+			"finished-limit": 300,
+			"recycled-limit": 300
+		},
+		"http": {
+			"redirection-limit": 30
+		},
+		"proxy": {
+			"port": 80,
+			"type": 0
+		},
+		"common": {
+			"folder": "\/home\/haozeke\/Downloads\/Books",
+			"connect-timeout": 15,
+			"transmit-timeout": 30,
+			"retry-delay": 6,
+			"retry-limit": 99,
+			"retry-count": 0,
+			"max-connections": 16,
+			"max-upload-speed": 0,
+			"max-download-speed": 0,
+			"timestamp": 1
+		}
+	},
+	"children": [
+		{
+			"name": "_Petroleum-Refinery-Engineering.pdf_",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 238506744,
+					"total": 238506744,
+					"elapsed": 172,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1513090830,
+					"completed-time": 1513091003,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "https:\/\/libgen.pw\/item\/adv\/5a1f054f3a044650f50ec7ec",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/libgen.pw\/download\/book\/5a1f054f3a044650f50ec7ec",
+					"file": "_Petroleum-Refinery-Engineering.pdf_",
+					"folder": "\/home\/haozeke\/Downloads\/Books",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/_Petroleum-Refinery-Engineering.pdf_",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/_Petroleum-Refinery-Engineering.pdf_.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "chemical_process_dynamics_and_controls-book_2.pdf",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 20805782,
+					"total": 20805782,
+					"elapsed": 407,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512747645,
+					"completed-time": 1512748053,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "https:\/\/www.scribd.com\/doc\/182821036\/simulation-handbook-pdf",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/38F2F2EC.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/open.umich.edu\/sites\/default\/files\/downloads\/chemical_process_dynamics_and_controls-book_2.pdf",
+					"file": "chemical_process_dynamics_and_controls-book_2.pdf",
+					"folder": "\/home\/haozeke\/Downloads\/Books",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/chemical_process_dynamics_and_controls-book_2.pdf",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/chemical_process_dynamics_and_controls-book_2.pdf.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		},
+		{
+			"name": "chemical_process_dynamics_and_controls-book_1.pdf",
+			"type": 2,
+			"state": 72,
+			"info": {
+				"relation": {
+					"task": {
+						"plugin-name": "aria2",
+						"priority": 1
+					}
+				},
+				"progress": {
+					"complete": 19054402,
+					"total": 19054402,
+					"elapsed": 390,
+					"uploaded": 0,
+					"percent": 100
+				},
+				"log": {
+					"added-time": 1512747646,
+					"completed-time": 1512748038,
+					"messages": [
+					]
+				},
+				"http": {
+					"referrer": "https:\/\/www.scribd.com\/doc\/182821036\/simulation-handbook-pdf",
+					"cookie-file": "\/home\/haozeke\/.config\/uGet\/attachment\/B5374E0.cookie",
+					"redirection-limit": 30
+				},
+				"proxy": {
+					"port": 80,
+					"type": 0
+				},
+				"common": {
+					"uri": "https:\/\/open.umich.edu\/sites\/default\/files\/downloads\/chemical_process_dynamics_and_controls-book_1.pdf",
+					"file": "chemical_process_dynamics_and_controls-book_1.pdf",
+					"folder": "\/home\/haozeke\/Downloads\/Books",
+					"connect-timeout": 15,
+					"transmit-timeout": 30,
+					"retry-delay": 6,
+					"retry-limit": 99,
+					"retry-count": 0,
+					"max-connections": 16,
+					"max-upload-speed": 0,
+					"max-download-speed": 0,
+					"timestamp": 1
+				}
+			},
+			"children": [
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/chemical_process_dynamics_and_controls-book_1.pdf",
+					"type": 0,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				},
+				{
+					"name": "\/home\/haozeke\/Downloads\/Books\/chemical_process_dynamics_and_controls-book_1.pdf.aria2",
+					"type": 5,
+					"state": 0,
+					"info": {
+					},
+					"children": [
+					]
+				}
+			]
+		}
+	]
+}
+

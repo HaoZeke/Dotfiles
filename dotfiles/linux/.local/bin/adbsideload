@@ -1,0 +1,27 @@
+#!/bin/sh
+
+which adb || { notify-send 'Please install android-tools-adb before using this script.' ; exit 1; }
+
+echo "APK install log:" > /tmp/adb_sideload_log
+echo "" >> /tmp/adb_sideload_log
+
+count=1
+
+(
+    adb start-server
+    echo "#Waiting for device ..."
+    for file in "$@"
+    do
+        echo "#Installing $(basename "$file")"
+        adb sideload "$file" 1>> /tmp/adb_sideload_log
+        echo "" >> /tmp/adb_sideload_log
+
+    done
+) | zenity --progress  \
+  --title="ADB Sideload" \
+  --text="Starting adb server ..." --percentage=0 --auto-close --no-cancel
+
+notify-send "Sideload completed"
+
+zenity --info --text="$(cat /tmp/adb_sideload_log)"
+rm /tmp/adb_sideload_log
