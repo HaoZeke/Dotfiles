@@ -1,9 +1,13 @@
-archlinux=common,archLinux
+archlinux=common,linux,archLinux
 
 # Common
 .zshrc
+.vimrc
 .shell_prompt.sh
 .config/nvim/init.vim
+.config/sublime-text-3/Packages/User/Preferences.sublime-settings
+.config/sublime-text-3/Packages/User/Package Control.sublime-settings
 
 # Shell-related
 .zshSpecifics:archLinux
+.zshPlatform:linux

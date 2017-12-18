@@ -162,9 +162,9 @@ echo "[INFO] MD5=${MD5}"
 local altURL='http://libgen.io/ads.php?md5='
 local FURL="${altURL}${MD5}"
 
-if [[ -x aria2c ]]; then
+if command -v aria2c >/dev/null 2>&1; then
   aria2c -j2 "$FURL"
-elif [[ -x wget ]]; then
+elif command -v wget >/dev/null 2>&1; then
   wget -v -c "${FURL}" -O "${MD5}.libgen"
   wget --trust-server-names -v -c "${FURL}"
 else
@@ -175,6 +175,22 @@ fi
 # md5sum $file???? == $MD5
 }
 
+getCloud() {
+  fileName=$(curl -sI  "${1}" | grep -o -E 'filename=.*$' | sed -e 's/filename=//')
+  echo $fileName
+  if [[ ! -a $fileName ]]; then
+    if command -v aria2c >/dev/null 2>&1; then
+      aria2c -j2 "$1"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -v -c "${1}"
+      wget --trust-server-names -v -c "${1}"
+    else
+      curl -L -J -O "${1}" --progress-bar
+    fi
+  else
+    echo "This file already exists."
+  fi
+}
 
 # Sources
 ############
@@ -223,6 +239,14 @@ if [[ ! -d ~/.zplug ]]; then
 fi
 
 source ~/.zplug/init.zsh
+
+
+# Platform 
+#############
+
+if [ -f ~/.zshPlatform ]; then
+  . ~/.zshPlatform
+fi
 
 
 # Specifics 
