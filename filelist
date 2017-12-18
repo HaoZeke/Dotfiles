@@ -3,6 +3,7 @@
 #############
 
 archlinux=common,linux,archLinux
+myarchbox=common,linux,archLinux,myArchBox
 
 ##########
 # Groups #
@@ -15,9 +16,14 @@ archlinux=common,linux,archLinux
 .zshrc
 .vimrc
 .shell_prompt.sh
+.tmuxlinesource
+.tmux.conf
+.agignore
+.sass-lint.yml
 
-# Config #
+# Configs #
 .config/nvim/init.vim
+.config/neofetch/config.conf
 
 # Sublime Text 3
 .config/sublime-text-3/Packages/User/Preferences.sublime-settings
@@ -57,9 +63,96 @@ archlinux=common,linux,archLinux
 
 .zshPlatform:linux
 
+# Executables #
+.local/bin/netlify-git-api:linux
+.local/bin/java_nonreparenting_wm_hack.sh:linux
+.local/bin/apkinst:linux
+.local/bin/adbsideload:linux
+.local/bin/bash2zshpromt:linux
+.local/bin/replace.sh:linux
+.local/bin/lineage_oms_merge.sh:linux
+.local/bin/lineage_oms_update.sh:linux
+.local/bin/ascii2hdf5:linux
+.local/bin/gh-md-toc:linux
+.local/bin/nukeGraphsScript.sh:linux
+
+# Configs #
+
+# Viewnoir
+.config/viewnior/viewnior.conf:linux
+
+# Tilda
+.config/tilda:linux
+.config/tilda/config_3:linux
+.config/tilda/config_1:linux
+.config/tilda/config_0:linux
+.config/tilda/config_2:linux
+
+# Uncrustify
+.config/uncrustify/uncrustify_cpp.cfg:linux
+
 # ArchLinux
 #################
 
 # Shell
 .zshSpecifics:archLinux
 
+# Configs #
+
+.config/compton.conf:archLinux
+.config/powerline:archLinux
+
+# sxhkd
+.config/sxhkd/sxhkdrc:archLinux
+
+# bspwm
+.config/bspwm/panel:archLinux
+.config/bspwm/panel_bar:archLinux
+.config/bspwm/panel_colors:archLinux
+.config/bspwm/bspwmrc:archLinux
+
+# Thunar
+.config/Thunar/uca.xml:archLinux
+.config/Thunar/renamerrc:archLinux
+.config/Thunar/accels.scm:archLinux
+
+# Xfce4
+.config/xfce4/panel:archLinux
+.config/xfce4/xfconf:archLinux
+
+# myArchBox
+##############
+
+crontab:myArchBox
+.xprofile:myArchBox
+
+# Configs #
+
+# mpd
+.config/mpd/mpd.conf:myArchBox
+
+# uGet
+.config/uGet/category/0000.json:myArchBox
+.config/uGet/category/0001.json:myArchBox
+.config/uGet/category/0002.json:myArchBox
+.config/uGet/category/0003.json:myArchBox
+.config/uGet/category/0004.json:myArchBox
+.config/uGet/Setting.json:myArchBox
+
+# CherryTree
+.config/cherrytree/config.cfg:myArchBox
+
+# Nitrogen
+.config/nitrogen/bg-saved.cfg:myArchBox
+.config/nitrogen/nitrogen.cfg:myArchBox
+
+# Audacious
+.config/audacious/config:myArchBox
+.config/audacious/plugin-registry:myArchBox
+.config/audacious/playlists/1004.audpl:myArchBox
+.config/audacious/playlists/1001.audpl:myArchBox
+.config/audacious/playlists/1003.audpl:myArchBox
+.config/audacious/playlists/1002.audpl:myArchBox
+.config/audacious/playlists/order:myArchBox
+.config/audacious/playlists/1000.audpl:myArchBox
+.config/audacious/playlists/1005.audpl:myArchBox
