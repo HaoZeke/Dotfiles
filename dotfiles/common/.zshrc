@@ -156,11 +156,14 @@ fi
 # GRE Word List
 if [[ ! -d $HOME/Github/Linux/gre-cli-words ]]; then
   $HOME/Github/Linux/gre-cli-words/random_gre.sh $HOME/Github/Linux/gre-cli-words/custom_gre_word_list
+  echo "You haven't configured gre-cli-words"
 fi
 
 # Nix
 if [[ ! -d /nix ]]; then
   . $HOME/.nix-profile/etc/profile.d/nix.sh
+else
+  echo "You don't have nix installed"
 fi
 
 # Common Exports

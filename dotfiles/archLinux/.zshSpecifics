@@ -18,7 +18,6 @@ alias cpv="rsync -poghb --backup-dir=/tmp/rsync -e /dev/null --progress --"
 # Alias for External Hard Disk
 alias Storage='/run/media/$USER/Storage'
 
-
 # IE Alias.
 # To get this working install winetricks and run
 # WINEARCH=win32 WINEPREFIX=~/.wine-ie6 winetricks ie6
@@ -35,6 +34,7 @@ alias z3cl='sudo umount /home/$USER/Encfs/Secrets ; rm -rf /home/$USER/Encfs/Sec
 alias airsonicDocker='docker run -v /run/media/haozeke/Storage/Music:/airsonic/music -v /run/media/haozeke/Storage/Music/airsonicData:/airsonic/data -p 4050:4040 -d airsonic/airsonic'
 alias crdroidDocker='docker run -it -h crdroid -v /run/media/haozeke/Storage/AndBuild/:/home/build/Android -v /home/haozeke/.ccache/:/home/build/.ccache -v /home/haozeke/.cache/:/home/build/.cache crdroid'
 alias plexDocker='docker run plex'
+
 # Convert this!!
 alias calibreDocker='calibre-server --port 8264 --userdb /run/media/haozeke/Storage/Library/calServUsers.sqlite --enable-auth --daemonize --log=/home/haozeke/.calServLog'
 
@@ -98,25 +98,35 @@ test -f /home/haozeke/Github/amber16/amber.sh && source /home/haozeke/Github/amb
 if [[ -z ccache ]]; then
   ccache -M 50G  >/dev/null
   export USE_CCACHE=1
+else
+  echo "You seem to be missing ccache\n"
 fi
 
 if [[ -d $HOME/.virtualenvs ]]; then
   export WORKON_HOME=~/.virtualenvs
   VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
   source /usr/bin/virtualenvwrapper.sh
+else
+  echo "You seem to be missing virtualenvs\n"
 fi
 
 if [[ -z direnv ]]; then
   eval "$(direnv hook zsh)"
+else
+  echo "You seem to be missing direnv\n"
 fi
 
 # Gets powerpill to work with pacaur
 if [[ -x powerpill ]]; then
   export PACMAN='powerpill'
+else
+  echo "You seem to be missing powerpill\n"
 fi
 
 if [[ -z mmake ]]; then
   alias make=mmake
+else
+  echo "You seem to be missing mmake\n"
 fi
 
 # Java Fixes
@@ -179,7 +189,6 @@ export INFINALITY_FT_FILTER_PARAMS="16 20 28 20 16"
 # PATH Changes
 ################
 
-
 # Pre path [overrides] #
 export PATH="$HOME/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH"
 
@@ -228,4 +237,6 @@ if [[ -z rvm ]]; then
   # RVM fixes whatever it considers the problem to be, on its own, in `rvm use`.
   # It also prints some junk we don't care about, so we squelch its output in the same way.
   rvm use default > /dev/null 2>&1
+else
+  echo "You seem to be missing rvm\n"
 fi
