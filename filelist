@@ -1,0 +1,9 @@
+archlinux=common,archLinux
+
+# Common
+.zshrc
+.shell_prompt.sh
+.config/nvim/init.vim
+
+# Shell-related
+.zshSpecifics:archLinux
