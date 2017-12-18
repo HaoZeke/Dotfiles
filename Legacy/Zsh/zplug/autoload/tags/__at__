@@ -1,0 +1,31 @@
+#!/usr/bin/env zsh
+# Description:
+#   Branch, tag, or commit to use
+
+local    arg="$1" package
+local -a parsed_zplugs
+local    at
+local    default="master"
+
+package="${arg}, ${zplugs[$arg]%, }"
+parsed_zplugs=(${(s/, /)package/,  */, })
+
+at="${parsed_zplugs[(k)at:*]#at:*}"
+if [[ -z $at ]]; then
+    zstyle -s ":zplug:tag" at at
+fi
+
+local from
+__zplug::core::core::run_interfaces \
+    'from' \
+    "$arg" \
+    | read from
+
+if [[ $from == "gh-r" ]]; then
+    default="latest"
+    if [[ -n $at ]]; then
+        at="tag/$at"
+    fi
+fi
+
+echo "${at:-$default}"

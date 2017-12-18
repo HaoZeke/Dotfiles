@@ -1,0 +1,18 @@
+#!/usr/bin/env zsh
+# Description:
+#   The conditions under which to install and/or use the package
+
+local    arg="$1" package
+local -a parsed_zplugs
+local    if
+local    default=""
+
+package="${arg}, ${zplugs[$arg]%, }"
+parsed_zplugs=(${(s/, /)package/,  */, })
+
+if="${parsed_zplugs[(k)if:*]#if:*}"
+if [[ -z $if ]]; then
+    zstyle -s ":zplug:tag" if if
+fi
+
+echo "${if:-$default}"

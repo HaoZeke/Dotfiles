@@ -1,0 +1,38 @@
+#!/usr/bin/env zsh
+# Description:
+#   The number of commits to include in the cloned repository
+
+local    arg="$1" package
+local -a parsed_zplugs
+local    depth
+local -i default=0
+
+package="${arg}, ${zplugs[$arg]%, }"
+parsed_zplugs=(${(s/, /)package/,  */, })
+
+depth="${parsed_zplugs[(k)depth:*]#depth:*}"
+if [[ -z $depth ]]; then
+    zstyle -s ":zplug:tag" depth depth
+fi
+
+: ${depth:=$default}
+
+case $depth in
+    <->)
+        #depth_option="--depth=$tag_depth"
+        :
+        ;;
+    *)
+        # not integer
+        __zplug::io::print::f \
+            --die \
+            --zplug \
+            --error \
+            --func \
+            "depth tag must be a positive number\n" \
+            "but, if zero, no shallow clone.\n"
+        return 1
+        ;;
+esac
+
+echo "$depth"

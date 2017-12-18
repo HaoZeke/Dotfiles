@@ -1,0 +1,55 @@
+#!/usr/bin/env zsh
+# Description:
+#   Specify the service from which you install
+
+local    arg="$1" package
+local -a parsed_zplugs
+local    from
+local    default="github"
+local -a candidates
+
+candidates=(
+"$ZPLUG_ROOT/base/sources/"*.zsh
+)
+candidates=( ${${candidates%.zsh}:t} )
+
+package="${arg}, ${zplugs[$arg]%, }"
+parsed_zplugs=(${(s/, /)package/,  */, })
+
+from="${parsed_zplugs[(k)from:*]#from:*}"
+if [[ -z $from ]]; then
+    zstyle -t ":zplug:tag" from "${candidates[@]}"
+    case $status in
+        0)
+            # ok
+            zstyle -s ":zplug:tag" from from
+            ;;
+        1)
+            __zplug::io::print::f \
+                --die \
+                --zplug \
+                --error \
+                --func \
+                "from tag must be [%s] ($fg[green]%s$reset_color)\n" \
+                "${(j:, :)candidates[*]}" \
+                "$arg"
+            ;;
+        2)
+            # undefined
+            ;;
+    esac
+fi
+
+: ${from:=$default}
+if [[ ! $from =~ ^(${(j:|:)candidates[@]})$ ]]; then
+    __zplug::io::print::f \
+        --die \
+        --zplug \
+        --error \
+        --func \
+        "from tag must be [%s] ($fg[green]%s$reset_color)\n" \
+        "${(j:, :)candidates[*]}" \
+        "$arg"
+    return 1
+fi
+echo "$from"

@@ -1,0 +1,1 @@
+/home/haozeke/Github/Dotfiles/Zsh/zplug/repos/zplug/zplug/init.zsh
