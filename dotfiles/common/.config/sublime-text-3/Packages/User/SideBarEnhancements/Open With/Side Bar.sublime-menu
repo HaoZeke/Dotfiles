@@ -1,0 +1,86 @@
+[
+	{"id": "side-bar-files-open-with",
+		"children":
+		[
+
+			// Okular
+			{
+				"caption": "Okular",
+				"id": "side-bar-files-open-with-okular",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "okular", // OSX
+									"extensions":"pdf|dvi",  //any file with these extensions
+									"args":[]
+								},
+				"open_automatically" : true // will close the view/tab and launch the application
+			},
+
+			// WPS Word
+			// {
+			// 	"caption": "Okular",
+			// 	"id": "side-bar-files-open-with-okular",
+
+			// 	"command": "side_bar_files_open_with",
+			// 	"args": {
+			// 						"paths": [],
+			// 						"application": "okular", // OSX
+			// 						"extensions":"pdf",  //any file with these extensions
+			// 						"args":[]
+			// 					},
+			// 	"open_automatically" : true // will close the view/tab and launch the application
+			// },
+
+			//application 1
+			{
+				"caption": "Photoshop",
+				"id": "side-bar-files-open-with-photoshop",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "Adobe Photoshop CS5.app", // OSX
+									"extensions":"psd|png|jpg|jpeg",  //any file with these extensions
+									"args":[]
+								},
+				"open_automatically" : false // will close the view/tab and launch the application
+			},
+
+			//separator
+			{"caption":"-"},
+
+			//application 2
+			{
+				"caption": "SeaMonkey",
+				"id": "side-bar-files-open-with-seamonkey",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "C:\\Archivos de programa\\SeaMonkey\\seamonkey.exe", // WINNT
+									"extensions":"", //open all even folders
+									"args":[]
+								},
+				"open_automatically" : false // will close the view/tab and launch the application
+			},
+			//application n
+			{
+				"caption": "Chrome",
+				"id": "side-bar-files-open-with-chrome",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "C:\\Documents and Settings\\tito\\local\\Datos de programa\\Google\\Chrome\\Application\\chrome.exe",
+									"extensions":".*", //any file with extension
+									"args":[]
+						},
+				"open_automatically" : false // will close the view/tab and launch the application
+			},
+
+			{"caption":"-"}
+		]
+	}
+]
