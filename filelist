@@ -125,6 +125,7 @@ myarchbox=common,linux,archLinux,myArchBox
 
 crontab:myArchBox
 .xprofile:myArchBox
+.xinitrc:myArchBox
 
 # Configs #
 
