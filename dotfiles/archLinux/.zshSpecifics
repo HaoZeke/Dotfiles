@@ -70,12 +70,15 @@ droidBuild() {
 
 zplug "plugins/archlinux",                from:oh-my-zsh
 
+# Misc
+zplug "rimraf/k"
+
 # Install and Update
 if ! zplug check --verbose; then
     printf "Install? [y/N]: "
     if read -q; then
         echo; zplug install
-        zplug load --verbose
+        zplug load --silent
     fi
 fi
 
@@ -95,7 +98,7 @@ test -f /home/haozeke/Github/amber16/amber.sh && source /home/haozeke/Github/amb
 # Commands
 ###########
 
-if [[ -z ccache ]]; then
+if command -v ccache >/dev/null 2>&1; then
   ccache -M 50G  >/dev/null
   export USE_CCACHE=1
 else
@@ -110,20 +113,20 @@ else
   echo "You seem to be missing virtualenvs\n"
 fi
 
-if [[ -z direnv ]]; then
+if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 else
   echo "You seem to be missing direnv\n"
 fi
 
 # Gets powerpill to work with pacaur
-if [[ -x powerpill ]]; then
+if command -v powerpill >/dev/null 2>&1; then
   export PACMAN='powerpill'
 else
   echo "You seem to be missing powerpill\n"
 fi
 
-if [[ -z mmake ]]; then
+if command -v mmake >/dev/null 2>&1; then
   alias make=mmake
 else
   echo "You seem to be missing mmake\n"
@@ -143,7 +146,7 @@ export JAVA_FONTS=/usr/share/fonts/TTF
 # Exports
 ###########
 
-export EDITOR='vim'
+export EDITOR='nvim'
 
 # NPM Stuff
 export npm_config_prefix=~/.node_modules
@@ -226,7 +229,7 @@ export PYTHONPATH=$PYTHONPATH:/home/$USER/Github/espresso:/home/$USER/Github/Lin
 # End with this
 ##################
 
-if [[ -z rvm ]]; then
+if command -v rvm >/dev/null 2>&1; then
   # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
   export PATH="$PATH:$HOME/.rvm/bin"
 
@@ -238,5 +241,5 @@ if [[ -z rvm ]]; then
   # It also prints some junk we don't care about, so we squelch its output in the same way.
   rvm use default > /dev/null 2>&1
 else
-  echo "You seem to be missing rvm\n"
+  echo "You seem to be missing rvm"
 fi
