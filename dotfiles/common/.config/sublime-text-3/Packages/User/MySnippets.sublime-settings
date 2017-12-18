@@ -5,8 +5,8 @@
 	// Leaving display empty will place directory contents in root menu
 	"folders":[
 		{
-			"display": "cssGrid",
-			"path": "/home/haozeke/Github/Linux/SublimeText/sublime-text-css-grid-snippets/snippets"
+			"display": "",
+			"path": ""
 		}
 	]
 }
