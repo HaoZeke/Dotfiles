@@ -83,6 +83,7 @@ alias tb="nc termbin.com 9999"
 # Sudo
 alias '_'= 'sudo'
 
+
 # Functions
 ############
 

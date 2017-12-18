@@ -102,7 +102,7 @@ if command -v ccache >/dev/null 2>&1; then
   ccache -M 50G  >/dev/null
   export USE_CCACHE=1
 else
-  echo "You seem to be missing ccache\n"
+  echo "You seem to be missing ccache"
 fi
 
 if [[ -d $HOME/.virtualenvs ]]; then
@@ -110,26 +110,26 @@ if [[ -d $HOME/.virtualenvs ]]; then
   VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
   source /usr/bin/virtualenvwrapper.sh
 else
-  echo "You seem to be missing virtualenvs\n"
+  echo "You seem to be missing virtualenvs"
 fi
 
 if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 else
-  echo "You seem to be missing direnv\n"
+  echo "You seem to be missing direnv"
 fi
 
 # Gets powerpill to work with pacaur
 if command -v powerpill >/dev/null 2>&1; then
   export PACMAN='powerpill'
 else
-  echo "You seem to be missing powerpill\n"
+  echo "You seem to be missing powerpill"
 fi
 
 if command -v mmake >/dev/null 2>&1; then
   alias make=mmake
 else
-  echo "You seem to be missing mmake\n"
+  echo "You seem to be missing mmake"
 fi
 
 # Java Fixes
