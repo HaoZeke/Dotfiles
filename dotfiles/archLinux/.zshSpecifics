@@ -177,6 +177,9 @@ export _JAVA_AWT_WM_NONREPARENTING=1
 # For Key signatures
 export GPG_TTY=$(tty)
 
+# Use pacman's keyring for gnupg
+export GNUPGHOME=/etc/pacman.d/gnupg
+
 # Stop breaking Wine
 export WINEARCH=win32
 
