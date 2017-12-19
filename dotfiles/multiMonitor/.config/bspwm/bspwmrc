@@ -55,7 +55,6 @@ bspc rule -a Xfce4-notes state=floating follow=on focus=on
 
 # AutoStart
 compton --config ~/.config/compton.conf -b  
-xfce4-volumed-pulse &
 java_nonreparenting &
 calibre-server --port 8264 --auto-reload --username haozeke --daemonize &
 thunar --daemon &
