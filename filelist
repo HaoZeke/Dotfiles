@@ -76,6 +76,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .local/bin/ascii2hdf5:linux
 .local/bin/gh-md-toc:linux
 .local/bin/nukeGraphsScript.sh:linux
+.local/bin/gh2https:linux
+.local/bin/gh2ssh:linux
 
 # Configs #
 
