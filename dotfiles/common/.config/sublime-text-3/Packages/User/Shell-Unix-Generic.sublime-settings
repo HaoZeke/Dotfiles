@@ -1,6 +1,7 @@
 {
 	"extensions":
 	[
-		"zshrc"
+		"zshrc",
+		"sxhkdrc"
 	]
 }

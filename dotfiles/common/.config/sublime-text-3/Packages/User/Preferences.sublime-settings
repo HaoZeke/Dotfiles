@@ -83,8 +83,8 @@
 		"node_modules/**"
 	],
 	"close_windows_when_empty": false,
-	"color_scheme": "Packages/Theme - Alpenglow/Alpenglow.tmTheme",
-	"font_face": "Meslo LG M DZ for Powerline",
+	"color_scheme": "Packages/User/SublimeLinter/Asphalt (SL).tmTheme",
+	"font_face": "Meslo LG L Regular Nerd Font Complete",
 	"font_size": 15,
 	"icon_file_type_enable": true,
 	"ignored_packages":
@@ -112,6 +112,7 @@
 		"HTML5",
 		"HTMLAttributes",
 		"HTMLBeautify",
+		"JavaScript",
 		"Javascript Beautify",
 		"Jekyll",
 		"JSONLint",
@@ -170,7 +171,7 @@
 	"tab_size": 2,
 	"tabs_padding_small": true,
 	"tabs_small": true,
-	"theme": "Alpenglow-blue.sublime-theme",
+	"theme": "Asphalt-blue.sublime-theme",
 	"translate_tabs_to_spaces": true,
 	"vintageous_use_ctrl_keys": false
 }
