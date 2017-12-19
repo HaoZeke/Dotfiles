@@ -6,14 +6,13 @@
 ################
 
 if command -v subl >/dev/null 2>&1; then
-  if [[ ! -a ".config/sublime-text-3/Packages/User/Package Control.sublime-settings" ]]; then
+  if [[ ! -a "$HOME/.config/sublime-text-3/Packages/User/Package Control.sublime-settings" ]]; then
     if command -v aria2c >/dev/null 2>&1; then
-      aria2c -j2 "https://packagecontrol.io/Package%20Control.sublime-package"
+      aria2c -j2 "https://packagecontrol.io/Package%20Control.sublime-package" -d=$HOME/.config/sublime-text-3/Packages/User/
     elif command -v wget >/dev/null 2>&1; then
-      wget -v -c "https://packagecontrol.io/Package%20Control.sublime-package"
-      wget --trust-server-names -v -c "https://packagecontrol.io/Package%20Control.sublime-package"
+      wget --trust-server-names -v -c "https://packagecontrol.io/Package%20Control.sublime-package" -P $HOME/.config/sublime-text-3/Packages/User/
     else
-      curl -L -J -O "https://packagecontrol.io/Package%20Control.sublime-package" --progress-bar
+      ( cd $HOME/.config/sublime-text-3/Packages/User/; curl -L -J -O "https://packagecontrol.io/Package%20Control.sublime-package" --progress-bar)
     fi
   fi
 fi
