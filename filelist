@@ -119,7 +119,6 @@ myarchbox=common,linux,archLinux,myArchBox
 # Thunar
 .config/Thunar/uca.xml:archLinux
 .config/Thunar/renamerrc:archLinux
-.config/Thunar/accels.scm:archLinux
 
 # Xfce4 Configs
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:archLinux
@@ -151,6 +150,7 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/xfce4/panel/windowck-plugin-4.rc:archLinux
 .config/xfce4/panel/windowck-plugin-18.rc:archLinux
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:archLinux
+
 
 # myArchBox
 ##############
