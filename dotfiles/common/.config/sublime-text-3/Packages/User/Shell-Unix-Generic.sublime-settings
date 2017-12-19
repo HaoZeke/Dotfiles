@@ -2,6 +2,12 @@
 	"extensions":
 	[
 		"zshrc",
-		"sxhkdrc"
+		"sxhkdrc",
+		".shellSpecifics",
+		".bashSpecifics",
+		".shellPlatform",
+		".zshPlatform",
+		".bashPlatform",
+		".zshenv"
 	]
 }

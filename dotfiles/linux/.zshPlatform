@@ -1,18 +1,32 @@
-###########################
-# Linux platform defaults #
-###########################
+########################
+# Linux zsh defaults   #
+########################
 
-# Sublime Text
-################
+# Extra zPlug Stuff
+#####################
 
-if command -v subl >/dev/null 2>&1; then
-  if [[ ! -a "$HOME/.config/sublime-text-3/Packages/User/Package Control.sublime-settings" ]]; then
-    if command -v aria2c >/dev/null 2>&1; then
-      aria2c -j2 "https://packagecontrol.io/Package%20Control.sublime-package" -d=$HOME/.config/sublime-text-3/Packages/User/
-    elif command -v wget >/dev/null 2>&1; then
-      wget --trust-server-names -v -c "https://packagecontrol.io/Package%20Control.sublime-package" -P $HOME/.config/sublime-text-3/Packages/User/
-    else
-      ( cd $HOME/.config/sublime-text-3/Packages/User/; curl -L -J -O "https://packagecontrol.io/Package%20Control.sublime-package" --progress-bar)
-    fi
-  fi
+
+# Commands
+if ! command -v rg >/dev/null 2>&1; then
+  zplug "BurntSushi/ripgrep", \
+      from:gh-r, \
+      as:command, \
+      rename-to:rg, \
+      use:"*64*linux*"
+fi
+
+if ! command -v fzf >/dev/null 2>&1; then
+  zplug "junegunn/fzf-bin", \
+      from:gh-r, \
+      as:command, \
+      rename-to:fzf, \
+      use:"*linux*amd64*"
+fi
+
+if ! command -v git-fzf >/dev/null 2>&1; then
+  zplug 'b4b4r07/git-fzf', hook-build:'make'
+  zplug 'b4b4r07/git-fzf', \
+      as:command, \
+      use:'bin/(git-*).zsh', \
+  rename-to:'$1'
 fi
