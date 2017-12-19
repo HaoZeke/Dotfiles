@@ -111,9 +111,6 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/sxhkd/sxhkdrc:archLinux
 
 # bspwm
-.config/bspwm/panel:archLinux
-.config/bspwm/panel_bar:archLinux
-.config/bspwm/panel_colors:archLinux
 .config/bspwm/bspwmrc:archLinux
 
 # Thunar
@@ -152,6 +149,15 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:archLinux
 
 
+# Multi Monitor
+################
+
+# Basically bspwm and the panel for my setup is for 2 monitors, otherwise use the single.
+
+# bspwm
+
+
+
 # myArchBox
 ##############
 
@@ -176,5 +182,6 @@ crontab:myArchBox
 .config/cherrytree/config.cfg:myArchBox
 
 # Nitrogen
-.config/nitrogen/bg-saved.cfg:myArchBox
 .config/nitrogen/nitrogen.cfg:myArchBox
+.config/nitrogen/bg-saved.cfg:myArchBox
+
