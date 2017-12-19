@@ -2,8 +2,8 @@
 # Targets   #
 #############
 
-archlinux=common,linux,archLinux
-myarchbox=common,linux,archLinux,myArchBox
+archlinuxMono=common,linux,archLinux,monoMonitor
+myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 
 ##########
 # Groups #
@@ -110,25 +110,17 @@ myarchbox=common,linux,archLinux,myArchBox
 # sxhkd
 .config/sxhkd/sxhkdrc:archLinux
 
-# bspwm
-.config/bspwm/bspwmrc:archLinux
-
 # Thunar
 .config/Thunar/uca.xml:archLinux
 .config/Thunar/renamerrc:archLinux
 
 # Xfce4 Configs
-.config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/ristretto.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mime-settings.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mixer.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-editor.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-manager.xml:archLinux
 .config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml:archLinux
@@ -146,16 +138,26 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/xfce4/panel/whiskermenu-10.rc:archLinux
 .config/xfce4/panel/windowck-plugin-4.rc:archLinux
 .config/xfce4/panel/windowck-plugin-18.rc:archLinux
-.config/xfce4/panel/xfce4-notes-plugin-12.rc:archLinux
 
 
 # Multi Monitor
 ################
 
-# Basically bspwm and the panel for my setup is for 2 monitors, otherwise use the single.
+# bspwm
+.config/bspwm/bspwmrc:multiMonitor
+
+# xfce4
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:multiMonitor
+
+
+# Mono Monitor
+################
 
 # bspwm
+.config/bspwm/bspwmrc:monoMonitor
 
+# xfce4
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:monoMonitor
 
 
 # myArchBox
@@ -184,4 +186,11 @@ crontab:myArchBox
 # Nitrogen
 .config/nitrogen/nitrogen.cfg:myArchBox
 .config/nitrogen/bg-saved.cfg:myArchBox
+
+# Xfce4 Specifics
+.config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
+.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml:myArchBox
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml:myArchBox
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml:myArchBox
+.config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
 

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=11;x=971;y=18"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="24"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="9"/>
+        <value type="int" value="12"/>
+        <value type="int" value="8"/>
+        <value type="int" value="4"/>
+        <value type="int" value="15"/>
+        <value type="int" value="16"/>
+        <value type="int" value="3"/>
+        <value type="int" value="5"/>
+        <value type="int" value="11"/>
+        <value type="int" value="6"/>
+        <value type="int" value="2"/>
+        <value type="int" value="13"/>
+      </property>
+      <property name="disable-struts" type="bool" value="false"/>
+      <property name="autohide-behavior" type="uint" value="0"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="background-color" type="array">
+        <value type="uint" value="7710"/>
+        <value type="uint" value="7710"/>
+        <value type="uint" value="7710"/>
+        <value type="uint" value="65535"/>
+      </property>
+      <property name="mode" type="uint" value="0"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="span-monitors" type="bool" value="true"/>
+      <property name="output-name" type="string" value="monitor-1"/>
+    </property>
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=6;x=68;y=26"/>
+      <property name="output-name" type="string" value="monitor-0"/>
+      <property name="size" type="uint" value="24"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="disable-struts" type="bool" value="true"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="background-color" type="array">
+        <value type="uint" value="7710"/>
+        <value type="uint" value="7710"/>
+        <value type="uint" value="7710"/>
+        <value type="uint" value="65535"/>
+      </property>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="10"/>
+        <value type="int" value="14"/>
+        <value type="int" value="17"/>
+        <value type="int" value="18"/>
+        <value type="int" value="19"/>
+        <value type="int" value="20"/>
+      </property>
+    </property>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-2" type="string" value="actions">
+      <property name="appearance" type="uint" value="1"/>
+      <property name="items" type="array">
+        <value type="string" value="+lock-screen"/>
+        <value type="string" value="+switch-user"/>
+        <value type="string" value="+separator"/>
+        <value type="string" value="+suspend"/>
+        <value type="string" value="-hibernate"/>
+        <value type="string" value="-separator"/>
+        <value type="string" value="+shutdown"/>
+        <value type="string" value="+restart"/>
+        <value type="string" value="+separator"/>
+        <value type="string" value="+logout"/>
+        <value type="string" value="+logout-dialog"/>
+      </property>
+    </property>
+    <property name="plugin-15" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+    <property name="plugin-5" type="string" value="clock">
+      <property name="mode" type="uint" value="2"/>
+      <property name="digital-format" type="string" value="%I:%M %p"/>
+      <property name="timezone" type="string" value="Asia/Kolkata"/>
+    </property>
+    <property name="plugin-6" type="string" value="systray">
+      <property name="names-visible" type="array">
+        <value type="string" value="caja"/>
+        <value type="string" value="synapse"/>
+        <value type="string" value="teamviewer"/>
+        <value type="string" value="networkmanager applet"/>
+        <value type="string" value="electron"/>
+        <value type="string" value="tixati"/>
+        <value type="string" value="yad"/>
+        <value type="string" value="javaembeddedframe"/>
+        <value type="string" value="gpick"/>
+        <value type="string" value="clementine"/>
+        <value type="string" value="wally"/>
+        <value type="string" value="simplescreenrecorder"/>
+        <value type="string" value="chromium"/>
+        <value type="string" value="yakyak"/>
+        <value type="string" value="keybase"/>
+        <value type="string" value="slack"/>
+        <value type="string" value="vlc"/>
+        <value type="string" value="pithos"/>
+        <value type="string" value="pomodoneapp"/>
+        <value type="string" value="vericoin-qt"/>
+        <value type="string" value="cherrytree"/>
+        <value type="string" value="cutegram"/>
+        <value type="string" value="smplayer"/>
+        <value type="string" value="syncthing-gtk"/>
+        <value type="string" value="mailspring"/>
+        <value type="string" value="task manager"/>
+        <value type="string" value="guake"/>
+        <value type="string" value="hexchat"/>
+        <value type="string" value="blockify-ui"/>
+        <value type="string" value="korganizer reminder daemon"/>
+        <value type="string" value="thunderbird"/>
+        <value type="string" value="chromium-dev"/>
+        <value type="string" value="sia-ui"/>
+        <value type="string" value="stremio-runtime"/>
+        <value type="string" value="pidgin"/>
+        <value type="string" value="enpass-desktop"/>
+        <value type="string" value="deluge"/>
+        <value type="string" value="amule"/>
+        <value type="string" value="gigolo"/>
+        <value type="string" value="audacious"/>
+        <value type="string" value="linuxdc++"/>
+        <value type="string" value="uget-gtk"/>
+        <value type="string" value="telegramdesktop"/>
+        <value type="string" value="firefox"/>
+        <value type="string" value="google-chrome"/>
+        <value type="string" value="notes"/>
+        <value type="string" value="everpad"/>
+        <value type="string" value="thunar"/>
+        <value type="string" value="gnome encfs manager"/>
+        <value type="string" value="nylas"/>
+        <value type="string" value="cantata"/>
+        <value type="string" value="seafile client"/>
+        <value type="string" value="ktimer"/>
+        <value type="string" value="gridcoin-qt"/>
+        <value type="string" value="gnome-encfs-manager"/>
+        <value type="string" value="megasync"/>
+        <value type="string" value="mikidown"/>
+        <value type="string" value="kalarm"/>
+        <value type="string" value="odesk team"/>
+        <value type="string" value="verium-qt"/>
+        <value type="string" value="blueman-applet"/>
+      </property>
+      <property name="size-max" type="uint" value="30"/>
+      <property name="show-frame" type="bool" value="false"/>
+    </property>
+    <property name="plugin-8" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+    <property name="plugin-9" type="string" value="whiskermenu"/>
+    <property name="plugin-12" type="string" value="xfce4-notes-plugin"/>
+    <property name="plugin-16" type="string" value="cpugraph"/>
+    <property name="notes" type="empty">
+      <property name="global" type="empty">
+        <property name="background-color" type="string" value="GTK+"/>
+        <property name="skip-taskbar-hint" type="bool" value="true"/>
+        <property name="font-description" type="string" value="Meslo LG L DZ for Powerline Plus Nerd File Types Plus Pomicons 12"/>
+      </property>
+      <property name="new-window" type="empty">
+        <property name="always-on-top" type="bool" value="false"/>
+        <property name="sticky" type="bool" value="true"/>
+        <property name="width" type="int" value="300"/>
+        <property name="height" type="int" value="375"/>
+      </property>
+    </property>
+    <property name="plugin-10" type="string" value="whiskermenu"/>
+    <property name="plugin-14" type="string" value="pager">
+      <property name="rows" type="uint" value="1"/>
+      <property name="miniature-view" type="bool" value="true"/>
+    </property>
+    <property name="plugin-17" type="string" value="separator">
+      <property name="style" type="uint" value="1"/>
+    </property>
+    <property name="plugin-19" type="string" value="separator">
+      <property name="style" type="uint" value="1"/>
+    </property>
+    <property name="plugin-3" type="string" value="netload"/>
+    <property name="plugin-4" type="string" value="windowck-plugin"/>
+    <property name="plugin-11" type="string" value="pulseaudio">
+      <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
+      <property name="mpris-players" type="string" value=";audacious;smplayer;spotify;vlc"/>
+    </property>
+    <property name="plugin-18" type="string" value="windowck-plugin"/>
+    <property name="plugin-20" type="string" value="wckbuttons"/>
+    <property name="plugin-13" type="string" value="wckbuttons"/>
+  </property>
+</channel>
