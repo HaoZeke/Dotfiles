@@ -7,3 +7,4 @@ Xft/RGBA "rgb"
 Xft/HintStyle "hintslight"
 Xft/Antialias 1
 Net/ThemeName "Adwaita-dark" 
+Net/IconThemeName "Papirus-Dark"
