@@ -178,14 +178,3 @@ crontab:myArchBox
 # Nitrogen
 .config/nitrogen/bg-saved.cfg:myArchBox
 .config/nitrogen/nitrogen.cfg:myArchBox
-
-# Audacious
-.config/audacious/config:myArchBox
-.config/audacious/plugin-registry:myArchBox
-.config/audacious/playlists/1004.audpl:myArchBox
-.config/audacious/playlists/1001.audpl:myArchBox
-.config/audacious/playlists/1003.audpl:myArchBox
-.config/audacious/playlists/1002.audpl:myArchBox
-.config/audacious/playlists/order:myArchBox
-.config/audacious/playlists/1000.audpl:myArchBox
-.config/audacious/playlists/1005.audpl:myArchBox
