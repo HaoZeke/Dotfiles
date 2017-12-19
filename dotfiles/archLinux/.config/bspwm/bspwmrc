@@ -66,6 +66,7 @@ nitrogen --restore &
 gnome-encfs-manager &
 tilda &
 tilda &
+xsettingsd &
 xfce4-panel --disable-wm-check &
 #~/.config/bspwm/panel &
 #stalonetray &
