@@ -64,18 +64,6 @@ super + ctrl + {1-9}
 super + {_,shift + }{1-9,0}
 	bspc {desktop -f,node -d} ^{1-9,10}
 
-~button1
-	bspc click_to_focus
-
-super + button{1-3}
-	bspc pointer_action{move,resize_side,resize_corner}
-
-super + !button{1-3}
-	bspc pointer -t %i %i
-
-super + @button{1-3}
-	bspc pointer -u
-
 #
 # wm independent hotkeys
 #
