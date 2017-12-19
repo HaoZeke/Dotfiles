@@ -93,6 +93,9 @@ myarchbox=common,linux,archLinux,myArchBox
 # ArchLinux
 #################
 
+# Profile settings
+.zprofile:archLinux
+
 # GTK Settings
 .xsettingsd:archLinux
 
