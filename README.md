@@ -8,8 +8,11 @@ This is now managed with [dotgit](https://github.com/kobus-v-schoor/dotgit).
 ### Usage
 Several targets (groups) have been defined.
 
-* archlinux --> This is for machines with ArchLinux.
-* noroot --> This is when you haven't got root. [TO-BE-IMPLEMENTED]
+* archlinuxMono --> This is for machines with ArchLinux and a single monitor.
+* archlinuxMulti --> This is for machines with ArchLinux and 2 monitors (VGA-0 and DVI-0)
+* myarchbox --> This is customized for my desktop. Don't use this.
+* noroot --> This is when you haven't got root. [**TODO**]
+
 
 
 ### Installation

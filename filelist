@@ -3,6 +3,7 @@
 #############
 
 archlinuxMono=common,linux,archLinux,monoMonitor
+archlinuxMulti=common,linux,archLinux,multiMonitor
 myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 
 ##########
