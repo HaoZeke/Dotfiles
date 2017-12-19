@@ -15,6 +15,10 @@ alias FlashTool='sudo FlashTool'
 alias cantata='cantata -style=gtk2'
 alias cpv="rsync -poghb --backup-dir=/tmp/rsync -e /dev/null --progress --"
 
+# Trizen stuff
+alias tris="trizen -Ss"
+alias trince='trizen -S --noedit --noconfirm'
+
 # Alias for External Hard Disk
 alias Storage='/run/media/$USER/Storage'
 
