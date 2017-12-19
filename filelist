@@ -121,9 +121,36 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/Thunar/renamerrc:archLinux
 .config/Thunar/accels.scm:archLinux
 
-# Xfce4
-.config/xfce4/panel:archLinux
-.config/xfce4/xfconf:archLinux
+# Xfce4 Configs
+.config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/ristretto.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mime-settings.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mixer.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-editor.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-manager.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml:archLinux
+.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml:archLinux
+
+# Xfce4 Panel Widgets
+.config/xfce4/panel/cpugraph-16.rc:archLinux
+.config/xfce4/panel/dockbarx-1.rc:archLinux
+.config/xfce4/panel/dockbarx-16.rc:archLinux
+.config/xfce4/panel/netload-3.rc:archLinux
+.config/xfce4/panel/netload-11.rc:archLinux
+.config/xfce4/panel/wckbuttons-13.rc:archLinux
+.config/xfce4/panel/wckbuttons-20.rc:archLinux
+.config/xfce4/panel/whiskermenu-9.rc:archLinux
+.config/xfce4/panel/whiskermenu-10.rc:archLinux
+.config/xfce4/panel/windowck-plugin-4.rc:archLinux
+.config/xfce4/panel/windowck-plugin-18.rc:archLinux
+.config/xfce4/panel/xfce4-notes-plugin-12.rc:archLinux
 
 # myArchBox
 ##############

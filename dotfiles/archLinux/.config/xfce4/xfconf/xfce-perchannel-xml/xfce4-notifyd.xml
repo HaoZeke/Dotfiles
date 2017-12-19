@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-notifyd" version="1.0">
+  <property name="notify-location" type="uint" value="2"/>
+  <property name="theme" type="string" value="Default"/>
+  <property name="applications" type="empty">
+    <property name="known_applications" type="array">
+      <value type="string" value="audacious"/>
+      <value type="string" value="calibre"/>
+      <value type="string" value="cantata"/>
+      <value type="string" value="com.gexperts.Terminix"/>
+      <value type="string" value="com.gexperts.Tilix"/>
+      <value type="string" value="Cutegram"/>
+      <value type="string" value="Cyberfox"/>
+      <value type="string" value="Deluge"/>
+      <value type="string" value="Electron"/>
+      <value type="string" value="Gridcoin-Qt"/>
+      <value type="string" value="io.github.Pithos"/>
+      <value type="string" value="MEGAsync"/>
+      <value type="string" value="Nightly"/>
+      <value type="string" value="nm-applet"/>
+      <value type="string" value="notify-send"/>
+      <value type="string" value="opera"/>
+      <value type="string" value="Spotify"/>
+      <value type="string" value="Syncthing GTK"/>
+      <value type="string" value="Thunar"/>
+      <value type="string" value="Thunderbird"/>
+      <value type="string" value="udiskie"/>
+      <value type="string" value="uGet"/>
+      <value type="string" value="XBMC Notifier"/>
+      <value type="string" value="Xfce volume control"/>
+      <value type="string" value="Xfce4-notifyd settings"/>
+    </property>
+  </property>
+  <property name="log-level" type="uint" value="0"/>
+  <property name="log-level-apps" type="uint" value="0"/>
+  <property name="primary-monitor" type="uint" value="0"/>
+</channel>
