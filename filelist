@@ -82,7 +82,6 @@ myarchbox=common,linux,archLinux,myArchBox
 .config/viewnior/viewnior.conf:linux
 
 # Tilda
-.config/tilda:linux
 .config/tilda/config_3:linux
 .config/tilda/config_1:linux
 .config/tilda/config_0:linux
