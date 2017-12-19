@@ -215,6 +215,13 @@ fi
 
 export XDG_CONFIG_HOME="$HOME/.config"
 
+if command -v nvim >/dev/null 2>&1; then
+  alias vim=nvim
+  alias vi=nvim
+  export EDITOR=nvim
+else
+  export EDITOR=vim
+fi
 
 # Tmux
 ##########
