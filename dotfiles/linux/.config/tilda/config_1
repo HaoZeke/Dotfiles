@@ -1,6 +1,6 @@
 tilda_config_version="1.2.4"
 command="tmux -2"
-font="Meslo LG S DZ for Powerline 12"
+font="Meslo LG L Regular Nerd Font Complete 12"
 key="F5"
 addtab_key="<Shift><Control>t"
 fullscreen_key="F6"

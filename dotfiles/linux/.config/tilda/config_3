@@ -1,6 +1,6 @@
 tilda_config_version="1.3.1"
 # command=""
-font="Monospace 11"
+font="Meslo LG L Regular Nerd Font Complete 11"
 key="F1"
 addtab_key="<Shift><Control>t"
 fullscreen_key="F11"
