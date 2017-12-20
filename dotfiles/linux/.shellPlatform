@@ -17,14 +17,9 @@ if command -v subl >/dev/null 2>&1; then
   fi
 fi
 
+
 function getBrew() {
-  if [[ -d ~/.linuxbrew ]]; then
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
-  fi
-  if [[ $SHELL == '/bin/zsh' ]]; then
-    echo "export PATH='$(brew --prefix)/bin:$(brew --prefix)/sbin'":'"$PATH"' >>~/.zprofile
-  else
-    echo "export PATH='$(brew --prefix)/bin:$(brew --prefix)/sbin'":'"$PATH"' >>~/.profile
+  if command -v brew >/dev/null 2>&1; then
+    echo | sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
   fi
 }
-

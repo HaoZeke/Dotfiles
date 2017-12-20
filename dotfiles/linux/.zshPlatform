@@ -30,3 +30,10 @@ if ! command -v git-fzf >/dev/null 2>&1; then
       use:'bin/(git-*).zsh', \
   rename-to:'$1'
 fi
+
+if ! command -v brew >/dev/null 2>&1; then
+  zplug "Linuxbrew/brew", \
+      as:command, \
+      use:"bin/brew", \
+      rename-to:'brew'
+fi

@@ -95,10 +95,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .config/viewnior/viewnior.conf:linux
 
 # Tilda
-.config/tilda/config_3:linux
 .config/tilda/config_1:linux
 .config/tilda/config_0:linux
-.config/tilda/config_2:linux
 
 # Uncrustify
 .config/uncrustify/uncrustify_cpp.cfg:linux
