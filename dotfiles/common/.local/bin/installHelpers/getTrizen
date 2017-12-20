@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+cd ~/Github/Linux/ArchPkgs
+git clone https://aur.archlinux.org/trizen-git.git
+cd trizen-git
+makepkg -si
