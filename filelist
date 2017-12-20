@@ -19,8 +19,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .zshenv
 .zshrc
 .vimrc
-.shell_prompt.sh
-.tmuxlinesource
 .tmux.conf
 .agignore
 .sass-lint.yml
