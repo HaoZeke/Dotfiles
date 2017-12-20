@@ -194,9 +194,6 @@ export PATH="$PATH:/var/lib/snapd/snap/bin"
 # Add ruby gems to the path
 export PATH="$PATH:/$HOME/.gem/ruby/2.4.0/bin"
 
-# For Haskell Stack and Friends
-export PATH="$HOME/.local/bin:$PATH"
-
 # Check this later  $$
 export PATH="$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
 

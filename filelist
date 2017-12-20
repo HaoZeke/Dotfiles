@@ -25,6 +25,27 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .agignore
 .sass-lint.yml
 
+
+# Executables #
+.local/bin/webHelpers/netlify-git-api
+.local/bin/droidHelpers/apkinst
+.local/bin/droidHelpers/adbsideload
+.local/bin/shellHelpers/bash2zshpromt
+.local/bin/fileHelpers/replace.sh
+.local/bin/droidHelpers/lineage_oms_merge.sh
+.local/bin/droidHelpers/lineage_oms_update.sh
+.local/bin/fileHelpers/ascii2hdf5
+.local/bin/fileHelpers/gh-md-toc
+.local/bin/dockerHelpers/nukeGraphsScript.sh
+.local/bin/gitHelpers/gh2https
+.local/bin/gitHelpers/gh2ssh
+.local/bin/installHelpers/getGREwords
+.local/bin/installHelpers/getPandocVersion
+.local/bin/installHelpers/getPatchedFont
+.local/bin/installHelpers/getClean
+.local/bin/installHelpers/getTeXLive
+.local/bin/installHelpers/texlive.profile
+
 # Configs #
 .config/nvim/init.vim
 .config/neofetch/config.conf
@@ -69,21 +90,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .bashPlatform:linux
 .shellPlatform:linux
 
-# Executables #
-.local/bin/netlify-git-api:linux
-.local/bin/java_nonreparenting_wm_hack.sh:linux
-.local/bin/apkinst:linux
-.local/bin/adbsideload:linux
-.local/bin/bash2zshpromt:linux
-.local/bin/replace.sh:linux
-.local/bin/lineage_oms_merge.sh:linux
-.local/bin/lineage_oms_update.sh:linux
-.local/bin/ascii2hdf5:linux
-.local/bin/gh-md-toc:linux
-.local/bin/nukeGraphsScript.sh:linux
-.local/bin/gh2https:linux
-.local/bin/gh2ssh:linux
-
 # Configs #
 
 # Viewnoir
@@ -111,6 +117,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .zshSpecifics:archLinux
 .bashSpecifics:archLinux
 .shellSpecifics:archLinux
+
+# Executables #
+.local/bin/java_nonreparenting_wm_hack.sh:archLinux
 
 # Configs #
 

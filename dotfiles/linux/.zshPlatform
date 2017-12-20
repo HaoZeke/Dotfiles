@@ -6,7 +6,7 @@
 #####################
 
 
-# Commands
+# Programs
 if ! command -v rg >/dev/null 2>&1; then
   zplug "BurntSushi/ripgrep", \
       from:gh-r, \

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+mkdir $HOME/.local/greWords
+cd $HOME/.local/greWords
+git clone https://github.com/mcaceresb/gre-cli-words
+cd gre-cli-words
+chmod +x ./generate_gre_words.jl
+./generate_gre_words.jl
+./random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list

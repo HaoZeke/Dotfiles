@@ -9,6 +9,7 @@
 		".zshPlatform",
 		".bashPlatform",
 		".zshenv",
-		".shellrc"
+		".shellrc",
+		"filelist"
 	]
 }

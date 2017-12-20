@@ -117,10 +117,11 @@ getCloud() {
 ############
 
 # GRE Word List
-if [[ -d $HOME/Github/Linux/gre-cli-words ]]; then
-  $HOME/Github/Linux/gre-cli-words/random_gre.sh $HOME/Github/Linux/gre-cli-words/custom_gre_word_list
+if [[ -d $HOME/.local/greWords/gre-cli-words ]]; then
+  $HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
+  echo "\n"
 else
-  echo "You don't have gre-cli-words setup"
+  echo "You don't have gre-cli-words setup, try running getGREwords"
 fi
 
 # Nix
@@ -159,6 +160,20 @@ export LANGUAGE="en_US.UTF-8"
 export LANG="${LANGUAGE}"
 export LC_ALL="${LANGUAGE}"
 export LC_CTYPE="${LANGUAGE}"
+
+
+# Path Additions
+##################
+
+# For the bundled scripts
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$PATH:$HOME/.local/bin/gitHelpers"
+export PATH="$PATH:$HOME/.local/bin/droidHelpers"
+export PATH="$PATH:$HOME/.local/bin/dockerHelpers"
+export PATH="$PATH:$HOME/.local/bin/shellHelpers"
+export PATH="$PATH:$HOME/.local/bin/fileHelpers"
+export PATH="$PATH:$HOME/.local/bin/webHelpers"
+export PATH="$PATH:$HOME/.local/bin/installHelpers"
 
 # Tmux
 ##########
