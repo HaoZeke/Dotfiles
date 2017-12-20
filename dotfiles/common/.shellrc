@@ -2,6 +2,13 @@
 # Shell Agnostic Commands #
 ###########################
 
+# Warnings
+############
+if ! command -v git >/dev/null 2>&1; then
+  echo "You do not have git.\n DO NOT DO ANYTHING WITHOUT GIT\n"
+  echo "You might want to install brew with getBrew\n"
+  echo "Once you have brew just run\nbrew install git"
+fi
 
 # Aliases
 ###########
