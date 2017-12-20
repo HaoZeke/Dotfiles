@@ -72,13 +72,19 @@ source ~/.zplug/init.zsh
 
 #source ~/.shell_prompt.sh
 POWERLEVEL9K_MODE='nerdfont-complete'
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline vcs)
 POWERLEVEL9K_VCS_CLEAN_FOREGROUND='blue'
 POWERLEVEL9K_VCS_CLEAN_BACKGROUND='black'
 POWERLEVEL9K_VCS_UNTRACKED_FOREGROUND='yellow'
 POWERLEVEL9K_VCS_UNTRACKED_BACKGROUND='black'
 POWERLEVEL9K_VCS_MODIFIED_FOREGROUND='blue'
 POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
+
+# Right
+POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs time)
+
+# Left
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rbenv vcs)
+
 zplug "bhilburn/powerlevel9k", use:powerlevel9k.zsh-theme, defer:3
 
 # zplug "caiogondim/bullet-train.zsh", use:bullet-train.zsh-theme, defer:3 # defer until other plugins like oh-my-zsh is loaded
