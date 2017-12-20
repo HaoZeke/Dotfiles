@@ -144,6 +144,15 @@ else
   export EDITOR=vim
 fi
 
+if ! command -v fzf >/dev/null 2>&1; then
+  if ! command -v rg >/dev/null 2>&1; then
+    echo "Please get ripgrep working"
+  else
+    export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
+    export FZF_DEFAULT_OPTS="--extended --ansi --multi"
+  fi
+  echo "Please get fzf working"
+fi
 
 # LANGUAGE must be set by en_US
 export LANGUAGE="en_US.UTF-8"

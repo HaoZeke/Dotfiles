@@ -14,6 +14,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 #########
 
 # Home #
+.shellrc
+.bashrc
+.zshenv
 .zshrc
 .vimrc
 .shell_prompt.sh
@@ -63,6 +66,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 #################
 
 .zshPlatform:linux
+.bashPlatform:linux
+.shellPlatform:linux
 
 # Executables #
 .local/bin/netlify-git-api:linux
@@ -104,6 +109,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 
 # Shell
 .zshSpecifics:archLinux
+.bashSpecifics:archLinux
+.shellSpecifics:archLinux
 
 # Configs #
 
