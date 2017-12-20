@@ -42,9 +42,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .local/bin/installHelpers/getGREwords
 .local/bin/installHelpers/getPandocVersion
 .local/bin/installHelpers/getPatchedFont
-.local/bin/installHelpers/getClean
+.local/bin/installHelpers/getTpm
 .local/bin/installHelpers/getTeXLive
 .local/bin/installHelpers/texlive.profile
+.local/bin/installHelpers/getClean
 
 # Configs #
 .config/nvim/init.vim

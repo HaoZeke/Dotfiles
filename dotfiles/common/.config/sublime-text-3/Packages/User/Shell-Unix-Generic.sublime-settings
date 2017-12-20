@@ -10,6 +10,7 @@
 		".bashPlatform",
 		".zshenv",
 		".shellrc",
-		"filelist"
+		"filelist",
+		"conf"
 	]
 }
