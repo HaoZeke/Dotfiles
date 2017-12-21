@@ -105,6 +105,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 # ArchLinux
 #################
 
+# X server stuff
+.xprofile:archLinux
+.xinitrc:archLinux
+
 # Profile settings
 .zprofile:archLinux
 
@@ -181,8 +185,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 ##############
 
 crontab:myArchBox
-.xprofile:myArchBox
-.xinitrc:myArchBox
 
 # Configs #
 
