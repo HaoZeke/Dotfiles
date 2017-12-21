@@ -48,6 +48,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 # Configs #
 .config/nvim/init.vim
 .config/neofetch/config.conf
+.config/ripgrep/ignore
 
 # Sublime Text 3
 .config/sublime-text-3/Packages/User/Preferences.sublime-settings

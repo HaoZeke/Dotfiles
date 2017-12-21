@@ -22,6 +22,8 @@ alias foldel='time rsync -avv --delete /home/$USER/blank/ '
 # Termbin (use to pipe output, eg. ls | tb)
 alias tb="nc termbin.com 9999"
 
+# Ripgrep
+alias rg=rg --ignore-file $HOME/.config/ripgrep/ignore 
 
 # Functions
 ############
