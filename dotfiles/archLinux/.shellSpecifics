@@ -97,8 +97,8 @@ fi
 
 if [[ -d $HOME/.virtualenvs ]]; then
   export WORKON_HOME=~/.virtualenvs
-  VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
-  source /usr/bin/virtualenvwrapper.sh
+  export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python2.7
+  source /usr/bin/virtualenvwrapper_lazy.sh
 else
   echo "You seem to be missing virtualenvs"
 fi
