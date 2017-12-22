@@ -2,9 +2,24 @@
 # Targets   #
 #############
 
+# Archlinux Barebones
 archlinuxMono=common,linux,archLinux,monoMonitor
 archlinuxMulti=common,linux,archLinux,multiMonitor
-myarchbox=common,linux,archLinux,multiMonitor,myArchBox
+
+# ArchLinux with xfce
+almXFCE=common,linux,archLinux,monoMonitor,xfceSession
+almlXFCE=common,linux,archLinux,multiMonitor,xfceSession
+
+# ArchLinux with lxde
+almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession
+almLXDE=common,linux,archLinux,monoMonitor,lxdeSession
+
+# Archlinux with no session manager
+almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession
+almnoSession=common,linux,archLinux,monoMonitor,lxdeSession
+
+# My current config. [desktop]
+myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 
 ##########
 # Groups #
@@ -105,10 +120,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 # ArchLinux
 #################
 
-# X server stuff
-.xprofile:archLinux
-.xinitrc:archLinux
-
 # Profile settings
 .zprofile:archLinux
 
@@ -135,22 +146,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .config/Thunar/uca.xml:archLinux
 .config/Thunar/renamerrc:archLinux
 
-# Xfce4 Configs
-.config/xfce4/xfconf/xfce-perchannel-xml/ristretto.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mime-settings.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-mixer.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-editor.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-settings-manager.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml:archLinux
-.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml:archLinux
-
 # Xfce4 Panel Widgets
 .config/xfce4/panel/cpugraph-16.rc:archLinux
-.config/xfce4/panel/dockbarx-1.rc:archLinux
-.config/xfce4/panel/dockbarx-16.rc:archLinux
 .config/xfce4/panel/netload-3.rc:archLinux
 .config/xfce4/panel/netload-11.rc:archLinux
 .config/xfce4/panel/wckbuttons-13.rc:archLinux
@@ -160,6 +157,44 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox
 .config/xfce4/panel/windowck-plugin-4.rc:archLinux
 .config/xfce4/panel/windowck-plugin-18.rc:archLinux
 
+# LXDE
+########
+
+.gtkrc-2.0:lxdeSession
+.dmrc:lxdeSession
+
+# X server stuff
+.xprofile:lxdeSession
+.xinitrc:lxdeSession
+
+# Session
+.config/lxsession-default-apps/settings.conf:lxdeSession
+.config/lxsession/LXDE/autostart:lxdeSession
+.config/lxsession/LXDE/desktop.conf:lxdeSession
+.config/gtk-3.0/bookmarks:lxdeSession
+.config/gtk-3.0/settings.ini:lxdeSession
+
+# noSession
+########
+
+# X server stuff
+.xprofile:noSession
+.xinitrc:noSession
+.xsettingsd:noSession
+
+# XFCE 4
+#########
+
+.dmrc:xfceSession
+
+# Session
+.config/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-volumed-pulse.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/keyboards.xml:xfceSession
+.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml:xfceSession
 
 # Multi Monitor
 ################
@@ -210,6 +245,5 @@ crontab:myArchBox
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
 .config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml:myArchBox
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml:myArchBox
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml:myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
 
