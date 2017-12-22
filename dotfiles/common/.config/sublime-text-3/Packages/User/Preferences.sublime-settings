@@ -79,7 +79,7 @@
 		"*.toc",
 		"*.ttf",
 		"*.zip",
-		"/home/haozeke/Github/Latex/HBTI/Syllabus/Tex/Sem_II.aux",
+		"/$HOME/Git/Github/Latex/HBTI/Syllabus/Tex/Sem_II.aux",
 		"node_modules/**"
 	],
 	"close_windows_when_empty": false,
