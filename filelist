@@ -11,7 +11,7 @@ almXFCE=common,linux,archLinux,monoMonitor,xfceSession
 almlXFCE=common,linux,archLinux,multiMonitor,xfceSession
 
 # ArchLinux with lxde
-almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession
+almLXDE=common,linux,archLinux,multiMonitor,lxdeSession
 almLXDE=common,linux,archLinux,monoMonitor,lxdeSession
 
 # Archlinux with no session manager
