@@ -12,7 +12,6 @@
       <property name="size" type="uint" value="24"/>
       <property name="plugin-ids" type="array">
         <value type="int" value="9"/>
-        <value type="int" value="12"/>
         <value type="int" value="8"/>
         <value type="int" value="4"/>
         <value type="int" value="15"/>
@@ -21,8 +20,8 @@
         <value type="int" value="5"/>
         <value type="int" value="11"/>
         <value type="int" value="6"/>
-        <value type="int" value="2"/>
         <value type="int" value="13"/>
+        <value type="int" value="1"/>
       </property>
       <property name="disable-struts" type="bool" value="false"/>
       <property name="autohide-behavior" type="uint" value="0"/>
@@ -64,22 +63,6 @@
     </property>
   </property>
   <property name="plugins" type="empty">
-    <property name="plugin-2" type="string" value="actions">
-      <property name="appearance" type="uint" value="1"/>
-      <property name="items" type="array">
-        <value type="string" value="+lock-screen"/>
-        <value type="string" value="+switch-user"/>
-        <value type="string" value="+separator"/>
-        <value type="string" value="+suspend"/>
-        <value type="string" value="-hibernate"/>
-        <value type="string" value="-separator"/>
-        <value type="string" value="+shutdown"/>
-        <value type="string" value="+restart"/>
-        <value type="string" value="+separator"/>
-        <value type="string" value="+logout"/>
-        <value type="string" value="+logout-dialog"/>
-      </property>
-    </property>
     <property name="plugin-15" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
@@ -196,5 +179,11 @@
     <property name="plugin-18" type="string" value="windowck-plugin"/>
     <property name="plugin-20" type="string" value="wckbuttons"/>
     <property name="plugin-13" type="string" value="wckbuttons"/>
+    <property name="plugin-1" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="15139254001.desktop"/>
+      </property>
+      <property name="show-label" type="bool" value="true"/>
+    </property>
   </property>
 </channel>

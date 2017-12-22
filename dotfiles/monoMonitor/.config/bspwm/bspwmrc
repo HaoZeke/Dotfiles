@@ -52,20 +52,14 @@ bspc rule -a Tilda state=floating focus=on locked=on manage=on
 bspc rule -a Synapse state=floating follow=on focus=on manage=on border=off
 bspc rule -a Xfce4-notes state=floating follow=on focus=on
 
-# AutoStart
-compton --config ~/.config/compton.conf -b  
-java_nonreparenting &
-calibre-server --port 8264 --auto-reload --username haozeke --daemonize &
-thunar --daemon &
-synapse -s &
-nm-applet &
-#acd_cli mount /run/media/haozeke/Storage/Amazon/ &
-#feh --bg-scale /run/media/haozeke/Storage/Pictures/Wallpapers/DeviantART/favorite\ star/1920x1200.jpg &
-nitrogen --restore &
-gnome-encfs-manager &
-tilda &
-tilda &
-xsettingsd &
-xfce4-panel --disable-wm-check &
-#~/.config/bspwm/panel &
-#stalonetray &
+# Autostart #
+###############
+
+#
+# Most of these are handled by the session manager.
+# Oddly ~/ and $HOME are not respected by the managers
+# So those things go here
+#
+
+compton --config ~/.config/compton.conf -b
+bash $HOME/.local/bin/java_nonreparenting_wm_hack.sh
