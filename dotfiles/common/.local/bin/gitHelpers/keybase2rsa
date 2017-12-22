@@ -2,8 +2,13 @@
 
 # From https://gist.github.com/camilin87/957f184047f768e6c5939d54cdea7448
 # Described here: https://www.tddapps.com/2017/01/15/how-to-use-your-keybase-key-for-ssh/
+# Modified slightly
+
 
 echo "Start Export Process"
+
+echo "Moving to ~/.ssh"
+cd ~/.ssh
 
 echo "Log into Keybase..."
 keybase login
