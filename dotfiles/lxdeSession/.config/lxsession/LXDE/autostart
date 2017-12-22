@@ -1,0 +1,15 @@
+@light-locker
+@udiskie -2
+@pulseaudio
+@thunar --daemon
+@tilda
+@tilda
+@nitrogen --restore
+@nm-applet
+@mpd
+@mpdscribble
+@synapse -s
+@java_nonreparenting
+@xscreensaver -no-splash
+@sxhkd
+@xfce4-panel --disable-wm-check
