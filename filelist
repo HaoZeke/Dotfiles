@@ -59,7 +59,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .local/bin/installHelpers/getTeXLive
 .local/bin/installHelpers/texlive.profile
 .local/bin/installHelpers/getTrizen
-.local/bin/installHelpers/getHatch
 .local/bin/installHelpers/getClean
 
 # Configs #
