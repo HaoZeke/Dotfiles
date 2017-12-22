@@ -83,7 +83,7 @@ POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
 POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rbenv vcs)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rbenv virtualenv vcs)
 
 zplug "bhilburn/powerlevel9k", use:powerlevel9k.zsh-theme, defer:3
 
