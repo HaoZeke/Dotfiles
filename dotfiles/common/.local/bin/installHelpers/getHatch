@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+echo "Grabbing pythons from brew"
+brew install python
+brew install python3
+
+if ! command -v pipsi >/dev/null 2>&1; then
+  echo "Getting pipsi..."
+  curl https://raw.githubusercontent.com/mitsuhiko/pipsi/master/get-pipsi.py | python
+fi
+
+if ! command -v hatch >/dev/null 2>&1; then
+  echo "Getting Hatch..."
+  pipsi install --python `which python3` hatch
+else
+  echo "Why are you running this if you have hatch.. -_-"
+fi
