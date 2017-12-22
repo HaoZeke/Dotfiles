@@ -11,6 +11,9 @@
 		".zshenv",
 		".shellrc",
 		"filelist",
-		"conf"
+		"conf",
+		".shellrc",
+		".shellPlatform",
+		".shellSpecifics"
 	]
 }
