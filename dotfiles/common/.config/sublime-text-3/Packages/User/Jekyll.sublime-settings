@@ -16,5 +16,5 @@
     // match your system convention. For example, Windows machines should
     // have a path similar to "C:\\Users\\username\\site\\_posts".
     // *nix systems should have a path similar to "/Users/username/site/_posts".
-    "jekyll_posts_path": "/home/haozeke/Github/WebDev/Formulae/src/_posts/"
+    "jekyll_posts_path": "/$HOME/Git/Github/WebDev/Formulae/src/_posts/"
 }
