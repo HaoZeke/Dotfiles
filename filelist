@@ -52,7 +52,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .local/bin/dockerHelpers/nukeGraphsScript.sh
 .local/bin/gitHelpers/gh2https
 .local/bin/gitHelpers/gh2ssh
-.local/bin/gitHelpers/keybase2rsa
 .local/bin/installHelpers/getGREwords
 .local/bin/installHelpers/getPandocVersion
 .local/bin/installHelpers/getPatchedFont
