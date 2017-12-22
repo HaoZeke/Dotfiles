@@ -15,6 +15,9 @@ alias FlashTool='sudo FlashTool'
 alias cantata='cantata -style=gtk2'
 alias cpv="rsync -poghb --backup-dir=/tmp/rsync -e /dev/null --progress --"
 
+# Lammps
+alias lmp_mpi='$HOME/Git/Github/Simulations/lammps/src/lmp_mpi'
+
 # Trizen stuff
 alias tris="trizen -Ss"
 alias trince='trizen -S --noedit --noconfirm'
@@ -195,9 +198,6 @@ export PATH="$PATH:/var/lib/snapd/snap/bin"
 
 # Add ruby gems to the path
 export PATH="$PATH:/$HOME/.gem/ruby/2.4.0/bin"
-
-# Lammps
-export PATH="$PATH:$HOME/Git/Github/lammps/src"
 
 # Check this later  $$
 export PATH="$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Git/Github/mylammps/src:$HOME/Git/Github/espresso/build:$HOME/Git/Github/Scripts/Build:$HOME/Git/Github/Scripts/System"
