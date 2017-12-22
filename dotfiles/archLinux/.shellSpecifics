@@ -27,6 +27,8 @@ alias Storage='/run/media/$USER/Storage'
 # WINEARCH=win32 WINEPREFIX=~/.wine-ie6 winetricks ie6
 alias ie6=' WINEARCH=win32 WINEPREFIX=~/.wine-ie6 wine ~/.wine-ie6/drive_c/Program\ Files/Internet\ Explorer/IEXPLORE.EXE'
 
+# Ripgrep aliases
+rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 
 # Check later  $$
 
