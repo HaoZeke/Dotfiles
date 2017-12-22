@@ -122,7 +122,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 #################
 
 # Packages
-aurPackages:archLinux
+allPackages:archLinux
 
 # Profile settings
 .zprofile:archLinux
