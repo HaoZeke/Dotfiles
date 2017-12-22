@@ -19,9 +19,7 @@
     <value type="string" value="TV"/>
     <value type="string" value="Private"/>
     <value type="string" value="Pictures"/>
-    <value type="string" value="Github"/>
     <value type="string" value="Library"/>
-    <value type="string" value="fd51ccc7-f4ed-492e-910a-7d38e514a743"/>
   </property>
   <property name="misc-single-click" type="bool" value="false"/>
   <property name="misc-text-beside-icons" type="bool" value="false"/>

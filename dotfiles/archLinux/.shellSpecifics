@@ -10,7 +10,7 @@ alias pacunlock="sudo rm /var/lib/pacman/db.lck"   # Delete the lock file /var/l
 alias paclock="sudo touch /var/lib/pacman/db.lck"  # Create the lock file /var/lib/pacman/db.lck
 
 alias mediaserve='rygel --config=/home/$USER/.config/rygel.conf'
-alias pizza.py='~/Github/pizza-9Oct15/src/pizza.py'
+alias pizza.py='~/Git/Github/pizza-9Oct15/src/pizza.py'
 alias FlashTool='sudo FlashTool'
 alias cantata='cantata -style=gtk2'
 alias cpv="rsync -poghb --backup-dir=/tmp/rsync -e /dev/null --progress --"
@@ -35,12 +35,12 @@ alias z3op='mkdir /home/$USER/Encfs/Secrets ;encfs -i 5 /run/media/$USER/Storage
 alias z3cl='sudo umount /home/$USER/Encfs/Secrets ; rm -rf /home/$USER/Encfs/Secrets'
 
 # Docker Aliases
-alias airsonicDocker='docker run -v /run/media/haozeke/Storage/Music:/airsonic/music -v /run/media/haozeke/Storage/Music/airsonicData:/airsonic/data -p 4050:4040 -d airsonic/airsonic'
-alias crdroidDocker='docker run -it -h crdroid -v /run/media/haozeke/Storage/AndBuild/:/home/build/Android -v /home/haozeke/.ccache/:/home/build/.ccache -v /home/haozeke/.cache/:/home/build/.cache crdroid'
+alias airsonicDocker='docker run -v /run/media/$USER/Storage/Music:/airsonic/music -v /run/media/$USER/Storage/Music/airsonicData:/airsonic/data -p 4050:4040 -d airsonic/airsonic'
+alias crdroidDocker='docker run -it -h crdroid -v /run/media/$USER/Storage/AndBuild/:/home/build/Android -v /home/$USER/.ccache/:/home/build/.ccache -v /home/$USER/.cache/:/home/build/.cache crdroid'
 alias plexDocker='docker run plex'
 
 # Convert this!!
-alias calibreDocker='calibre-server --port 8264 --userdb /run/media/haozeke/Storage/Library/calServUsers.sqlite --enable-auth --daemonize --log=/home/haozeke/.calServLog'
+alias calibreDocker='calibre-server --port 8264 --userdb /run/media/$USER/Storage/Library/calServUsers.sqlite --enable-auth --daemonize --log=/$HOME/.calServLog'
 
 
 # Functions
@@ -59,11 +59,11 @@ droidBuild() {
   echo "Setting up environment variables\n"
   export USE_HOST_LEX=yes       # Prevent builds breaking..
   # Sets the right path for linkers. cm-12.1 only.
-  #export LD_LIBRARY_PATH=/run/media/haozeke/Storage/AndBuild/cm-12.1/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8/lib/
+  #export LD_LIBRARY_PATH=/run/media/$USER/Storage/AndBuild/cm-12.1/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8/lib/
   echo "Getting the right Python\n"
-  source /run/media/haozeke/Storage/AndBuild/venv/bin/activate
+  source /run/media/$USER/Storage/AndBuild/venv/bin/activate
   echo "Getting the right tools for Gello \n"
-  export PATH=$HOME/Github/Linux/depot_tools:$PATH
+  export PATH=$HOME/Git/Github/Linux/depot_tools:$PATH
   echo "Enjoy.\n"
 }
 
@@ -78,7 +78,7 @@ source /etc/profile.d/vte.sh
 [ -f $HOME/.travis/travis.sh ] && source $HOME/.travis/travis.sh
 
 # For Amber
-test -f /home/haozeke/Github/amber16/amber.sh && source /home/haozeke/Github/amber16/amber.sh
+test -f /$HOME/Git/Github/amber16/amber.sh && source /$HOME/Git/Github/amber16/amber.sh
 
 # Commands
 ###########
@@ -181,12 +181,12 @@ export INFINALITY_FT_FILTER_PARAMS="16 20 28 20 16"
 ################
 
 # Pre path [overrides] #
-export PATH="$HOME/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH"
+export PATH="$HOME/Git/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH"
 
 # Post Path [additions] #
 
 # Miner Path
-export PATH="$PATH:$HOME/Github/Linux/xmr-stak-cpu/bin"
+export PATH="$PATH:$HOME/Git/Github/Linux/xmr-stak-cpu/bin"
 
 # Add snaps to the path
 export PATH="$PATH:/var/lib/snapd/snap/bin"
@@ -195,7 +195,7 @@ export PATH="$PATH:/var/lib/snapd/snap/bin"
 export PATH="$PATH:/$HOME/.gem/ruby/2.4.0/bin"
 
 # Check this later  $$
-export PATH="$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Github/mylammps/src:$HOME/Github/espresso/build:$HOME/Github/Scripts/Build:$HOME/Github/Scripts/System"
+export PATH="$PATH:$HOME/LabWork/IITB/Icover:/root/.gem/ruby/2.2.0/bin:$HOME/Matlab/MATLAB_Production_Server/R2015a/bin:$HOME/.gem/ruby/2.2.0/bin:$HOME/.gem/ruby/2.3.0/bin:/opt/schrodinger2016-2:$HOME/Git/Github/mylammps/src:$HOME/Git/Github/espresso/build:$HOME/Git/Github/Scripts/Build:$HOME/Git/Github/Scripts/System"
 
 # Build Paths
 ###############
@@ -209,7 +209,7 @@ export CPATH=$CPATH:/usr/local/include
 # Python Path
 ##############
 
-export PYTHONPATH=$PYTHONPATH:/home/$USER/Github/espresso:/home/$USER/Github/Linux/acd_fuse:/usr/share/amazon/pyacd
+export PYTHONPATH=$PYTHONPATH:/home/$USER/Git/Github/espresso:/home/$USER/Git/Github/Linux/acd_fuse:/usr/share/amazon/pyacd
 
 # End with this
 ##################
