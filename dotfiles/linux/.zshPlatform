@@ -13,6 +13,7 @@ if ! command -v rg >/dev/null 2>&1; then
       as:command, \
       rename-to:rg, \
       use:"*64*linux*"
+  # zplug "jedahan/ripz"
 fi
 
 if ! command -v fzf >/dev/null 2>&1; then
@@ -32,8 +33,5 @@ if ! command -v git-fzf >/dev/null 2>&1; then
 fi
 
 if ! command -v brew >/dev/null 2>&1; then
-  zplug "Linuxbrew/brew", \
-      as:command, \
-      use:"bin/brew", \
-      rename-to:'brew'
+  zplug "zpm-zsh/linuxbrew"
 fi

@@ -109,9 +109,6 @@ fi
 ######################
 
 # OMZ Plugins
-zplug "plugins/common-aliases",             from:oh-my-zsh
-zplug "plugins/colored-man-pages",          from:oh-my-zsh
-zplug "plugins/command-not-found",          from:oh-my-zsh
 zplug "plugins/history",                    from:oh-my-zsh
 zplug "plugins/history-substring-search",   from:oh-my-zsh
 zplug "plugins/github",                     from:oh-my-zsh
@@ -123,8 +120,12 @@ zplug "plugins/systemd",                    from:oh-my-zsh
 zplug "plugins/rsync",                      from:oh-my-zsh
 zplug "plugins/yarn",                       from:oh-my-zsh
 
+# No OMZ
+zplug "j-arnaiz/common-aliases"
+zplug "hcgraf/zsh-sudo"
+
 # Colors and Highlighting
-zplug "zsh-users/zsh-syntax-highlighting", defer:2
+zplug "zdharma/fast-syntax-highlighting", defer:2
 zplug "zlsun/solarized-man"
 
 # Misc
@@ -135,7 +136,7 @@ zplug "mollifier/cd-gitroot"
 # Completions
 zplug "zsh-users/zsh-completions"
 zplug "ascii-soup/zsh-url-highlighter"
-zplug "djui/alias-tips"
+zplug "molovo/tipz" 
 zplug "srijanshetty/zsh-pip-completion"
 
 # Install plugins if there are plugins that have not been installed
@@ -176,6 +177,8 @@ bindkey -M vicmd 'j' history-substring-search-down
 export ENHANCD_FILTER="fzf --height 50% --reverse --ansi"
 # export ENHANCD_DOT_SHOW_FULLPATH=1
     
+TIPZ_TEXT='Alias:'    
+
 # Common Aliases (Plugin based)
 ################################
 
