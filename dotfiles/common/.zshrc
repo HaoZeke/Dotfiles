@@ -41,8 +41,8 @@ key[PageDown]=${terminfo[knp]}
 [[ -n "${key[PageUp]}"   ]]  && bindkey  "${key[PageUp]}"   beginning-of-buffer-or-history
 [[ -n "${key[PageDown]}" ]]  && bindkey  "${key[PageDown]}" end-of-buffer-or-history
 
-# # Functions
-# ############
+# Functions
+############
 
 # Reload complete functions
 r() {
@@ -130,6 +130,7 @@ zplug "zlsun/solarized-man"
 # Misc
 zplug "b4b4r07/enhancd", use:init.sh
 zplug "changyuheng/zsh-interactive-cd"
+zplug "mollifier/cd-gitroot"
 
 # Completions
 zplug "zsh-users/zsh-completions"
@@ -175,3 +176,7 @@ bindkey -M vicmd 'j' history-substring-search-down
 export ENHANCD_FILTER="fzf --height 50% --reverse --ansi"
 # export ENHANCD_DOT_SHOW_FULLPATH=1
     
+# Common Aliases (Plugin based)
+################################
+
+alias cdg=cd-gitroot
