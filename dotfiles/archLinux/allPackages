@@ -22,6 +22,7 @@ bzip2
 catfish
 ccache
 cherrytree
+chmlib
 compton
 coreutils
 cpupower
@@ -33,9 +34,11 @@ dhcpcd
 diff-so-fancy
 diffutils
 direnv
+discount
 docker
 dotgit
 e2fsprogs
+ebook-tools
 elinks
 enpass-bin
 etckeeper
@@ -72,7 +75,10 @@ iproute2
 iputils
 jfsutils
 jp2a
+kcachegrind
+kdegraphics-mobipocket
 keybase-bin
+khtml
 less
 libcaca
 libcue
@@ -118,12 +124,17 @@ network-manager-applet
 networkmanager
 ngrok
 nitrogen
+npm
 ntfs-3g
+okular
 openmpi
 otf-impallari-raleway-family
 p7zip
 pacaur
 pacman
+pandoc
+pandoc-citeproc
+pandoc-crossref
 papirus-icon-theme
 papirus-smplayer-theme-git
 patch
@@ -142,9 +153,12 @@ procps-ng
 psmisc
 pulseaudio
 pygtk
+pyprof2calltree
 python
 python-neovim
+python-pandocfilters
 python-pip
+python-pypandoc
 python-virtualenvwrapper
 python2
 python2-mako
@@ -160,6 +174,7 @@ ripgrep
 roxterm
 rsync
 ruby
+ruby-bundler
 ruby-docs
 rxvt-unicode
 s-nail
@@ -207,6 +222,7 @@ tmux
 totem
 tree
 trizen-git
+tup
 udiskie
 uget
 unace
