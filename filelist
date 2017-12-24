@@ -2,6 +2,9 @@
 # Targets   #
 #############
 
+# Generic Linux
+genLinux=common,linux
+
 # Archlinux Barebones
 archlinuxMono=common,linux,archLinux,monoMonitor
 archlinuxMulti=common,linux,archLinux,multiMonitor
