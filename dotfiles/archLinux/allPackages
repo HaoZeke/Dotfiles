@@ -68,6 +68,8 @@ groff
 guake
 gzip
 htop
+hub
+i7z
 imagemagick
 indicator-application-gtk2
 inetutils
@@ -149,6 +151,7 @@ polybar-git
 pomodoneapp
 poppler-glib
 powerpill
+powertop
 procps-ng
 psmisc
 pulseaudio
@@ -209,6 +212,7 @@ texlive-pstricks
 texlive-publishers
 texlive-science
 the_silver_searcher
+thermald
 thunar
 thunar-archive-plugin
 thunar-media-tags-plugin
@@ -222,6 +226,7 @@ tmux
 totem
 tree
 trizen-git
+tumbler
 tup
 udiskie
 uget
