@@ -132,6 +132,7 @@ zplug "zlsun/solarized-man"
 zplug "b4b4r07/enhancd", use:init.sh
 zplug "changyuheng/zsh-interactive-cd"
 zplug "mollifier/cd-gitroot"
+zplug "bobsoppe/zsh-ssh-agent", use:ssh-agent.zsh, from:github
 
 # Completions
 zplug "zsh-users/zsh-completions"

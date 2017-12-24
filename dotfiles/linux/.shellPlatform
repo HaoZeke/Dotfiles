@@ -23,3 +23,26 @@ function getBrew() {
     echo | sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
   fi
 }
+
+
+# Commands
+###########
+
+if [[ -d $HOME/.virtualenvs ]]; then
+  export WORKON_HOME=~/.virtualenvs
+  source /usr/bin/virtualenvwrapper_lazy.sh
+else
+  echo "You seem to be missing virtualenvs"
+fi
+
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook zsh)"
+else
+  echo "You seem to be missing direnv"
+fi
+
+if command -v mmake >/dev/null 2>&1; then
+  alias make=mmake
+else
+  echo "You seem to be missing mmake"
+fi
