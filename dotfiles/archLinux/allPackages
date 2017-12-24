@@ -120,6 +120,9 @@ nano
 neofetch
 neovim
 nerd-fonts-complete
+netcdf
+netcdf-cxx
+netcdf-fortran
 netctl
 network-manager-applet
 networkmanager
@@ -128,6 +131,7 @@ nitrogen
 npm
 ntfs-3g
 okular
+openbabel
 openmpi
 otf-impallari-raleway-family
 p7zip
@@ -241,6 +245,7 @@ util-linux
 vertex-themes-git
 vi
 viewnior
+vmd
 wget
 which
 wireless_tools
