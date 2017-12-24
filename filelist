@@ -40,7 +40,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .tmux.conf
 .agignore
 .sass-lint.yml
-
+.dir_colors
 
 # Executables #
 .local/bin/webHelpers/netlify-git-api
