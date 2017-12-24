@@ -30,8 +30,6 @@ alias Storage='/run/media/$USER/Storage'
 # WINEARCH=win32 WINEPREFIX=~/.wine-ie6 winetricks ie6
 alias ie6=' WINEARCH=win32 WINEPREFIX=~/.wine-ie6 wine ~/.wine-ie6/drive_c/Program\ Files/Internet\ Explorer/IEXPLORE.EXE'
 
-# Ripgrep aliases
-rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 
 # Check later  $$
 
@@ -95,19 +93,6 @@ else
   echo "You seem to be missing ccache"
 fi
 
-if [[ -d $HOME/.virtualenvs ]]; then
-  export WORKON_HOME=~/.virtualenvs
-  source /usr/bin/virtualenvwrapper_lazy.sh
-else
-  echo "You seem to be missing virtualenvs"
-fi
-
-if command -v direnv >/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
-else
-  echo "You seem to be missing direnv"
-fi
-
 # Gets powerpill to work with pacaur
 if command -v powerpill >/dev/null 2>&1; then
   export PACMAN='powerpill'
@@ -115,11 +100,6 @@ else
   echo "You seem to be missing powerpill"
 fi
 
-if command -v mmake >/dev/null 2>&1; then
-  alias make=mmake
-else
-  echo "You seem to be missing mmake"
-fi
 
 # Java Fixes
 
