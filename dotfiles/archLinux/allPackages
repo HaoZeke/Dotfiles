@@ -180,6 +180,7 @@ ruby-bundler
 ruby-docs
 rxvt-unicode
 s-nail
+screenkey
 sed
 shadow
 smplayer
@@ -263,6 +264,7 @@ xfsprogs
 xlogin-git
 xorg-server
 xorg-xauth
+xorg-xev
 xorg-xinit
 xorg-xprop
 xorg-xrandr
