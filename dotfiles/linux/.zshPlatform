@@ -38,6 +38,14 @@ if ! command -v exa >/dev/null 2>&1; then
     use:"*linux*"
 fi
 
+if ! command -v archiver >/dev/null 2>&1; then
+  zplug "mholt/archiver", \
+    from:gh-r, \
+    as:command, \
+    rename-to:archiver, \
+    use:"*linux*amd64*"
+fi
+
 if command -v fzf >/dev/null 2>&1; then
   if ! command -v git-fzf >/dev/null 2>&1; then
     zplug 'b4b4r07/git-fzf', hook-build:'make'
