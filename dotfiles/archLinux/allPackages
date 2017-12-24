@@ -104,7 +104,6 @@ lxde-common
 lxpanel
 lxsession
 m4
-mailspring
 make
 man-db
 man-pages
@@ -217,6 +216,7 @@ thunar
 thunar-archive-plugin
 thunar-media-tags-plugin
 thunar-volman
+thunderbird
 tilda
 tilix-git
 tk
