@@ -13,7 +13,7 @@ if ! command -v rg >/dev/null 2>&1; then
       as:command, \
       rename-to:rg, \
       use:"*64*linux*"
-  # zplug "jedahan/ripz"
+  # zplug "jedahan/ripz"]
   # Ripgrep aliases
   alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 fi
@@ -26,12 +26,14 @@ if ! command -v fzf >/dev/null 2>&1; then
       use:"*linux*amd64*"
 fi
 
-if ! command -v git-fzf >/dev/null 2>&1; then
-  zplug 'b4b4r07/git-fzf', hook-build:'make'
-  zplug 'b4b4r07/git-fzf', \
-      as:command, \
-      use:'bin/(git-*).zsh', \
-  rename-to:'$1'
+if command -v fzf >/dev/null 2>&1; then
+  if ! command -v git-fzf >/dev/null 2>&1; then
+    zplug 'b4b4r07/git-fzf', hook-build:'make'
+    zplug 'b4b4r07/git-fzf', \
+        as:command, \
+        use:'bin/(git-*).zsh', \
+    rename-to:'$1'
+  fi
 fi
 
 if ! command -v brew >/dev/null 2>&1; then
