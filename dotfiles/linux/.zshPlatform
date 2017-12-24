@@ -14,6 +14,8 @@ if ! command -v rg >/dev/null 2>&1; then
       rename-to:rg, \
       use:"*64*linux*"
   # zplug "jedahan/ripz"
+  # Ripgrep aliases
+  alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 fi
 
 if ! command -v fzf >/dev/null 2>&1; then
