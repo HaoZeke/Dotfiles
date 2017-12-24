@@ -30,7 +30,7 @@ function getBrew() {
 
 if [[ -d $HOME/.virtualenvs ]]; then
   export WORKON_HOME=~/.virtualenvs
-  source /usr/bin/virtualenvwrapper_lazy.sh
+  source $(which virtualenvwrapper_lazy.sh)
 else
   echo "You seem to be missing virtualenvs"
 fi
