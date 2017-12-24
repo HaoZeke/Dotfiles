@@ -133,6 +133,7 @@ zplug "b4b4r07/enhancd", use:init.sh
 zplug "changyuheng/zsh-interactive-cd"
 zplug "mollifier/cd-gitroot"
 zplug "bobsoppe/zsh-ssh-agent", use:ssh-agent.zsh, from:github
+zplug "zdharma/history-search-multi-word"
 
 # Completions
 zplug "zsh-users/zsh-completions"
@@ -179,6 +180,7 @@ export ENHANCD_FILTER="fzf --height 50% --reverse --ansi"
 # export ENHANCD_DOT_SHOW_FULLPATH=1
     
 TIPZ_TEXT='Alias:'    
+
 
 # Common Aliases (Plugin based)
 ################################
