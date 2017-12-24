@@ -121,6 +121,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 # Uncrustify
 .config/uncrustify/uncrustify_cpp.cfg:linux
 
+# Tilix
+.config/tilix/schemes/nord.json:linux
+
 # ArchLinux
 #################
 
