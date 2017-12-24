@@ -31,8 +31,6 @@ alias rg=rg --ignore-file $HOME/.config/ripgrep/ignore
 # Make directory
 alias md=mkdir -p
 
-# Ripgrep aliases
-alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 
 # Functions
 ############
