@@ -54,6 +54,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .local/bin/fileHelpers/ascii2hdf5
 .local/bin/fileHelpers/gh-md-toc
 .local/bin/dockerHelpers/nukeGraphsScript.sh
+.local/bin/dockerHelpers/docker-ssh
 .local/bin/gitHelpers/gh2https
 .local/bin/gitHelpers/gh2ssh
 .local/bin/installHelpers/getGREwords
