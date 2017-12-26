@@ -151,6 +151,9 @@ allPackages:archLinux
 .config/compton.conf:archLinux
 .config/powerline:archLinux
 
+# trizen
+.config/trizen/trizen.conf:archLinux
+
 # sxhkd
 .config/sxhkd/sxhkdrc:archLinux
 
