@@ -195,7 +195,6 @@ export LC_CTYPE="${LANGUAGE}"
 # For docker-compose stuff
 export userid=$(id -u)
 export groupid=$(id -g)
-export time=$(cat /etc/timezone)
 
 # Path Additions
 ##################
