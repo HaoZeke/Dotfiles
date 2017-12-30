@@ -15,6 +15,7 @@
 		".shellrc",
 		".shellPlatform",
 		".shellSpecifics",
-		"filelist"
+		"filelist",
+		"qcom"
 	]
 }
