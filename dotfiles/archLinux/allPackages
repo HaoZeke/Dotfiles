@@ -3,6 +3,7 @@ alsa-utils
 android-file-transfer
 android-tools
 android-udev
+anki
 arc-gtk-theme
 arc-solid-gtk-theme
 archivetools
@@ -37,6 +38,7 @@ diffutils
 direnv
 discount
 docker
+docker-compose
 dotgit
 e2fsprogs
 ebook-tools
@@ -48,9 +50,11 @@ ffmpegthumbnailer
 file
 file-roller
 filesystem
+filezilla
 findutils
 firefox-nightly
 flex
+g2sc
 galculator
 gawk
 gcc
@@ -69,6 +73,10 @@ gparted
 grep
 groff
 guake
+gvfs
+gvfs-afc
+gvfs-mtp
+gvfs-smb
 gzip
 htop
 hub
@@ -90,6 +98,7 @@ libcue
 libgsf
 libmpeg2
 libreoffice-fresh
+libtinfo5
 libtool
 licenses
 light-locker
@@ -123,6 +132,7 @@ mpd
 mpdscribble
 mpv
 nano
+ncurses
 neofetch
 neovim
 nerd-fonts-complete
@@ -132,6 +142,7 @@ netcdf-fortran
 netctl
 network-manager-applet
 networkmanager
+nfs-utils
 ngrok
 nitrogen
 npm
@@ -191,6 +202,7 @@ ruby-bundler
 ruby-docs
 rxvt-unicode
 s-nail
+samba
 schedtool
 screenkey
 sed
@@ -201,6 +213,7 @@ smtube
 snap-pac
 snapper-gui-git
 speech-dispatcher
+sshfs
 strace
 sublime-text
 sudo
@@ -246,6 +259,7 @@ uget
 uget-chrome-wrapper
 unace
 unrar
+unyaffs
 unzip
 urxvt-perls
 urxvtconfig
@@ -284,6 +298,7 @@ xorg-xinit
 xorg-xprop
 xorg-xrandr
 xorg-xwininfo
+xperia-flashtool
 yaourt
 yarn
 youtube-dl
