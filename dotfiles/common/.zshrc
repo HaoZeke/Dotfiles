@@ -118,7 +118,6 @@ zplug "plugins/systemadmin",                from:oh-my-zsh
 zplug "plugins/sudo",                       from:oh-my-zsh
 zplug "plugins/systemd",                    from:oh-my-zsh
 zplug "plugins/rsync",                      from:oh-my-zsh
-zplug "plugins/yarn",                       from:oh-my-zsh
 
 # No OMZ
 zplug "j-arnaiz/common-aliases"
