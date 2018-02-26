@@ -56,7 +56,8 @@
 		"Langevin",
 		"Financials",
 		"downcomer",
-		"Calcination"
+		"Calcination",
+		"Dhanabad"
 	],
 	"auto_complete_commit_on_tab": true,
 	"auto_complete_with_fields": true,
@@ -84,6 +85,15 @@
 	],
 	"close_windows_when_empty": false,
 	"color_scheme": "Packages/User/SublimeLinter/Asphalt (SL).tmTheme",
+	"folder_exclude_patterns":
+	[
+		".svn",
+		".git",
+		".hg",
+		"CVS",
+		"node_modules",
+		".cache"
+	],
 	"font_face": "Meslo LG L Regular Nerd Font Complete",
 	"font_size": 15,
 	"icon_file_type_enable": true,
@@ -105,7 +115,6 @@
 		"DocPy",
 		"Dotfiles Syntax Highlighting",
 		"DoxyDoc",
-		"GitGutter",
 		"Google Search",
 		"Google Spell Check",
 		"HTML Boilerplate",
@@ -120,13 +129,13 @@
 		"LaTeXing",
 		"Makefile",
 		"Markdown Extended",
-		"MarkdownEditing",
 		"Monocyanide Colorscheme",
 		"Monokai - Spacegray",
 		"Monokai Extended",
 		"Origami",
 		"ProjectManager",
 		"Pug",
+		"Python",
 		"Python 3",
 		"SCSS",
 		"SCSS Snippets",
@@ -142,6 +151,10 @@
 		"Travis YML Lint",
 		"Vuejs Complete Package",
 		"Wombatish color scheme"
+	],
+	"install_prereleases":
+	[
+	  "GitGutter"
 	],
 	"ignored_words":
 	[
