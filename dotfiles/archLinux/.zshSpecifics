@@ -9,3 +9,6 @@
 
 zplug "plugins/archlinux",                from:oh-my-zsh
 
+# Crossover stuff
+
+export PATH=$PATH:$HOME/cxoffice/bin
