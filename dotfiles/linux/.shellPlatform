@@ -46,3 +46,12 @@ if command -v mmake >/dev/null 2>&1; then
 else
   echo "You seem to be missing mmake"
 fi
+
+# Crossover Paths
+###################
+
+if [[ -d $HOME/cxoffice/bin ]]; then
+  export PATH=$PATH:$HOME/cxoffice/bin
+else
+  echo "You haven't installed Crossover in $HOME/cxoffice"
+fi
