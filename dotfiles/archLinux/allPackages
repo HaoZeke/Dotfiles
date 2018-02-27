@@ -22,11 +22,13 @@ biber
 binutils
 bison
 blockify-git
+borg
 broadcom-wl-ck-haswell
 bspwm
 btrfs-progs
 byacc
 bzip2
+cachedir
 caja
 catfish
 ccache
@@ -191,6 +193,7 @@ pandoc-citeproc
 pandoc-crossref
 papirus-icon-theme
 papirus-smplayer-theme-git
+parallel
 patch
 pavucontrol
 pb-for-desktop
@@ -218,6 +221,7 @@ pygtk
 pypdfocr-git
 pyprof2calltree
 python
+python-llfuse
 python-neovim
 python-pandocfilters
 python-pdfrw

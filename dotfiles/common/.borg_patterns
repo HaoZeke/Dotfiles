@@ -1,0 +1,30 @@
+#################
+# Borg patterns #
+#################
+
+#
+# Use with --patterns-from
+#
+
+
+# "sh:" pattern style is the default, so the following line is not needed:
+# P sh
+# R /
+# # susan is a nice person
+# # include susans home
+# + /home/susan
+# # don't backup the other home directories
+# - /home/*
+
+
+# Should be rebuilt
+- /home/*/.cache
+- */node_modules
+- */.ccache
+- *.tmp
+- */.conda
+- */.wine
+- */.cargo
+- */.cache
+- */.cache
+- */.tmp 

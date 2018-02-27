@@ -42,6 +42,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .sass-lint.yml
 .dir_colors
 
+# Borg
+.borg_exclusions
+.borg_patterns
+
 # Executables #
 .local/bin/webHelpers/netlify-git-api
 .local/bin/droidHelpers/apkinst
