@@ -1,6 +1,23 @@
 # Excludes
 *.tmp
 .cache/
+.cache/*
+node_modules/
+node_modules/*
+.ccache/*
+.conda/*
+.wine/*
+.cargo/*
+.cache/*
+.tmp/*
 # fm:aa:something/*
 # re:^/home/[^/]\.tmp/
 # sh:/home/*/.thumbnails
+fm:.cache/*
+fm:node_modules/*
+fm:.ccache/*
+fm:.conda/*
+fm:.wine/*
+fm:.cargo/*
+fm:.cache/*
+fm:.tmp/*
