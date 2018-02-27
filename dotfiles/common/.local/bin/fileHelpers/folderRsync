@@ -35,6 +35,7 @@ do
       sleep ${sleeptime}
     done
     # Run rsync in background for the current subfolder and move one to the next one
+    echo echo "Running rsync -a from ${source}/${subfolder}" to "${target}/${subfolder} "
     nohup rsync -a "${source}/${subfolder}/" "${target}/${subfolder}/" </dev/null >/dev/null 2>&1 &
   fi
 done
