@@ -19,12 +19,12 @@
 
 # Should be rebuilt
 - /home/*/.cache
-- */node_modules
-- */.ccache
-- *.tmp
-- */.conda
-- */.wine
-- */.cargo
-- */.cache
-- */.cache
-- */.tmp 
+- /*/node_modules
+- /*/.ccache
+- /*.tmp
+- /*/.conda
+- /*/.wine
+- /*/.cargo
+- /*/.cache
+- /*/.cache
+- /*/.tmp 
