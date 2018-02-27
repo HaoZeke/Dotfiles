@@ -8,8 +8,8 @@
 
 
 # "sh:" pattern style is the default, so the following line is not needed:
-# P sh
-# R /
+P sh
+R /
 # # susan is a nice person
 # # include susans home
 # + /home/susan
@@ -18,13 +18,12 @@
 
 
 # Should be rebuilt
-- /home/*/.cache
-- /*/node_modules
-- /*/.ccache
-- /*.tmp
-- /*/.conda
-- /*/.wine
-- /*/.cargo
-- /*/.cache
-- /*/.cache
-- /*/.tmp 
+- **/.cache/*
+- **/node_modules/*
+- **/.ccache/*
+- **.tmp
+- **/.conda/*
+- **/.wine/*
+- **/.cargo/*
+- **/.cache/*
+- **/.tmp/*
