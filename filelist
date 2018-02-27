@@ -49,6 +49,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .local/bin/shellHelpers/bash2zshpromt
 .local/bin/fileHelpers/replace.sh
 .local/bin/fileHelpers/extract
+.local/bin/fileHelpers/folderRsync
 .local/bin/droidHelpers/lineage_oms_merge.sh
 .local/bin/droidHelpers/lineage_oms_update.sh
 .local/bin/fileHelpers/ascii2hdf5
