@@ -1,0 +1,6 @@
+# Excludes
+*.tmp
+.cache/
+# fm:aa:something/*
+# re:^/home/[^/]\.tmp/
+# sh:/home/*/.thumbnails
