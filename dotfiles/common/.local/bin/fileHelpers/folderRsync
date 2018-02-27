@@ -1,4 +1,6 @@
 #!/bin/bash
+# From here: https://www.krazyworks.com/making-rsync-faster/
+# Modified to take user input
 
 # Define source, target, maxdepth and cd to source
 source=$1
