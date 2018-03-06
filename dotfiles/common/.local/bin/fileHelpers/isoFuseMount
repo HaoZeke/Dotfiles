@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# from https://wiki.archlinux.org/index.php/Fuseiso
+
+FILE=$(basename "$1")
+MOUNTPOINT="$HOME/Desktop/$FILE"
+
+fuseiso -p "$1" "$MOUNTPOINT"
