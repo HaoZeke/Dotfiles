@@ -8,7 +8,6 @@ anki
 arc-gtk-theme
 arc-solid-gtk-theme
 archivetools
-aria2
 audacious
 autoconf
 automake
@@ -52,6 +51,7 @@ discount
 djvu2pdf
 docker
 docker-compose
+dosfstools
 dotgit
 e2fsprogs
 ebook-tools
@@ -177,7 +177,6 @@ mpdecimal
 mpdscribble
 mpv
 nano
-nanobox
 neofetch
 neovim
 nerd-fonts-git
@@ -202,6 +201,7 @@ openssh
 otf-impallari-raleway-family
 p7zip
 pacaur
+package-query
 pacman
 pandoc
 pandoc-citeproc
@@ -254,9 +254,7 @@ python3-threaded_servers
 qemu
 raw-thumbnailer
 rbenv-binstubs
-rbenv-git
 refind-efi
-reflector
 reiserfsprogs
 repo
 ripgrep
@@ -272,7 +270,6 @@ ryver-desktop
 s-nail
 sabnzbd
 samba
-schedtool
 screenkey
 sdfs
 sed
