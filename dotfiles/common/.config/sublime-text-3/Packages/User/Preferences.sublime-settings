@@ -152,10 +152,6 @@
 		"Vuejs Complete Package",
 		"Wombatish color scheme"
 	],
-	"install_prereleases":
-	[
-	  "GitGutter"
-	],
 	"ignored_words":
 	[
 		"Jiang2010",
@@ -164,6 +160,10 @@
 		"dipolar",
 		"ie",
 		"radical–"
+	],
+	"install_prereleases":
+	[
+		"GitGutter"
 	],
 	"paths":
 	{
