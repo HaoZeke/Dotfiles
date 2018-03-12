@@ -107,7 +107,6 @@ httrack
 hub
 i7z
 imagemagick
-imagemagick-full-doc-git
 img2pdf-git
 indicator-application-gtk2
 inetutils
@@ -179,7 +178,7 @@ mpv
 nano
 neofetch
 neovim
-nerd-fonts-git
+nerd-fonts-complete
 netcdf
 netcdf-cxx
 netcdf-fortran
@@ -224,9 +223,7 @@ pkg-config
 planner
 playerctl
 playonlinux
-plymouth
 polari
-polybar-git
 pomodoneapp
 poppler-glib
 powerpill
