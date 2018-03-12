@@ -136,6 +136,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 # ArchLinux
 #################
 
+# bspwm
+.config/bspwm/bspwmrc:archLinux
+
 # Packages
 allPackages:archLinux
 
@@ -221,18 +224,12 @@ allPackages:archLinux
 # Multi Monitor
 ################
 
-# bspwm
-.config/bspwm/bspwmrc:multiMonitor
-
 # xfce4
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:multiMonitor
 
 
 # Mono Monitor
 ################
-
-# bspwm
-.config/bspwm/bspwmrc:monoMonitor
 
 # xfce4
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml:monoMonitor
