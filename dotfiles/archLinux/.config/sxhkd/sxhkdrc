@@ -81,10 +81,10 @@ super + space
 # Kitty is made to float here incase I use it elsewhere too
 
 F1
- tdrop -p "bspc rule -a kitty -o state=floating" -m -w 70% -h 70% -x 15% -y 15% -n 1 -s mainWindow -f "--config $HOME/.config/kitty/kittyMain.conf" kitty 
+ tdrop --wm bspwm -ma -w 70% -h 70% -x 15% -y 15% -n 1 -s mainWindow -f "--config $HOME/.config/kitty/kittyMain.conf" kitty 
 
 F5
- tdrop -p "bspc rule -a kitty -o state=floating" -m -w 35% -h 15% -n 2 -s subWindow -f "--config $HOME/.config/kitty/kittySub.conf" kitty 
+ tdrop --wm bspwm -ma -w 35% -h 15% -n 2 -s subWindow -f "--config $HOME/.config/kitty/kittySub.conf" kitty 
 
 # make sxhkd reload its configuration files:
 super + Escape
