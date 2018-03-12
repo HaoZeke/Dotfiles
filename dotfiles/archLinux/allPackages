@@ -126,6 +126,7 @@ kcachegrind
 kdegraphics-mobipocket
 keybase-bin
 khtml
+kitty
 less
 lib32-libcups
 lib32-libxslt
@@ -312,7 +313,6 @@ thunar-archive-plugin
 thunar-media-tags-plugin
 thunar-volman
 thunderbird
-tilda-git
 tilix-bin
 tk
 tldr

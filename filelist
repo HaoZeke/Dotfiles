@@ -120,12 +120,13 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 
 # Configs #
 
+# Kitty
+.config/kitty/kittyMain.conf:linux
+.config/kitty/kittySub.conf:linux
+.config/kitty/kitty.conf:linux
+
 # Viewnoir
 .config/viewnior/viewnior.conf:linux
-
-# Tilda
-.config/tilda/config_1:linux
-.config/tilda/config_0:linux
 
 # Uncrustify
 .config/uncrustify/uncrustify_cpp.cfg:linux
