@@ -26,14 +26,29 @@ bspc config pointer_action1 move
 bspc config pointer_action2 resize_side
 bspc config pointer_action2 resize_corner
 
+#
+# Monitor Setup
+#
+
 # Consolidate monitor setups [see https://github.com/baskerville/bspwm/issues/630]
 # Can also use bspc query -M --names
-# for monitor in $(bspc query -M); do
-#   bspc monitor $monitor -d I II III IV V
-# done
 
-bspc monitor VGA-0 -d I II III IV V 
-bspc monitor DVI-0 -d VI VII VIII IX X
+# readarray is in sh and bash, not zsh
+
+readarray -t monitorList <<< "$(bspc query -M)"
+if [[ ${#monitorList[@]} == 1 ]]; then
+  bspc monitor ${monitorList[0]} -d I II III IV V VI VII VIII IX X
+elif [[ ${#monitorList[@]} == 2 ]]; then
+  bspc monitor ${monitorList[0]} -d I II III IV V
+  bspc monitor ${monitorList[1]} -d VI VII VIII IX X
+else
+  for monitor in $(bspc query -M); do
+    bspc monitor $monitor -d I II III IV V
+  done
+fi
+
+# bspc monitor VGA-0 -d I II III IV V 
+# bspc monitor DVI-0 -d VI VII VIII IX X
 
 # Padding
 bspc config top_padding       16
