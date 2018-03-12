@@ -123,7 +123,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 # Kitty
 .config/kitty/kittyMain.conf:linux
 .config/kitty/kittySub.conf:linux
-.config/kitty/kitty.conf:linux
 
 # Viewnoir
 .config/viewnior/viewnior.conf:linux
