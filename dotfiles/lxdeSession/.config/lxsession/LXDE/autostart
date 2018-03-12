@@ -2,8 +2,6 @@
 @udiskie -2
 @pulseaudio
 @thunar --daemon
-@tilda
-@tilda
 @nitrogen --restore
 @nm-applet
 @mpd

@@ -74,6 +74,20 @@ super + Return
 super + space
 	dmenu_run
 
+#
+# Dropdowns
+#
+
+# Kitty is made to float here incase I use it elsewhere too
+
+F1
+ tdrop -p "bspc rule -a kitty -o state=floating" -ma -w 70% -h 70% -x 15% -y 15% -n 1 -s mainWindow kitty 
+# '-f "--config $USER/.config/kitty/kittyMain.conf"'
+
+F5
+ tdrop -p "bspc rule -a kitty -o state=floating" -ma -w 35% -h 15% -n 2 -s subWindow kitty 
+# '-f "--config $USER/.config/kitty/kittySub.conf"'
+
 # make sxhkd reload its configuration files:
 super + Escape
 	pkill -USR1 -x sxhkd
