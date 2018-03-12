@@ -58,3 +58,4 @@ It is necessary for the following packagages to be installed.
 
 * Consolidate multi and single monitor setups (panel remaining)
 * Switch from tilda to tdrop+kitty (dropdowns)
+* Use a configuration management system like puppet, ansible or saltstack for full automation
