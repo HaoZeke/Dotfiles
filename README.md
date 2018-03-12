@@ -52,3 +52,9 @@ It is necessary for the following packagages to be installed.
 * Npm --> {Markdown, JSlint}
 * Virtualenv --> {For vim compatible python2}
 * PNF Powerline Fonts --> {For the symbols}
+
+
+#### TO-DO
+
+* Consolidate multi and single monitor setups (panel remaining)
+* Switch from tilda to tdrop+kitty (dropdowns)
