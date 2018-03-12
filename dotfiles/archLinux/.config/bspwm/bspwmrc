@@ -26,6 +26,8 @@ bspc config pointer_action1 move
 bspc config pointer_action2 resize_side
 bspc config pointer_action2 resize_corner
 
+# Consolidate monitor setups [see https://github.com/baskerville/bspwm/issues/630]
+# Can also use bspc query -M --names
 for monitor in $(bspc query -M); do
     bspc monitor $monitor -d I II III IV V
 done
