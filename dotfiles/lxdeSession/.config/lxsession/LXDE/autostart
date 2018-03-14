@@ -12,4 +12,4 @@
 @sxhkd
 @xfce4-panel --disable-wm-check
 @xbanish
-@unclutter --timeout 1 
+@unclutter --timeout 1
