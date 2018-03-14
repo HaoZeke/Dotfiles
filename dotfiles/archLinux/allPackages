@@ -98,6 +98,7 @@ gparted
 grep
 groff
 gsmartcontrol
+gtypist
 guake
 gvfs
 gvfs-afc
@@ -134,6 +135,7 @@ keybase-bin
 keynav
 khtml
 kitty
+ktouch
 less
 lib32-alsa-plugins
 lib32-fontconfig
