@@ -131,6 +131,7 @@ k2pdfopt
 kcachegrind
 kdegraphics-mobipocket
 keybase-bin
+keynav
 khtml
 kitty
 less
@@ -307,7 +308,7 @@ speex
 sshfs
 strace
 subdownloader
-sublime-text-dev
+sublime-text
 sudo
 sxhkd
 synapse
