@@ -11,3 +11,5 @@
 @xscreensaver -no-splash
 @sxhkd
 @xfce4-panel --disable-wm-check
+@xbanish
+@unclutter --timeout 1 
