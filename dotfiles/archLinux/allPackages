@@ -152,6 +152,7 @@ lib32-libtiff
 lib32-libx11
 lib32-libxcomposite
 lib32-libxext
+lib32-libxinerama
 lib32-libxml2
 lib32-libxslt
 lib32-mesa
