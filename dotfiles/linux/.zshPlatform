@@ -2,9 +2,13 @@
 # Linux zsh defaults   #
 ########################
 
+# Extra PATH stuff
+###################
+
+export PATH=$PATH:/usr/local/MATLAB/R2017a/bin
+
 # Extra zPlug Stuff
 #####################
-
 
 # Programs
 if ! command -v rg >/dev/null 2>&1; then
