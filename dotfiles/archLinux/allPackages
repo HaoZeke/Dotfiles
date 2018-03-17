@@ -52,6 +52,7 @@ diffutils
 direnv
 discount
 djvu2pdf
+docear
 docker
 docker-compose
 dotgit
@@ -122,6 +123,7 @@ iputils
 irqbalance
 itstool
 iw
+jabref
 jack
 java-openjfx
 jfsutils
