@@ -68,3 +68,12 @@ export XDG_DATA_DIRS=$XDG_DATA_HOME:/usr/share
 #############
 
 export PATH=$PATH:$HOME/.cargo/bin        
+
+# Go Paths
+###########
+
+export GOPATH=$HOME/.go
+export GOBIN=$HOME/.go/bin
+export GOCACHE=$HOME/.cache/go-build
+
+export PATH=$PATH:$GOBIN
