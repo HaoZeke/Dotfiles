@@ -63,3 +63,8 @@ fi
 
 export XDG_DATA_HOME=$XDG_DATA_HOME:/usr/share
 export XDG_DATA_DIRS=$XDG_DATA_HOME:/usr/share
+
+# Rust Paths
+#############
+
+export PATH=$PATH:$HOME/.cargo/bin        
