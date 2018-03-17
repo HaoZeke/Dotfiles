@@ -1,5 +1,4 @@
 adapta-gtk-theme
-alex
 alsa-utils
 ananicy-git
 android-file-transfer
@@ -30,7 +29,6 @@ bspwm
 btrfs-progs
 byacc
 bzip2
-cabal-install
 cachedir
 caja
 catfish
@@ -84,8 +82,6 @@ gcc
 gcc-libs
 gcolor2
 gettext
-ghc
-ghc-static
 ghostscript
 gimp
 git
@@ -110,7 +106,6 @@ gvfs-afc
 gvfs-mtp
 gvfs-smb
 gzip
-happy
 hdparm
 htop
 httrack
@@ -316,7 +311,6 @@ smtube
 speech-dispatcher
 speex
 sshfs
-stack
 strace
 subdownloader
 sublime-text
