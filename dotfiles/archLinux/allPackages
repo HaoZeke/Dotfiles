@@ -62,6 +62,7 @@ ebook-tools
 ed
 elinks
 enpass-bin
+epub-thumbnailer-git
 etckeeper
 exe-thumbnailer
 exercism-cli
@@ -86,6 +87,7 @@ gettext
 ghostscript
 gimp
 git
+git-lfs
 git-review
 glibc
 gnome-dictionary
@@ -258,6 +260,7 @@ pkg-config
 planner
 playerctl
 polari
+polybar-git
 pomodoneapp
 poppler-glib
 powerpill
@@ -307,6 +310,7 @@ sdfs
 sed
 shadow
 shrinkpdf
+simplescreenrecorder
 smartmontools
 smplayer
 smplayer-skins
