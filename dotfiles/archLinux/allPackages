@@ -58,7 +58,6 @@ docear
 docker
 docker-compose
 dotgit
-drun
 e2fsprogs
 ebook-tools
 ed
@@ -308,10 +307,7 @@ rofi
 roxterm
 rstudio-desktop-bin
 rsync
-ruby
-ruby-bundler
 ruby-docs
-ruby-rmagick
 rustup
 rxvt-unicode
 ryver-desktop
