@@ -2,5 +2,5 @@
 	"synonyms": {
 		"loz": "mdlgwhtlozenge"
 	},
-	"ignore_syntax": ["latex, tex, latexing, latexing beamer"]
+	"ignore_syntax": ["latex", "tex", "latexing", "latexing beamer"]
 }
