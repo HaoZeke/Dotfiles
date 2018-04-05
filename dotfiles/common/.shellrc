@@ -214,15 +214,19 @@ export PATH=$PATH:$HOME/.cargo/bin
 
 # NVM Paths
 #############
+export NVM_DIR="$HOME/.nvm"
 
-if command -v nvm >/dev/null 2>&1; then
-  export NVM_DIR="$HOME/.nvm"
+if [[ -d $NVM_DIR ]]; then
+
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
   export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 else
-  echo "You seem to be missing nvm"
+  echo "You seem to be missing nvm, I'll grab the github release"
+  git clone https://github.com/creationix/nvm.git "$NVM_DIR"
+  cd "$NVM_DIR"
+  git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" origin`
 fi
 
 # Go Paths
