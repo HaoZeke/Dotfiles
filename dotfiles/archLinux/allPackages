@@ -1,4 +1,5 @@
 adapta-gtk-theme
+adobe-base-14-fonts
 alsa-utils
 ananicy-git
 android-file-transfer
@@ -57,6 +58,7 @@ docear
 docker
 docker-compose
 dotgit
+drun
 e2fsprogs
 ebook-tools
 ed
@@ -71,11 +73,12 @@ ffmpeg
 ffmpegthumbnailer
 file
 file-roller
-filebot
 filesystem
 filezilla
 findutils
 flex
+fontawesome.sty
+fontforge
 fuseiso
 g2sc
 galculator
@@ -87,9 +90,12 @@ gettext
 ghostscript
 gimp
 git
+git-extras-git
 git-lfs
 git-review
 glibc
+gnome-chemistry-utils
+gnome-common
 gnome-dictionary
 gnome-encfs-manager-bin
 gnome-font-viewer
@@ -209,6 +215,7 @@ mpd
 mpdecimal
 mpdscribble
 mpv
+namcap
 nano
 neofetch
 neovim
@@ -223,7 +230,6 @@ nfs-utils
 nginx
 ngrok
 nitrogen
-npm
 ntfs-3g
 ocl-icd
 okular
@@ -239,11 +245,12 @@ package-query
 pacman
 pacnanny
 pandoc
-pandoc-citeproc
+pandoc-citeproc-bin
 pandoc-crossref
 pango
 papirus-icon-theme
 papirus-smplayer-theme-git
+paps
 parallel
 patch
 pavucontrol
@@ -277,7 +284,10 @@ python-neovim
 python-pandocfilters
 python-pdfrw
 python-pip
+python-pyenchant
 python-pypandoc
+python-reportlab
+python-sane
 python-virtualenvwrapper
 python2-mako
 python2-notify
@@ -286,12 +296,15 @@ python2-pip
 python2-pyenchant
 python3-threaded_servers
 qemu
+qpdf
+rar
 raw-thumbnailer
 rbenv-binstubs
 refind-efi
 reiserfsprogs
 repo
 ripgrep
+rofi
 roxterm
 rstudio-desktop-bin
 rsync
@@ -316,7 +329,9 @@ smplayer
 smplayer-skins
 smtube
 speech-dispatcher
+speedreader
 speex
+sqlitebrowser
 sshfs
 strace
 subdownloader
@@ -362,9 +377,15 @@ todoist-linux-bin
 totem
 tree
 trizen
+ttf-adobe-fonts
 ttf-bookerly
+ttf-font-awesome
+ttf-indic-otf
+ttf-neuton
+ttf-roboto-slab
 tumbler
 tup
+typecatcher
 typora
 udiskie
 udisks2
@@ -386,6 +407,7 @@ vmd
 waterfox-bin
 wget
 which
+whippet
 wireless_tools
 wpa_supplicant
 wps-office
@@ -393,6 +415,7 @@ xbanish-git
 xclip
 xcursor-breeze
 xdotool
+xdrawchem
 xf86-video-amdgpu
 xf86-video-ati
 xf86-video-intel
@@ -423,7 +446,6 @@ xperia-flashtool
 xsel
 xterm
 yaourt
-yarn
 youtube-dl
 youtube-dl-gui-git
 zenity
