@@ -223,10 +223,7 @@ if [[ -d $NVM_DIR ]]; then
 
   export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 else
-  echo "You seem to be missing nvm, I'll grab the github release"
-  git clone https://github.com/creationix/nvm.git "$NVM_DIR"
-  cd "$NVM_DIR"
-  git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" origin`
+  echo "You seem to be missing nvm, try running getNVM for the latest github release"
 fi
 
 # Go Paths
