@@ -69,6 +69,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .local/bin/installHelpers/getPatchedFont
 .local/bin/installHelpers/getTpm
 .local/bin/installHelpers/getTeXLive
+.local/bin/installHelpers/getNVM
 .local/bin/installHelpers/texlive.profile
 .local/bin/installHelpers/getTrizen
 .local/bin/installHelpers/getClean
