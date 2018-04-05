@@ -223,7 +223,7 @@ if [[ -d $NVM_DIR ]]; then
 
   export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 else
-  echo "You seem to be missing nvm, try running getNVM for the latest github release"
+  echo "You seem to be missing nvm, try running getNVM"
 fi
 
 # Go Paths
