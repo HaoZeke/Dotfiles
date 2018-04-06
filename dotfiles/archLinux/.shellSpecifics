@@ -198,7 +198,10 @@ export PYTHONPATH=$PYTHONPATH:/home/$USER/Git/Github/espresso:/home/$USER/Git/Gi
 # End with this
 ##################
 
-if command -v rvm >/dev/null 2>&1; then
+# RVM setup
+export rvm_ignore_dotfiles=yes
+
+if [[ -d $HOME/.rvm ]]; then
   # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
   export PATH="$PATH:$HOME/.rvm/bin"
 
