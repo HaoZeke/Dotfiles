@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "Grabbing the latest github release\n"
+echo "Grabbing the latest github release"
 git clone https://github.com/creationix/nvm.git "$NVM_DIR"
 cd "$NVM_DIR"
 git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" origin`
