@@ -65,4 +65,24 @@
 	<text-files/>
 	<video-files/>
 </action>
+<action>
+	<icon>folder-green-cd</icon>
+	<name>Mount ISO</name>
+	<unique-id>1521098257001732-8</unique-id>
+	<command>/home/haozeke/.local/bin/fileHelpers/isoFuseMount %f</command>
+	<description>Use fuseiso to mount to a desktop folder</description>
+	<patterns>*.iso;*.mdf;*.bin</patterns>
+	<startup-notify/>
+	<other-files/>
+</action>
+<action>
+	<icon>folder-grey-cd</icon>
+	<name>Unmount ISO</name>
+	<unique-id>1522973396029298-1</unique-id>
+	<command>/home/haozeke/.local/bin/fileHelpers/isoFuseUmount %f</command>
+	<description>Unmounts the folder mounted by Mount ISO</description>
+	<patterns>*.iso;*.mdf;*.bin</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
 </actions>
