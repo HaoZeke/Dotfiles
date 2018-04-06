@@ -210,5 +210,5 @@ if command -v rvm >/dev/null 2>&1; then
   # It also prints some junk we don't care about, so we squelch its output in the same way.
   rvm use default > /dev/null 2>&1
 else
-  echo "You seem to be missing rvm"
+  echo "You seem to be missing rvm, try running getRVM"
 fi
