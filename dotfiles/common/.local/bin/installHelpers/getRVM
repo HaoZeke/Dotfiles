@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
-echo "Grabbing the latest development version.....\n and not touching the dotfiles\n"
+echo "Grabbing the latest development version....."
+echo "and not touching the dotfiles"
 \curl -sSL https://get.rvm.io | bash -s -- --ignore-dotfiles
