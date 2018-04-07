@@ -146,14 +146,14 @@ getCloud() {
 if [[ -d $HOME/.local/greWords/gre-cli-words && $- = *i* ]]; then
   $HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
   echo "\n"
-else if [[ $- = *i* ]]
+elif [[ $- = *i* ]]; then
   echo "You don't have gre-cli-words setup, try running getGREwords"
 fi
 
 # Nix
 if [[ -d /nix && $- = *i* ]]; then
   . $HOME/.nix-profile/etc/profile.d/nix.sh
-else if [[ $- = *i* ]]
+elif [[ $- = *i* ]]; then
   echo "You don't have nix installed"
 fi
 
