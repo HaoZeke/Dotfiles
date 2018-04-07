@@ -37,7 +37,7 @@ tar -xvzf $HOME/save/$TAR -C $HOME/save/
 
 mkdir -p $HOME/.local/
 
-mv -f $HOME/save/pandoc-$VERSION/* $HOME/.local
+rsync -a $HOME/save/pandoc-$VERSION/ $HOME/.local/
 
 export PATH=$HOME/.local/bin:$PATH
 
