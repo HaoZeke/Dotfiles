@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+git clone https://github.com/Cube777/dotgit
+mkdir -p ~/.local/bin
+cp -r dotgit/bin/dotgit* ~/.local/bin
+cat dotgit/bin/bash_completion >> ~/.bash_completion
+rm -rf dotgit
