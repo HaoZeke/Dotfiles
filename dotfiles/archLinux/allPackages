@@ -24,8 +24,6 @@ bin2iso
 binutils
 bison
 blockify-git
-borg
-borgmatic
 broadcom-wl-ck-haswell
 bspwm
 btrfs-progs
@@ -205,6 +203,7 @@ man-pages
 masterpdfeditor
 mdadm
 mediainfo
+megasync
 mendeleydesktop
 menulibre
 mimeo
