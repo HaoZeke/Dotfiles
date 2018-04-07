@@ -42,3 +42,4 @@ rsync -a $HOME/save/pandoc-$VERSION/ $HOME/.local/
 export PATH=$HOME/.local/bin:$PATH
 
 fi
+done
