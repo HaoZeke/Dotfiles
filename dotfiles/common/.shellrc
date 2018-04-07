@@ -143,17 +143,17 @@ getCloud() {
 ############
 
 # GRE Word List
-if [[ -d $HOME/.local/greWords/gre-cli-words ]]; then
+if [[ -d $HOME/.local/greWords/gre-cli-words && $- = *i* ]]; then
   $HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
   echo "\n"
-else
+else if [[ $- = *i* ]]
   echo "You don't have gre-cli-words setup, try running getGREwords"
 fi
 
 # Nix
-if [[ -d /nix ]]; then
+if [[ -d /nix && $- = *i* ]]; then
   . $HOME/.nix-profile/etc/profile.d/nix.sh
-else
+else if [[ $- = *i* ]]
   echo "You don't have nix installed"
 fi
 
@@ -174,8 +174,8 @@ else
   export EDITOR=vim
 fi
 
-if ! command -v fzf >/dev/null 2>&1; then
-  if ! command -v rg >/dev/null 2>&1; then
+if ! command -v fzf >/dev/null 2>&1 && [[ $- = *i* ]]; then
+  if ! command -v rg >/dev/null 2>&1 && [[ $- = *i* ]]; then
     echo "Please get ripgrep working"
   else
     export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
