@@ -26,10 +26,10 @@ alias copy='xclip -sel clip'
 alias tb="nc termbin.com 9999"
 
 # Ripgrep
-alias rg=rg --ignore-file $HOME/.config/ripgrep/ignore 
+alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 
 # Make directory
-alias md=mkdir -p
+alias md='mkdir -p'
 
 # Colors
 alias ls='ls --color=auto'
