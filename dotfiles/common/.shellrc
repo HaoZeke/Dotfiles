@@ -143,18 +143,22 @@ getCloud() {
 ############
 
 # GRE Word List
-if [[ -d $HOME/.local/greWords/gre-cli-words && $- = *i* ]]; then
+if [[ $- = *i* ]]; then
+  if [[ -d $HOME/.local/greWords/gre-cli-words ]]; then
   $HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
   echo "\n"
-elif [[ $- = *i* ]]; then
-  echo "You don't have gre-cli-words setup, try running getGREwords"
+  else
+    echo "You don't have gre-cli-words setup, try running getGREwords"
+  fi
 fi
 
 # Nix
-if [[ -d /nix && $- = *i* ]]; then
-  . $HOME/.nix-profile/etc/profile.d/nix.sh
-elif [[ $- = *i* ]]; then
-  echo "You don't have nix installed"
+if [[ $- = *i* ]]; then
+  if [[ -d /nix ]]; then
+    . $HOME/.nix-profile/etc/profile.d/nix.sh
+  else
+    echo "You don't have nix installed"
+  fi
 fi
 
 # For ssh-add
