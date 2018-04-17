@@ -36,6 +36,7 @@ ccache
 certbot
 cherrytree
 chmlib
+chromedriver
 compton
 coreutils
 cpupower
@@ -83,6 +84,7 @@ gawk
 gcc
 gcc-libs
 gcolor2
+geckodriver
 gettext
 ghostscript
 gimp
@@ -180,6 +182,7 @@ libsamplerate
 libtool
 libwmf
 licenses
+liferea
 light-locker
 light-locker-settings
 lightdm
@@ -257,7 +260,9 @@ pciutils
 pcmciautils
 pdf2djvu
 pdfcrack
+pdftk-bin
 perl
+phantomjs-bin
 php
 php-fpm
 pigz
@@ -342,6 +347,7 @@ teamviewer-beta
 termite
 tesseract
 tesseract-data-eng
+tex-gyre-fonts
 texinfo
 texlive-bibtexextra
 texlive-core
