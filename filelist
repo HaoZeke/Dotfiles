@@ -120,6 +120,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .zshPlatform:linux
 .bashPlatform:linux
 .shellPlatform:linux
+.spacemacs:linux
 
 # Configs #
 
