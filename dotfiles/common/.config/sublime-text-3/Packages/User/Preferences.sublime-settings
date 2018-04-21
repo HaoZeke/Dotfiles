@@ -143,6 +143,7 @@
 		"LaTeX-cwl",
 		"LaTeXing",
 		"Makefile",
+		"Markdown",
 		"Monocyanide Colorscheme",
 		"Monokai - Spacegray",
 		"Monokai Extended",
@@ -165,8 +166,7 @@
 		"Tmux",
 		"Travis YML Lint",
 		"Vuejs Complete Package",
-		"Wombatish color scheme",
-		"Markdown"
+		"Wombatish color scheme"
 	],
 	"ignored_words":
 	[
