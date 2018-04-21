@@ -1,5 +1,6 @@
 adapta-gtk-theme
 adobe-base-14-fonts
+adobe-source-code-pro-fonts
 alsa-utils
 ananicy-git
 android-file-transfer
@@ -61,6 +62,7 @@ e2fsprogs
 ebook-tools
 ed
 elinks
+emacs
 enpass-bin
 epub-thumbnailer-git
 etckeeper
@@ -240,6 +242,7 @@ openmpi
 openssh
 openssl
 otf-impallari-raleway-family
+otf-texgyre-pagella-math
 p7zip
 pacaur
 package-query
