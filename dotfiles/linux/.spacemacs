@@ -30,7 +30,8 @@ values."
    dotspacemacs-configuration-layer-path '()
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(
+   '(yaml
+     javascript
      ;; ----------------------------------------------------------------
      ;; Example of useful layers you may want to use right away.
      ;; Uncomment some layer names and press <SPC f e R> (Vim style) or
@@ -38,7 +39,6 @@ values."
      ;; ----------------------------------------------------------------
      helm
      auto-completion
-     better-defaults
      emacs-lisp
      git
      markdown
@@ -48,9 +48,11 @@ values."
      bibtex
      deft
      pandoc
-     ;; (shell :variables
-     ;;        shell-default-height 30
-     ;;        shell-default-position 'bottom)
+     go
+     (shell :variables
+            shell-default-shell 'multi-term
+            shell-default-height 30
+            shell-default-position 'bottom)
      (spell-checking :variables enable-flyspell-auto-completion t)
      (version-control :variables
                       version-control-global-margin t)
@@ -64,6 +66,12 @@ values."
                                       interleave
                                       all-the-icons
                                       fzf
+                                      anki-editor
+                                      cdlatex
+                                      ialign
+                                      magithub
+                                      focus
+                                      tup-mode
                                       )
    ;; A list of packages that cannot be updated.
    dotspacemacs-frozen-packages '()
@@ -301,6 +309,8 @@ values."
    ;; delete only whitespace for changed lines or `nil' to disable cleanup.
    ;; (default nil)
    dotspacemacs-whitespace-cleanup nil
+   ;; Suppress warning: Can be either spacemacs all-the-icons custom vim-powerline or vanilla or a list with `car' one of the previous values and properties one of the following `:separator' or `:separator-scale'
+   dotspacemacs-mode-line-theme `spacemacs
    ))
 
 (defun dotspacemacs/user-init ()
@@ -335,6 +345,33 @@ you should place your code here."
         )
   ;; Deft Notes
   (setq deft-directory "~/Documents/Notes")
+  ;; Go setup
+  (setq gofmt-command "goimports")
+  ;; Org mode stuff
+    ;; (with-eval-after-load 'org-agenda
+    ;;   (require 'org-projectile)
+    ;;   (push (org-projectile:todo-files) org-agenda-files))
+  (with-eval-after-load 'org
+    ;; here goes your Org config :)
+    ;; cdlatex hook
+    (add-hook 'org-mode-hook 'turn-on-org-cdlatex)
+    )
+  ;; Stop freezing on large files as per https://github.com/syl20bnr/spacemacs/issues/3828
+  (add-hook 'change-major-mode-after-body-hook
+            (lambda ()
+              (when (> (buffer-size) 80000)
+                (turn-off-show-smartparens-mode))))
+  ;; ialign
+  (global-set-key (kbd "C-x l") #'ialign)
+  ;; magithub setup
+  (use-package magithub
+    :after magit
+    :config (magithub-feature-autoinject t))
+    ;; MELPA
+    (setq configuration-layer-elpa-archives '(("melpa" . "melpa.org/packages/")
+                                                          ("org" . "orgmode.org/elpa/") ("gnu" . "elpa.gnu.org/packages/")))
+    ;; Use zsh
+    (setq multi-term-program "/usr/bin/zsh")
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -347,10 +384,31 @@ you should place your code here."
  '(evil-want-Y-yank-to-eol nil)
  '(package-selected-packages
    (quote
-    (flyspell-popup git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck diff-hl auto-dictionary fzf pandoc-mode ox-pandoc ht org-ref key-chord ivy helm-bibtex parsebib deft biblio biblio-core helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company auto-yasnippet yasnippet all-the-icons memoize ac-ispell auto-complete interleave pdf-tools tablist auctex-latexmk auctex unfill smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-mime org-download mwim mmm-mode markdown-toc markdown-mode magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md evil-magit magit magit-popup git-commit ghub let-alist with-editor ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async))))
+    (ox-reveal anki-editor go-guru go-eldoc company-go go-mode flyspell-popup git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck diff-hl auto-dictionary fzf pandoc-mode ox-pandoc ht org-ref key-chord ivy helm-bibtex parsebib deft biblio biblio-core helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company auto-yasnippet yasnippet all-the-icons memoize ac-ispell auto-complete interleave pdf-tools tablist auctex-latexmk auctex unfill smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-mime org-download mwim mmm-mode markdown-toc markdown-mode magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md evil-magit magit magit-popup git-commit ghub let-alist with-editor ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+(defun dotspacemacs/emacs-custom-settings ()
+  "Emacs custom settings.
+This is an auto-generated function, do not modify its content directly, use
+Emacs customize menu instead.
+This function is called at the very end of Spacemacs initialization."
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(evil-want-Y-yank-to-eol nil)
+ '(package-selected-packages
+   (quote
+    (xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help ox-reveal anki-editor go-guru go-eldoc company-go go-mode flyspell-popup git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck diff-hl auto-dictionary fzf pandoc-mode ox-pandoc ht org-ref key-chord ivy helm-bibtex parsebib deft biblio biblio-core helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company auto-yasnippet yasnippet all-the-icons memoize ac-ispell auto-complete interleave pdf-tools tablist auctex-latexmk auctex unfill smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-mime org-download mwim mmm-mode markdown-toc markdown-mode magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md evil-magit magit magit-popup git-commit ghub let-alist with-editor ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+)
