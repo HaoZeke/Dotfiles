@@ -190,6 +190,9 @@ export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/local/include
 export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/usr/local/include
 export CPATH=$CPATH:/usr/local/include
 
+# Gaussian
+export PATH=$PATH:$HOME/.local/g16
+
 # Python Path
 ##############
 
@@ -218,3 +221,8 @@ if [[ -d $HOME/.rvm ]]; then
 else
   echo "You seem to be missing rvm, try running getRVM"
 fi
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
