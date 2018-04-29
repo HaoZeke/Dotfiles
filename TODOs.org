@@ -2,3 +2,6 @@
 * TODO 
 
  [] Generalize the Gaussian part
+
+* TODO [#B] Add keybindings for the new emacs packages 
+
