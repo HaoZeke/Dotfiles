@@ -26,6 +26,10 @@ bin2iso
 binutils
 bison
 blockify-git
+blueman
+bluez
+bluez-firmware
+bluez-utils
 broadcom-wl-ck-haswell
 bspwm
 btrfs-progs
@@ -108,6 +112,7 @@ goffice
 gonvim
 google-chrome
 gparted
+grace
 grep
 groff
 gsmartcontrol
@@ -180,6 +185,7 @@ libmagick6
 libmediainfo
 libmpeg2
 libraw
+libreoffice-fresh
 librsvg
 libsamplerate
 libtool
@@ -204,6 +210,7 @@ lxsession
 lyricfier
 m4
 make
+mal-gtk
 man-db
 man-pages
 masterpdfeditor
@@ -235,6 +242,7 @@ nginx
 ngrok
 nitrogen
 ntfs-3g
+obexfs
 ocl-icd
 okular
 openbabel
