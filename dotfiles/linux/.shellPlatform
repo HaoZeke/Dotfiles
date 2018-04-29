@@ -64,3 +64,9 @@ fi
 export XDG_DATA_HOME=$XDG_DATA_HOME:/usr/share
 export XDG_DATA_DIRS=$XDG_DATA_HOME:/usr/share
 export XDG_CONFIG_HOME="$HOME/.config"
+
+# Emacs Stuff (cross platform)
+
+# Local Variables:
+# mode: shell-script
+# End:
