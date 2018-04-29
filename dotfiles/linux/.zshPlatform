@@ -59,3 +59,10 @@ if command -v fzf >/dev/null 2>&1; then
     rename-to:'$1'
   fi
 fi
+
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
+
