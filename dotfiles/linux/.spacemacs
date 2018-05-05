@@ -30,8 +30,11 @@ values."
    dotspacemacs-configuration-layer-path '()
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(yaml
+   '(python
+     rust
+     yaml
      javascript
+     react
      ;; ----------------------------------------------------------------
      ;; Example of useful layers you may want to use right away.
      ;; Uncomment some layer names and press <SPC f e R> (Vim style) or
@@ -334,19 +337,21 @@ you should place your code here."
   ;; This is supposed to get interleave to work properly
   (setq org-ref-notes-directory "$HOME/Documents/References/Notes/"
         org-ref-bibliography-notes "$HOME/Documents/References/bibNotes.org"
-        org-ref-default-bibliography '("$HOME/Documents/References/masterBib.bib")
+        org-ref-default-bibliography '("~/Documents/References/masterBib.bib")
         org-ref-pdf-directory "/media/Storage/Library/")
   ;; Helm bibtex sugar and mixins
-  (setq helm-bibtex-bibliography "$HOME/Documents/References/masterBib.bib" ;; where your references are stored
+  (setq helm-bibtex-bibliography "/home/haozeke/Documents/References/masterBib.bib" ;; where your references are stored
         helm-bibtex-library-path "/media/Storage/Library/" ;; where your pdfs etc are stored
-        helm-bibtex-notes-path "$HOME/Documents/References/bibNotes.org" ;; where your notes are stored
-        bibtex-completion-bibliography "$HOME/Documents/References/masterBib.bib" ;; writing completion
-        bibtex-completion-notes-path "$HOME/Documents/References/bibNotes.org"
+        helm-bibtex-notes-path "/home/haozeke/Documents/References/bibNotes.org" ;; where your notes are stored
+        bibtex-completion-bibliography "/home/haozeke/Documents/References/masterBib.bib" ;; writing completion
+        bibtex-completion-notes-path "/home/haozeke/Documents/References/bibNotes.org"
         )
   ;; Deft Notes
   (setq deft-directory "~/Documents/Notes")
   ;; Go setup
   (setq gofmt-command "goimports")
+  ;; I have a GOPATH
+  (exec-path-from-shell-copy-env "GOPATH")
   ;; Org mode stuff
     ;; (with-eval-after-load 'org-agenda
     ;;   (require 'org-projectile)
@@ -355,6 +360,9 @@ you should place your code here."
     ;; here goes your Org config :)
     ;; cdlatex hook
     (add-hook 'org-mode-hook 'turn-on-org-cdlatex)
+    (require 'org-projectile)
+    (org-projectile-per-project)
+    (setq org-projectile-per-project-filepath "TODOs.org")
     )
   ;; Stop freezing on large files as per https://github.com/syl20bnr/spacemacs/issues/3828
   (add-hook 'change-major-mode-after-body-hook
@@ -372,6 +380,19 @@ you should place your code here."
                                                           ("org" . "orgmode.org/elpa/") ("gnu" . "elpa.gnu.org/packages/")))
     ;; Use zsh
     (setq multi-term-program "/usr/bin/zsh")
+    ;; Symbolic link (nil t ask)
+    (setq vc-follow-symlinks t)
+    ;; Enable these major modes per file type
+    (setq auto-mode-alist
+          (append
+           (list
+            '("\\.\\(shellrc\\|shellSpecifics\\)$" . shell-script-mode)
+            )
+           auto-mode-alist))
+    ;; Minor mode hooks
+    (add-hook 'markdown-mode-hook 'cdlatex-mode)
+    (add-hook 'markdown-mode-hook 'markdown-toggle-math)
+    (add-hook 'markdown-mode-hook 'auto-fill-mode)
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -404,7 +425,8 @@ This function is called at the very end of Spacemacs initialization."
  '(evil-want-Y-yank-to-eol nil)
  '(package-selected-packages
    (quote
-    (xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help ox-reveal anki-editor go-guru go-eldoc company-go go-mode flyspell-popup git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck diff-hl auto-dictionary fzf pandoc-mode ox-pandoc ht org-ref key-chord ivy helm-bibtex parsebib deft biblio biblio-core helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company auto-yasnippet yasnippet all-the-icons memoize ac-ispell auto-complete interleave pdf-tools tablist auctex-latexmk auctex unfill smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-mime org-download mwim mmm-mode markdown-toc markdown-mode magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md evil-magit magit magit-popup git-commit ghub let-alist with-editor ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async))))
+    (yapfify stickyfunc-enhance pyvenv pytest pyenv-mode py-isort pippel pipenv pip-requirements lsp-python lsp-mode live-py-mode importmagic epc ctable concurrent deferred hy-mode helm-pydoc helm-gtags helm-cscope xcscope ggtags cython-mode counsel-gtags company-anaconda anaconda-mode pythonic ox-reveal anki-editor go-guru go-eldoc company-go go-mode flyspell-popup git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck diff-hl auto-dictionary fzf pandoc-mode ox-pandoc ht org-ref key-chord ivy helm-bibtex parsebib deft biblio biblio-core helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company auto-yasnippet yasnippet all-the-icons memoize ac-ispell auto-complete interleave pdf-tools tablist auctex-latexmk auctex unfill smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-mime org-download mwim mmm-mode markdown-toc markdown-mode magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md evil-magit magit magit-popup git-commit ghub let-alist with-editor ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+ '(safe-local-variable-values (quote ((org-ref-bibliography . "./refs.bib")))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
