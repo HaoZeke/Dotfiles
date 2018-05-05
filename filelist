@@ -41,6 +41,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .agignore
 .sass-lint.yml
 .dir_colors
+.direnvrc
 
 # Borg
 .borg_exclusions
