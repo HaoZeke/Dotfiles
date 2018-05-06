@@ -1,6 +1,0 @@
-[roxterm options]
-only_warn_running=1
-warn_close=0
-encoding=UTF-8
-profile=Greybird
-prefer_dark_theme=1
