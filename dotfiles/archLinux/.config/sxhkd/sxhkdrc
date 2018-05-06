@@ -71,8 +71,8 @@ super + {_,shift + }{1-9,0}
 super + Return
 	tilix	
 
-super + space
-	dmenu_run
+ctrl + shift + Return
+	emacsclient -nc
 
 #
 # Dropdowns
