@@ -1,5 +1,0 @@
-delta
-target thumb C++: skia_skia_library_gyp <= external/chromium_org/third_party/skia/src/ports/SkImageDecoder_empty.cpp
-
-target thumb C++: skia_skia_library_gyp <= external/chromium_org/third_party/skia/src/ports/SkImageDecoder_empty.cpp
- toolbox <= system/core/toolbox/lsmod.c
