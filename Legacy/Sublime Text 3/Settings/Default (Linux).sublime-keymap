@@ -1,9 +1,0 @@
-[
-	
-
-{
-      "keys": ["super+ctrl+o"],
-      "command": "project_manager_list", "args": {"action": "new"}
-    }
-
-]

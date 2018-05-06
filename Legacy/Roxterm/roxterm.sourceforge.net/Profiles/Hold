@@ -1,9 +1,0 @@
-[roxterm profile]
-colour_scheme=GTK
-font=DejaVu Sans Mono 12
-browser=midori
-dir_filer=thunar
-show_tab_status=1
-new_tabs_adjacent=1
-saturation=1.000000
-exit_action=1
