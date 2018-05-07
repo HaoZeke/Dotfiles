@@ -43,6 +43,45 @@ layout_pipenv() {
     layout_virtualenv $(pipenv --venv)
 }
 
+########
+# Ruby #
+########
+
+# Usage (lines other than the first are optional):
+## layout rvm
+## rvm use $VERSION_NUMBER
+## layout ruby
+## PATH_add .direnv/bundler-bin
+#
+# This loads rvm only when needed. The remaining steps basically involve the appropriate ruby setup.
+#
+# https://rvm.io/
+# https://github.com/direnv/direnv/wiki/Ruby
+#
+
+layout_rvm() {
+    # RVM setup
+    export rvm_ignore_dotfiles=yes
+
+    if [[ ! -d "${HOME}/.rvm" ]]; then
+        echo "You seem to be missing rvm, running getRVM now"
+        getRVM
+    fi
+      # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+      export PATH="$PATH:$HOME/.rvm/bin"
+
+      # RVM Fixes (per https://github.com/rvm/rvm/issues/3212)
+      # Squelch the warning by appending ' > /dev/null 2>&1' here
+      [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" > /dev/null 2>&1
+
+      # RVM fixes whatever it considers the problem to be, on its own, in `rvm use`.
+      # It also prints some junk we don't care about, so we squelch its output in the same way.
+      rvm use default > /dev/null 2>&1
+
+      # RVM bash completion
+      [[ -r "$HOME/.rvm/scripts/completion" ]] && source "$HOME/.rvm/scripts/completion"
+}
+
 ######
 # Go #
 ######
