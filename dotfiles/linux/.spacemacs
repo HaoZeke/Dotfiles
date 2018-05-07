@@ -389,8 +389,7 @@ you should place your code here."
     (setq auto-mode-alist
           (append
            (list
-            '("\\.\\(shellrc\\|shellSpecifics\\)$" . shell-script-mode)
-            '("\\.envrc\\'" . shell-script-mode)
+            '("\\.\\(.\*rc\\|\.*Specifics\\)$" . shell-script-mode)
             )
            auto-mode-alist))
     ;; Minor mode hooks
