@@ -89,3 +89,8 @@ F5
 # make sxhkd reload its configuration files:
 super + Escape
 	pkill -USR1 -x sxhkd
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
