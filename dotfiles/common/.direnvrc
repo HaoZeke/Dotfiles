@@ -4,16 +4,48 @@
 # End:
 
 
-# Use python virtualenv functions
+##########
+# Python #
+##########
+
+# Usage: layout virtualenv
+#
+# Use python virtualenv functions. Basic function composes well with the rest
+#
+# https://virtualenv.pypa.io/en/stable/
+#
+
 layout_virtualenv() {
   local venv_path="$1"
   source ${venv_path}/bin/activate
 }
 
+# Usage: layout virtualenvwrapper
+#
+# Use virtualenvwrapper. This is sort of depreciated.
+#
+# https://virtualenvwrapper.readthedocs.io/en/latest/
+#
+
 layout_virtualenvwrapper() {
   local venv_path="${WORKON_HOME}/$1"
   layout_virtualenv $venv_path
 }
+
+# Usage: layout pipenv
+#
+# Recommended python setup. Loads the relevant pipenv virtualwrapper.
+#
+# https://docs.pipenv.org/
+#
+
+layout_pipenv() {
+    layout_virtualenv $(pipenv --venv)
+}
+
+######
+# Go #
+######
 
 # Usage: layout golang
 #
