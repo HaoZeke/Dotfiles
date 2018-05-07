@@ -390,6 +390,7 @@ you should place your code here."
           (append
            (list
             '("\\.\\(shellrc\\|shellSpecifics\\)$" . shell-script-mode)
+            '("\\.envrc\\'" . shell-script-mode)
             )
            auto-mode-alist))
     ;; Minor mode hooks
