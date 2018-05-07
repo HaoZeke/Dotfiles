@@ -4,4 +4,5 @@
  [] Generalize the Gaussian part
 
 * TODO [#B] Add keybindings for the new emacs packages 
-
+* TODO [#B] Switch to [[https://github.com/GetStream/vg][virtualGo]] instead of direnv golang
+  
