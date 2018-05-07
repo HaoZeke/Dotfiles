@@ -82,6 +82,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .config/neofetch/config.conf
 .config/ripgrep/ignore
 
+# Desktop Entries #
+.local/share/applications/emacs-client.desktop
+
 # Sublime Text 3
 .config/sublime-text-3/Packages/User/Preferences.sublime-settings
 .config/sublime-text-3/Packages/User/Package Control.sublime-settings
