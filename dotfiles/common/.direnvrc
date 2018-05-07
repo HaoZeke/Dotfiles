@@ -1,3 +1,9 @@
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
+
+
 # Use python virtualenv functions
 layout_virtualenv() {
   local venv_path="$1"
