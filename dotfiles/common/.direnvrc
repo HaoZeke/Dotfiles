@@ -8,3 +8,20 @@ layout_virtualenvwrapper() {
   local venv_path="${WORKON_HOME}/$1"
   layout_virtualenv $venv_path
 }
+
+# Usage: layout golang
+#
+# Sets up environment for a Go project using the alternative gb build tool. Also
+# works with the official dep package.In addition to project executables on
+# PATH, this includes an exclusive, project- local GOPATH which enables many
+# tools like gocode and oracle to "just work".
+#
+# http://getgb.io/
+# https://golang.github.io/dep/
+#
+
+layout_golang() {
+  export GOPATH="$PWD/vendor:$PWD"
+  PATH_add "$PWD/vendor/bin"
+  PATH_add bin
+}
