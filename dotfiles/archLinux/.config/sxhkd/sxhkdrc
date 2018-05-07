@@ -72,7 +72,7 @@ super + Return
 	tilix	
 
 ctrl + shift + Return
-	emacsclient -nc
+	emacsclient -c -a ''
 
 #
 # Dropdowns
