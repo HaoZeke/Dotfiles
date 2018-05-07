@@ -23,6 +23,7 @@ bc
 bftpd
 biber
 bin2iso
+bindfs
 binutils
 bison
 blockify-git
@@ -49,6 +50,9 @@ cpupower
 cronie
 crossover
 cryptsetup
+cuneiform
+cups
+cups-pdf
 customizepkg
 deluge
 device-mapper
@@ -65,6 +69,7 @@ docker-compose
 dotgit
 e2fsprogs
 ebook-tools
+ecm-tools
 ed
 elinks
 emacs
@@ -100,6 +105,7 @@ git-extras-git
 git-lfs
 git-review
 glibc
+gmp-ecm
 gnome-chemistry-utils
 gnome-common
 gnome-dictionary
@@ -108,13 +114,14 @@ gnome-font-viewer
 gnome-screenshot
 gnuplot
 go
+gocr
 goffice
 gonvim
 google-chrome
 gparted
-grace
 grep
 groff
+gscan2pdf
 gsmartcontrol
 gtypist
 guake
@@ -124,6 +131,8 @@ gvfs-mtp
 gvfs-smb
 gzip
 hdparm
+hplip-plugin
+hpoj
 htop
 httrack
 hub
@@ -156,6 +165,7 @@ khtml
 kitty
 ktouch
 less
+lesstif
 lib32-alsa-plugins
 lib32-fontconfig
 lib32-freetype2
@@ -210,7 +220,6 @@ lxsession
 lyricfier
 m4
 make
-mal-gtk
 man-db
 man-pages
 masterpdfeditor
@@ -226,6 +235,7 @@ mpd
 mpdecimal
 mpdscribble
 mpv
+mupdf-git
 namcap
 nano
 neofetch
@@ -244,6 +254,7 @@ nitrogen
 ntfs-3g
 obexfs
 ocl-icd
+ocropy
 okular
 openbabel
 openexr
@@ -299,6 +310,7 @@ python-neovim
 python-pandocfilters
 python-pdfrw
 python-pip
+python-pipenv
 python-pyenchant
 python-pypandoc
 python-reportlab
@@ -458,9 +470,13 @@ xperia-flashtool
 xsel
 xterm
 yaourt
+yarn
 youtube-dl
 youtube-dl-gui-git
+zathura-git
+zathura-pdf-mupdf
 zenity
+zotero
 zsh
 zsh-completions
 zstd
