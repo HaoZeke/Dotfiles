@@ -1,12 +1,26 @@
+#######################
+# Startup debugging   #
+# tools for profiling #
+#######################
+
+# Start Profiler
+# Test with:
+# time  zsh -i -c exit
+# To check without results try:
+# for i in $(seq 1 10); do time zsh -i -c exit; done
+if [[ "${ZSH_PROFILE}" == 1 ]]; then
+    zmodload zsh/zprof
+else
+    ZSH_PROFILE=0
+fi
+
+
 # First load shell agnostic functions
 . ~/.shellrc
-
 
 ##################
 #  Common Zsh    #
 ##################
-
-# zmodload zsh/zprof
 
 if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
@@ -133,11 +147,14 @@ zplug "changyuheng/zsh-interactive-cd"
 zplug "mollifier/cd-gitroot"
 zplug "bobsoppe/zsh-ssh-agent", use:ssh-agent.zsh, from:github
 zplug "zdharma/history-search-multi-word"
+# Manage NVM better (needs settings before being loaded)
+export NVM_LAZY_LOAD=true
+zplug "lukechilds/zsh-nvm"
 
 # Completions
 zplug "zsh-users/zsh-completions"
 zplug "ascii-soup/zsh-url-highlighter"
-zplug "molovo/tipz" 
+zplug "molovo/tipz"
 zplug "srijanshetty/zsh-pip-completion"
 
 # Install plugins if there are plugins that have not been installed
@@ -177,11 +194,16 @@ bindkey -M vicmd 'j' history-substring-search-down
 # export ENHANCD_FILTER="fzf --height 50% --reverse --ansi --preview 'ls -l {}' --preview-window down"
 export ENHANCD_FILTER="fzf --height 50% --reverse --ansi"
 # export ENHANCD_DOT_SHOW_FULLPATH=1
-    
-TIPZ_TEXT='Alias:'    
+TIPZ_TEXT='Alias:' 
 
 
 # Common Aliases (Plugin based)
 ################################
 
 alias cdg=cd-gitroot
+
+
+# End Profiler
+if [[ "${ZSH_PROFILE}" == 1 ]]; then
+zprof
+fi
