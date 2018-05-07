@@ -198,30 +198,6 @@ export PATH=$PATH:$HOME/.local/g16
 
 export PYTHONPATH=$PYTHONPATH:/home/$USER/Git/Github/espresso:/home/$USER/Git/Github/Linux/acd_fuse:/usr/share/amazon/pyacd
 
-# End with this
-##################
-
-# RVM setup
-export rvm_ignore_dotfiles=yes
-
-if [[ -d $HOME/.rvm ]]; then
-  # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-  export PATH="$PATH:$HOME/.rvm/bin"
-
-  # RVM Fixes (per https://github.com/rvm/rvm/issues/3212)
-  # Squelch the warning by appending ' > /dev/null 2>&1' here
-  [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" > /dev/null 2>&1
-
-  # RVM fixes whatever it considers the problem to be, on its own, in `rvm use`.
-  # It also prints some junk we don't care about, so we squelch its output in the same way.
-  rvm use default > /dev/null 2>&1
-
-  # RVM bash completion
-  [[ -r "$HOME/.rvm/scripts/completion" ]] && source "$HOME/.rvm/scripts/completion"
-else
-  echo "You seem to be missing rvm, try running getRVM"
-fi
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
