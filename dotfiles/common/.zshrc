@@ -210,6 +210,11 @@ TIPZ_TEXT='Alias:'
 
 alias cdg=cd-gitroot
 
+if which bat >/dev/null 2>&1; then
+    alias cat=bat
+    # Remember to use =cat or \cat when bat fails
+fi
+
 
 # End Profiler
 if [[ "${ZSH_PROFILE}" == 1 ]]; then
