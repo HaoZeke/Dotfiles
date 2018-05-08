@@ -81,6 +81,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .config/nvim/init.vim
 .config/neofetch/config.conf
 .config/ripgrep/ignore
+.config/zathura/zathurarc
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
