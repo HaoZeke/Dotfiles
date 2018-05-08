@@ -5,3 +5,5 @@
 * TODO [#A] Make zsh load faster
 ** Look into using [[https://github.com/getantibody/antibody][antibody]]  or something to speed things up
 * TODO [#C] Use Ansible to setup targets like [[https://github.com/eoli3n/dotfiles][here]] 
+* TODO Use tabbed and jumpapp to run zathura tabs
+* TODO Setup spacemacs keybindings for zathura
