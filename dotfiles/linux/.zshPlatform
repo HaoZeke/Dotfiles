@@ -11,7 +11,7 @@ export PATH=$PATH:/usr/local/MATLAB/R2017a/bin
 #####################
 
 # Programs
-if ! command -v rg >/dev/null 2>&1; then
+if which rg >/dev/null 2>&1; then
   zplug "BurntSushi/ripgrep", \
       from:gh-r, \
       as:command, \
@@ -22,7 +22,7 @@ if ! command -v rg >/dev/null 2>&1; then
   alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 fi
 
-if ! command -v fzf >/dev/null 2>&1; then
+if which fzf >/dev/null 2>&1; then
   zplug "junegunn/fzf-bin", \
       from:gh-r, \
       as:command, \
@@ -30,11 +30,11 @@ if ! command -v fzf >/dev/null 2>&1; then
       use:"*linux*amd64*"
 fi
 
-if ! command -v brew >/dev/null 2>&1; then
+if which brew >/dev/null 2>&1; then
   zplug "zpm-zsh/linuxbrew"
 fi
 
-if ! command -v exa >/dev/null 2>&1; then
+if which exa >/dev/null 2>&1; then
   zplug "ogham/exa", \
     from:gh-r, \
     as:command, \
@@ -42,7 +42,7 @@ if ! command -v exa >/dev/null 2>&1; then
     use:"*linux*"
 fi
 
-if ! command -v archiver >/dev/null 2>&1; then
+if which archiver >/dev/null 2>&1; then
   zplug "mholt/archiver", \
     from:gh-r, \
     as:command, \
@@ -50,8 +50,8 @@ if ! command -v archiver >/dev/null 2>&1; then
     use:"*linux*amd64*"
 fi
 
-if command -v fzf >/dev/null 2>&1; then
-  if ! command -v git-fzf >/dev/null 2>&1; then
+if which fzf >/dev/null 2>&1; then
+  if which git-fzf >/dev/null 2>&1; then
     zplug 'b4b4r07/git-fzf', hook-build:'make'
     zplug 'b4b4r07/git-fzf', \
         as:command, \
