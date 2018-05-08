@@ -1,0 +1,35 @@
+###########
+# Zathura #
+###########
+
+# Values from http://manpages.ubuntu.com/manpages/trusty/man5/zathurarc.5.html
+# Also here https://pwmt.org/projects/zathura/documentation/
+
+# best-fit width
+set adjust-open width
+
+# Use the X11 clipboard
+# primary clipboard
+# primary uses Shift+Insert to paste
+# clipboard uses the traditional method to paste
+set selection-clipboard clipboard
+
+# Try the database
+# plain null sql
+set database sqlite
+
+#  Defines if scrolling by half or full pages stops at page boundaries.
+# true false
+set scroll-page-aware true
+
+# En/Disables the ability of changing zoom when following links.
+# true false
+set link-zoom false
+
+# Use basename of the file in the window title.
+# true false
+set window-title-basename true
+
+# Display a short version of the file path, which replaces $HOME with ~, in the statusbar.
+# true false
+set statusbar-home-tilde true
