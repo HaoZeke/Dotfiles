@@ -26,7 +26,7 @@ if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
-#  Keys     
+#  Keys
 #############
 
 typeset -A key
@@ -84,7 +84,9 @@ source ~/.zplug/init.zsh
 # Shell Theme
 ###############
 
-#source ~/.shell_prompt.sh
+# Power level 9k #
+
+# source ~/.shell_prompt.sh
 POWERLEVEL9K_MODE='nerdfont-complete'
 POWERLEVEL9K_VCS_CLEAN_FOREGROUND='blue'
 POWERLEVEL9K_VCS_CLEAN_BACKGROUND='black'
@@ -94,16 +96,22 @@ POWERLEVEL9K_VCS_MODIFIED_FOREGROUND='blue'
 POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
 
 # Right
-POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status root_indicator background_jobs time)
+POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rbenv virtualenv vcs)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rvm virtualenv vcs)
 
 zplug "bhilburn/powerlevel9k", use:powerlevel9k.zsh-theme, defer:3
 
+# Bullet Train #
+
 # zplug "caiogondim/bullet-train.zsh", use:bullet-train.zsh-theme, defer:3 # defer until other plugins like oh-my-zsh is loaded
 
-# Platform 
+# Spaceship #
+
+# zplug denysdovhan/spaceship-prompt, use:spaceship.zsh, from:github, as:theme
+
+# Platform
 #############
 
 if [ -f ~/.zshPlatform ]; then
