@@ -1,10 +1,7 @@
 
-* TODO 
-
- [] Generalize the Gaussian part
-
+* TODO [#C] Generalize the Gaussian part
 * TODO [#B] Add keybindings for the new emacs packages 
 * TODO [#B] Switch to [[https://github.com/GetStream/vg][virtualGo]] instead of direnv golang
 * TODO [#A] Make zsh load faster
 ** Look into using [[https://github.com/getantibody/antibody][antibody]]  or something to speed things up
-  
+* TODO [#C] Use Ansible to setup targets like [[https://github.com/eoli3n/dotfiles][here]] 
