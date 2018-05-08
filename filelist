@@ -222,7 +222,6 @@ allPackages:archLinux
 .dmrc:xfceSession
 
 # Session
-.config/xfce4/xfconf/xfce-perchannel-xml/thunar-volman.xml:xfceSession
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml:xfceSession
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-volumed-pulse.xml:xfceSession
 .config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml:xfceSession
@@ -271,7 +270,5 @@ crontab:myArchBox
 
 # Xfce4 Specifics
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
-.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml:myArchBox
-.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml:myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
 
