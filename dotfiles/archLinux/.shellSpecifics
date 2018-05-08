@@ -86,7 +86,7 @@ test -f /$HOME/Git/Github/amber16/amber.sh && source /$HOME/Git/Github/amber16/a
 # Commands
 ###########
 
-if command -v ccache >/dev/null 2>&1; then
+if which ccache >/dev/null 2>&1; then
   ccache -M 50G  >/dev/null
   export USE_CCACHE=1
 else
@@ -94,7 +94,7 @@ else
 fi
 
 # Gets powerpill to work with pacaur
-if command -v powerpill >/dev/null 2>&1; then
+if which powerpill >/dev/null 2>&1; then
   export PACMAN='powerpill'
 else
   echo "You seem to be missing powerpill"
