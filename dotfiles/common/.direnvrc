@@ -74,6 +74,9 @@ layout_rvm() {
 
       # RVM bash completion
       [[ -r "$HOME/.rvm/scripts/completion" ]] && source "$HOME/.rvm/scripts/completion"
+      # Direnv specials
+      watch_file Gemfile
+      watch_file .ruby_version
 }
 
 ######
