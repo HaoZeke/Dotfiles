@@ -140,7 +140,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .config/uncrustify/uncrustify_cpp.cfg:linux
 
 # Tilix
-.config/tilix/schemes/nord.json:linux
+# From https://github.com/karlding/base16-tilix
+.config/tilix/schemes/base16-spacemacs.json:linux
 
 # ArchLinux
 #################
