@@ -171,16 +171,12 @@ call plug#begin()
     Plug 'ryanoasis/vim-devicons'
 call plug#end()
 call plug#helptags()
-nnoremap ; :
 if !has('g:syntax_on')|syntax enable|endif
 "filetype plugin indent on
 "filetype indent on
 " Behold paste indenting!
-"nnoremap <F2> :set invpaste paste?<CR>
 set pastetoggle=<F2>
 set showmode
-" Probably NOT a good idea
-
 " setlocal spell spelllang=en_us
 set grepprg=grep\ -nH\ $*
 set showcmd        " display incomplete commands
@@ -204,10 +200,16 @@ set undolevels=1000      " use many muchos levels of undo
 autocmd GUIEnter * set visualbell t_vb=
 "set visualbell           " don't beep
 "set noerrorbells         " don't beep
+" ================ Mappings ======================
+" Probably NOT a good idea
+"nnoremap <F2> :set invpaste paste?<CR>
+nnoremap ; :
+"Spacemacs Esc
+imap fd <Esc>
 "Fake Sudo
 cmap w!! w !sudo tee % >/dev/null
 " Allow j and k to be more normal.
-nmap j gj         
+nmap j gj
 nmap k gk
 " Use Q for formatting the current paragraph (or selection)
 vmap Q gq
