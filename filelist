@@ -42,6 +42,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .sass-lint.yml
 .dir_colors
 .direnvrc
+.gtkrc-2.0
 
 # Borg
 .borg_exclusions
@@ -195,7 +196,6 @@ allPackages:archLinux
 # LXDE
 ########
 
-.gtkrc-2.0:lxdeSession
 .dmrc:lxdeSession
 
 # X server stuff
