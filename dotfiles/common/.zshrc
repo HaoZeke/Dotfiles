@@ -119,7 +119,7 @@ if [ -f ~/.zshPlatform ]; then
 fi
 
 
-# Specifics 
+# Specifics
 #############
 
 if [ -f ~/.zshSpecifics ]; then
