@@ -83,6 +83,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .config/neofetch/config.conf
 .config/ripgrep/ignore
 .config/zathura/zathurarc
+.config/zathura/zathuraThemerc
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
