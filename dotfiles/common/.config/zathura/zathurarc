@@ -12,7 +12,7 @@ set adjust-open width
 # primary clipboard
 # primary uses Shift+Insert to paste
 # clipboard uses the traditional method to paste
-set selection-clipboard clipboard
+set selection-clipboard primary
 
 # Try the database
 # plain null sql
@@ -33,3 +33,6 @@ set window-title-basename true
 # Display a short version of the file path, which replaces $HOME with ~, in the statusbar.
 # true false
 set statusbar-home-tilde true
+
+# Put themes in a separate file
+include zathuraThemerc
