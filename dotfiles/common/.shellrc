@@ -10,6 +10,15 @@ if ! which git >/dev/null 2>&1; then
   echo "Once you have brew just run\nbrew install git"
 fi
 
+# Exports
+##########
+
+if [ ! $DISPLAY ] ; then
+    if [ "$SSH_CLIENT" ] ; then
+        export DISPLAY=`echo $SSH_CLIENT|cut -f1 -d\ `:0.0
+    fi
+fi
+
 # Aliases
 ###########
 
@@ -240,7 +249,7 @@ else
   echo "You appear to be missing tmux"
 fi
 
-# Platform 
+# Platform
 #############
 
 if [ -f ~/.shellPlatform ]; then
@@ -248,7 +257,7 @@ if [ -f ~/.shellPlatform ]; then
 fi
 
 
-# Specifics 
+# Specifics
 #############
 
 if [ -f ~/.shellSpecifics ]; then
