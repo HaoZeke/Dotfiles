@@ -46,6 +46,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .direnvrc
 .gtkrc-2.0
 
+# GDB init is actually from gdb-dashboard with some additions
+# Update frequently
+.gdbinit
+
 # Borg
 .borg_exclusions
 .borg_patterns
