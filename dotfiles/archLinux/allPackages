@@ -11,6 +11,7 @@ arc-gtk-theme
 arc-solid-gtk-theme
 archivetools
 aria2
+asp
 aspell-en
 audacious
 autoconf
@@ -39,12 +40,15 @@ byacc
 bzip2
 cachedir
 caja
+casperjs
 catfish
 ccache
 certbot
 cherrytree
 chmlib
 chromedriver
+clang
+colordiff
 compton
 coreutils
 cpupower
@@ -64,6 +68,7 @@ diffutils
 direnv
 discount
 djvu2pdf
+djvusmooth
 docear
 docker
 docker-compose
@@ -90,6 +95,8 @@ findutils
 flex
 fontawesome.sty
 fontforge
+fort77
+ftnchek
 fuseiso
 g2sc
 galculator
@@ -97,6 +104,7 @@ gawk
 gcc
 gcc-libs
 gcolor2
+gdb
 geckodriver
 gettext
 ghostscript
@@ -126,6 +134,7 @@ gscan2pdf
 gsmartcontrol
 gtypist
 guake
+gucharmap
 gvfs
 gvfs-afc
 gvfs-mtp
@@ -153,6 +162,7 @@ iw
 jabref
 jack
 java-openjfx
+jbig2enc
 jfsutils
 joe-go
 jp2a
@@ -165,6 +175,7 @@ keybase-bin
 keynav
 khtml
 kitty
+ktikz
 ktouch
 less
 lesstif
@@ -221,16 +232,20 @@ lxpanel
 lxsession
 lyricfier
 m4
+maim
 make
 man-db
 man-pages
-masterpdfeditor
+masterpdfeditor4
 mdadm
 mediainfo
 megasync
+meld
 mendeleydesktop
 menulibre
+midori
 mimeo
+minidjvu
 molden
 mosh
 mpd
@@ -263,6 +278,7 @@ openexr
 openmpi
 openssh
 openssl
+oprofile
 otf-impallari-raleway-family
 otf-texgyre-pagella-math
 p7zip
@@ -285,6 +301,7 @@ pciutils
 pcmciautils
 pdf2djvu
 pdfcrack
+pdfsizeopt
 pdftk-bin
 perl
 phantomjs-bin
@@ -294,6 +311,7 @@ pigz
 pkg-config
 planner
 playerctl
+pngout
 polari
 polybar-git
 pomodoneapp
@@ -304,6 +322,7 @@ procps-ng
 psmisc
 pulseaudio
 pulseaudio-alsa
+pydb
 pygtk
 pypdfocr-git
 pyprof2calltree
@@ -342,6 +361,7 @@ ryver-desktop
 s-nail
 sabnzbd
 samba
+scantailor
 screenkey
 sdfs
 sed
@@ -357,6 +377,7 @@ speedreader
 speex
 sqlitebrowser
 sshfs
+standardnotes-desktop
 strace
 subdownloader
 sublime-text
@@ -446,6 +467,7 @@ xf86-video-amdgpu
 xf86-video-ati
 xf86-video-intel
 xfce4-cpugraph-plugin
+xfce4-genmon-plugin
 xfce4-netload-plugin
 xfce4-notifyd
 xfce4-panel
@@ -455,7 +477,6 @@ xfce4-settings
 xfce4-taskmanager
 xfce4-volumed-pulse
 xfce4-whiskermenu-plugin
-xfce4-windowck-plugin
 xfsprogs
 xlogin-git
 xorg-grandr
@@ -475,8 +496,11 @@ yaourt
 yarn
 youtube-dl
 youtube-dl-gui-git
+zathura-cb
+zathura-djvu
 zathura-git
 zathura-pdf-mupdf
+zathura-ps
 zenity
 zotero
 zsh
