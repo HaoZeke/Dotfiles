@@ -46,6 +46,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .direnvrc
 .gtkrc-2.0
 
+# This should be in config
+.doom.d/config.el
+.doom.d/init.el
+
 # GDB init is actually from gdb-dashboard with some additions
 # Update frequently
 .gdbinit
@@ -279,4 +283,3 @@ crontab:myArchBox
 # Xfce4 Specifics
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
-
