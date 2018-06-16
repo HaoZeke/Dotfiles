@@ -1,0 +1,46 @@
+#+TITLE: Literate doom-emacs config
+#+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
+
+* Configuration
+:Properties:
+:Visibility: children
+:End:
+
+** About
+This is a literate config file for [[doom-emacs][https://github.com/hlissner/doom-emacs]] by
+`hlinssner`. This
+is meant to be used with the `develop` branch.
+Much of the basic setup is pulled from the [[emacs literate
+starter][https://github.com/gilbertw1/emacs-literate-starter]] by `gilbertw1`.
+
+** Personal Information
+Let's set some variables with basic user information.
+
+#+BEGIN_SRC emacs-lisp
+(setq user-full-name "Rohit Goswami (HaoZeke)"
+      user-mail-address "rohit.goswami@aol.com")
+#+END_SRC
+** Doom Emacs Stuff
+*** Visual Tweaks
+Honestly the basic font setting is simply not pretty enough.
+#+BEGIN_SRC emacs-lisp
+(setq doom-font (font-spec :family "Attribute Mono"
+                           :size 20))
+#+END_SRC
+*** Spacemacs Equivalency
+I find the default `jk` evil escape key sequence to be distracting as I am
+unable to navigate with one hand on the mouse anymore.
+
+#+BEGIN_SRC emacs-lisp
+(setq-default evil-escape-key-sequence "fd")
+#+END_SRC
+
+Also it's inconvinient to have a key chord requiring two hands to close a
+buffer.
+
+#+BEGIN_SRC emacs-lisp
+(map!
+ (:leader
+   (:prefix "b"
+     :desc "Kill buffer" :n "d" #'kill-this-buffer)))
+#+END_SRC
