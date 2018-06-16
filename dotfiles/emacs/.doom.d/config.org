@@ -15,11 +15,11 @@
   - [[#packages][Packages]]
 
 ** About
-This is a literate config file for [[doom-emacs][https://github.com/hlissner/doom-emacs]] by
-`hlinssner`. This
-is meant to be used with the `develop` branch.
-Much of the basic setup is pulled from the [[emacs literate
-starter][https://github.com/gilbertw1/emacs-literate-starter]] by `gilbertw1`.
+This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
+~hlinssner~. This
+is meant to be used with the =develop= branch.
+Much of the basic setup is pulled from the [[https://github.com/gilbertw1/emacs-literate-starter][emacs literate
+starter]] by =gilbertw1=.
 
 ** Personal Information
 Let's set some variables with basic user information.
@@ -40,7 +40,7 @@ Honestly the basic font setting is simply not pretty enough.
 
 *** Spacemacs Equivalency
 **** Escape
-I find the default `jk` evil escape key sequence to be distracting as I am
+I find the default ~jk~ evil escape key sequence to be distracting as I am
 unable to navigate with one hand on the mouse anymore.
 
 #+BEGIN_SRC emacs-lisp
