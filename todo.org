@@ -1,3 +1,4 @@
+#+TITLE: Dotfiles TODO
 
 * TODO [#C] Generalize the Gaussian part
 * TODO [#B] Add keybindings for the new emacs packages 
@@ -7,3 +8,7 @@
 * TODO [#C] Use Ansible to setup targets like [[https://github.com/eoli3n/dotfiles][here]] 
 * TODO Use tabbed and jumpapp to run zathura tabs
 * TODO Setup spacemacs keybindings for zathura
+* TODO Use modules instead of one private module
+** TODO Switch to using XDG config stuff
+
+
