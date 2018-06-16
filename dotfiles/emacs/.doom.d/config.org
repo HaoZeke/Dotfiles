@@ -13,6 +13,7 @@
     - [[#visual-tweaks][Visual Tweaks]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
   - [[#packages][Packages]]
+    - [[#magit-aids][Magit Aids]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -59,3 +60,16 @@ buffer.
 #+END_SRC
 
 ** Packages
+These should eventually go into a different module.
+Each of these.
+
+*** Magit Aids
+Of course this is not really meant to be here..
+
+#+BEGIN_SRC emacs-lisp
+(def-package! magit-org-todos
+  :mode "\\COMMIT_EDITMSG$"
+  :commands magit-org-todods magit-org-todos-autoinsert
+  :config
+  (magit-org-todos-autoinsert))
+#+END_SRC
