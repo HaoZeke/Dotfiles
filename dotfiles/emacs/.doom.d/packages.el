@@ -3,3 +3,4 @@
 
 
 (package! magit-org-todos)
+(package! magithub)
