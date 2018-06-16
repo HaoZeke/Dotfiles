@@ -28,6 +28,7 @@ Honestly the basic font setting is simply not pretty enough.
                            :size 20))
 #+END_SRC
 *** Spacemacs Equivalency
+**** Escape
 I find the default `jk` evil escape key sequence to be distracting as I am
 unable to navigate with one hand on the mouse anymore.
 
@@ -35,6 +36,7 @@ unable to navigate with one hand on the mouse anymore.
 (setq-default evil-escape-key-sequence "fd")
 #+END_SRC
 
+**** Kill buffer
 Also it's inconvinient to have a key chord requiring two hands to close a
 buffer.
 
