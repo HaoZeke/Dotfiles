@@ -5,6 +5,14 @@
 :Properties:
 :Visibility: children
 :End:
+** Table of Contents :TOC_3_gh:
+- [[#configuration][Configuration]]
+  - [[#about][About]]
+  - [[#personal-information][Personal Information]]
+  - [[#doom-emacs-stuff][Doom Emacs Stuff]]
+    - [[#visual-tweaks][Visual Tweaks]]
+    - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+  - [[#packages][Packages]]
 
 ** About
 This is a literate config file for [[doom-emacs][https://github.com/hlissner/doom-emacs]] by
@@ -20,13 +28,16 @@ Let's set some variables with basic user information.
 (setq user-full-name "Rohit Goswami (HaoZeke)"
       user-mail-address "rohit.goswami@aol.com")
 #+END_SRC
+
 ** Doom Emacs Stuff
 *** Visual Tweaks
 Honestly the basic font setting is simply not pretty enough.
+
 #+BEGIN_SRC emacs-lisp
 (setq doom-font (font-spec :family "Attribute Mono"
                            :size 20))
 #+END_SRC
+
 *** Spacemacs Equivalency
 **** Escape
 I find the default `jk` evil escape key sequence to be distracting as I am
@@ -46,3 +57,5 @@ buffer.
    (:prefix "b"
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
+
+** Packages
