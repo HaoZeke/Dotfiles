@@ -27,3 +27,5 @@ R /
 - **/.cargo/*
 - **/.cache/*
 - **/.tmp/*
+- **/.thumbnails
+- */.thumbnails/

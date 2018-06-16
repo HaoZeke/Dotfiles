@@ -4,6 +4,7 @@
 .cache/*
 node_modules/
 node_modules/*
+.thumbnails/*
 .ccache/*
 .conda/*
 .wine/*
@@ -21,3 +22,4 @@ fm:.wine/*
 fm:.cargo/*
 fm:.cache/*
 fm:.tmp/*
+fm:.thumbnails/*
