@@ -47,7 +47,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .gtkrc-2.0
 
 # This should be in config
-.doom.d/config.el
 .doom.d/config.org
 .doom.d/init.el
 
