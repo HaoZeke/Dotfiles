@@ -26,34 +26,34 @@
         +fuzzy)          ; enable fuzzy search backend for ivy
 
        :ui
-       doom              ; what makes DOOM look the way it does
-       doom-dashboard    ; a nifty splash screen for Emacs
-       doom-modeline     ; a snazzy Atom-inspired mode-line
-       doom-quit         ; DOOM quit-message prompts when you quit Emacs
-       evil-goggles      ; display visual hints when editing in evil
-      ;fci               ; a `fill-column' indicator
-       hl-todo           ; highlight TODO/FIXME/NOTE tags
-       nav-flash         ; blink the current line after jumping
-       ;; neotree           ; a project drawer, like NERDTree for vim
-      treemacs          ; a project drawer, like neotree but cooler
+      doom              ; what makes DOOM look the way it does
+      doom-dashboard    ; a nifty splash screen for Emacs
+      doom-modeline     ; a snazzy Atom-inspired mode-line
+      doom-quit         ; DOOM quit-message prompts when you quit Emacs
+      evil-goggles      ; display visual hints when editing in evil
+      fci               ; a `fill-column' indicator
+      hl-todo           ; highlight TODO/FIXME/NOTE tags
+      nav-flash         ; blink the current line after jumping
+      neotree           ; a project drawer, like NERDTree for vim
+      ;; treemacs          ; a project drawer, like neotree but cooler
        (popup            ; tame sudden yet inevitable temporary windows
         +all             ; catch all popups that start with an asterix
         +defaults)       ; default popup rules
       ;tabbar            ; FIXME an (incomplete) tab bar for Emacs
       unicode           ; extended unicode support for various languages
-       vi-tilde-fringe   ; fringe tildes to mark beyond EOB
-       window-select     ; visually switch windows
+      vi-tilde-fringe   ; fringe tildes to mark beyond EOB
+      window-select     ; visually switch windows
 
        :emacs
-       dired             ; making dired pretty [functional]
-       ediff             ; comparing files in Emacs
-       electric   ; smarter, keyword-based electric-indent
+      dired             ; making dired pretty [functional]
+      ediff             ; comparing files in Emacs
+      electric   ; smarter, keyword-based electric-indent
       ;eshell            ; a consistent, cross-platform shell (WIP)
-       imenu             ; an imenu sidebar and searchable code index
-       term              ; terminals in Emacs
+      imenu             ; an imenu sidebar and searchable code index
+      term              ; terminals in Emacs
 
        :tools
-       editorconfig      ; let someone else argue about tabs vs spaces
+      editorconfig      ; let someone else argue about tabs vs spaces
       ;ein               ; tame Jupyter notebooks with emacs
       ;gist              ; interacting with github gists
       ;macos             ; MacOS-specific commands
@@ -103,13 +103,13 @@
       ;php               ; perl's insecure younger brother
       ;plantuml          ; diagrams for confusing people more
       ;purescript        ; javascript, but functional
-       python            ; beautiful is better than ugly
+      python            ; beautiful is better than ugly
       ;qt                ; the 'cutest' gui framework ever
       ;rest              ; Emacs as a REST client
       ruby              ; 1.step do {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
       ;rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
       ;scala             ; java, but good
-       sh                ; she sells (ba|z)sh shells on the C xor
+      sh                ; she sells (ba|z)sh shells on the C xor
       ;solidity          ; do you need a blockchain? No.
       ;swift             ; who asked for emoji variables?
       web               ; the tubes
