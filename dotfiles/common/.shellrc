@@ -236,6 +236,10 @@ export GOCACHE=$HOME/.cache/go-build
 
 export PATH=$PATH:$GOBIN
 
+# Yarn Paths
+#############
+export PATH=$HOME/.yarn/bin:$PATH
+
 # Tmux
 ##########
 
