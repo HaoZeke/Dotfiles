@@ -11,9 +11,10 @@
   - [[#personal-information][Personal Information]]
   - [[#doom-emacs-stuff][Doom Emacs Stuff]]
     - [[#visual-tweaks][Visual Tweaks]]
-    - [[#spacemacs-equivalency][Spacemacs Equivalency]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
+  - [[#keybindings][Keybindings]]
+    - [[#spacemacs-equivalency][Spacemacs Equivalency]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -37,26 +38,6 @@ Honestly the basic font setting is simply not pretty enough.
 #+BEGIN_SRC emacs-lisp
 (setq doom-font (font-spec :family "Attribute Mono"
                            :size 20))
-#+END_SRC
-
-*** Spacemacs Equivalency
-**** Escape
-I find the default ~jk~ evil escape key sequence to be distracting as I am
-unable to navigate with one hand on the mouse anymore.
-
-#+BEGIN_SRC emacs-lisp
-(setq-default evil-escape-key-sequence "fd")
-#+END_SRC
-
-**** Kill buffer
-Also it's inconvinient to have a key chord requiring two hands to close a
-buffer.
-
-#+BEGIN_SRC emacs-lisp
-(map!
- (:leader
-   (:prefix "b"
-     :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
 
 ** Packages
@@ -93,4 +74,27 @@ This is for sweet github integration.
 (def-package! evil-magit :after magit
   :init
   (setq evil-magit-state 'normal))
+#+END_SRC
+
+
+** Keybindings
+
+*** Spacemacs Equivalency
+**** Escape
+I find the default ~jk~ evil escape key sequence to be distracting as I am
+unable to navigate with one hand on the mouse anymore.
+
+#+BEGIN_SRC emacs-lisp
+(setq-default evil-escape-key-sequence "fd")
+#+END_SRC
+
+**** Kill buffer
+Also it's inconvinient to have a key chord requiring two hands to close a
+buffer.
+
+#+BEGIN_SRC emacs-lisp
+(map!
+ (:leader
+   (:prefix "b"
+     :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
