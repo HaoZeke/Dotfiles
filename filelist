@@ -48,6 +48,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 
 # This should be in config
 .doom.d/config.el
+.doom.d/config.org
 .doom.d/init.el
 
 # GDB init is actually from gdb-dashboard with some additions
