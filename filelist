@@ -5,26 +5,29 @@
 #############
 
 # Generic Linux
-genLinux=common,linux
+genLinux=common,linux,doom
+
+# Doom Emacs ONLY
+doomEmacs=emacs
 
 # Archlinux Barebones
-archlinuxMono=common,linux,archLinux,monoMonitor
-archlinuxMulti=common,linux,archLinux,multiMonitor
+archlinuxMono=common,linux,archLinux,monoMonitor,emacs
+archlinuxMulti=common,linux,archLinux,multiMonitor,emacs
 
 # ArchLinux with xfce
-almXFCE=common,linux,archLinux,monoMonitor,xfceSession
-almlXFCE=common,linux,archLinux,multiMonitor,xfceSession
+almXFCE=common,linux,archLinux,monoMonitor,xfceSession,emacs
+almlXFCE=common,linux,archLinux,multiMonitor,xfceSession,emacs
 
 # ArchLinux with lxde
-almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession
-almLXDE=common,linux,archLinux,monoMonitor,lxdeSession
+almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession,emacs
+almLXDE=common,linux,archLinux,monoMonitor,lxdeSession,emacs
 
 # Archlinux with no session manager
-almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession
-almnoSession=common,linux,archLinux,monoMonitor,lxdeSession
+almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession,emacs
+almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,emacs
 
 # My current config. [desktop]
-myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
+myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs
 
 ##########
 # Groups #
@@ -45,10 +48,6 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .dir_colors
 .direnvrc
 .gtkrc-2.0
-
-# This should be in config
-.doom.d/config.org
-.doom.d/init.el
 
 # GDB init is actually from gdb-dashboard with some additions
 # Update frequently
@@ -130,6 +129,13 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession
 .config/sublime-text-3/Packages/User/JavaScript (Babel).sublime-settings
 .config/sublime-text-3/Packages/User/PKGBUILD.sublime-settings
 .config/sublime-text-3/Packages/User/Shell-Unix-Generic.sublime-settings
+
+# Emacs (doom)
+#################
+
+# This should be in config
+.doom.d/config.org:emacs
+.doom.d/init.el:emacs
 
 # Linux
 #################
