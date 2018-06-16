@@ -136,6 +136,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs
 # This should be in config
 .doom.d/config.org:emacs
 .doom.d/init.el:emacs
+.doom.d/packages.el:emacs
 
 # Linux
 #################
