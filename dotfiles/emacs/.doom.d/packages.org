@@ -7,13 +7,11 @@
 # eval: (add-hook 'after-save-hook (lambda () (org-babel-tangle)) nil t)
 # End:
 
-* Packages
 :PROPERTIES:
 :VISIBILITY: children
 :END:
 
 ** Table of Contents :TOC_3_gh:
-- [[#packages][Packages]]
   - [[#about-this-file][About this file]]
   - [[#magit-additions][Magit Additions]]
   - [[#snippets][Snippets]]
