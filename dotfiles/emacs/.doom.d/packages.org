@@ -1,6 +1,11 @@
 #+TITLE: Emacs Literate Package Additions
 #+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
 #+PROPERTY: header-args :tangle yes
+#+PROPERTY: header-args+ :tangle "~/.doom.d/packages.el"
+
+# Local Variables:
+# eval: (add-hook 'after-save-hook (lambda () (org-babel-tangle)) nil t)
+# End:
 
 * Packages
 :PROPERTIES:
@@ -11,6 +16,7 @@
 - [[#packages][Packages]]
   - [[#about-this-file][About this file]]
   - [[#magit-additions][Magit Additions]]
+  - [[#snippets][Snippets]]
 
 ** About this file
 This is an Emacs literate package file. It contains the basic structure along
@@ -30,4 +36,15 @@ These basically allow for TODOs in magit along with enhanced github integration.
 #+BEGIN_SRC emacs-lisp
 (package! magit-org-todos)
 (package! magithub)
+#+END_SRC
+
+
+** Snippets
+These are actually from the ~doom-emacs~ guy...
+
+#+BEGIN_SRC emacs-lisp
+(package! emacs-snippets
+  :recipe (:fetcher github
+           :repo "hlissner/emacs-snippets"
+           :files ("*")))
 #+END_SRC

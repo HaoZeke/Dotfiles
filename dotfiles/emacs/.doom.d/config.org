@@ -16,6 +16,8 @@
     - [[#magit-aids][Magit Aids]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+  - [[#literate-configuration][Literate Configuration]]
+    - [[#safe-variables][Safe variables]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -109,3 +111,24 @@ buffer.
 #+END_SRC
 
 
+** Literate Configuration
+The problem is that ~packages.el~ isn't being produced by the clever little ugly
+commit I tried so, this is a workaround to tangle *any* file to be produced in
+~.el~ format in the same location.
+
+*** Safe variables
+So adding the automatic tangling code doesn't mangle things up everytime you
+open emacs. Basically this is adapted from [[https://www.reddit.com/r/emacs/comments/5d4hqq/using_babel_to_put_your_init_file_in_org/][this reddit thread]].
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'safe-local-variable-values
+             '(eval add-hook 'after-save-hook
+	                (lambda () (org-babel-tangle))
+	                nil t))
+#+END_SRC
+
+**** TODO Caveats
+- This actually forms it relative to the exact path. 
+  (Gotta move it to the config folder)
+- The actual code is much more elegant in every way possible.
+- Seriously there has to be  a way to not have to do this.
