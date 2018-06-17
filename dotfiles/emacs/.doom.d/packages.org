@@ -1,0 +1,33 @@
+#+TITLE: Emacs Literate Package Additions
+#+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
+#+PROPERTY: header-args :tangle yes
+
+* Packages
+:PROPERTIES:
+:VISIBILITY: children
+:END:
+
+** Table of Contents :TOC_3_gh:
+- [[#packages][Packages]]
+  - [[#about-this-file][About this file]]
+  - [[#magit-additions][Magit Additions]]
+
+** About this file
+This is an Emacs literate package file. It contains the basic structure along
+with some data about each package and why it's needed. This is to be used in
+tandem with the ~define-package!~ function in ~config.org~.
+
+Since it's primarily aimed at ~doom-emacs~ let's add their comments.
+
+#+BEGIN_SRC emacs-lisp
+;; -*- no-byte-compile: t; -*-
+;;; ~/.doom.d/packages.el
+#+END_SRC
+
+** Magit Additions
+These basically allow for TODOs in magit along with enhanced github integration.
+
+#+BEGIN_SRC emacs-lisp
+(package! magit-org-todos)
+(package! magithub)
+#+END_SRC
