@@ -10,7 +10,8 @@
   - [[#about][About]]
   - [[#personal-information][Personal Information]]
   - [[#doom-emacs-stuff][Doom Emacs Stuff]]
-    - [[#visual-tweaks][Visual Tweaks]]
+    - [[#visual-tweaks][Visual tweaks]]
+    - [[#kill-spellcheck][Kill spellcheck]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
   - [[#keybindings][Keybindings]]
@@ -32,12 +33,20 @@ Let's set some variables with basic user information.
 #+END_SRC
 
 ** Doom Emacs Stuff
-*** Visual Tweaks
+*** Visual tweaks
 Honestly the basic font setting is simply not pretty enough.
 
 #+BEGIN_SRC emacs-lisp
 (setq doom-font (font-spec :family "Attribute Mono"
                            :size 20))
+#+END_SRC
+
+*** Kill spellcheck
+This is really really really excruciatingly slow for LaTeX mode and maybe even
+for other random buffers.
+
+#+BEGIN_SRC emacs-lisp
+(setq-hook! 'LaTeX-mode-hook +spellchek-immediately nil)
 #+END_SRC
 
 ** Packages
@@ -98,3 +107,5 @@ buffer.
    (:prefix "b"
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
+
+
