@@ -43,6 +43,9 @@ alias md='mkdir -p'
 # Colors
 alias ls='ls --color=auto'
 
+# Emacs for the terminal
+alias emacs='emacs -nw'
+
 # Better ls
 if which exa >/dev/null 2>&1; then
   alias ls=exa
