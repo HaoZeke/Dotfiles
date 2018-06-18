@@ -71,11 +71,15 @@ super + {_,shift + }{1-9,0}
 super + Return
 	tilix
 
+# Emacs bindings
+
 ctrl + shift + Return
+	emacs 
+    
+ctrl + shift + super + Return
 	emacsclient -c -a ''
 
-# Temporary
-  # import /home/haozeke/Git/Github/HBTU/bTechProjFin/report/img/$(date +%Y%m%d-%H%M%S).png
+# Screenshots
 super + ctrl + Return
   gnome-screenshot -i
 
