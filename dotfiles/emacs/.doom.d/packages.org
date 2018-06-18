@@ -11,7 +11,7 @@
 :VISIBILITY: children
 :END:
 
-** Table of Contents :TOC_3_gh:
+** Table of Contents  :TOC_3_gh: :noexport:
   - [[#about-this-file][About this file]]
   - [[#magit-additions][Magit Additions]]
   - [[#snippets][Snippets]]
