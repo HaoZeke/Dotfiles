@@ -1,7 +1,7 @@
 #+TITLE: Literate doom-emacs config
 #+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
 
-** Table of Contents :TOC_3_gh:
+** Table of Contents  :TOC_3_gh: :noexport:
   - [[#about][About]]
   - [[#personal-information][Personal Information]]
   - [[#doom-emacs-stuff][Doom Emacs Stuff]]
