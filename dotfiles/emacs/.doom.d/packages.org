@@ -5,7 +5,6 @@
 
 # Local Variables:
 # eval: (add-hook 'after-save-hook (lambda () (org-babel-tangle)) nil t)
-# eval: (add-hook 'after-save-hook 'haozeke/org-save-and-export nil t)
 # End:
 
 :PROPERTIES:
