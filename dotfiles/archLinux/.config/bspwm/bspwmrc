@@ -56,8 +56,12 @@ bspc config top_padding       16
 
 bspc rule -a Gimp desktop=^8 follow=on state=floating
 bspc rule -a Chromium desktop=^2
+bspc rule -a spotify desktop=^2
 bspc rule -a Kupfer.py focus=on
 bspc rule -a Screenkey manage=off
+
+# Tile
+bspc rule -a Emacs state=tiled
 
 # Float
 bspc rule -a Wine state=floating
