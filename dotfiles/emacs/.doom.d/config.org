@@ -119,6 +119,7 @@ commit I tried so, this is a workaround to tangle *any* file to be produced in
 ~.el~ format in the same location.
 
 *** Safe variables
+**** Tangle
 So adding the automatic tangling code doesn't mangle things up everytime you
 open emacs. Basically this is adapted from [[https://www.reddit.com/r/emacs/comments/5d4hqq/using_babel_to_put_your_init_file_in_org/][this reddit thread]].
 
@@ -129,8 +130,32 @@ open emacs. Basically this is adapted from [[https://www.reddit.com/r/emacs/comm
 	                nil t))
 #+END_SRC
 
+**** Export
+This is a catch all for the eventual ~org-mode~ based multiple target exports.
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'safe-local-variable-values
+             '(eval (add-hook 'after-save-hook
+	                'haozeke/org-save-and-export
+	                nil t)))
+#+END_SRC
+
 **** TODO Caveats
 - This actually forms it relative to the exact path. 
   (Gotta move it to the config folder)
 - The actual code is much more elegant in every way possible.
 - Seriously there has to be  a way to not have to do this.
+  
+** Functions
+This one is to generate pdfs whenever a buffer is saved. Mainly taken from
+[[https:https://emacs.stackexchange.com/questions/9893/how-can-i-export-to-latex-every-time-i-save-an-org-mode-buffer][this stack exchange question]].
+
+#+BEGIN_SRC emacs-lisp
+(defun haozeke/org-save-and-export ()
+  (interactive)
+  (org-latex-export-to-pdf))
+#+END_SRC
+
+*** TODO Caveats
+- Minted needs to be setup.
+- There are really a lot of optimizations to the above.
