@@ -42,7 +42,7 @@ super + {_,shift + }c
 
 super + {comma,period}
 	node @DESKTOP_SEL:/ -C forward|backward
-	
+
 super + bracket{west,east}
 	bspc desktop -f {prev,next}
 
@@ -69,10 +69,15 @@ super + {_,shift + }{1-9,0}
 #
 
 super + Return
-	tilix	
+	tilix
 
 ctrl + shift + Return
 	emacsclient -c -a ''
+
+# Temporary
+  # import /home/haozeke/Git/Github/HBTU/bTechProjFin/report/img/$(date +%Y%m%d-%H%M%S).png
+super + ctrl + Return
+  gnome-screenshot -i
 
 #
 # Dropdowns
@@ -81,7 +86,7 @@ ctrl + shift + Return
 # Kitty is made to float here incase I use it elsewhere too
 
 F1
- tdrop --wm bspwm -ma -w 70% -h 70% -x 15% -y 15% -n 1 -s mainWindow -f "--config $HOME/.config/kitty/kittyMain.conf" kitty 
+ tdrop --wm bspwm -ma -w 70% -h 70% -x 15% -y 15% -n 1 -s mainWindow -f "--config $HOME/.config/kitty/kittyMain.conf" kitty
 
 F5
  tdrop --wm bspwm -ma -w 35% -h 15% -n 2 -s subWindow -f "--config $HOME/.config/kitty/kittySub.conf" kitty 
