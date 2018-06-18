@@ -20,7 +20,8 @@ bspc config normal_frame_opacity 0.0
 bspc config focused_frame_opacity 0.1
 
 # Needed for mouse compatibility
-bspc config click_to_focus true
+bspc config click_to_focus button1
+# Now in 0.9.2 true for click_to_focus is a button name where true is now button1
 bspc config pointer_modifier mod4
 bspc config pointer_action1 move
 bspc config pointer_action2 resize_side
