@@ -11,9 +11,11 @@
 :VISIBILITY: children
 :END:
 
-** Table of Contents  :TOC_3_gh: :noexport:
+** Table of Contents :TOC_3_gh:noexport:
   - [[#about-this-file][About this file]]
+    - [[#about-that-toc][About that TOC..]]
   - [[#magit-additions][Magit Additions]]
+  - [[#org-additions][Org Additions]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -43,6 +45,14 @@ These basically allow for TODOs in magit along with enhanced github integration.
 (package! magithub)
 #+END_SRC
 
+** Org Additions
+
+The new ones need to be covered in the ~config.org~ file with the appropriate
+keybindings.
+
+#+BEGIN_SRC emacs-lisp
+(package! toc-org)
+#+END_SRC
 
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
