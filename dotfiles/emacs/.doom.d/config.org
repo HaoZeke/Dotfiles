@@ -1,18 +1,22 @@
 #+TITLE: Literate doom-emacs config
 #+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
 
-** Table of Contents  :TOC_3_gh: :noexport:
+** Table of Contents :noexport:TOC_3_gh:
   - [[#about][About]]
+    - [[#about-that-toc][About that TOC..]]
   - [[#personal-information][Personal Information]]
   - [[#doom-emacs-stuff][Doom Emacs Stuff]]
     - [[#visual-tweaks][Visual tweaks]]
     - [[#kill-spellcheck][Kill spellcheck]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
+    - [[#org-additions][Org Additions]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
   - [[#literate-configuration][Literate Configuration]]
     - [[#safe-variables][Safe variables]]
+  - [[#functions][Functions]]
+    - [[#caveats][Caveats]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -89,6 +93,15 @@ This is for sweet github integration.
   (setq evil-magit-state 'normal))
 #+END_SRC
 
+*** Org Additions
+**** Org Toc
+This actually broke somehow, lets see if this helps.
+
+#+BEGIN_SRC emacs-lisp
+(if (require 'toc-org nil t)
+    (add-hook 'org-mode-hook 'toc-org-enable)
+  (warn "toc-org not found"))
+#+END_SRC
 
 ** Keybindings
 
