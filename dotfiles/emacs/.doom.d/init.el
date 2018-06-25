@@ -13,7 +13,6 @@
        spellcheck        ; tasing you for misspelling mispelling
        (syntax-checker   ; tasing you for every semicolon you forget
         +childframe)     ; use childframes for error popups (Emacs 26+ only)
-       version-control   ; remember, remember that commit in November
        workspaces        ; tab emulation, persistence & separate workspaces
 
        :completion
@@ -39,11 +38,17 @@
        (popup            ; tame sudden yet inevitable temporary windows
         +all             ; catch all popups that start with an asterix
         +defaults)       ; default popup rules
+      pretty-code       ; replace bits of code with pretty symbols
       ;tabbar            ; FIXME an (incomplete) tab bar for Emacs
       unicode           ; extended unicode support for various languages
+      vc-gutter         ; vcs diff in the fringe
       vi-tilde-fringe   ; fringe tildes to mark beyond EOB
       window-select     ; visually switch windows
 
+      :editor
+      ;parinfer          ; turn lisp into python, sort of
+       rotate-text       ; cycle region at point between text candidates
+      
        :emacs
       dired             ; making dired pretty [functional]
       ediff             ; comparing files in Emacs
@@ -51,11 +56,12 @@
       ;eshell           ; a consistent, cross-platform shell (WIP)
       imenu             ; an imenu sidebar and searchable code index
       term              ; terminals in Emacs
+      vc                ; version-control and Emacs, sitting in a tree
 
        :tools
       editorconfig      ; let someone else argue about tabs vs spaces
       ;ein               ; tame Jupyter notebooks with emacs
-      ;gist              ; interacting with github gists
+      gist              ; interacting with github gists
       ;macos             ; MacOS-specific commands
       ;make              ; run make tasks from Emacs
        magit             ;
@@ -63,14 +69,13 @@
        pdf               ; pdf enhancements
       ;prodigy           ; FIXME managing external services & code builders
       ;rgb               ; creating color strings
-       rotate-text       ; cycle region at point between text candidates
-      ;tmux              ; an API for interacting with tmux
+      tmux              ; an API for interacting with tmux
       ;upload            ; map local to remote projects via ssh/ftp
       ;wakatime
 
        :lang
       ;assembly          ; assembly for fun or debugging
-       cc                ; C/C++/Obj-C madness
+      (cc +irony +rtags); C/C++/Obj-C madness
       ;crystal           ; ruby at the speed of c
       ;clojure           ; java with a lisp
       ;csharp            ; unity, .NET, and mono shenanigans
@@ -80,11 +85,11 @@
       ;elm               ; care for a cup of TEA?
        emacs-lisp        ; drown in parentheses
       ;ess               ; emacs speaks statistics
-      ;go                ; the hipster dialect
+      go                ; the hipster dialect
       ;(haskell +intero) ; a language that's lazier than I am
       ;hy                ; readability of scheme w/ speed of python
       ;(java +meghanada) ; the poster child for carpal tunnel syndrome
-      ;javascript        ; all(hope(abandon(ye(who(enter(here))))))
+      javascript        ; all(hope(abandon(ye(who(enter(here))))))
       ;julia             ; a better, faster MATLAB
        latex             ; writing papers in Emacs has never been so fun
       ;ledger            ; an accounting system in Emacs
