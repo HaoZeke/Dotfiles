@@ -50,10 +50,6 @@ These basically allow for TODOs in magit along with enhanced github integration.
 The new ones need to be covered in the ~config.org~ file with the appropriate
 keybindings.
 
-#+BEGIN_SRC emacs-lisp
-(package! toc-org)
-#+END_SRC
-
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
 
