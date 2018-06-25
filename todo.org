@@ -11,4 +11,4 @@
 * TODO Fix caveats for the export
 * TODO Use modules instead of one private module
 ** TODO Switch to using XDG config stuff
-
+* TODO [#A] Make everything literate!
