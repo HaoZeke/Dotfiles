@@ -10,7 +10,6 @@
     - [[#kill-spellcheck][Kill spellcheck]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
-    - [[#org-additions][Org Additions]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
   - [[#literate-configuration][Literate Configuration]]
@@ -91,16 +90,6 @@ This is for sweet github integration.
 (def-package! evil-magit :after magit
   :init
   (setq evil-magit-state 'normal))
-#+END_SRC
-
-*** Org Additions
-**** Org Toc
-This actually broke somehow, lets see if this helps.
-
-#+BEGIN_SRC emacs-lisp
-(if (require 'toc-org nil t)
-    (add-hook 'org-mode-hook 'toc-org-enable)
-  (warn "toc-org not found"))
 #+END_SRC
 
 ** Keybindings
