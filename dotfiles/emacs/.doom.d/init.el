@@ -48,7 +48,7 @@
       :editor
       ;parinfer          ; turn lisp into python, sort of
        rotate-text       ; cycle region at point between text candidates
-      
+
        :emacs
       dired             ; making dired pretty [functional]
       ediff             ; comparing files in Emacs
@@ -71,7 +71,7 @@
       ;rgb               ; creating color strings
       tmux              ; an API for interacting with tmux
       ;upload            ; map local to remote projects via ssh/ftp
-      ;wakatime
+      wakatime
 
        :lang
       ;assembly          ; assembly for fun or debugging
@@ -94,7 +94,8 @@
        latex             ; writing papers in Emacs has never been so fun
       ;ledger            ; an accounting system in Emacs
       ;lua               ; one-based indices? one-based indices
-       markdown          ; writing docs for people to ignore
+       (markdown         ; writing docs for people to ignore
+        +pandoc)         ; can I get that in "* format?"
       ;nim               ; python + lisp at the speed of c
       ;nix               ; I hereby declare "nix geht mehr!"
       ;ocaml             ; an objective camel
