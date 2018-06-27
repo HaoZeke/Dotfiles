@@ -12,6 +12,7 @@
     - [[#magit-aids][Magit Aids]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+    - [[#pdf-issues][PDF Issues]]
   - [[#literate-configuration][Literate Configuration]]
     - [[#safe-variables][Safe variables]]
   - [[#functions][Functions]]
@@ -114,6 +115,16 @@ buffer.
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
 
+
+*** PDF Issues
+
+**** Evil initial state
+This is a temporary fix. To be fixed in a ~develop~ branch commit soon.
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-initial-state 'pdf-view-mode 'normal)
+(with-eval-after-load 'pdf-view-mode (require 'evil-collection-pdf) (evil-collection-pdf-setup))
+#+END_SRC
 
 ** Literate Configuration
 The problem is that ~packages.el~ isn't being produced by the clever little ugly
