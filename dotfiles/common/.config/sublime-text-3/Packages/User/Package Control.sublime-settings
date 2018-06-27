@@ -26,6 +26,7 @@
 		"Colour Complete",
 		"CSS3",
 		"Dockerfile Syntax Highlighting",
+		"Ecmascript Syntax",
 		"EJS 2",
 		"Emmet",
 		"Emoji",
@@ -55,6 +56,7 @@
 		"Log Highlight",
 		"MagicPython",
 		"Makefile Plus",
+		"Markdown Extended",
 		"MarkdownEditing",
 		"Matlab Completions",
 		"MinimalFortran",
@@ -106,6 +108,7 @@
 		"UnicodeTeX",
 		"VimL",
 		"Vintageous",
+		"WakaTime",
 		"WebFont",
 		"WordCount"
 	]
