@@ -39,6 +39,9 @@ call plug#begin()
     " Loaded when clojure file is opened
     Plug 'tpope/vim-fireplace', { 'for': 'clojure' }
 
+    " Because everything must be tracked
+    Plug 'wakatime/vim-wakatime'
+
     " Group dependencies, vim-snippets depends on ultisnips
     Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
       
