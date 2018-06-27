@@ -4,7 +4,6 @@
 	"draw_indent_guides": false,
 	"extensions":
 	[
-		"md"
 	],
 	"trim_trailing_white_space_on_save": false,
 	"word_wrap": true,
