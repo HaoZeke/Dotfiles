@@ -17,6 +17,8 @@
     - [[#safe-variables][Safe variables]]
   - [[#functions][Functions]]
     - [[#caveats][Caveats]]
+  - [[#variables][Variables]]
+    - [[#wakatime][Wakatime]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -172,3 +174,11 @@ This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 *** TODO Caveats
 - Minted needs to be setup.
 - There are really a lot of optimizations to the above.
+
+** Variables
+*** Wakatime
+This is actually a bug. Seriously. Fix this soon.
+
+#+BEGIN_SRC 
+(setq wakatime-api-key "adfcd779-4ccc-4d7e-8d8e-a2e0fb8cdbe9")
+#+END_SRC
