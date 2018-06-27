@@ -115,7 +115,7 @@ export JAVA_FONTS=/usr/share/fonts/TTF
 # Exports
 ###########
 
-export EDITOR='emacs'
+export EDITOR='emacs -nw'
 
 # NPM Stuff (not needed with nvm)
 # export npm_config_prefix=~/.node_modules
