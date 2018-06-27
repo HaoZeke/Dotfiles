@@ -120,7 +120,7 @@ buffer.
 
 *** PDF Issues
 
-**** Evil initial state
+**** TODO Evil initial state
 This is a temporary fix. To be fixed in a ~develop~ branch commit soon.
 
 #+BEGIN_SRC emacs-lisp
@@ -176,7 +176,7 @@ This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 - There are really a lot of optimizations to the above.
 
 ** Variables
-*** Wakatime
+*** TODO Wakatime
 This is actually a bug. Seriously. Fix this soon.
 
 #+BEGIN_SRC 
