@@ -54,7 +54,7 @@ This is really really really excruciatingly slow for LaTeX mode and maybe even
 for other random buffers.
 
 #+BEGIN_SRC emacs-lisp
-(setq-hook! 'LaTeX-mode-hook +spellchek-immediately nil)
+(setq-hook! 'LaTeX-mode-hook +spellcheck-immediately nil)
 #+END_SRC
 
 ** Packages
