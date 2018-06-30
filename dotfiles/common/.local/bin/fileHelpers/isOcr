@@ -6,6 +6,8 @@
 # Only searches for text on the first 5 pages
 # Modified to have red text.
 
+# -*- mode: shell-script-mode -*-
+
 MYFONTS=$(pdffonts -l 5 "$1" | tail -n +3 | cut -d' ' -f1 | sort | uniq)
 if [ "$MYFONTS" = '' ] || [ "$MYFONTS" = '[none]' ]; then
     echo "$(tput setaf 1)NOT OCR'ed: $1"
