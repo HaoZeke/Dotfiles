@@ -8,10 +8,16 @@
 
 # -*- mode: shell-script-mode -*-
 
-MYFONTS=$(pdffonts -l 5 "$1" | tail -n +3 | cut -d' ' -f1 | sort | uniq)
+MYFONTS=$(pdffonts -l 15 "$1" | tail -n +3 | cut -d' ' -f1 | sort | uniq)
 if [ "$MYFONTS" = '' ] || [ "$MYFONTS" = '[none]' ]; then
     echo "$(tput setaf 1)NOT OCR'ed: $1"
-    if [[ -x "$(which pypdfocr)" ]]; then
+    if [[ -x "$(which ocrmypdf)" ]]; then
+        echo "$(tput setaf 4)"
+        echo "Converting to ${1%.*}_ocr.pdf with ocrmypdf"
+        echo "$(tput setaf 7)"
+        ocrmypdf --deskew --clean --rotate-pages \
+            --jobs 8 -v --output-type pdfa "$1" "${1%.*}_ocr.pdf"
+    elif [[ -x "$(which pypdfocr)" ]]; then
         echo "$(tput setaf 2) Looking for config files at $XDG_CONFIG_HOME/pypdfocr/config.yml" 
         echo "$(tput setaf 3)"
         if [[ -e $XDG_CONFIG_HOME/pypdfocr/config.yml ]]; then
