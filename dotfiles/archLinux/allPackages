@@ -1,3 +1,4 @@
+acd_cli-git
 adapta-gtk-theme
 adbfs-rootless-git
 adobe-base-14-fonts
@@ -381,6 +382,7 @@ qemu
 qpdf
 rar
 raw-thumbnailer
+rclone
 refind-efi
 reiserfsprogs
 remacs-git
