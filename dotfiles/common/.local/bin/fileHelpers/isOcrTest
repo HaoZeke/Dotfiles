@@ -1,0 +1,17 @@
+#!/bin/bash
+# Use as  find . -type f -name "*.pdf" -exec isOcr '{}' \;
+
+# Shamelessly kanged from here:
+# https://stackoverflow.com/questions/7997399/bash-script-to-check-pdfs-are-ocrd 
+# Only searches for text on the first 5 pages
+# Modified to have red text. 
+
+# -*- mode: shell-script-mode -*-
+
+MYFONTS=$(pdffonts -l 15 "$1" | tail -n +3 | cut -d' ' -f1 | sort | uniq)
+if [ "$MYFONTS" = '' ] || [ "$MYFONTS" = '[none]' ]; then
+    echo "$(tput setaf 1)NOT OCR'ed: $1"
+    echo "$1" >> notOcr.txt
+else 
+    echo "$(tput setaf 7)$1 is OCR'ed."
+fi 
