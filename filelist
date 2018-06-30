@@ -71,6 +71,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 .local/bin/droidHelpers/lineage_oms_update.sh
 .local/bin/fileHelpers/ascii2hdf5
 .local/bin/fileHelpers/gh-md-toc
+.local/bin/fileHelpers/isOcr
 .local/bin/dockerHelpers/nukeGraphsScript.sh
 .local/bin/dockerHelpers/docker-ssh
 .local/bin/gitHelpers/gh2https
