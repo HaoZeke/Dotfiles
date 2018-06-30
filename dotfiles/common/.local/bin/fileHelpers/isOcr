@@ -4,13 +4,27 @@
 # Shamelessly kanged from here:
 # https://stackoverflow.com/questions/7997399/bash-script-to-check-pdfs-are-ocrd 
 # Only searches for text on the first 5 pages
-# Modified to have red text.
+# Modified to have red text. Also to do possibly ocr the thing.
 
 # -*- mode: shell-script-mode -*-
 
 MYFONTS=$(pdffonts -l 5 "$1" | tail -n +3 | cut -d' ' -f1 | sort | uniq)
 if [ "$MYFONTS" = '' ] || [ "$MYFONTS" = '[none]' ]; then
     echo "$(tput setaf 1)NOT OCR'ed: $1"
+    if [[ -x "$(which pypdfocr)" ]]; then
+        echo "$(tput setaf 2) Looking for config files at $XDG_CONFIG_HOME/pypdfocr/config.yml" 
+        echo "$(tput setaf 3)"
+        if [[ -e $XDG_CONFIG_HOME/pypdfocr/config.yml ]]; then
+            echo "Using configuration settings"
+            echo "$(tput setaf 4)"
+            pypdfocr -c $XDG_CONFIG_HOME/pypdfocr/config.yml "$1"
+        else
+            echo "Using default settings"
+            echo "$(tput setaf 4)"
+            pypdfocr "$1"
+        fi
+        echo "$(tput setaf 2) You might want to get pypdfocr"
+    fi
 else 
     echo "$1 is OCR'ed."
 fi 
