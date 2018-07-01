@@ -12,7 +12,6 @@
     - [[#magit-aids][Magit Aids]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
-    - [[#pdf-issues][PDF Issues]]
   - [[#functions][Functions]]
     - [[#caveats][Caveats]]
   - [[#variables][Variables]]
@@ -116,16 +115,6 @@ buffer.
 #+END_SRC
 
 
-*** PDF Issues
-
-**** TODO Evil initial state
-This is a temporary fix. To be fixed in a ~develop~ branch commit soon.
-
-#+BEGIN_SRC emacs-lisp
-(evil-set-initial-state 'pdf-view-mode 'normal)
-(with-eval-after-load 'pdf-view-mode (require 'evil-collection-pdf) (evil-collection-pdf-setup))
-#+END_SRC
-
 ** Functions
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 [[https:https://emacs.stackexchange.com/questions/9893/how-can-i-export-to-latex-every-time-i-save-an-org-mode-buffer][this stack exchange question]].
@@ -141,7 +130,6 @@ This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 - There are really a lot of optimizations to the above.
 
 ** Variables
-
 *** Safe variables
 The problem is that ~packages.el~ isn't being produced by the clever little ugly
 commit I tried so, this is a workaround to tangle *any* file to be produced in
