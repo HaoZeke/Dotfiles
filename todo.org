@@ -14,3 +14,7 @@
 * TODO [#A] Make everything literate!
 * TODO Fix sublime text
 Atleast change the target so it doesn't keep breaking things.
+
+* TODO Clean up the dotfiles
+Remember, ~.zshenv~ and ~.profile~ things are loaded in a specific order.
+Random commands kill ssh.
