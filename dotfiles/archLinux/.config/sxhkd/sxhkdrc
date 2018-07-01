@@ -74,10 +74,10 @@ super + Return
 # Emacs bindings
 
 ctrl + shift + Return
-	emacs 
+	/usr/bin/zsh -c emacs 
     
 ctrl + shift + super + Return
-	emacsclient -c -a ''
+	/usr/bin/zsh -c emacsclient -c -a ''
 
 # Screenshots
 super + ctrl + Return
