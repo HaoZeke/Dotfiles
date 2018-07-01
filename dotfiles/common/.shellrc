@@ -243,6 +243,10 @@ export PATH=$PATH:$GOBIN
 #############
 export PATH=$HOME/.yarn/bin:$PATH
 
+# Rclone Config
+################
+RCLONE_STATS=5s
+
 # Tmux
 ##########
 
