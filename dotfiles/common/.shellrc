@@ -247,6 +247,10 @@ export PATH=$HOME/.yarn/bin:$PATH
 ################
 RCLONE_STATS=5s
 
+# Fix paths
+############
+export SXHKD_SHELL=/usr/bin/zsh
+
 # Tmux
 ##########
 
