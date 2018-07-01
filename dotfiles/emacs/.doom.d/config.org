@@ -108,6 +108,7 @@ Also it's inconvinient to have a key chord requiring two hands to close a
 buffer.
 
 #+BEGIN_SRC emacs-lisp
+; Bind a new key chord
 (map!
  (:leader
    (:prefix "b"
