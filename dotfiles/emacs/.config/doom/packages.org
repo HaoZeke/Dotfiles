@@ -1,7 +1,7 @@
 #+TITLE: Emacs Literate Package Additions
 #+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
 #+PROPERTY: header-args :tangle yes
-#+PROPERTY: header-args+ :tangle "~/.doom.d/packages.el"
+#+PROPERTY: header-args+ :output-dir (print doom-private-dir)
 
 # Local Variables:
 # eval: (add-hook 'after-save-hook (lambda () (org-babel-tangle)) nil t)
