@@ -14,6 +14,7 @@
 ** Table of Contents :TOC_3_gh:noexport:
   - [[#about-this-file][About this file]]
     - [[#about-that-toc][About that TOC..]]
+    - [[#the-properties][The properties]]
   - [[#magit-additions][Magit Additions]]
   - [[#org-additions][Org Additions]]
   - [[#snippets][Snippets]]
@@ -36,6 +37,12 @@ while keeping the ~org-toc~ tag.
 
 It's not really a problem since ~org-export~ actually generates a TOC for the
 files anyway.
+*** The properties
+Basically, the properties set imply that the file is to be tangled for every
+block and moreover the output directory is the ~doom-private-dir~. It's
+practically self explanatory but still. 
+
+The filename is determined by the ~SRC~ block languages.
 
 ** Magit Additions
 These basically allow for TODOs in magit along with enhanced github integration.
