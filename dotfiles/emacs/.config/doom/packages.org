@@ -2,14 +2,17 @@
 #+AUTHOR: Rohit Goswami (HaoZeke) <rohit.goswami@aol.com>
 #+PROPERTY: header-args :tangle (concat doom-private-dir "packages.el")
 #+PROPERTY: header-args+ :comments link
+#+STARTUP: outline
 
 # Local Variables:
 # eval: (add-hook 'after-save-hook (lambda () (org-babel-tangle)) nil t)
 # End:
 
-:PROPERTIES:
-:VISIBILITY: children
-:END:
+# Now we set this with STARTUP
+# These can be set per subtree.
+# :PROPERTIES:
+# :VISIBILITY: children
+# :END:
 
 ** Table of Contents :TOC_3_gh:noexport:
   - [[#about-this-file][About this file]]
