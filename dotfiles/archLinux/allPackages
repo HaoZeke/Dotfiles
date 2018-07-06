@@ -80,6 +80,7 @@ docear
 docker
 docker-compose
 dotgit
+drawio-desktop-bin
 duolingo-desktop-git
 e2fsprogs
 ebook-tools
@@ -160,7 +161,7 @@ hdparm
 hostsblock
 hplip-plugin
 hpoj
-htop
+htop-vim-git
 httrack
 hub
 i7z
