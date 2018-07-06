@@ -35,7 +35,7 @@ Since it's primarily aimed at ~doom-emacs~ let's add their comments.
 #+END_SRC
 
 *** About that TOC..
-So as mentioned [[https:https://github.com/snosov1/toc-org/issues/35][here]] there is trouble when ~org-export~ tries to create files
+So as mentioned [[https://github.com/snosov1/toc-org/issues/35][here]] there is trouble when ~org-export~ tries to create files
 while keeping the ~org-toc~ tag.
 
 It's not really a problem since ~org-export~ actually generates a TOC for the
