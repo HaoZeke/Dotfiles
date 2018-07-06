@@ -10,7 +10,7 @@
 * TODO Setup spacemacs keybindings for zathura
 * TODO Fix caveats for the export
 * TODO Use modules instead of one private module
-** TODO Switch to using XDG config stuff
+** DONE Switch to using XDG config stuff
 * TODO [#A] Make everything literate!
 * TODO Fix sublime text
 Atleast change the target so it doesn't keep breaking things.
