@@ -46,6 +46,7 @@ casperjs
 catfish
 ccache
 certbot
+cheese
 cherrytree
 chmlib
 chromedriver
@@ -136,6 +137,7 @@ gnome-dictionary
 gnome-encfs-manager-bin
 gnome-font-viewer
 gnome-screenshot
+gnome-video-effects
 gnuplot
 go
 gocr
@@ -433,6 +435,7 @@ tabbed
 tar
 tdrop-git
 teamviewer-beta
+telegram-desktop
 telegram-purple-git
 telegram-qt
 termite
