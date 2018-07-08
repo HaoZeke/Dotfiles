@@ -70,7 +70,7 @@ Because honestly there isn't anything better than [[http://gittup.org/tup/][tup]
 system which [[http://gittup.org/tup/tup_vs_mordor.html][scales with the eye of Mordor]]?
 
 #+BEGIN_SRC emacs-lisp
-(package! exec-path-from-shell
+(package! tup-mode
 :recipe (:fetcher github
            :repo "ejmr/tup-mode"))
 #+END_SRC
