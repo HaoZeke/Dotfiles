@@ -10,6 +10,7 @@
     - [[#kill-spellcheck][Kill spellcheck]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
+    - [[#saltstack-settings][SaltStack Settings]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
   - [[#functions][Functions]]
@@ -90,6 +91,18 @@ This is for sweet github integration.
 (def-package! evil-magit :after magit
   :init
   (setq evil-magit-state 'normal))
+#+END_SRC
+*** SaltStack Settings
+I like having spell checks for the comments.
+
+#+BEGIN_SRC emacs-lisp
+;; Load it
+(def-package! salt-mode
+  :ensure t)
+;; Flyspell
+(add-hook 'salt-mode-hook
+        (lambda ()
+            (flyspell-mode 1)))
 #+END_SRC
 
 ** Keybindings

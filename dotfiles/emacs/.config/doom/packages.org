@@ -22,6 +22,7 @@
   - [[#org-additions][Org Additions]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
+    - [[#saltstack-mode][SaltStack Mode]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -77,6 +78,13 @@ system which [[http://gittup.org/tup/tup_vs_mordor.html][scales with the eye of 
 
 **** LATER Caveats
 The repo is unmaintained so I ought to fork it and take a look into maintaining it.
+*** SaltStack Mode
+I have recently decided that [[https://saltstack.com/][saltstack]] ought to be used for working on multiple
+systems.
+
+#+BEGIN_SRC emacs-lisp
+(package! salt-mode)
+#+END_SRC
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
 
