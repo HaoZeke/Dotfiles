@@ -83,7 +83,9 @@ I have recently decided that [[https://saltstack.com/][saltstack]] ought to be u
 systems.
 
 #+BEGIN_SRC emacs-lisp
-(package! salt-mode)
+(package! salt-mode
+:recipe (:fetcher github
+         :repo "glynnforrest/salt-mode"))
 #+END_SRC
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
