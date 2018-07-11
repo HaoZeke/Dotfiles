@@ -232,6 +232,7 @@ libgsf
 libmagick6
 libmediainfo
 libmpeg2
+libpam-google-authenticator
 libraw
 libreoffice-fresh
 librsvg
@@ -511,6 +512,7 @@ whatsapp-purple-git
 whatsie
 which
 whippet
+windscribe-cli
 wireless_tools
 wiznote
 wpa_supplicant
