@@ -13,6 +13,7 @@
     - [[#saltstack-settings][SaltStack Settings]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+    - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#functions][Functions]]
     - [[#caveats][Caveats]]
   - [[#variables][Variables]]
@@ -127,6 +128,24 @@ buffer.
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
 
+*** Neotree --> Treemacs
+**** Toggle pane
+This remaps ~SPC o N~ to use ~treemacs~.
+I guess this doesn't make all that much sense, but ~t~ and ~T~ and bound to
+terminals and that makes sense, so I guess this is fine.
+
+#+BEGIN_SRC emacs-lisp
+;; Remap opening the sidebar
+(map! :leader
+      :nv "o n" nil
+      :desc "Open treemacs pane"
+      :n "o n" #'+treemacs/toggle)
+;; Remap finding stuff
+(map! :leader
+      :nv "o N" nil
+      :desc "Treemacs find file"
+      :n "o N" 'treemacs-find-file)
+#+END_SRC
 
 ** Functions
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
