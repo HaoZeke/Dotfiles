@@ -20,3 +20,4 @@ Remember, ~.zshenv~ and ~.profile~ things are loaded in a specific order.
 Random commands kill ssh.
 * TODO Configure org-noter
 * TODO Also setup biblatex and moreover setup cdlatex. The org version. Pull it in infact.
+* Do more org math
