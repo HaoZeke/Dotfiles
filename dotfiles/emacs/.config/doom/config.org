@@ -97,8 +97,7 @@ I like having spell checks for the comments.
 
 #+BEGIN_SRC emacs-lisp
 ;; Load it
-(def-package! salt-mode
-  :ensure t)
+(def-package! salt-mode)
 ;; Flyspell
 (add-hook 'salt-mode-hook
         (lambda ()
