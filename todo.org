@@ -21,3 +21,4 @@ Random commands kill ssh.
 * TODO Configure org-noter
 * TODO Also setup biblatex and moreover setup cdlatex. The org version. Pull it in infact.
 * Do more org math
+* Setup private configs for pianobar and proxychains
