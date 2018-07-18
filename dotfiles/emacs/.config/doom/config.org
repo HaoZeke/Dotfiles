@@ -128,13 +128,13 @@ buffer.
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
 
-*** Neotree --> Treemacs
-**** Toggle pane
+*** DONE Neotree --> Treemacs
+**** CANCELLED Toggle pane
 This remaps ~SPC o N~ to use ~treemacs~.
 I guess this doesn't make all that much sense, but ~t~ and ~T~ and bound to
 terminals and that makes sense, so I guess this is fine.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no 
 ;; Remap opening the sidebar
 (map! :leader
       :nv "o n" nil
@@ -146,6 +146,8 @@ terminals and that makes sense, so I guess this is fine.
       :desc "Treemacs find file"
       :n "o N" 'treemacs-find-file)
 #+END_SRC
+
+Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c94010f4d8ded0fbfecf479c1772a][this commit]] on the ~develop~ branch.
 
 ** Functions
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
