@@ -18,3 +18,7 @@ Atleast change the target so it doesn't keep breaking things.
 * TODO Clean up the dotfiles
 Remember, ~.zshenv~ and ~.profile~ things are loaded in a specific order.
 Random commands kill ssh.
+* TODO Configure org-noter
+* TODO Also setup biblatex and moreover setup cdlatex. The org version. Pull it in infact.
+* Do more org math
+* Setup private configs for pianobar and proxychains
