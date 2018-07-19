@@ -18,7 +18,7 @@
   - [[#about-this-file][About this file]]
     - [[#about-that-toc][About that TOC..]]
     - [[#the-properties][The properties]]
-  - [[#magit-additions][Magit Additions]]
+  - [[#later-magit-additions][LATER Magit Additions]]
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
   - [[#syntax-highlighting][Syntax Highlighting]]
@@ -51,25 +51,32 @@ practically self explanatory but still.
 
 The filename is determined by the ~SRC~ block languages.
 
-** Magit Additions
+** LATER Magit Additions
 These basically allow for TODOs in magit along with enhanced github integration.
+These have been added upstream in ~develop~.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (package! magit-org-todos)
 (package! magithub)
 #+END_SRC
+
+Actually [[https://github.com/alphapapa/magit-todos][magit-todos]] has been added upstream which collates all ~todo~ items.
+There might still be workflows where [[https://github.com/danielma/magit-org-todos.el][magit-org-todos]] is useful since that
+displays a global ~todo.org~ file.
 
 ** Org Additions
 
 The new ones need to be covered in the ~config.org~ file with the appropriate
 keybindings.
 
-*** Org Noter
+*** TODO Org Noter
 This is sort of more of a ~pdf-tools~ extension and it needs it's own ~biblatex~
 setup and stuff as well so this might move into a tree of it's own.
+
 #+BEGIN_SRC emacs-lisp
-(package! org-noter)
+;; (package! org-noter)
 #+END_SRC
+This actually breaks the ~pdf-tools~ bindings.
 
 ** Syntax Highlighting
 These are additionally required to work with the sort of files I use often.
