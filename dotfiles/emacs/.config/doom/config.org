@@ -63,10 +63,11 @@ These should eventually go into a different module.
 Each of these.
 
 *** Magit Aids
-**** Magit todos
+**** DONE Magit todos
 Of course this is not really meant to be here..
+A variation of this was included upstream in the ~develop~ branch.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (def-package! magit-org-todos
   :mode "\\COMMIT_EDITMSG$"
   :commands (magit-org-todods magit-org-todos-autoinsert)
