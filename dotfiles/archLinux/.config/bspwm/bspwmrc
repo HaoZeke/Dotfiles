@@ -69,7 +69,6 @@ bspc rule -a Wine state=floating
 bspc rule -a mplayer2 state=floating
 bspc rule -a smplayer state=floating
 bspc rule -a Lxappearance state=floating
-bspc rule -a thunderbird state=floating
 bspc rule -a Cantata state=floating
 bspc rule -a Audacious state=floating
 bspc rule -a Xfce4-taskmanager state=floating
