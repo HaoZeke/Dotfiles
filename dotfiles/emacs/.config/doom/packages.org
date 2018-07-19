@@ -18,7 +18,7 @@
   - [[#about-this-file][About this file]]
     - [[#about-that-toc][About that TOC..]]
     - [[#the-properties][The properties]]
-  - [[#magit-additions][Magit Additions]]
+  - [[#later-magit-additions][LATER Magit Additions]]
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
   - [[#syntax-highlighting][Syntax Highlighting]]
@@ -51,7 +51,7 @@ practically self explanatory but still.
 
 The filename is determined by the ~SRC~ block languages.
 
-** DONE Magit Additions
+** LATER Magit Additions
 These basically allow for TODOs in magit along with enhanced github integration.
 These have been added upstream in ~develop~.
 
@@ -59,6 +59,10 @@ These have been added upstream in ~develop~.
 (package! magit-org-todos)
 (package! magithub)
 #+END_SRC
+
+Actually [[https://github.com/alphapapa/magit-todos][magit-todos]] has been added upstream which collates all ~todo~ items.
+There might still be workflows where [[https://github.com/danielma/magit-org-todos.el][magit-org-todos]] is useful since that
+displays a global ~todo.org~ file.
 
 ** Org Additions
 
