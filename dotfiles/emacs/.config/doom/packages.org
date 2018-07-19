@@ -64,12 +64,14 @@ These basically allow for TODOs in magit along with enhanced github integration.
 The new ones need to be covered in the ~config.org~ file with the appropriate
 keybindings.
 
-*** Org Noter
+*** TODO Org Noter
 This is sort of more of a ~pdf-tools~ extension and it needs it's own ~biblatex~
 setup and stuff as well so this might move into a tree of it's own.
+
 #+BEGIN_SRC emacs-lisp
-(package! org-noter)
+;; (package! org-noter)
 #+END_SRC
+This actually breaks the ~pdf-tools~ bindings.
 
 ** Syntax Highlighting
 These are additionally required to work with the sort of files I use often.
