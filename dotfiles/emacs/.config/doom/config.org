@@ -63,10 +63,11 @@ These should eventually go into a different module.
 Each of these.
 
 *** Magit Aids
-**** Magit todos
+**** DONE Magit todos
 Of course this is not really meant to be here..
+A variation of this was included upstream in the ~develop~ branch.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (def-package! magit-org-todos
   :mode "\\COMMIT_EDITMSG$"
   :commands (magit-org-todods magit-org-todos-autoinsert)
@@ -74,10 +75,11 @@ Of course this is not really meant to be here..
   (magit-org-todos-autoinsert))
 #+END_SRC
 
-**** Magithub
+**** DONE Magithub
 This is for sweet github integration.
+Also integrated upstream.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (def-package! magithub
   :after magit
   :commands (magithub-clone
