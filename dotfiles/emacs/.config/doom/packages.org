@@ -51,10 +51,11 @@ practically self explanatory but still.
 
 The filename is determined by the ~SRC~ block languages.
 
-** Magit Additions
+** DONE Magit Additions
 These basically allow for TODOs in magit along with enhanced github integration.
+These have been added upstream in ~develop~.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (package! magit-org-todos)
 (package! magithub)
 #+END_SRC
