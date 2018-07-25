@@ -24,6 +24,7 @@
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
     - [[#saltstack-mode][SaltStack Mode]]
+    - [[#pkgbuild-mode][PKGBUILD Mode]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -102,6 +103,16 @@ systems.
 :recipe (:fetcher github
          :repo "glynnforrest/salt-mode"))
 #+END_SRC
+*** PKGBUILD Mode
+No point using ~emacs~ if I can't get highlighting for all my needs. This needs
+some extra configuration. Must figure out if this is well mantained. Works for now.
+
+#+BEGIN_SRC emacs-lisp
+(package! pkgbuild-mode
+  :recipe (:fetcher github
+            :repo "juergenhoetzel/pkgbuild-mode"))
+#+END_SRC
+
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
 
