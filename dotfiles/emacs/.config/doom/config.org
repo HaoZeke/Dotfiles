@@ -19,6 +19,8 @@
     - [[#caveats][Caveats]]
   - [[#variables][Variables]]
     - [[#safe-variables][Safe variables]]
+  - [[#troubleshooting][Troubleshooting]]
+    - [[#pdf-modeline][PDF Modeline]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -208,3 +210,15 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 - The actual code is much more elegant in every way possible.
 - Seriously there has to be  a way to not have to do this.
   
+  
+** Troubleshooting
+These are strictly temporary hacks to resolve problems until they are fixed
+upstream.
+
+*** PDF Modeline
+With ~org-noter~ the modeline breaks, causing unwanted holiness. 
+
+#+BEGIN_SRC emacs-lisp
+(after! pdf-tools
+  (remove-hook! 'pdf-tools-enabled-hook (doom-set-modeline 'pdf-tools-modeline)))
+#+END_SRC
