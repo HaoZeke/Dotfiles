@@ -246,3 +246,16 @@ keycode 252 =
 keycode 253 =
 keycode 254 =
 keycode 255 =
+
+!!!!!!!!!!!!!!!!
+! My Additions !
+!!!!!!!!!!!!!!!!
+
+! Emacs
+!!!!!!!!
+
+! From https://wiki.archlinux.org/index.php/xmodmap
+clear lock
+clear control
+add control = Caps_Lock Control_L Control_R
+keycode 66 = Control_L Caps_Lock NoSymbol NoSymbol
