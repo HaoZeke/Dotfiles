@@ -11,6 +11,7 @@
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
+  - [[#syntax-highlighting][Syntax Highlighting]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
@@ -105,6 +106,16 @@ I like having spell checks for the comments.
 (add-hook 'salt-mode-hook
         (lambda ()
             (flyspell-mode 1)))
+#+END_SRC
+
+** Syntax Highlighting
+This section is for setting up major modes for various file formats which are
+typically non-standard.
+
+#+BEGIN_SRC emacs-lisp
+(autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
+(setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
+                              auto-mode-alist))
 #+END_SRC
 
 ** Keybindings
