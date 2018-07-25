@@ -229,7 +229,6 @@ allPackages:archLinux
 .config/lxsession-default-apps/settings.conf:lxdeSession
 .config/lxsession/LXDE/autostart:lxdeSession
 .config/lxsession/LXDE/desktop.conf:lxdeSession
-.config/gtk-3.0/bookmarks:lxdeSession
 .config/gtk-3.0/settings.ini:lxdeSession
 
 # noSession
