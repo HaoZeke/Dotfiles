@@ -80,6 +80,16 @@ setup and stuff as well so this might move into a tree of it's own.
 
 This actually breaks the ~pdf-tools~ bindings.
 
+** Reference Management
+**** Zotero
+There are a bunch of ~zotero~ integrations for emacs, most notably, [[https://github.com/vspinu/zotelo][zotelo]], but
+they don't seem to be all that well mantained. [[https://github.com/emacsmirror/zotxt][Zotxt]] seems to be updated pretty
+often though.
+
+#+BEGIN_SRC emacs-lisp
+(package! zotxt)
+#+END_SRC
+
 ** Syntax Highlighting
 These are additionally required to work with the sort of files I use often.
 The configuration and settings are as usual in ~config.org~
