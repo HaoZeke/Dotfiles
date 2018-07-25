@@ -105,7 +105,8 @@ systems.
 #+END_SRC
 *** PKGBUILD Mode
 No point using ~emacs~ if I can't get highlighting for all my needs. This needs
-some extra configuration. Must figure out if this is well mantained. Works for now.
+some extra configuration. +Must figure out if this is well mantained+. The
+developer is very responsive to pull requests and the like.
 
 #+BEGIN_SRC emacs-lisp
 (package! pkgbuild-mode
