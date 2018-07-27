@@ -17,6 +17,7 @@
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
+    - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
     - [[#caveats][Caveats]]
     - [[#helper-function][Helper function]]
   - [[#safe-evals-and-variables][Safe Evals and Variables]]
@@ -25,6 +26,7 @@
   - [[#troubleshooting][Troubleshooting]]
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
+  - [[#references][References]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -269,3 +271,17 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
       ("\\section{%s}" . "\\section*{%s}")
       ("\\subsection{%s}" . "\\subsection*{%s}")))))
 #+END_SRC
+
+** TODO References
+This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
+#+BEGIN_SRC emacs-lisp
+(setq reftex-default-bibliography '("~/Documents/References/zotero.bib"))
+
+;; see org-ref for use of these variables
+(setq org-ref-bibliography-notes "~/Documents/References/notes.org"
+      org-ref-default-bibliography '("~/Documents/References/zotero.bib")
+      org-ref-pdf-directory "~/Documents/References/bibtex-pdfs/")
+#+END_SRC
+
+I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
+I should change those soon.
