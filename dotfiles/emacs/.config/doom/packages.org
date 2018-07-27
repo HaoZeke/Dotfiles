@@ -21,6 +21,8 @@
   - [[#later-magit-additions][LATER Magit Additions]]
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
+    - [[#org-ref][Org Ref]]
+  - [[#reference-management][Reference Management]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
     - [[#saltstack-mode][SaltStack Mode]]
@@ -79,6 +81,13 @@ setup and stuff as well so this might move into a tree of it's own.
 #+END_SRC
 
 This actually breaks the ~pdf-tools~ bindings.
+
+*** Org Ref
+This is probably not the best thing in my current setup..
+
+#+BEGIN_SRC emacs-lisp
+(package! org-ref)
+#+END_SRC
 
 ** Reference Management
 **** Zotero
