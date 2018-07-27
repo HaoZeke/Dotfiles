@@ -16,10 +16,14 @@
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#functions][Functions]]
+    - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#caveats][Caveats]]
+    - [[#helper-function][Helper function]]
   - [[#variables][Variables]]
     - [[#safe-variables][Safe variables]]
   - [[#troubleshooting][Troubleshooting]]
+  - [[#temporary][Temporary]]
+    - [[#latex-for-org-mode][LaTeX for Org mode]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -164,6 +168,7 @@ terminals and that makes sense, so I guess this is fine.
 Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c94010f4d8ded0fbfecf479c1772a][this commit]] on the ~develop~ branch.
 
 ** Functions
+*** Org-mode export pdf when saved
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 [[https:https://emacs.stackexchange.com/questions/9893/how-can-i-export-to-latex-every-time-i-save-an-org-mode-buffer][this stack exchange question]].
 
@@ -176,6 +181,20 @@ This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 *** TODO Caveats
 - Minted needs to be setup.
 - There are really a lot of optimizations to the above.
+
+*** Helper function
+Figure out if I can replicate this some other way. Taken from [[https://github.com/sam217pa/emacs-config][sam217pa's github repo]].
+#+BEGIN_SRC emacs-lisp
+;; this function is used to append multiple elements to the list 'ox-latex
+(defun append-to-list (list-var elements)
+  "Append ELEMENTS to the end of LIST-VAR. The return value is the new value of LIST-VAR."
+  (unless (consp elements) (error "ELEMENTS must be a list"))
+  (let ((list (symbol-value list-var)))
+    (if list
+        (setcdr (last list) elements)
+      (set list-var elements)))
+(symbol-value list-var))
+#+END_SRC
 
 ** Variables
 *** Safe variables
@@ -199,8 +218,7 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'safe-local-variable-values
              '(eval (add-hook 'after-save-hook
-	                'haozeke/org-save-and-export
-	                nil t)))
+	                          haozeke/org-save-and-export)))
 #+END_SRC
 
 **** TODO Caveats
@@ -214,3 +232,21 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 These are strictly temporary hacks to resolve problems until they are fixed
 upstream.
 
+
+** Temporary
+
+*** LaTeX for Org mode
+Pretty this up. Consider using file templates or something. Atleast make a
+proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r/emacs/comments/54g578/anyone_go_from_using_latex_to_org_mode/][this reddit thread]].
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'ox-latex
+  (append-to-list
+   'org-latex-classes
+   '(("tufte-book"
+      "\\documentclass[a4paper, sfsidenotes, openany, justified]{tufte-book}
+     \\input{/home/haozeke/Git/tufte-book.tex}"
+      ("\\part{%s}" . "\\part*{%s}")
+      ("\\chapter{%s}" . "\\chapter*{%s}")
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")))))
+#+END_SRC
