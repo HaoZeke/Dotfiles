@@ -19,8 +19,9 @@
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#caveats][Caveats]]
     - [[#helper-function][Helper function]]
-  - [[#variables][Variables]]
+  - [[#safe-evals-and-variables][Safe Evals and Variables]]
     - [[#safe-variables][Safe variables]]
+    - [[#safe-evals][Safe Evals]]
   - [[#troubleshooting][Troubleshooting]]
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
@@ -173,9 +174,19 @@ This one is to generate pdfs whenever a buffer is saved. Mainly taken from
 [[https:https://emacs.stackexchange.com/questions/9893/how-can-i-export-to-latex-every-time-i-save-an-org-mode-buffer][this stack exchange question]].
 
 #+BEGIN_SRC emacs-lisp
-(defun haozeke/org-save-and-export ()
-  (interactive)
-  (org-latex-export-to-pdf))
+(defun haozeke/org-save-and-export-pdf ()
+  (if (eq major-mode 'org-mode)
+    (org-latex-export-to-pdf)))
+#+END_SRC
+
+*** Org-mode export tex when saved
+Similar to the one above, but ~tex~ generation is much faster and this way I can
+keep editing my files without waiting for it to finish creating the ~pdf~.
+
+#+BEGIN_SRC emacs-lisp
+(defun haozeke/org-save-and-export-tex ()
+  (if (eq major-mode 'org-mode)
+    (org-latex-export-to-latex)))
 #+END_SRC
 
 *** TODO Caveats
@@ -196,7 +207,7 @@ Figure out if I can replicate this some other way. Taken from [[https://github.c
 (symbol-value list-var))
 #+END_SRC
 
-** Variables
+** Safe Evals and Variables
 *** Safe variables
 The problem is that ~packages.el~ isn't being produced by the clever little ugly
 commit I tried so, this is a workaround to tangle *any* file to be produced in
@@ -212,13 +223,13 @@ open emacs. Basically this is adapted from [[https://www.reddit.com/r/emacs/comm
 	                nil t))
 #+END_SRC
 
-**** Export
+**** TODO Export
 This is a catch all for the eventual ~org-mode~ based multiple target exports.
 
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'safe-local-variable-values
-             '(eval (add-hook 'after-save-hook
-	                          haozeke/org-save-and-export)))
+                '(eval add-hook 'after-save-hook 'haozeke/org-save-and-export-tex nil t)
+                '(eval add-hook 'after-save-hook 'haozeke/org-save-and-export-pdf nil t))
 #+END_SRC
 
 **** TODO Caveats
@@ -227,6 +238,14 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 - The actual code is much more elegant in every way possible.
 - Seriously there has to be  a way to not have to do this.
   
+  
+*** TODO Safe Evals
+This enables the evaluation of these forms. Read more about this via
+~docstrings~ sometime.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(add-to-list 'safe-local-eval-forms (eval add-hook 'after-save-hook haozeke/org-save-and-export))
+#+END_SRC
   
 ** Troubleshooting
 These are strictly temporary hacks to resolve problems until they are fixed
