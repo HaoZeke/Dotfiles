@@ -26,6 +26,7 @@
   - [[#troubleshooting][Troubleshooting]]
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
+    - [[#org-ref-latex][Org Ref LaTeX]]
   - [[#references][References]]
     - [[#org-ref-ivy][Org Ref Ivy]]
 
@@ -271,6 +272,11 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
       ("\\chapter{%s}" . "\\chapter*{%s}")
       ("\\section{%s}" . "\\section*{%s}")
       ("\\subsection{%s}" . "\\subsection*{%s}")))))
+#+END_SRC
+*** Org Ref LaTeX
+This is really not part of my workflow...
+#+BEGIN_SRC emacs-lisp
+(setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f"))
 #+END_SRC
 
 ** TODO References
