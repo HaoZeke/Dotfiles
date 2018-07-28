@@ -282,6 +282,10 @@ This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
 (setq org-ref-bibliography-notes "~/Documents/References/notes.org"
       org-ref-default-bibliography '("~/Documents/References/zotero.bib")
       org-ref-pdf-directory "~/Documents/References/bibtex-pdfs/")
+
+(setq bibtex-completion-notes-path "~/Documents/References/notes.org"
+      bibtex-completion-bibliography '("~/Documents/References/zotero.bib")
+      bibtex-completion-library-directory "~/Documents/References/bibtex-pdfs/")
 #+END_SRC
 
 I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
