@@ -27,6 +27,7 @@
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
   - [[#references][References]]
+    - [[#org-ref-ivy][Org Ref Ivy]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -285,3 +286,9 @@ This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
 
 I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
 I should change those soon.
+
+*** Org Ref Ivy
+Ivy is used exclusively throughout ~doom~, makes sense to use it here too.
+#+BEGIN_SRC emacs-lisp
+(setq org-ref-completion-library 'org-ref-ivy-cite)
+#+END_SRC
