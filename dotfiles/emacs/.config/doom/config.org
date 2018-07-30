@@ -29,6 +29,8 @@
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
     - [[#org-ref-latex][Org Ref LaTeX]]
+  - [[#flycheck-additions][Flycheck Additions]]
+    - [[#melpa-helpers][MELPA Helpers]]
   - [[#references][References]]
     - [[#org-ref-ivy][Org Ref Ivy]]
 
@@ -291,6 +293,18 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
 This is really not part of my workflow...
 #+BEGIN_SRC emacs-lisp
 (setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f"))
+#+END_SRC
+
+** Flycheck Additions
+These are basically meant to aid in development. The relevant linters are also
+added here.
+
+*** MELPA Helpers
+This includes settings for both flycheck and the packages it needs.
+#+BEGIN_SRC emacs-lisp
+(def-package! flycheck-package
+  :after flycheck
+  :config (flycheck-package-setup))
 #+END_SRC
 
 ** TODO References
