@@ -12,8 +12,6 @@
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
   - [[#syntax-highlighting][Syntax Highlighting]]
-    - [[#pkgbuild-mode][PKGBUILD Mode]]
-    - [[#editorconfig][Editorconfig]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
@@ -129,14 +127,6 @@ typically non-standard.
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
                               auto-mode-alist))
-#+END_SRC
-
-*** Editorconfig 
-This is to actually ensure that the ~editorconfig~ stuff is respected and
-loaded.
-#+BEGIN_SRC emacs-lisp
-(after! editorconfig
-  (editorconfig-mode 1))
 #+END_SRC
 
 ** Keybindings
