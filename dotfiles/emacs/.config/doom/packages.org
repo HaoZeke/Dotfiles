@@ -23,7 +23,6 @@
     - [[#tup-mode][Tup Mode]]
     - [[#saltstack-mode][SaltStack Mode]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
-    - [[#editorconfig][Editorconfig]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -130,14 +129,6 @@ developer is very responsive to pull requests and the like.
   :recipe (:fetcher github
             :repo "juergenhoetzel/pkgbuild-mode"))
 #+END_SRC
-*** Editorconfig
-[[https://editorconfig.org/][This]] is actually not a syntax highlighting package per se, but it allows for
-interoperable syntax standards for a bunch of editors so it belongs here.
-#+BEGIN_SRC emacs-lisp
-(package! editorconfig)
-#+END_SRC
-
-
 
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
