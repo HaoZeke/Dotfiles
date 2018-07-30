@@ -16,6 +16,7 @@ arm-linux-gnueabihf-binutils
 arm-linux-gnueabihf-gcc
 asp
 aspell-en
+asymptote
 audacious
 autoconf
 automake
@@ -104,6 +105,7 @@ file-roller
 filesystem
 filezilla
 findutils
+firefox-nightly
 flatpak
 flex
 fontawesome.sty
@@ -137,6 +139,8 @@ gnome-dictionary
 gnome-encfs-manager-bin
 gnome-font-viewer
 gnome-screenshot
+gnome-sudoku
+gnome-twitch
 gnome-video-effects
 gnuplot
 go
@@ -163,6 +167,7 @@ hdparm
 hostsblock
 hplip-plugin
 hpoj
+htmldoc
 htop-vim-git
 httrack
 hub
@@ -184,10 +189,12 @@ jack
 java-openjfx
 jbig2enc
 jfsutils
+jnettop
 joe-go
 jp2a
 jq
 jumpapp-git
+jupyter-notebook
 k2pdfopt
 kcachegrind
 kdegraphics-mobipocket
@@ -199,6 +206,7 @@ koreader-appimage
 ktikz
 ktouch
 kwakd
+lab
 languagetool
 less
 lesstif
@@ -275,6 +283,7 @@ menulibre
 midori
 mimeo
 minidjvu
+mlocate
 molden
 mosh
 mpd
@@ -338,6 +347,7 @@ perl
 phantomjs-bin
 php
 php-fpm
+pianobar
 pidgin
 pidgin-latex
 pidgin-leftify-tabs
@@ -353,7 +363,9 @@ pomodoneapp
 poppler-glib
 powerpill
 powertop
+pp-git
 procps-ng
+proxychains-ng
 psmisc
 pug
 pulseaudio
@@ -385,6 +397,7 @@ python2-pyenchant
 python3-threaded_servers
 qemu
 qpdf
+qtox
 rar
 raw-thumbnailer
 rclone
@@ -412,6 +425,7 @@ sed
 shadow
 shrinkpdf
 simplescreenrecorder
+skypeforlinux-stable-bin
 smartmontools
 smplayer
 smplayer-skins
@@ -421,8 +435,10 @@ speedreader
 speex
 sqlitebrowser
 sshfs
-standardnotes-desktop
+sshuttle
+stack
 strace
+streamlink
 subdownloader
 sublime-text
 subversion
@@ -474,12 +490,15 @@ tmux
 todoist-linux-bin
 totem
 tree
+trillian
 trizen
+tsocks
 ttf-bookerly
 ttf-font-awesome
 ttf-indic-otf
 ttf-nanumgothic_coding
 ttf-neuton
+ttf-roboto
 ttf-roboto-slab
 ttf-signika-family-ib
 ttf-vollkorn-ibx
@@ -489,6 +508,10 @@ typecatcher
 typora
 udiskie
 udisks2
+uget
+uget-integrator
+uget-integrator-chrome
+uget-integrator-firefox
 unace
 unclutter-xfixes-git
 unrar
@@ -503,10 +526,10 @@ vesta
 vi
 viewnior
 vim
+vlc
 vmd
 vte3
 wakatime
-waterfox-bin
 wget
 whatsapp-purple-git
 whatsie
@@ -533,7 +556,6 @@ xfce4-pulseaudio-plugin
 xfce4-session
 xfce4-settings
 xfce4-taskmanager
-xfce4-volumed-pulse
 xfce4-whiskermenu-plugin
 xfsprogs
 xlogin-git
