@@ -13,6 +13,7 @@
     - [[#saltstack-settings][SaltStack Settings]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
+    - [[#lammps-mode][LAMMPS Mode]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
@@ -128,6 +129,16 @@ typically non-standard.
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
                               auto-mode-alist))
+#+END_SRC
+
+*** LAMMPS Mode
+#+BEGIN_SRC emacs-lisp
+(autoload 'lammps-mode "lammps-mode.el" "LAMMPS mode." t)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
+
 #+END_SRC
 
 ** Keybindings
