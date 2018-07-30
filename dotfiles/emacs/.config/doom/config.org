@@ -271,6 +271,7 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
       ("\\part{%s}" . "\\part*{%s}")
       ("\\chapter{%s}" . "\\chapter*{%s}")
       ("\\section{%s}" . "\\section*{%s}")
+      ("utf8" . "utf8x")
       ("\\subsection{%s}" . "\\subsection*{%s}")))))
 #+END_SRC
 *** Org Ref LaTeX
