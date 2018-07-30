@@ -24,6 +24,8 @@
     - [[#saltstack-mode][SaltStack Mode]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
+  - [[#flycheck-additions][Flycheck Additions]]
+    - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -138,6 +140,14 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
 (package! lammps-mode
   :recipe (:fetcher github
                     :repo "HaoZeke/lammps-mode"))
+#+END_SRC
+
+** Flycheck Additions
+*** MELPA Helper
+This is for linting files before submitting to MELPA.
+#+BEGIN_SRC emacs-lisp
+(package! package-lint)
+(package! flycheck-package)
 #+END_SRC
 
 ** Snippets
