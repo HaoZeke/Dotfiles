@@ -122,6 +122,7 @@ I like having spell checks for the comments.
 This section is for setting up major modes for various file formats which are
 typically non-standard.
 
+*** PKGBUILD Mode
 #+BEGIN_SRC emacs-lisp
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
