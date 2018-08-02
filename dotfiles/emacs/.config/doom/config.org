@@ -32,6 +32,9 @@
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helpers][MELPA Helpers]]
   - [[#references][References]]
+    - [[#basic-setup][Basic Setup]]
+    - [[#noteyoda][noteYoda]]
+    - [[#reftex][Reftex]]
     - [[#org-ref-ivy][Org Ref Ivy]]
 
 ** About
