@@ -358,6 +358,19 @@ bibliographies in general.
       helm-bibtex-notes-path "~/.megaRefs/articles.org")
 #+END_SRC
 
+**** Org-Noter
+I decided to use [[https://github.com/weirdNox/org-noter][org-noter]] over the more commonly described [[https://github.com/rudolfochrist/interleave][interleave]] because
+it has better support for working with multiple documents linked to one file.
+
+#+BEGIN_SRC emacs-lisp
+;; bspwm can handle splits
+(setq org-noter-always-create-frame nil
+;; Everything is relative to the rclone mega
+      org-noter-notes-search-path '("~/.megaRefs/Notes"
+                                    "~/.megaRefs/"
+                                    "~/Documents"))
+#+END_SRC
+
 *** Reftex
 Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
 still needs some setup.
