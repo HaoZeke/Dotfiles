@@ -333,7 +333,14 @@ This is largely inspired from [[https://www.reddit.com/r/emacs/comments/4gudyw/h
 
 #+BEGIN_SRC emacs-lisp
 
+**** Org-Ref 
+[[https://github.com/jkitchin/org-ref][This]] seems like an ubiquitous choice for working with org files and references.
 
+#+BEGIN_SRC emacs-lisp
+(setq org-ref-notes-directory "~/.megaRefs/Notes"
+      org-ref-bibliography-notes "~/.megaRefs/articles.org"
+      org-ref-default-bibliography '("~/.megaRefs/Bibliographies/zotLib.bib")
+      org-ref-pdf-directory "~/.megaRefs/Papers/")
 #+END_SRC
 
 *** Reftex
