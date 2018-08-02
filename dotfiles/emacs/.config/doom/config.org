@@ -371,6 +371,24 @@ it has better support for working with multiple documents linked to one file.
                                     "~/Documents"))
 #+END_SRC
 
+**** Org-Capture Template
+This just scratches the surface of these templates, but it's a good enough
+start.
+
+#+BEGIN_SRC emacs-lisp
+(setq org-capture-templates
+        (append 
+         '("a"               ; key
+           "Article"         ; name
+           entry             ; type
+           (file+headline "~/.megaRefs/Notes/consolidated.org" "Article")  ; target
+           "* %^{Title} %(org-set-tags)  :article: \n:PROPERTIES:\n:Created: %U\n:Linked: %a\n:END:\n%i\nBrief description:\n%?"  ; template
+           :prepend t        ; properties
+           :empty-lines 1    ; properties
+           :created t        ; properties
+           ) org-capture-templates))  
+#+END_SRC
+
 *** Reftex
 Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
 still needs some setup.
