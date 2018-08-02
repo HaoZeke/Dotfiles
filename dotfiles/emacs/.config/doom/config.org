@@ -336,6 +336,14 @@ This is largely inspired from [[https://www.reddit.com/r/emacs/comments/4gudyw/h
 
 #+END_SRC
 
+*** Reftex
+Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
+still needs some setup.
+
+#+BEGIN_SRC emacs-lisp
+(setq reftex-default-bibliography '("~/.megaRefs/Bibliographies/zotLib.bib"))
+#+END_SRC
+
 
 *** Org Ref Ivy
 Ivy is used exclusively throughout ~doom~, makes sense to use it here too.
