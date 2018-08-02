@@ -343,6 +343,20 @@ This is largely inspired from [[https://www.reddit.com/r/emacs/comments/4gudyw/h
       org-ref-pdf-directory "~/.megaRefs/Papers/")
 #+END_SRC
 
+Apparently, ~org-ref~ is also able to fetch ~pdf~ files when ~DOI~ or ~URL~
+links are dragged onto the ~.bib~ file. However, since ~zotero~ will handle the
+metadata, this remains to be considered.
+
+**** Helm-Bibtex
+Name aside, [[https://github.com/tmalsburg/helm-bibtex][this]] also works for ~ivy~. Basically meant to interface with
+bibliographies in general.
+
+#+BEGIN_SRC emacs-lisp
+(setq helm-bibtex-bibliography "~/.megaRefs/Bibliographies/zotLib.bib"
+      helm-bibtex-library-path "~/.megaRefs/Papers/"
+      helm-bibtex-notes-path "~/.megaRefs/articles.org")
+#+END_SRC
+
 *** Reftex
 Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
 still needs some setup.
