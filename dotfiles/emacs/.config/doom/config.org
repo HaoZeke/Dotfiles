@@ -308,8 +308,9 @@ This includes settings for both flycheck and the packages it needs.
 #+END_SRC
 
 ** TODO References
+*** Basic Setup
 This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq reftex-default-bibliography '("~/Documents/References/zotero.bib"))
 
 ;; see org-ref for use of these variables
