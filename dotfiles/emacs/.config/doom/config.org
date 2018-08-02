@@ -323,8 +323,19 @@ This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
       bibtex-completion-library-directory "~/Documents/References/bibtex-pdfs/")
 #+END_SRC
 
-I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
-I should change those soon.
++I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
+I should change those soon.+
+
+Depreciated in favor of a better setup.
+
+*** noteYoda 
+This is largely inspired from [[https://www.reddit.com/r/emacs/comments/4gudyw/help_me_with_my_orgmode_workflow_for_notetaking/][this reddit comment]].
+
+#+BEGIN_SRC emacs-lisp
+
+
+#+END_SRC
+
 
 *** Org Ref Ivy
 Ivy is used exclusively throughout ~doom~, makes sense to use it here too.
