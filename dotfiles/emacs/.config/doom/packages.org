@@ -23,6 +23,9 @@
     - [[#tup-mode][Tup Mode]]
     - [[#saltstack-mode][SaltStack Mode]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
+    - [[#lammps-mode][LAMMPS Mode]]
+  - [[#flycheck-additions][Flycheck Additions]]
+    - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
 
 ** About this file
@@ -128,6 +131,23 @@ developer is very responsive to pull requests and the like.
 (package! pkgbuild-mode
   :recipe (:fetcher github
             :repo "juergenhoetzel/pkgbuild-mode"))
+#+END_SRC
+*** LAMMPS Mode
++This could do with some updates. Will look into this soon. Also it takesunbearably long this way. Must figure out how to stop it from downloading the
+whole repo.+
+Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
+#+BEGIN_SRC emacs-lisp
+(package! lammps-mode
+  :recipe (:fetcher github
+                    :repo "HaoZeke/lammps-mode"))
+#+END_SRC
+
+** Flycheck Additions
+*** MELPA Helper
+This is for linting files before submitting to MELPA.
+#+BEGIN_SRC emacs-lisp
+(package! package-lint)
+(package! flycheck-package)
 #+END_SRC
 
 ** Snippets
