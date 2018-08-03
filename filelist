@@ -59,6 +59,9 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 .borg_patterns
 
 # Executables #
+.local/bin/cronDrivers/rclone_template.sh
+.local/bin/cronDrivers/readme.org
+.local/bin/cronDrivers/rclone_megaRefs.sh
 .local/bin/dockerHelpers/docker-ssh
 .local/bin/dockerHelpers/nukeGraphsScript.sh
 .local/bin/droidHelpers/adbsideload
