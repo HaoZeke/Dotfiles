@@ -215,6 +215,7 @@ export groupid=$(id -g)
 
 # For the bundled scripts
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$PATH:$HOME/.local/bin/cronDrivers"
 export PATH="$PATH:$HOME/.local/bin/gitHelpers"
 export PATH="$PATH:$HOME/.local/bin/droidHelpers"
 export PATH="$PATH:$HOME/.local/bin/dockerHelpers"
