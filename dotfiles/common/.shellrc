@@ -216,13 +216,13 @@ export groupid=$(id -g)
 # For the bundled scripts
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.local/bin/cronDrivers"
-export PATH="$PATH:$HOME/.local/bin/gitHelpers"
-export PATH="$PATH:$HOME/.local/bin/droidHelpers"
 export PATH="$PATH:$HOME/.local/bin/dockerHelpers"
-export PATH="$PATH:$HOME/.local/bin/shellHelpers"
+export PATH="$PATH:$HOME/.local/bin/droidHelpers"
 export PATH="$PATH:$HOME/.local/bin/fileHelpers"
-export PATH="$PATH:$HOME/.local/bin/webHelpers"
+export PATH="$PATH:$HOME/.local/bin/gitHelpers"
 export PATH="$PATH:$HOME/.local/bin/installHelpers"
+export PATH="$PATH:$HOME/.local/bin/shellHelpers"
+export PATH="$PATH:$HOME/.local/bin/webHelpers"
 
 # Rust Paths
 #############
