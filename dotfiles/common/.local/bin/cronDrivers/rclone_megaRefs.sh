@@ -39,10 +39,10 @@
 SRC=$HOME/.megaRefs
 
 #---- Edit this to the desired destination
-DEST=megaRefs:
+DEST=megaRefs:/
 
 #---- This is the path to a file with a list of exclude rules
-EXCLUDEFILE=$HOME/.rclone/excludes 
+EXCLUDEFILE=$SRC/.rclone/excludes 
 
 #---- Name of exclude file
 # NOTE: you need "v1.39-036-g2030dc13β" or later for this to work.
@@ -58,11 +58,10 @@ MINAGE=15m
 # TRANSFERS=32
 
 #---- Location of sync log [will be rotated with savelog]
-LOGFILE=$HOME/.rclone/rclone-sync.log
-LOGS='-vv --log-file='$LOGFILE
+LOGFILE=$SRC/.rclone/rclone-sync.log
 
 #---- Location of cron log
-CRONLOG=$HOME/.rclone/rclone-cron.log
+CRONLOG=$SRC/.rclone/rclone-cron.log
 
 
 ###################################################
@@ -110,14 +109,21 @@ exlock_now || exit_on_lock
 #We now have the lock.
 
 #Rotate logs.
-savelog -n -c 7 $LOGFILE >> $CRONLOG
+# savelog -n -c 7 $LOGFILE >> $CRONLOG
 
 #Log startup
 echo $(date -u)' | starting rclone-cron.sh . . .' >> $CRONLOG
 
 #Now do the sync!
-rclone sync $SRC $DEST --transfers $TRANSFERS --bwlimit "$BWLIMIT" --min-age $MINAGE --exclude-from $EXCLUDEFILE --exclude-if-present $EXIFPRESENT --delete-excluded $LOGS
+rclone sync $SRC $DEST \
+    --min-age $MINAGE \
+    --exclude-from $EXCLUDEFILE \
+    --exclude-if-present $EXIFPRESENT \
+    --delete-excluded \
+    -v --log-file=$LOGFILE
 
+# Options I don't care for
+    # --bwlimit $BWLIMIT \
 
 #log success
 echo $(date -u)' | completed rclone-cron.sh.' >> $CRONLOG
