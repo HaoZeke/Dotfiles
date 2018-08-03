@@ -1,3 +1,7 @@
+aarch64-linux-gnu-binutils
+aarch64-linux-gnu-gcc
+aarch64-linux-gnu-gdb
+aarch64-linux-gnu-glibc
 acd_cli-git
 adapta-gtk-theme
 adbfs-rootless-git
@@ -88,6 +92,7 @@ e2fsprogs
 ebook-tools
 ecm-tools
 ed
+editorconfig-core-c
 elinks
 emacs
 enpass-bin
@@ -149,6 +154,7 @@ goffice
 gonvim
 google-chrome
 gparted
+grace
 grep
 groff
 gscan2pdf
@@ -209,7 +215,6 @@ kwakd
 lab
 languagetool
 less
-lesstif
 lib32-alsa-plugins
 lib32-fontconfig
 lib32-freetype2
@@ -308,6 +313,7 @@ nginx
 ngrok
 nitrogen
 ntfs-3g
+nuget
 ocl-icd
 ocrmypdf
 ocropy
@@ -353,6 +359,7 @@ pidgin-latex
 pidgin-leftify-tabs
 pidgin-otr
 pigz
+pithos
 pkgconf
 planner
 playerctl
@@ -528,6 +535,7 @@ viewnior
 vim
 vlc
 vmd
+voro++
 vte3
 wakatime
 wget
