@@ -12,6 +12,8 @@
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
   - [[#syntax-highlighting][Syntax Highlighting]]
+    - [[#pkgbuild-mode][PKGBUILD Mode]]
+    - [[#lammps-mode][LAMMPS Mode]]
   - [[#keybindings][Keybindings]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
@@ -27,7 +29,12 @@
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
     - [[#org-ref-latex][Org Ref LaTeX]]
+  - [[#flycheck-additions][Flycheck Additions]]
+    - [[#melpa-helpers][MELPA Helpers]]
   - [[#references][References]]
+    - [[#basic-setup][Basic Setup]]
+    - [[#noteyoda][noteYoda]]
+    - [[#reftex][Reftex]]
     - [[#org-ref-ivy][Org Ref Ivy]]
 
 ** About
@@ -122,10 +129,21 @@ I like having spell checks for the comments.
 This section is for setting up major modes for various file formats which are
 typically non-standard.
 
+*** PKGBUILD Mode
 #+BEGIN_SRC emacs-lisp
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
                               auto-mode-alist))
+#+END_SRC
+
+*** LAMMPS Mode
+#+BEGIN_SRC emacs-lisp
+(autoload 'lammps-mode "lammps-mode.el" "LAMMPS mode." t)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
+
 #+END_SRC
 
 ** Keybindings
@@ -271,6 +289,7 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
       ("\\part{%s}" . "\\part*{%s}")
       ("\\chapter{%s}" . "\\chapter*{%s}")
       ("\\section{%s}" . "\\section*{%s}")
+      ("utf8" . "utf8x")
       ("\\subsection{%s}" . "\\subsection*{%s}")))))
 #+END_SRC
 *** Org Ref LaTeX
@@ -279,9 +298,22 @@ This is really not part of my workflow...
 (setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f"))
 #+END_SRC
 
-** TODO References
-This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
+** Flycheck Additions
+These are basically meant to aid in development. The relevant linters are also
+added here.
+
+*** MELPA Helpers
+This includes settings for both flycheck and the packages it needs.
 #+BEGIN_SRC emacs-lisp
+(def-package! flycheck-package
+  :after flycheck
+  :config (flycheck-package-setup))
+#+END_SRC
+
+** TODO References
+*** Basic Setup
+This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq reftex-default-bibliography '("~/Documents/References/zotero.bib"))
 
 ;; see org-ref for use of these variables
@@ -294,8 +326,80 @@ This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
       bibtex-completion-library-directory "~/Documents/References/bibtex-pdfs/")
 #+END_SRC
 
-I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
-I should change those soon.
++I don't actually use ~org-ref-pdf-directory~ or ~org-ref-bibliography-notes~ so
+I should change those soon.+
+
+Depreciated in favor of a better setup.
+
+*** noteYoda 
+This is largely inspired from [[https://www.reddit.com/r/emacs/comments/4gudyw/help_me_with_my_orgmode_workflow_for_notetaking/][this reddit comment]]. For clarity and extensibility
+this will be broken down into a per-package configuration. The heart of this is
+an [[https://rclone.org/mega/][rclone mega]] folder to manage all these transparently. With this setup links
+to the files are stored in [[https://www.zotero.org/][zotero]] and managed by [[https://github.com/jlegewie/zotfile][zotfile]]. More on this in a post later.
+
+**** Org-Ref 
+[[https://github.com/jkitchin/org-ref][This]] seems like an ubiquitous choice for working with org files and references.
+
+#+BEGIN_SRC emacs-lisp
+(setq org-ref-notes-directory "~/.megaRefs/Notes"
+      org-ref-bibliography-notes "~/.megaRefs/articles.org"
+      org-ref-default-bibliography '("~/.megaRefs/Bibliographies/zotLib.bib")
+      org-ref-pdf-directory "~/.megaRefs/Papers/")
+#+END_SRC
+
+Apparently, ~org-ref~ is also able to fetch ~pdf~ files when ~DOI~ or ~URL~
+links are dragged onto the ~.bib~ file. However, since ~zotero~ will handle the
+metadata, this remains to be considered.
+
+**** Helm-Bibtex
+Name aside, [[https://github.com/tmalsburg/helm-bibtex][this]] also works for ~ivy~. Basically meant to interface with
+bibliographies in general.
+
+#+BEGIN_SRC emacs-lisp
+(setq helm-bibtex-bibliography "~/.megaRefs/Bibliographies/zotLib.bib"
+      helm-bibtex-library-path "~/.megaRefs/Papers/"
+      helm-bibtex-notes-path "~/.megaRefs/articles.org")
+#+END_SRC
+
+**** Org-Noter
+I decided to use [[https://github.com/weirdNox/org-noter][org-noter]] over the more commonly described [[https://github.com/rudolfochrist/interleave][interleave]] because
+it has better support for working with multiple documents linked to one file.
+
+#+BEGIN_SRC emacs-lisp
+;; bspwm can handle splits
+(setq org-noter-always-create-frame nil
+;; Everything is relative to the rclone mega
+      org-noter-notes-search-path '("~/.megaRefs/Notes"
+                                    "~/.megaRefs/"
+                                    "~/Documents"))
+#+END_SRC
+
+**** Org-Capture Template
+This just scratches the surface of these templates, but it's a good enough
+start.
+
+#+BEGIN_SRC emacs-lisp
+(setq org-capture-templates
+        (append 
+         '("a"               ; key
+           "Article"         ; name
+           entry             ; type
+           (file+headline "~/.megaRefs/Notes/consolidated.org" "Article")  ; target
+           "* %^{Title} %(org-set-tags)  :article: \n:PROPERTIES:\n:Created: %U\n:Linked: %a\n:END:\n%i\nBrief description:\n%?"  ; template
+           :prepend t        ; properties
+           :empty-lines 1    ; properties
+           :created t        ; properties
+           ) org-capture-templates))  
+#+END_SRC
+
+*** Reftex
+Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
+still needs some setup.
+
+#+BEGIN_SRC emacs-lisp
+(setq reftex-default-bibliography '("~/.megaRefs/Bibliographies/zotLib.bib"))
+#+END_SRC
+
 
 *** Org Ref Ivy
 Ivy is used exclusively throughout ~doom~, makes sense to use it here too.

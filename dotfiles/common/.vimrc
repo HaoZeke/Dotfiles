@@ -139,6 +139,9 @@ call plug#begin()
     "More autocomplete
     Plug 'tpope/vim-surround'
 
+    " Respect Common Editorconfig stuff
+    Plug 'editorconfig/editorconfig-vim'
+    
     " Markdown
     "Plug 'tpope/vim-markdown'
     "Plug 'godlygeek/tabular'
