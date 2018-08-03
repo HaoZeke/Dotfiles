@@ -1,0 +1,19 @@
+* Cron Helper Scripts
+
+** About
+
+These are meant to be used in the crontab as:
+
+#+BEGIN_SRC crontab
+/minute/ /hour/ /day_of_month/ /month/ /day_of_week/ /command/
+#+END_SRC
+
+In any case, refer to the [[https://wiki.archlinux.org/index.php/Cron][ArchWiki]] page.
+
+
+** Instructions
+Modify the ~_template.sh~ files for your own use.
+
+** Script List
+*** Rclone
+This is taken [[https://gist.github.com/jaredmales/2f732254bb10002fc0549fa9aa0abdd7][from a gist]].

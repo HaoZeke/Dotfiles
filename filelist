@@ -59,36 +59,39 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 .borg_patterns
 
 # Executables #
-.local/bin/webHelpers/netlify-git-api
-.local/bin/droidHelpers/apkinst
+.local/bin/cronDrivers/rclone_template.sh
+.local/bin/cronDrivers/readme.org
+.local/bin/cronDrivers/rclone_megaRefs.sh
+.local/bin/dockerHelpers/docker-ssh
+.local/bin/dockerHelpers/nukeGraphsScript.sh
 .local/bin/droidHelpers/adbsideload
-.local/bin/shellHelpers/bash2zshpromt
-.local/bin/fileHelpers/replace.sh
-.local/bin/fileHelpers/extract
-.local/bin/fileHelpers/folderRsync
-.local/bin/fileHelpers/isoFuseMount
-.local/bin/fileHelpers/isoFuseUmount
+.local/bin/droidHelpers/apkinst
 .local/bin/droidHelpers/lineage_oms_merge.sh
 .local/bin/droidHelpers/lineage_oms_update.sh
 .local/bin/fileHelpers/ascii2hdf5
+.local/bin/fileHelpers/extract
+.local/bin/fileHelpers/folderRsync
 .local/bin/fileHelpers/gh-md-toc
 .local/bin/fileHelpers/isOcr
 .local/bin/fileHelpers/isOcrTest
-.local/bin/dockerHelpers/nukeGraphsScript.sh
-.local/bin/dockerHelpers/docker-ssh
+.local/bin/fileHelpers/isoFuseMount
+.local/bin/fileHelpers/isoFuseUmount
+.local/bin/fileHelpers/replace.sh
 .local/bin/gitHelpers/gh2https
 .local/bin/gitHelpers/gh2ssh
+.local/bin/installHelpers/getClean
+.local/bin/installHelpers/getDotGit
 .local/bin/installHelpers/getGREwords
+.local/bin/installHelpers/getNVM
 .local/bin/installHelpers/getPandocVersion
 .local/bin/installHelpers/getPatchedFont
-.local/bin/installHelpers/getTpm
-.local/bin/installHelpers/getTeXLive
-.local/bin/installHelpers/getNVM
 .local/bin/installHelpers/getRVM
-.local/bin/installHelpers/getDotGit
-.local/bin/installHelpers/texlive.profile
+.local/bin/installHelpers/getTeXLive
+.local/bin/installHelpers/getTpm
 .local/bin/installHelpers/getTrizen
-.local/bin/installHelpers/getClean
+.local/bin/installHelpers/texlive.profile
+.local/bin/shellHelpers/bash2zshpromt
+.local/bin/webHelpers/netlify-git-api
 
 # Configs #
 .config/nvim/init.vim
