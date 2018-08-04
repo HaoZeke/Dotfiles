@@ -314,8 +314,6 @@ This includes settings for both flycheck and the packages it needs.
 *** Basic Setup
 This is a standard [[https://github.com/jkitchin/org-ref][org-ref]] setup.
 #+BEGIN_SRC emacs-lisp :tangle no
-(setq reftex-default-bibliography '("~/Documents/References/zotero.bib"))
-
 ;; see org-ref for use of these variables
 (setq org-ref-bibliography-notes "~/Documents/References/notes.org"
       org-ref-default-bibliography '("~/Documents/References/zotero.bib")
@@ -351,6 +349,10 @@ Apparently, ~org-ref~ is also able to fetch ~pdf~ files when ~DOI~ or ~URL~
 links are dragged onto the ~.bib~ file. However, since ~zotero~ will handle the
 metadata, this remains to be considered.
 
+
+***** Customizing notes
+The notes created are not in a form which is used by 
+
 **** Helm-Bibtex
 Name aside, [[https://github.com/tmalsburg/helm-bibtex][this]] also works for ~ivy~. Basically meant to interface with
 bibliographies in general.
@@ -379,8 +381,7 @@ This just scratches the surface of these templates, but it's a good enough
 start.
 
 #+BEGIN_SRC emacs-lisp
-(setq org-capture-templates
-        (append 
+(add-to-list 'org-capture-templates
          '("a"               ; key
            "Article"         ; name
            entry             ; type
@@ -389,7 +390,7 @@ start.
            :prepend t        ; properties
            :empty-lines 1    ; properties
            :created t        ; properties
-           ) org-capture-templates))  
+           ) org-capture-templates)
 #+END_SRC
 
 *** Reftex
