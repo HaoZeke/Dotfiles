@@ -51,6 +51,7 @@
       :editor
       ;parinfer          ; turn lisp into python, sort of
        rotate-text       ; cycle region at point between text candidates
+       multiple-cursors  ; editing in many places at once
 
        :emacs
       dired             ; making dired pretty [functional]
