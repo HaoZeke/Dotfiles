@@ -35,7 +35,7 @@
     - [[#basic-setup][Basic Setup]]
     - [[#noteyoda][noteYoda]]
     - [[#reftex][Reftex]]
-    - [[#org-ref-ivy][Org Ref Ivy]]
+    - [[#org-ref-ivy][+Org Ref Ivy+]]
 
 ** About
 This is a literate config file for [[https://github.com/hlissner/doom-emacs][doom-emacs]] by
@@ -402,8 +402,11 @@ still needs some setup.
 #+END_SRC
 
 
-*** Org Ref Ivy
+*** +Org Ref Ivy+
 Ivy is used exclusively throughout ~doom~, makes sense to use it here too.
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (setq org-ref-completion-library 'org-ref-ivy-cite)
 #+END_SRC
+Turns out ~helm~ is probably faster for larger collections since it can be
+asynchronous. Basically, this is because using the minibuffer, as ivy does is a
+blocking action while the ~helm~ buffer may be opened asynchronously.
