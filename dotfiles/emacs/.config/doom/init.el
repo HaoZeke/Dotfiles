@@ -19,12 +19,13 @@
        (company          ; the ultimate code completion backend
         +childframe      ; a better UI for company (Emacs 26+)
         +auto)           ; as-you-type code completion
-      ;(helm             ; the *other* search engine for love and life
-      ; +fuzzy)          ; enable fuzzy search backend for helm
+      (helm             ; the *other* search engine for love and life
+        +childframe      ; a better UI for helm (Emacs 26+)
+        +fuzzy)          ; enable fuzzy search backend for helm
       ;ido               ; the other *other* search engine...
-       (ivy              ; a search engine for love and life
-        +childframe      ; a better UI for ivy (Emacs 26+)
-        +fuzzy)          ; enable fuzzy search backend for ivy
+       ;; (ivy              ; a search engine for love and life
+       ;;  +childframe      ; a better UI for ivy (Emacs 26+)
+       ;;  +fuzzy)          ; enable fuzzy search backend for ivy
 
        :ui
       doom              ; what makes DOOM look the way it does
