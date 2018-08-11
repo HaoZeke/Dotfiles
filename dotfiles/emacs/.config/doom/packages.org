@@ -37,7 +37,7 @@ Since it's primarily aimed at ~doom-emacs~ let's add their comments.
 
 #+BEGIN_SRC emacs-lisp
 ;; -*- no-byte-compile: t; -*-
-;;; ~/.doom.d/packages.el
+;;; ~/.config/doom/packages.el
 #+END_SRC
 
 *** About that TOC..
