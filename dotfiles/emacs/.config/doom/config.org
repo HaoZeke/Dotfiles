@@ -140,10 +140,20 @@ This section is for setting up major modes for various file formats which are
 typically non-standard.
 
 *** PKGBUILD Mode
+This is the non ~doom~ way of loading this.
+
 #+BEGIN_SRC emacs-lisp
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
                               auto-mode-alist))
+#+END_SRC
+
+
+I use ~doom~. So.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! pkgbuild-mode
+  :mode "/PKGBUILD$")
 #+END_SRC
 
 *** LAMMPS Mode
