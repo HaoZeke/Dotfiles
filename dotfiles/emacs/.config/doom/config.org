@@ -61,11 +61,21 @@ Let's set some variables with basic user information.
 
 ** Doom Emacs Stuff
 *** Visual tweaks
+**** Font Face
 Honestly the basic font setting is simply not pretty enough.
 
 #+BEGIN_SRC emacs-lisp
 (setq doom-font (font-spec :family "Attribute Mono"
                            :size 20))
+#+END_SRC
+
+**** Helm and Childframes
+
+I prefer the regular diminished font size, even for the childframes.
+
+#+BEGIN_SRC emacs-lisp
+;; Undo the helm text enlargement in childframes
+(setq +helm-posframe-text-scale 0)
 #+END_SRC
 
 *** Kill spellcheck
