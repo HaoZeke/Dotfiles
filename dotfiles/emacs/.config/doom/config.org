@@ -142,7 +142,7 @@ typically non-standard.
 *** PKGBUILD Mode
 This is the non ~doom~ way of loading this.
 
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 (autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
 (setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
                               auto-mode-alist))
@@ -157,13 +157,24 @@ I use ~doom~. So.
 #+END_SRC
 
 *** LAMMPS Mode
-#+BEGIN_SRC emacs-lisp
+**** No doom setup
+For most users.
+
+#+BEGIN_SRC emacs-lisp :tangle no
 (autoload 'lammps-mode "lammps-mode.el" "LAMMPS mode." t)
 (setq auto-mode-alist (append auto-mode-alist
                               '(("in\\." . lammps-mode))
                               '(("\\.lmp\\'" . lammps-mode))
                               ))
+#+END_SRC
 
+
+**** Doom Version
+With macros.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! lammps-mode
+  :mode ("\\.lmp\\'" "in\\.'"))
 #+END_SRC
 
 ** Keybindings
