@@ -173,8 +173,11 @@ For most users.
 With macros.
 
 #+BEGIN_SRC emacs-lisp
-(def-package! lammps-mode
-  :mode ("\\.lmp\\'" "in\\.'"))
+(def-package! lammps-mode)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
 #+END_SRC
 
 ** Keybindings
