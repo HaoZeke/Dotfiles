@@ -15,6 +15,7 @@
     - [[#about-that-toc][About that TOC..]]
     - [[#the-properties][The properties]]
   - [[#later-magit-additions][LATER Magit Additions]]
+  - [[#key-chords-and-keybindings][Key Chords and Keybindings]]
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
@@ -64,6 +65,12 @@ These have been added upstream in ~develop~.
 Actually [[https://github.com/alphapapa/magit-todos][magit-todos]] has been added upstream which collates all ~todo~ items.
 There might still be workflows where [[https://github.com/danielma/magit-org-todos.el][magit-org-todos]] is useful since that
 displays a global ~todo.org~ file.
+** Key Chords and Keybindings
+It turns out that the switch to [[https://github.com/noctuid/general.el][general.el]] is both inevitable (doom version 2.1)
+and very rational. However, I really can't wait. So.. This is a stop gap solution.
+#+BEGIN_SRC emacs-lisp
+(package! general)
+#+END_SRC
 ** Org Additions
 
 The new ones need to be covered in the ~config.org~ file with the appropriate
