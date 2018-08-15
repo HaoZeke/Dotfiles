@@ -187,9 +187,14 @@ for now and carry on. Later this block can be prevented from being tangled.
 *** LATER General
 - [ ] Remove once merged upstream.
 
-This does very little other than load it for the other bindings to work.
+This does very little other than load it and remind it that ~SPC~ is the leader for the other bindings to work.
 #+BEGIN_SRC emacs-lisp
 (def-package! general)
+;; Creating a constant for making future changes simpler
+(defconst gen-leader "SPC")
+;; Tell general all about it
+(general-create-definer gen-leader-def
+  :prefix gen-leader)
 #+END_SRC
 *** Spacemacs Equivalency
 **** Escape
