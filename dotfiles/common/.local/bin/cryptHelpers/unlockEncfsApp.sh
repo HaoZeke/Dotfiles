@@ -28,7 +28,7 @@
 # Program Implementation
 #
 
-# Get a capitalized App name
+# Get a capitalized app name
 # bash specific
 tempName=( $1 )
 appName=$(echo "${tempName[@]^}")
