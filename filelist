@@ -62,6 +62,8 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 .local/bin/cronDrivers/rclone_template.sh
 .local/bin/cronDrivers/readme.org
 .local/bin/cronDrivers/rclone_megaRefs.sh
+.local/bin/cryptHelpers/createEncfsApp.sh
+.local/bin/cryptHelpers/unlockEncfsApp.sh
 .local/bin/dockerHelpers/docker-ssh
 .local/bin/dockerHelpers/nukeGraphsScript.sh
 .local/bin/droidHelpers/adbsideload

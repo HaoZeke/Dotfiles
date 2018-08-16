@@ -15,7 +15,10 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
   - [[#keybindings][Keybindings]]
+    - [[#later-general][LATER General]]
+    - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+    - [[#markdown-improvements][Markdown Improvements]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
@@ -173,12 +176,40 @@ For most users.
 With macros.
 
 #+BEGIN_SRC emacs-lisp
-(def-package! lammps-mode
-  :mode ("\\.lmp\\'" "in\\.'"))
+(def-package! lammps-mode)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
 #+END_SRC
 
 ** Keybindings
+These are eventually going to with [[https://github.com/noctuid/general.el][general]] anyway. So it's better to load that
+for now and carry on. Later this block can be prevented from being tangled.
+*** LATER General
+- [ ] Remove once merged upstream.
 
+This does very little other than load it and remind it that ~SPC~ is the leader for the other bindings to work.
+#+BEGIN_SRC emacs-lisp
+(def-package! general)
+;; ;; Creating a constant for making future changes simpler
+;; (defconst my-leader "SPC")
+;; ;; Tell general all about it
+;; (general-create-definer my-leader-def
+;;   ;; :prefix my-leader
+;;   :prefix "SPC")
+;; (general-create-definer my-local-leader-def
+;;   ;; :prefix my-local-leader
+;;   :prefix "SPC m")
+#+END_SRC
+*** Evil Setup and Error Handling
+Actually this might not be ported over so I'm just going to put this elsewhere.
+#+BEGIN_SRC emacs-lisp
+;; I like short names
+(general-evil-setup t)
+;; Stop telling me things begin with non-prefix keys
+(general-auto-unbind-keys)
+#+END_SRC
 *** Spacemacs Equivalency
 **** Escape
 I find the default ~jk~ evil escape key sequence to be distracting as I am
@@ -192,14 +223,47 @@ unable to navigate with one hand on the mouse anymore.
 Also it's inconvinient to have a key chord requiring two hands to close a
 buffer.
 
-#+BEGIN_SRC emacs-lisp
+***** Doom method (pre-general)
+Hopefully this won't be necessary.
+#+BEGIN_SRC emacs-lisp :tangle no
 ; Bind a new key chord
 (map!
  (:leader
    (:prefix "b"
      :desc "Kill buffer" :n "d" #'kill-this-buffer)))
 #+END_SRC
-
+***** general.el
+The binding syntax of the future, TODAY!
+#+BEGIN_SRC emacs-lisp
+;; ** Global Keybindings
+;; Normal mode?
+(nmap
+ :prefix "SPC"
+ "b d" #'kill-this-buffer
+  ;; kill things
+  "k" '(:ignore t :which-key "kill")
+  "k e" 'save-buffers-kill-terminal
+  "k b" 'my-kill-this-buffer
+  "k f" 'delete-frame
+  "k o f" 'delete-other-frames
+  "k o w" 'delete-other-windows
+ "a" 'helm-mini)
+;; (my-leader-def 'normal 'override
+;;   "a" 'org-agenda)
+#+END_SRC
+*** Markdown Improvements
+Local leader is already bound to `m` and there are few bindings, this just adds
+more.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "SPC"
+  :keymaps 'markdown-mode-map
+  "m" '(ignore t :wk "Markdown Commands")
+  "m i" '(ignore t :wk "Insert")
+  "m i i" '(markdown-insert-image :wk "Image")
+  "m i l" '(markdown-insert-link :wk "Link")
+  "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block"))
+#+END_SRC
 *** DONE Neotree --> Treemacs
 **** CANCELLED Toggle pane
 This remaps ~SPC o N~ to use ~treemacs~.
