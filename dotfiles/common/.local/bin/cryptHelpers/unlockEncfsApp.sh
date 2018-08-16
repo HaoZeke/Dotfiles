@@ -28,27 +28,28 @@
 # Program Implementation
 #
 
-# Determine the appropriate ASKPASS program
-
-if which zenity >/dev/null 2>&1; then
-    askPass='zenity --password --title="Unlock Thunderbird"'
-elif which git >/dev/null 2>&1; then
-    askPass='/usr/lib/git-core/git-gui--askpass "Unlock Thunderbird"'
-else echo "ERROR: No valid (zenity or git) askpass program available\n"
-     fi
-
-# Create the directories
-# Get the right directory name
+# Get a capitalized App name
 # bash specific
 tempName=( $1 )
 appName=$(echo "${tempName[@]^}")
+unlockString="Unlock $appName"
 
-cryptDir="$HOME/Encfs/.$appName"
-appDir="$HOME/.decrypt/$appName"
+# Determine the appropriate ASKPASS program
+
+if which zenity >/dev/null 2>&1; then
+    askPass="zenity --password --title=$unlockString"
+elif which git >/dev/null 2>&1; then
+    askPass="/usr/lib/git-core/git-gui--askpass $unlockString"
+else echo "ERROR: No valid (zenity or git) askpass program available\n"
+     fi
 
 #
 # TODO work on the logic when the folder is mounted
 #
+
+# Create the directories
+cryptDir="$HOME/Encfs/.$appName"
+appDir="$HOME/.decrypt/$appName"
 
 if [ ! -d $appDir ]; then
     mkdir -p $appDir
