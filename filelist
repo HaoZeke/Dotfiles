@@ -101,6 +101,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 .config/ripgrep/ignore
 .config/zathura/zathurarc
 .config/zathura/zathuraThemerc
+.config/tridactyl/tridactylrc
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
