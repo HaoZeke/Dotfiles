@@ -15,6 +15,7 @@
     - [[#about-that-toc][About that TOC..]]
     - [[#the-properties][The properties]]
   - [[#later-magit-additions][LATER Magit Additions]]
+  - [[#later-key-chords-and-keybindings][LATER Key Chords and Keybindings]]
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
@@ -37,7 +38,7 @@ Since it's primarily aimed at ~doom-emacs~ let's add their comments.
 
 #+BEGIN_SRC emacs-lisp
 ;; -*- no-byte-compile: t; -*-
-;;; ~/.doom.d/packages.el
+;;; ~/.config/doom/packages.el
 #+END_SRC
 
 *** About that TOC..
@@ -52,7 +53,6 @@ block and moreover the output directory is the ~doom-private-dir~. It's
 practically self explanatory but still. 
 
 The filename is determined by the ~SRC~ block languages.
-
 ** LATER Magit Additions
 These basically allow for TODOs in magit along with enhanced github integration.
 These have been added upstream in ~develop~.
@@ -65,7 +65,13 @@ These have been added upstream in ~develop~.
 Actually [[https://github.com/alphapapa/magit-todos][magit-todos]] has been added upstream which collates all ~todo~ items.
 There might still be workflows where [[https://github.com/danielma/magit-org-todos.el][magit-org-todos]] is useful since that
 displays a global ~todo.org~ file.
-
+** LATER Key Chords and Keybindings
+It turns out that the switch to [[https://github.com/noctuid/general.el][general.el]] is both inevitable (doom version 2.1)
+and very rational. However, I really can't wait. So.. This is a stop gap solution.
+#+BEGIN_SRC emacs-lisp
+(package! general)
+#+END_SRC
+- [ ] Remove when it's merged upstream
 ** Org Additions
 
 The new ones need to be covered in the ~config.org~ file with the appropriate
@@ -87,7 +93,6 @@ This is probably not the best thing in my current setup..
 #+BEGIN_SRC emacs-lisp
 (package! org-ref)
 #+END_SRC
-
 ** Reference Management
 **** Zotero
 There are a bunch of ~zotero~ integrations for emacs, most notably, [[https://github.com/vspinu/zotelo][zotelo]], but
@@ -97,7 +102,6 @@ often though.
 #+BEGIN_SRC emacs-lisp
 (package! zotxt)
 #+END_SRC
-
 ** Syntax Highlighting
 These are additionally required to work with the sort of files I use often.
 The configuration and settings are as usual in ~config.org~
@@ -141,7 +145,6 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
   :recipe (:fetcher github
                     :repo "HaoZeke/lammps-mode"))
 #+END_SRC
-
 ** Flycheck Additions
 *** MELPA Helper
 This is for linting files before submitting to MELPA.
@@ -149,7 +152,6 @@ This is for linting files before submitting to MELPA.
 (package! package-lint)
 (package! flycheck-package)
 #+END_SRC
-
 ** Snippets
 These are actually from the ~doom-emacs~ guy...
 
