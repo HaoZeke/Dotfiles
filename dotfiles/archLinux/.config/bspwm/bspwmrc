@@ -36,7 +36,7 @@ bspc config pointer_action2 resize_corner
 
 # readarray is in sh and bash, not zsh
 
-readarray -t monitorList <<< "$(bspc query -M)"
+readarray monitorList <<< "$(bspc query -M)"
 if [[ ${#monitorList[@]} == 1 ]]; then
   bspc monitor ${monitorList[0]} -d I II III IV V VI VII VIII IX X
 elif [[ ${#monitorList[@]} == 2 ]]; then
