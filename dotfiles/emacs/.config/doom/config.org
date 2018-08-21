@@ -7,6 +7,7 @@
   - [[#personal-information][Personal Information]]
   - [[#doom-emacs-stuff][Doom Emacs Stuff]]
     - [[#visual-tweaks][Visual tweaks]]
+    - [[#helm-changes][Helm changes]]
     - [[#kill-spellcheck][Kill spellcheck]]
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
@@ -81,6 +82,15 @@ I prefer the regular diminished font size, even for the childframes.
 (setq +helm-posframe-text-scale 0)
 #+END_SRC
 
+*** Helm changes
+This makes `helm` behave more like `ivy` while working with directories.
+#+BEGIN_SRC emacs-lisp
+(after! helm
+  ;; I want backspace to go up a level, like ivy
+  (add-hook! 'helm-find-files-after-init-hook
+    (map! :map helm-find-files-map
+          "<DEL>" #'helm-find-files-up-one-level)))
+#+END_SRC
 *** Kill spellcheck
 This is really really really excruciatingly slow for LaTeX mode and maybe even
 for other random buffers.
