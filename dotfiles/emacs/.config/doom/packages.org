@@ -19,6 +19,7 @@
   - [[#org-additions][Org Additions]]
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
+    - [[#org-mind-map][Org Mind Map]]
   - [[#reference-management][Reference Management]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
@@ -92,6 +93,13 @@ This is probably not the best thing in my current setup..
 
 #+BEGIN_SRC emacs-lisp
 (package! org-ref)
+#+END_SRC
+*** Org Mind Map
+Not on MELPA yet. From [[github:theodorewiles/org-mind-map][here]].
+#+BEGIN_SRC emacs-lisp
+(package! org-mind-map
+  :recipe (:fetcher github
+            :repo "theodorewiles/org-mind-map"))
 #+END_SRC
 ** Reference Management
 **** Zotero

@@ -12,6 +12,8 @@
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
+  - [[#org-additions][Org Additions]]
+    - [[#org-mind-map][Org Mind Map]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
@@ -148,6 +150,19 @@ I like having spell checks for the comments.
             (flyspell-mode 1)))
 #+END_SRC
 
+** Org Additions
+These are numerous and complicated enough to be in a segment of their own.
+*** Org Mind Map
+[[github:/theodorewiles/org-mind-map][This]] is used to create ~graphiz~ graphs from ~org-mode~ stuff.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! org-mind-map
+  :general
+  (:keymaps 'org-mode-map
+            :states 'normal
+            :prefix "SPC"
+            "m e m" '(org-mind-map-write :wk "Export mind-map") ))
+#+END_SRC
 ** Syntax Highlighting
 This section is for setting up major modes for various file formats which are
 typically non-standard.
