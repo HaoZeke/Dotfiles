@@ -12,17 +12,17 @@
   - [[#packages][Packages]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
-  - [[#org-additions][Org Additions]]
-    - [[#org-mind-map][Org Mind Map]]
-  - [[#syntax-highlighting][Syntax Highlighting]]
-    - [[#pkgbuild-mode][PKGBUILD Mode]]
-    - [[#lammps-mode][LAMMPS Mode]]
   - [[#keybindings][Keybindings]]
     - [[#later-general][LATER General]]
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#markdown-improvements][Markdown Improvements]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
+  - [[#org-additions][Org Additions]]
+    - [[#org-mind-map][Org Mind Map]]
+  - [[#syntax-highlighting][Syntax Highlighting]]
+    - [[#pkgbuild-mode][PKGBUILD Mode]]
+    - [[#lammps-mode][LAMMPS Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
@@ -150,64 +150,6 @@ I like having spell checks for the comments.
             (flyspell-mode 1)))
 #+END_SRC
 
-** Org Additions
-These are numerous and complicated enough to be in a segment of their own.
-*** Org Mind Map
-[[github:/theodorewiles/org-mind-map][This]] is used to create ~graphiz~ graphs from ~org-mode~ stuff.
-
-#+BEGIN_SRC emacs-lisp
-(def-package! org-mind-map
-  :general
-  (:keymaps 'org-mode-map
-            :states 'normal
-            :prefix "SPC"
-            "m e m" '(org-mind-map-write :wk "Export mind-map") ))
-#+END_SRC
-** Syntax Highlighting
-This section is for setting up major modes for various file formats which are
-typically non-standard.
-
-*** PKGBUILD Mode
-This is the non ~doom~ way of loading this.
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
-(setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
-                              auto-mode-alist))
-#+END_SRC
-
-
-I use ~doom~. So.
-
-#+BEGIN_SRC emacs-lisp
-(def-package! pkgbuild-mode
-  :mode "/PKGBUILD$")
-#+END_SRC
-
-*** LAMMPS Mode
-**** No doom setup
-For most users.
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(autoload 'lammps-mode "lammps-mode.el" "LAMMPS mode." t)
-(setq auto-mode-alist (append auto-mode-alist
-                              '(("in\\." . lammps-mode))
-                              '(("\\.lmp\\'" . lammps-mode))
-                              ))
-#+END_SRC
-
-
-**** Doom Version
-With macros.
-
-#+BEGIN_SRC emacs-lisp
-(def-package! lammps-mode)
-(setq auto-mode-alist (append auto-mode-alist
-                              '(("in\\." . lammps-mode))
-                              '(("\\.lmp\\'" . lammps-mode))
-                              ))
-#+END_SRC
-
 ** Keybindings
 These are eventually going to with [[https://github.com/noctuid/general.el][general]] anyway. So it's better to load that
 for now and carry on. Later this block can be prevented from being tangled.
@@ -309,6 +251,64 @@ terminals and that makes sense, so I guess this is fine.
 #+END_SRC
 
 Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c94010f4d8ded0fbfecf479c1772a][this commit]] on the ~develop~ branch.
+
+** Org Additions
+These are numerous and complicated enough to be in a segment of their own.
+*** Org Mind Map
+[[github:/theodorewiles/org-mind-map][This]] is used to create ~graphiz~ graphs from ~org-mode~ stuff.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! org-mind-map
+  :general
+  (:keymaps 'org-mode-map
+            :states 'normal
+            :prefix "SPC"
+            "m e m" '(org-mind-map-write :wk "Export mind-map") ))
+#+END_SRC
+** Syntax Highlighting
+This section is for setting up major modes for various file formats which are
+typically non-standard.
+
+*** PKGBUILD Mode
+This is the non ~doom~ way of loading this.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(autoload 'pkgbuild-mode "pkgbuild-mode.el" "PKGBUILD mode." t)
+(setq auto-mode-alist (append '(("/PKGBUILD$" . pkgbuild-mode))
+                              auto-mode-alist))
+#+END_SRC
+
+
+I use ~doom~. So.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! pkgbuild-mode
+  :mode "/PKGBUILD$")
+#+END_SRC
+
+*** LAMMPS Mode
+**** No doom setup
+For most users.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(autoload 'lammps-mode "lammps-mode.el" "LAMMPS mode." t)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
+#+END_SRC
+
+
+**** Doom Version
+With macros.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! lammps-mode)
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("in\\." . lammps-mode))
+                              '(("\\.lmp\\'" . lammps-mode))
+                              ))
+#+END_SRC
 
 ** Functions
 *** Org-mode export pdf when saved
