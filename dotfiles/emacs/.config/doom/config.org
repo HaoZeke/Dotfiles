@@ -17,6 +17,7 @@
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#markdown-improvements][Markdown Improvements]]
+    - [[#org-noter][Org Noter]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
     - [[#org-mind-map][Org Mind Map]]
@@ -230,6 +231,17 @@ more.
   "m i i" '(markdown-insert-image :wk "Image")
   "m i l" '(markdown-insert-link :wk "Link")
   "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block"))
+#+END_SRC
+*** Org Noter
+These bindings should probably be after ~org-noter~ is loaded.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "SPC"
+  :keymaps '(org-mode-map pdf-view-mode-map)
+  "m" '(ignore t :wk "Local Commands")
+  "m o" '(ignore t :wk "Org Commands")
+  "m o n" '(org-noter :wk "Make a note")
+  )
 #+END_SRC
 *** DONE Neotree --> Treemacs
 **** CANCELLED Toggle pane
@@ -488,12 +500,15 @@ I decided to use [[https://github.com/weirdNox/org-noter][org-noter]] over the m
 it has better support for working with multiple documents linked to one file.
 
 #+BEGIN_SRC emacs-lisp
+(def-package! org-noter
+  :after (:any org pdf-view)
+  :config
 ;; bspwm can handle splits
 (setq org-noter-always-create-frame nil
 ;; Everything is relative to the rclone mega
       org-noter-notes-search-path '("~/.megaRefs/Notes"
                                     "~/.megaRefs/"
-                                    "~/Documents"))
+                                    "~/Documents")))
 #+END_SRC
 
 **** Org-Capture Template
