@@ -18,6 +18,7 @@
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#markdown-improvements][Markdown Improvements]]
     - [[#org-noter][Org Noter]]
+    - [[#org-mode-additions][Org Mode additions]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
     - [[#org-mind-map][Org Mind Map]]
@@ -242,6 +243,15 @@ These bindings should probably be after ~org-noter~ is loaded.
   "m o" '(ignore t :wk "Org Commands")
   "m o n" '(org-noter :wk "Make a note")
   )
+#+END_SRC
+*** Org Mode additions
+Apart from extension specific bindings, here we define useful functions which
+are a part of ~org-mode~.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "SPC"
+  :keymaps 'org-mode-map
+  "m o t" '(org-set-tags :wk "Set tags"))
 #+END_SRC
 *** DONE Neotree --> Treemacs
 **** CANCELLED Toggle pane
