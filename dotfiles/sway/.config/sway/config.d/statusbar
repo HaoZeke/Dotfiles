@@ -1,0 +1,17 @@
+#
+# Status Bar:
+#
+# Read `man 5 sway-bar` for more information about this section.
+bar {
+    position top
+    colors {
+        statusline #ffffff
+        background #323232
+        inactive_workspace #32323200 #32323200 #5c5c5c
+    }
+tray_output all
+}
+
+# Local Variables:
+# mode: conf
+# End:
