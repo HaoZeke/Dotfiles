@@ -237,6 +237,9 @@ allPackages:archLinux
 
 # sway keybindings
 
+# Statusbar
+.config/sway/config.d/statusbar:sway
+
 # LXDE
 ########
 
