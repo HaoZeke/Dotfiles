@@ -19,6 +19,7 @@
     - [[#markdown-improvements][Markdown Improvements]]
     - [[#org-noter][Org Noter]]
     - [[#org-mode-additions][Org Mode additions]]
+    - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
     - [[#org-mind-map][Org Mind Map]]
@@ -253,6 +254,19 @@ are a part of ~org-mode~.
   :keymaps 'org-mode-map
   "m o t" '(org-set-tags :wk "Set tags"))
 #+END_SRC
+*** Evil Movement
+These are mostly for convinience. I know that the upper cased versions of
+commands are usually for the reverse action, but unless I get a 60% keyboard
+these seem comfortable.
+#+BEGIN_SRC emacs-lisp
+(nmap 
+  "K" 'nil
+  "K" 'evil-scroll-page-up
+  "J" 'evil-scroll-page-down)
+#+END_SRC
+
+#+RESULTS:
+
 *** DONE Neotree --> Treemacs
 **** CANCELLED Toggle pane
 This remaps ~SPC o N~ to use ~treemacs~.
