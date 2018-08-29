@@ -58,7 +58,7 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
     bindsym $mod+w kill
 
     # start your launcher
-    bindsym $mod+d exec $menu
+    bindsym ctrl+space exec $menu
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
