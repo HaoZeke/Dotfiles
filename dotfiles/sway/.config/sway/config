@@ -51,7 +51,7 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
     bindsym $mod+Return exec $term
 
     # kill focused window
-    bindsym $mod+Shift+q kill
+    bindsym $mod+w kill
 
     # start your launcher
     bindsym $mod+d exec $menu
@@ -130,7 +130,7 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 
     # Switch the current container between different layout styles
     bindsym $mod+s layout stacking
-    bindsym $mod+w layout tabbed
+    # bindsym $mod+w layout tabbed
     bindsym $mod+e layout toggle split
 
     # Make the current focus fullscreen
