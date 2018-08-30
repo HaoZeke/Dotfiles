@@ -237,6 +237,12 @@ allPackages:archLinux
 
 # sway keybindings
 
+
+# Inputs
+.config/sway/conf.d/inputs/hztpadarch:sway
+
+# TODO remove this to a more sane laptop location
+
 # Statusbar
 .config/sway/conf.d/statusbar:sway
 .config/i3rust/swayconf.toml:sway
