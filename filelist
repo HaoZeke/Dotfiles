@@ -238,7 +238,8 @@ allPackages:archLinux
 # sway keybindings
 
 # Statusbar
-.config/sway/config.d/statusbar:sway
+.config/sway/conf.d/statusbar:sway
+.config/i3rust/swayconf.toml:sway
 
 # LXDE
 ########
