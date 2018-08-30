@@ -53,7 +53,7 @@ jsb browser.runtime.getPlatformInfo().then(os=>{const profiledir = os.os=="win" 
 
 " Sane hinting mode
 set hintfiltermode vimperator-reflow
-set hintchars 4327895610
+set hintchars 432789fjhgdkesla
 
 " Make Tridactyl work on more sites at the expense of some security
 set csp clobber
