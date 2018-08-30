@@ -17,6 +17,10 @@ sanitise tridactyllocal tridactylsync
 " Tridactyl settings
 "
 
+" Theme
+" This is an alias to 'color' and 'set theme'
+colorscheme dark
+
 " Sane hinting mode
 set hintfiltermode vimperator-reflow
 set hintchars 432789fjhgdkesla
