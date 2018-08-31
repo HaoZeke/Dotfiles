@@ -43,7 +43,16 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 # You can get the names of your inputs by running: swaymsg -t get_inputs
 # Read `man 5 sway-input` for more information about this section.
 
+# Special Keys
+
+ bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +5%
+ bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -5%
+ bindsym XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
+ bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+ bindsym XF86MonBrightnessUp exec brightnessctl set +5%
+ 
 # Gaps
+# smart_gaps on
 # gaps outer 0
 # gaps inner 5
 
@@ -127,10 +136,10 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 # Layout stuff:
 #
     # You can "split" the current object of your focus with
-    # $mod+b or $mod+v, for horizontal and vertical splits
-    # respectively.
-    bindsym $mod+- splith
-    bindsym $mod+| splitv
+    # $mod+v or $mod+V, for horizontal and vertical splits
+    # respectively. 
+    bindsym $mod+shift+v splith
+    bindsym $mod+v splitv
 
     # Switch the current container between different layout styles
     bindsym $mod+s layout stacking
@@ -159,6 +168,7 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 
     # Show the next scratchpad window or hide the focused scratchpad window.
     # If there are multiple scratchpad windows, this command cycles through them.
+    # This is now $mod+*
     bindsym $mod+minus scratchpad show
 #
 # Resizing containers:
