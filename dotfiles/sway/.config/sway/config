@@ -16,7 +16,7 @@ set $right l
 # Your preferred terminal emulator
 set $term termite
 # Your preferred application launcher
-set $menu rofi -show run
+set $menu rofi -show combi -show-icons -combi-modi "drun,run" -modi combi
 
 ### Output configuration
 #
