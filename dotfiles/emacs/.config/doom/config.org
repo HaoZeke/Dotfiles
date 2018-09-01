@@ -9,9 +9,6 @@
     - [[#visual-tweaks][Visual tweaks]]
     - [[#helm-changes][Helm changes]]
     - [[#kill-spellcheck][Kill spellcheck]]
-  - [[#packages][Packages]]
-    - [[#magit-aids][Magit Aids]]
-    - [[#saltstack-settings][SaltStack Settings]]
   - [[#keybindings][Keybindings]]
     - [[#later-general][LATER General]]
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
@@ -20,6 +17,9 @@
     - [[#org-noter][Org Noter]]
     - [[#org-mode-additions][Org Mode additions]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
+  - [[#packages][Packages]]
+    - [[#magit-aids][Magit Aids]]
+    - [[#saltstack-settings][SaltStack Settings]]
   - [[#org-additions][Org Additions]]
     - [[#org-mind-map][Org Mind Map]]
   - [[#syntax-highlighting][Syntax Highlighting]]
@@ -101,55 +101,6 @@ for other random buffers.
 
 #+BEGIN_SRC emacs-lisp
 (setq-hook! 'LaTeX-mode-hook +spellcheck-immediately nil)
-#+END_SRC
-
-** Packages
-These should eventually go into a different module.
-Each of these.
-
-*** Magit Aids
-**** DONE Magit todos
-Of course this is not really meant to be here..
-A variation of this was included upstream in the ~develop~ branch.
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(def-package! magit-org-todos
-  :mode "\\COMMIT_EDITMSG$"
-  :commands (magit-org-todods magit-org-todos-autoinsert)
-  :config
-  (magit-org-todos-autoinsert))
-#+END_SRC
-
-**** DONE Magithub
-This is for sweet github integration.
-Also integrated upstream.
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(def-package! magithub
-  :after magit
-  :commands (magithub-clone
-             magithub-completion-enable)
-  ;; :ensure t
-  :config
-  (magithub-feature-autoinject t)
-  (setq
-   magithub-clone-default-directory "$HOME/Git/Github/"
-   magithub-dir (concat doom-etc-dir "magithub/")
-   magithub-preferred-remote-method 'clone_url))
-(def-package! evil-magit :after magit
-  :init
-  (setq evil-magit-state 'normal))
-#+END_SRC
-*** SaltStack Settings
-I like having spell checks for the comments.
-
-#+BEGIN_SRC emacs-lisp
-;; Load it
-(def-package! salt-mode)
-;; Flyspell
-(add-hook 'salt-mode-hook
-        (lambda ()
-            (flyspell-mode 1)))
 #+END_SRC
 
 ** Keybindings
@@ -273,6 +224,55 @@ terminals and that makes sense, so I guess this is fine.
 #+END_SRC
 
 Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c94010f4d8ded0fbfecf479c1772a][this commit]] on the ~develop~ branch.
+
+** Packages
+These should eventually go into a different module.
+Each of these.
+
+*** Magit Aids
+**** DONE Magit todos
+Of course this is not really meant to be here..
+A variation of this was included upstream in the ~develop~ branch.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(def-package! magit-org-todos
+  :mode "\\COMMIT_EDITMSG$"
+  :commands (magit-org-todods magit-org-todos-autoinsert)
+  :config
+  (magit-org-todos-autoinsert))
+#+END_SRC
+
+**** DONE Magithub
+This is for sweet github integration.
+Also integrated upstream.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(def-package! magithub
+  :after magit
+  :commands (magithub-clone
+             magithub-completion-enable)
+  ;; :ensure t
+  :config
+  (magithub-feature-autoinject t)
+  (setq
+   magithub-clone-default-directory "$HOME/Git/Github/"
+   magithub-dir (concat doom-etc-dir "magithub/")
+   magithub-preferred-remote-method 'clone_url))
+(def-package! evil-magit :after magit
+  :init
+  (setq evil-magit-state 'normal))
+#+END_SRC
+*** SaltStack Settings
+I like having spell checks for the comments.
+
+#+BEGIN_SRC emacs-lisp
+;; Load it
+(def-package! salt-mode)
+;; Flyspell
+(add-hook 'salt-mode-hook
+        (lambda ()
+            (flyspell-mode 1)))
+#+END_SRC
 
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
