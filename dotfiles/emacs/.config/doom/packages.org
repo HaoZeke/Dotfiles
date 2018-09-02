@@ -20,6 +20,7 @@
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
     - [[#org-mind-map][Org Mind Map]]
+  - [[#hugo-stuff][Hugo Stuff]]
   - [[#reference-management][Reference Management]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
@@ -100,6 +101,11 @@ Not on MELPA yet. From [[github:theodorewiles/org-mind-map][here]].
 (package! org-mind-map
   :recipe (:fetcher github
             :repo "theodorewiles/org-mind-map"))
+#+END_SRC
+** Hugo Stuff
+Presently stuff is just [[https://github.com/masasam/emacs-easy-hugo][easy-hugo]].
+#+BEGIN_SRC emacs-lisp 
+(package! easy-hugo)
 #+END_SRC
 ** Reference Management
 **** Zotero
