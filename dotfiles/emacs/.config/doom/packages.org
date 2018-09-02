@@ -107,6 +107,7 @@ Presently stuff is just [[https://github.com/masasam/emacs-easy-hugo][easy-hugo]
 #+BEGIN_SRC emacs-lisp 
 (package! easy-hugo)
 #+END_SRC
+# TODO Fix this
 ** Reference Management
 **** Zotero
 There are a bunch of ~zotero~ integrations for emacs, most notably, [[https://github.com/vspinu/zotelo][zotelo]], but
