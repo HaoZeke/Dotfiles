@@ -276,6 +276,19 @@ more.
   "m i l" '(markdown-insert-link :wk "Link")
   "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block"))
 #+END_SRC
+*** Pdf Mode
+These bindings are essentially part of ~org-noter~ however, they do not actually
+need to be bound in ~org-mode~ files.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "SPC"
+  :keymaps '(pdf-view-mode-map)
+  "m" '(ignore t :wk "Local Commands")
+  "m o" '(ignore t :wk "Org Commands")
+  "m o n" '(ignore t :wk "org-noter commands")
+  "m o n i" '(org-noter-insert-note :wk "Insert note")
+  )
+#+END_SRC
 *** Org Noter
 These bindings should probably be after ~org-noter~ is loaded.
 #+BEGIN_SRC emacs-lisp
@@ -284,7 +297,7 @@ These bindings should probably be after ~org-noter~ is loaded.
   :keymaps '(org-mode-map pdf-view-mode-map)
   "m" '(ignore t :wk "Local Commands")
   "m o" '(ignore t :wk "Org Commands")
-  "m o n" '(org-noter :wk "Make a note")
+  "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
 *** Org Mode additions
