@@ -294,7 +294,12 @@ are a part of ~org-mode~.
 (nmap
   :prefix "SPC"
   :keymaps 'org-mode-map
-  "m o t" '(org-set-tags :wk "Set tags"))
+  "m o t" '(org-set-tags :wk "Set tags")
+  "m o p" '(nil :wk "Properties")
+  "m o p s" '(org-set-property :wk "Set")
+  "m o p d" '(org-delete-property :wk "Delete" )
+  "m o p a" '(org-property-action :wk "Actions")
+  )
 #+END_SRC
 *** Anki Editor
 These are only relevant to ~org-mode~.
