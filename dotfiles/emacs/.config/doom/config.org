@@ -295,6 +295,20 @@ are a part of ~org-mode~.
   :keymaps 'org-mode-map
   "m o t" '(org-set-tags :wk "Set tags"))
 #+END_SRC
+*** Anki Editor
+#+BEGIN_SRC emacs-lisp
+(nmap
+:prefix "SPC"
+:keymaps 'org-mode-map
+"m o a" '(nil :wk "Do anki stuff")
+"m o a p" '(anki-editor-push-notes :wk "Push notes")
+"m o a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
+"m o a i" '(anki-editor-insert-note :wk "Insert a new note")
+"m o a i n" '(anki-editor-insert-note :wk "Insert a new note")
+"m o a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
+)
+
+#+END_SRC
 *** DONE Neotree --> Treemacs
 **** CANCELLED Toggle pane
 This remaps ~SPC o N~ to use ~treemacs~.
