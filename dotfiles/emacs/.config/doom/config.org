@@ -24,6 +24,7 @@
     - [[#anki-editor-1][Anki Editor]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
+    - [[#org-rifle][Org Rifle]]
     - [[#org-mind-map][Org Mind Map]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
@@ -368,6 +369,34 @@ Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c9401
 
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** Org Rifle
+This probably needs to be refactored later. Or loaded elsewhere.
+The keymaps are defined in the following way:
+
+#+BEGIN_SRC dot
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(def-package! helm-org-rifle
+  :after org
+  :general
+  (:keymaps 'org-mode-map
+            :states 'normal
+            :prefix "SPC"
+            "m r" '(nil :wk "Rifle (Helm)")
+            "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
+            "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
+            "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
+            "m r o" '(nil :wk "Occur (Persistent)")
+            "m r o b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r o e" '(helm-org-rifle :wk "Rifle every open buffer")
+            "m r o d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
+            "m r o a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
+            )
+  )
+#+END_SRC
 *** Org Mind Map
 [[github:/theodorewiles/org-mind-map][This]] is used to create ~graphiz~ graphs from ~org-mode~ stuff.
 
@@ -605,10 +634,15 @@ it has better support for working with multiple documents linked to one file.
 (def-package! org-noter
   :after (:any org pdf-view)
   :config
-;; bspwm can handle splits
-(setq org-noter-notes-window-location 'other-frame
-;; Everything is relative to the rclone mega
-      org-noter-notes-search-path '("~/.megaRefs/Notes"
+  (setq
+   ;; bspwm can handle splits
+   org-noter-notes-window-location 'other-frame
+   ;; Please stop opening frames
+   org-noter-always-create-frame nil
+   ;; I want to see the whole file
+   org-noter-hide-other nil
+   ;; Everything is relative to the rclone mega
+   org-noter-notes-search-path '("~/.megaRefs/Notes"
                                     "~/.megaRefs/"
                                     "~/Documents")))
 #+END_SRC
