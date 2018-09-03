@@ -302,7 +302,8 @@ are a part of ~org-mode~.
   )
 #+END_SRC
 *** Anki Editor
-These are only relevant to ~org-mode~.
+These are only relevant to ~org-mode~. Nevertheless they are not part of
+~org-mode~ so semantically it makes no sense to use ~o~ after the localleader.
 #+BEGIN_SRC emacs-lisp
 (nmap
 :prefix "SPC"
