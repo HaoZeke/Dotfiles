@@ -102,6 +102,11 @@ Not on MELPA yet. From [[github:theodorewiles/org-mind-map][here]].
   :recipe (:fetcher github
             :repo "theodorewiles/org-mind-map"))
 #+END_SRC
+*** Anki Mode
+This is put here since it only works with ~org-mode~ stuff.
+#+BEGIN_SRC emacs-lisp
+(package! anki-editor)
+#+END_SRC
 ** Hugo Stuff
 Presently stuff is just [[https://github.com/masasam/emacs-easy-hugo][easy-hugo]].
 #+BEGIN_SRC emacs-lisp 
