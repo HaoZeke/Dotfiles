@@ -598,7 +598,7 @@ it has better support for working with multiple documents linked to one file.
   :after (:any org pdf-view)
   :config
 ;; bspwm can handle splits
-(setq org-noter-always-create-frame nil
+(setq org-noter-notes-window-location 'other-frame
 ;; Everything is relative to the rclone mega
       org-noter-notes-search-path '("~/.megaRefs/Notes"
                                     "~/.megaRefs/"
