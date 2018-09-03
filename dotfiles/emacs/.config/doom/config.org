@@ -185,6 +185,15 @@ I like having spell checks for the comments.
 # 	       (easy-hugo-image-directory . "img"))))
 #   )
 # #+END_SRC
+** Anki Editor
+This is for my favorite [[https://github.com/louietan/anki-editor][anki interaction]] mechanism.
+#+BEGIN_SRC emacs-lisp
+(def-package! anki-editor
+  :after org-mode
+  :config
+  ; I like making decks
+  (setq anki-editor-create-decks 't))
+#+END_SRC
 ** Keybindings
 These are eventually going to with [[https://github.com/noctuid/general.el][general]] anyway. So it's better to load that
 for now and carry on. Later this block can be prevented from being tangled.
