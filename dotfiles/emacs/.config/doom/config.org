@@ -186,6 +186,7 @@ I like having spell checks for the comments.
 #   )
 # #+END_SRC
 ** Anki Editor
+# TODO Add to doom as a module
 This is for my favorite [[https://github.com/louietan/anki-editor][anki interaction]] mechanism.
 #+BEGIN_SRC emacs-lisp
 (def-package! anki-editor
