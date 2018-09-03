@@ -190,7 +190,7 @@ I like having spell checks for the comments.
 This is for my favorite [[https://github.com/louietan/anki-editor][anki interaction]] mechanism.
 #+BEGIN_SRC emacs-lisp
 (def-package! anki-editor
-  :after org-mode
+  :after org-noter
   :config
   ; I like making decks
   (setq anki-editor-create-decks 't))
