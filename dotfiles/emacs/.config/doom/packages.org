@@ -20,6 +20,7 @@
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
     - [[#org-mind-map][Org Mind Map]]
+    - [[#anki-mode][Anki Mode]]
   - [[#hugo-stuff][Hugo Stuff]]
   - [[#reference-management][Reference Management]]
   - [[#syntax-highlighting][Syntax Highlighting]]
