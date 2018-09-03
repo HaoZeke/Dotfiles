@@ -20,6 +20,7 @@
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
     - [[#org-mind-map][Org Mind Map]]
+    - [[#org-rifle][Org Rifle]]
     - [[#anki-mode][Anki Mode]]
   - [[#hugo-stuff][Hugo Stuff]]
   - [[#reference-management][Reference Management]]
@@ -102,6 +103,12 @@ Not on MELPA yet. From [[github:theodorewiles/org-mind-map][here]].
 (package! org-mind-map
   :recipe (:fetcher github
             :repo "theodorewiles/org-mind-map"))
+#+END_SRC
+*** Org Rifle
+Technically a helm addition. Perfect for monolithic ~org~ files. More details
+[[github:alphapapa/helm-org-rifle][here]].
+#+BEGIN_SRC emacs-lisp
+(package! helm-org-rifle)
 #+END_SRC
 *** Anki Mode
 This is put here since it only works with ~org-mode~ stuff.
