@@ -289,12 +289,15 @@ need to be bound in ~org-mode~ files.
   "m" '(ignore t :wk "Local Commands")
   "m o" '(ignore t :wk "Org Commands")
   "m o n" '(ignore t :wk "org-noter commands")
+  "m o n n" '(org-noter :wk "Go to note")
   "m o n i" '(org-noter-insert-note :wk "Insert note")
   )
 #+END_SRC
+# TODO Figure out why the maps don't overlay (fix thing below)
 *** Org Noter
 These bindings should probably be after ~org-noter~ is loaded.
-#+BEGIN_SRC emacs-lisp
+Broken
+#+BEGIN_SRC emacs-lisp :tangle no
 (nmap
   :prefix "SPC"
   :keymaps '(org-mode-map pdf-view-mode-map)
@@ -315,6 +318,7 @@ are a part of ~org-mode~.
   "m o p s" '(org-set-property :wk "Set")
   "m o p d" '(org-delete-property :wk "Delete" )
   "m o p a" '(org-property-action :wk "Actions")
+  "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
 *** Anki Editor
