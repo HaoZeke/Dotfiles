@@ -9,19 +9,23 @@
     - [[#visual-tweaks][Visual tweaks]]
     - [[#helm-changes][Helm changes]]
     - [[#kill-spellcheck][Kill spellcheck]]
-  - [[#packages][Packages]]
+  - [[#package-settings][Package Settings]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
+  - [[#anki-editor][Anki Editor]]
   - [[#keybindings][Keybindings]]
     - [[#later-general][LATER General]]
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
     - [[#markdown-improvements][Markdown Improvements]]
+    - [[#pdf-mode][Pdf Mode]]
     - [[#org-noter][Org Noter]]
     - [[#org-mode-additions][Org Mode additions]]
+    - [[#anki-editor-1][Anki Editor]]
     - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
+    - [[#org-rifle][Org Rifle]]
     - [[#org-mind-map][Org Mind Map]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
@@ -74,8 +78,17 @@ Let's set some variables with basic user information.
 Honestly the basic font setting is simply not pretty enough.
 
 #+BEGIN_SRC emacs-lisp
-(setq doom-font (font-spec :family "Attribute Mono"
-                           :size 20))
+(setq doom-font (font-spec :family "Attribute Mono" :size 20))
+(unless (find-font doom-font)
+  (setq doom-font (font-spec :family "Fira Mono" :size 20)))
+#+END_SRC
+
+**** Unicode Fonts
+This should be implemented as fallback font once [[https://github.com/hlissner/doom-emacs/pull/861][this]] is merged.
+
+#+BEGIN_SRC emacs-lisp
+(setq doom-unicode-font (font-spec :name "DejaVu Sans Mono" :size 20))
+
 #+END_SRC
 
 **** Helm and Childframes
@@ -104,10 +117,9 @@ for other random buffers.
 (setq-hook! 'LaTeX-mode-hook +spellcheck-immediately nil)
 #+END_SRC
 
-** Packages
+** Package Settings
 These should eventually go into a different module.
 Each of these.
-
 *** Magit Aids
 **** DONE Magit todos
 Of course this is not really meant to be here..
@@ -153,6 +165,49 @@ I like having spell checks for the comments.
             (flyspell-mode 1)))
 #+END_SRC
 
+# *** Hugo
+# Mostly for a job.
+# #+BEGIN_SRC emacs-lisp
+# (def-package! easy-hugo
+#   :after (helm-ag
+# )
+#   :ensure t
+#   :config
+#   ;; Main blog
+#   (setq easy-hugo-basedir "~/Git/Github/Upwork/WebDev/Braam/hugoMigration/peterbraam-site")
+#   (setq easy-hugo-url "https://yourblogdomain")
+#   (setq easy-hugo-sshdomain "blogdomain")
+#   (setq easy-hugo-root "/home/blog/")
+#   (setq easy-hugo-previewtime "300")
+#   ;; (define-key global-map (kbd "C-c C-e") 'easy-hugo)
+  
+#   (setq easy-hugo-bloglist
+# 	;; blog2 setting
+# 	    '(((easy-hugo-basedir . "~/src/github.com/masasam/hugo2/")
+# 	       (easy-hugo-url . "http://example2.com")
+# 	       (easy-hugo-sshdomain . "myblogdomain")
+# 	       (easy-hugo-root . "/home/hugo/"))
+#   ;; blog3 setting
+# 	      ((easy-hugo-basedir . "~/src/github.com/masasam/hugo3/")
+# 	       (easy-hugo-url . "http://example3.net")
+# 	       (easy-hugo-amazon-s3-bucket-name . "yours3bucketname"))
+# 	      ;; blog4 setting
+# 	      ((easy-hugo-basedir . "~/src/github.com/masasam/hugo4/")
+# 	       (easy-hugo-url . "http://example4.net")
+# 	       (easy-hugo-google-cloud-storage-bucket-name . "yourGCPbucketname")
+# 	       (easy-hugo-image-directory . "img"))))
+#   )
+# #+END_SRC
+** Anki Editor
+# TODO Add to doom as a module
+This is for my favorite [[https://github.com/louietan/anki-editor][anki interaction]] mechanism.
+#+BEGIN_SRC emacs-lisp
+(def-package! anki-editor
+  :after org-noter
+  :config
+  ; I like making decks
+  (setq anki-editor-create-decks 't))
+#+END_SRC
 ** Keybindings
 These are eventually going to with [[https://github.com/noctuid/general.el][general]] anyway. So it's better to load that
 for now and carry on. Later this block can be prevented from being tangled.
@@ -234,15 +289,31 @@ more.
   "m i l" '(markdown-insert-link :wk "Link")
   "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block"))
 #+END_SRC
+*** Pdf Mode
+These bindings are essentially part of ~org-noter~ however, they do not actually
+need to be bound in ~org-mode~ files.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "SPC"
+  :keymaps '(pdf-view-mode-map)
+  "m" '(ignore t :wk "Local Commands")
+  "m o" '(ignore t :wk "Org Commands")
+  "m o n" '(ignore t :wk "org-noter commands")
+  "m o n n" '(org-noter :wk "Go to note")
+  "m o n i" '(org-noter-insert-note :wk "Insert note")
+  )
+#+END_SRC
+# TODO Figure out why the maps don't overlay (fix thing below)
 *** Org Noter
 These bindings should probably be after ~org-noter~ is loaded.
-#+BEGIN_SRC emacs-lisp
+Broken
+#+BEGIN_SRC emacs-lisp :tangle no
 (nmap
   :prefix "SPC"
   :keymaps '(org-mode-map pdf-view-mode-map)
   "m" '(ignore t :wk "Local Commands")
   "m o" '(ignore t :wk "Org Commands")
-  "m o n" '(org-noter :wk "Make a note")
+  "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
 *** Org Mode additions
@@ -252,7 +323,29 @@ are a part of ~org-mode~.
 (nmap
   :prefix "SPC"
   :keymaps 'org-mode-map
-  "m o t" '(org-set-tags :wk "Set tags"))
+  "m o t" '(org-set-tags :wk "Set tags")
+  "m o p" '(nil :wk "Properties")
+  "m o p s" '(org-set-property :wk "Set")
+  "m o p d" '(org-delete-property :wk "Delete" )
+  "m o p a" '(org-property-action :wk "Actions")
+  "m o n n" '(org-noter :wk "Go to note")
+  )
+#+END_SRC
+*** Anki Editor
+These are only relevant to ~org-mode~. Nevertheless they are not part of
+~org-mode~ so semantically it makes no sense to use ~o~ after the localleader.
+#+BEGIN_SRC emacs-lisp
+(nmap
+:prefix "SPC"
+:keymaps 'org-mode-map
+"m a" '(nil :wk "Do anki stuff")
+"m a p" '(anki-editor-push-notes :wk "Push notes")
+"m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
+"m a i" '(nil :wk "Insert notes")
+"m a i n" '(anki-editor-insert-note :wk "Insert a new note")
+"m a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
+)
+
 #+END_SRC
 *** Evil Movement
 These are mostly for convinience. I know that the upper cased versions of
@@ -290,6 +383,34 @@ Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c9401
 
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** Org Rifle
+This probably needs to be refactored later. Or loaded elsewhere.
+The keymaps are defined in the following way:
+
+#+BEGIN_SRC dot
+
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(def-package! helm-org-rifle
+  :after org
+  :general
+  (:keymaps 'org-mode-map
+            :states 'normal
+            :prefix "SPC"
+            "m r" '(nil :wk "Rifle (Helm)")
+            "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
+            "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
+            "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
+            "m r o" '(nil :wk "Occur (Persistent)")
+            "m r o b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r o e" '(helm-org-rifle :wk "Rifle every open buffer")
+            "m r o d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
+            "m r o a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
+            )
+  )
+#+END_SRC
 *** Org Mind Map
 [[github:/theodorewiles/org-mind-map][This]] is used to create ~graphiz~ graphs from ~org-mode~ stuff.
 
@@ -527,10 +648,15 @@ it has better support for working with multiple documents linked to one file.
 (def-package! org-noter
   :after (:any org pdf-view)
   :config
-;; bspwm can handle splits
-(setq org-noter-always-create-frame nil
-;; Everything is relative to the rclone mega
-      org-noter-notes-search-path '("~/.megaRefs/Notes"
+  (setq
+   ;; bspwm can handle splits
+   org-noter-notes-window-location 'other-frame
+   ;; Please stop opening frames
+   org-noter-always-create-frame nil
+   ;; I want to see the whole file
+   org-noter-hide-other nil
+   ;; Everything is relative to the rclone mega
+   org-noter-notes-search-path '("~/.megaRefs/Notes"
                                     "~/.megaRefs/"
                                     "~/Documents")))
 #+END_SRC
