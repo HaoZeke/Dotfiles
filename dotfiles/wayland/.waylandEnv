@@ -1,0 +1,25 @@
+# This is loaded when a wayland compositor is required
+# These are mostly from https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland
+
+# Force GTK to use wayland
+GDK_BACKEND=wayland
+CLUTTER_BACKEND=wayland 
+
+# Force QT
+QT_QPA_PLATFORM=wayland
+# Kill Client Side Decoration
+QT_WAYLAND_DISABLE_WINDOWDECORATION=1 
+
+# Elementary
+ECORE_EVAS_ENGINE=wayland_egl
+ELM_ENGINE=wayland_egl
+
+# SDL
+SDL_VIDEODRIVER=wayland
+
+# Java (set anyway)
+_JAVA_AWT_WM_NONREPARENTING=1
+
+# Local Variables:
+# mode: shell-script
+# End:

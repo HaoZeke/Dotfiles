@@ -281,6 +281,13 @@ if [ -f ~/.shellSpecifics ]; then
   . ~/.shellSpecifics
 fi
 
+# Wayland
+#############
+
+if [ -f ~/.waylandEnv ]; then
+  . ~/.waylandEnv
+fi
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script

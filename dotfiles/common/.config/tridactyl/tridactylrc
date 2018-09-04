@@ -23,7 +23,7 @@ colorscheme dark
 
 " Sane hinting mode
 set hintfiltermode vimperator-reflow
-set hintchars 432789fjhgdkesla
+set hintchars fjhgdk432789esla
 
 " Make Tridactyl work on more sites at the expense of some security
 set csp clobber
