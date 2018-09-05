@@ -41,6 +41,7 @@
   - [[#troubleshooting][Troubleshooting]]
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
+    - [[#latex-preview-for-org-mode][LaTeX Preview for Org mode]]
     - [[#org-ref-latex][Org Ref LaTeX]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helpers][MELPA Helpers]]
@@ -569,6 +570,48 @@ proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r
       ("utf8" . "utf8x")
       ("\\subsection{%s}" . "\\subsection*{%s}")))))
 #+END_SRC
+*** LaTeX Preview for Org mode
+Basically I need to see math and physics. Originally borrowed from [[https://emacs.stackexchange.com/questions/30341/how-do-i-customize-the-process-that-gets-triggered-in-org-preview-latex-fragment][this
+stackexchange]] question.
+
+**** Process
+
+#+BEGIN_SRC emacs-lisp
+'(org-preview-latex-process-alist
+       (quote
+       ((dvipng :programs
+         ("lualatex" "dvipng")
+         :description "dvi > png" :message "you need to install the programs: latex and dvipng." :image-input-type "dvi" :image-output-type "png" :image-size-adjust
+         (1.0 . 1.0)
+         :latex-compiler
+         ("lualatex -output-format dvi -interaction nonstopmode -output-directory %o %f")
+         :image-converter
+         ("dvipng -fg %F -bg %B -D %D -T tight -o %O %f"))
+ (dvisvgm :programs
+          ("latex" "dvisvgm")
+          :description "dvi > svg" :message "you need to install the programs: latex and dvisvgm." :use-xcolor t :image-input-type "xdv" :image-output-type "svg" :image-size-adjust
+          (1.7 . 1.5)
+          :latex-compiler
+          ("xelatex -no-pdf -interaction nonstopmode -output-directory %o %f")
+          :image-converter
+          ("dvisvgm %f -n -b min -c %S -o %O"))
+ (imagemagick :programs
+              ("latex" "convert")
+              :description "pdf > png" :message "you need to install the programs: latex and imagemagick." :use-xcolor t :image-input-type "pdf" :image-output-type "png" :image-size-adjust
+              (1.0 . 1.0)
+              :latex-compiler
+              ("xelatex -no-pdf -interaction nonstopmode -output-directory %o %f")
+              :image-converter
+              ("convert -density %D -trim -antialias %f -quality 100 %O")))))
+#+END_SRC
+
+**** Packages
+These are required to view math properly.
+
+
+
+#+END_SRC
+
 *** Org Ref LaTeX
 This is really not part of my workflow...
 #+BEGIN_SRC emacs-lisp
