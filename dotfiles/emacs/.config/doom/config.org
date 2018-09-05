@@ -397,7 +397,7 @@ The keymaps are defined in the following way:
             :states 'normal
             :prefix "SPC"
             "m r" '(nil :wk "Rifle (Helm)")
-            "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r h" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
             "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
