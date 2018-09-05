@@ -597,6 +597,7 @@ This is from [[https://www.reddit.com/r/emacs/comments/8tjgtu/cdlatex_and_genera
     (setq company-math-allow-latex-symbols-in-faces t))
 #+END_SRC
 #+END_SRC
+# TODO Add more stuff about the maxima hint from [[https://www.reddit.com/r/emacs/comments/75fp3d/taking_university_notes_in_orgmode_latex/][this reddit thread]].
 ** Flycheck Additions
 These are basically meant to aid in development. The relevant linters are also
 added here.
