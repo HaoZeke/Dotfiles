@@ -32,6 +32,7 @@
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
+  - [[#math-support][Math support]]
 
 ** About this file
 This is an Emacs literate package file. It contains the basic structure along
@@ -193,3 +194,8 @@ These are actually from the ~doom-emacs~ guy...
 # Local Variables:
 # eval: (add-hook (quote after-save-hook) (lambda nil (org-babel-tangle)) nil t)
 # End:
+** Math support
+I like [[https://github.com/cdominik/cdlatex][cdlatex]].
+#+BEGIN_SRC emacs-lisp
+(package! cdlatex)
+#+END_SRC

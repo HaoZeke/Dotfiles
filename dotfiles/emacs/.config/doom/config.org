@@ -42,6 +42,7 @@
   - [[#temporary][Temporary]]
     - [[#latex-for-org-mode][LaTeX for Org mode]]
     - [[#org-ref-latex][Org Ref LaTeX]]
+    - [[#math-support][Math support]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helpers][MELPA Helpers]]
   - [[#references][References]]
@@ -575,6 +576,27 @@ This is really not part of my workflow...
 (setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f"))
 #+END_SRC
 
+*** Math support
+This is from [[https://www.reddit.com/r/emacs/comments/8tjgtu/cdlatex_and_general_latex_completion_with_company/][this reddit]] thread.
+
+#+BEGIN_SRC emacs-lisp
+(def-package! cdlatex
+    :after (:any org-mode LaTeX-mode)
+    :hook
+    ((LaTeX-mode . turn-on-cdlatex)
+     (org-mode . turn-on-org-cdlatex)))
+
+(def-package! company-math
+    :after (:any org-mode TeX-mode)
+    :config
+    (set-company-backend! 'org-mode 'company-math-symbols-latex)
+    (set-company-backend! 'TeX-mode 'company-math-symbols-latex)
+    (set-company-backend! 'org-mode 'company-latex-commands)
+    (set-company-backend! 'TeX-mode 'company-latex-commands)
+    (setq company-tooltip-align-annotations t)
+    (setq company-math-allow-latex-symbols-in-faces t))
+#+END_SRC
+#+END_SRC
 ** Flycheck Additions
 These are basically meant to aid in development. The relevant linters are also
 added here.
