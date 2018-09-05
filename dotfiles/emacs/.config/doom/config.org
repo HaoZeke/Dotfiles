@@ -389,10 +389,6 @@ These are numerous and complicated enough to be in a segment of their own.
 This probably needs to be refactored later. Or loaded elsewhere.
 The keymaps are defined in the following way:
 
-#+BEGIN_SRC dot
-
-#+END_SRC
-
 #+BEGIN_SRC emacs-lisp
 (def-package! helm-org-rifle
   :after org
