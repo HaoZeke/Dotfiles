@@ -118,8 +118,12 @@ This is put here since it only works with ~org-mode~ stuff.
 #+END_SRC
 ** Hugo Stuff
 Presently stuff is just [[https://github.com/masasam/emacs-easy-hugo][easy-hugo]].
-#+BEGIN_SRC emacs-lisp 
+#+BEGIN_SRC emacs-lisp :tangle no
 (package! easy-hugo)
+#+END_SRC
+Actually I would prefer to be able to export ~org-subtrees~ so, I need [[https://ox-hugo.scripter.co/][ox-hugo]].
+#+BEGIN_SRC emacs-lisp
+(package! ox-hugo)
 #+END_SRC
 # TODO Fix this
 ** Reference Management
