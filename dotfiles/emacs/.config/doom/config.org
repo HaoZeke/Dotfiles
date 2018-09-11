@@ -28,6 +28,7 @@
   - [[#org-additions][Org Additions]]
     - [[#org-rifle][Org Rifle]]
     - [[#org-mind-map][Org Mind Map]]
+    - [[#org-download][Org Download]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
@@ -397,6 +398,27 @@ The keymaps are defined in the following way:
             :states 'normal
             :prefix "SPC"
             "m e m" '(org-mind-map-write :wk "Export mind-map") ))
+#+END_SRC
+*** Org Download
+This is already included in the standard doom setup. However, I was having
+trouble with relative exports so I have this one instead. Partially kanged from
+~doom-emacs~.
+#+BEGIN_SRC emacs-lisp
+(def-package! org-download
+  :commands (org-download-dnd org-download-dnd-base64)
+  :init
+  ;; Add these manually so that org-download is lazy-loaded...
+  (add-to-list 'dnd-protocol-alist '("^\\(https?\\|ftp\\|file\\|nfs\\):" . +org-attach-download-dnd))
+  (add-to-list 'dnd-protocol-alist '("^data:" . org-download-dnd-base64))
+
+  (advice-add #'org-download-enable :override #'ignore)
+  :config
+(setq-default org-download-image-dir "./img/"
+              org-download-screenshot-method "gnome-screenshot"
+              org-download-method 'directory
+              org-download-heading-lvl 1
+              )
+  )
 #+END_SRC
 ** Syntax Highlighting
 This section is for setting up major modes for various file formats which are
