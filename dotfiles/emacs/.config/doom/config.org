@@ -299,12 +299,16 @@ are a part of ~org-mode~.
 (nmap
   :prefix "SPC"
   :keymaps 'org-mode-map
+  ;; Org Stuff
   "m o t" '(org-set-tags :wk "Set tags")
   "m o p" '(nil :wk "Properties")
   "m o p s" '(org-set-property :wk "Set")
   "m o p d" '(org-delete-property :wk "Delete" )
   "m o p a" '(org-property-action :wk "Actions")
   "m o n n" '(org-noter :wk "Go to note")
+  ;; Insertions
+  "m i" '(nil :wk "Insert")
+  "m i l" '(org-insert-link :wk "Link")
   )
 #+END_SRC
 *** Anki Editor
