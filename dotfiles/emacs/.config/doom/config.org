@@ -26,6 +26,9 @@
     - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
+    - [[#ob-julia][Ob-Julia]]
+    - [[#org-babel][Org Babel]]
+    - [[#org-config][Org Config]]
     - [[#org-rifle][Org Rifle]]
     - [[#org-mind-map][Org Mind Map]]
     - [[#org-download][Org Download]]
@@ -364,6 +367,27 @@ Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c9401
 
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** Ob-Julia
+So ~julia~ support is inbuilt, however the process variable needs to be set:
+#+BEGIN_SRC emacs-lisp
+(setq  inferior-julia-program-name "/bin/julia")
+#+END_SRC
+*** Org Babel
+Julia is not set. Other languages might also be needed here eventually.
+#+BEGIN_SRC emacs-lisp
+(after! 'org
+            (org-babel-do-load-languages 'org-babel-load-languages
+                                         (append org-babel-load-languages
+                                                 '(julia . t))))
+#+END_SRC
+
+*** Org Config
+These are just variables I need to set to prevent things from dying.
+**** Inline images
+These need to be disabled by default otherwise ~emacs~ stalls often.
+#+BEGIN_SRC emacs-lisp
+(setq org-startup-with-inline-images 'nil)
+#+END_SRC
 *** Org Rifle
 This probably needs to be refactored later. Or loaded elsewhere.
 The keymaps are defined in the following way:
