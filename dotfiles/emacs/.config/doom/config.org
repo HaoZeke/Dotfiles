@@ -35,6 +35,7 @@
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
+    - [[#pug-mode][Pug Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
@@ -488,7 +489,14 @@ With macros.
                               '(("\\.lmp\\'" . lammps-mode))
                               ))
 #+END_SRC
-
+*** Pug Mode
+Need better font locking everywhere.
+#+BEGIN_SRC emacs-lisp
+(def-package! pug-mode
+  :config
+  (setq auto-mode-alist (append '(("\\.pug$" . pug-mode))
+                              auto-mode-alist)))
+#+END_SRC
 ** Functions
 *** Org-mode export pdf when saved
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
