@@ -12,7 +12,6 @@
   - [[#package-settings][Package Settings]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
-    - [[#flyspell-settings][Flyspell Settings]]
   - [[#hugo-stuff][Hugo Stuff]]
   - [[#anki-editor][Anki Editor]]
   - [[#keybindings][Keybindings]]
@@ -171,13 +170,6 @@ I like having spell checks for everything.
 (add-hook 'salt-mode-hook
         (lambda ()
             (flyspell-mode 1)))
-#+END_SRC
-*** Flyspell Settings
-Hopefully get corrections to load everywhere.
-#+BEGIN_SRC emacs-lisp
-(map! :after flyspell
-      :map flyspell-mouse-map
-      :nvm "RET" #'flyspell-correct-word-generic)
 #+END_SRC
 ** Hugo Stuff
 Easy hugo I don't need right now.
