@@ -12,6 +12,7 @@
   - [[#package-settings][Package Settings]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
+    - [[#flyspell-settings][Flyspell Settings]]
   - [[#hugo-stuff][Hugo Stuff]]
   - [[#anki-editor][Anki Editor]]
   - [[#keybindings][Keybindings]]
@@ -162,8 +163,7 @@ Also integrated upstream.
   (setq evil-magit-state 'normal))
 #+END_SRC
 *** SaltStack Settings
-I like having spell checks for the comments.
-
+I like having spell checks for everything.
 #+BEGIN_SRC emacs-lisp
 ;; Load it
 (def-package! salt-mode)
@@ -171,6 +171,13 @@ I like having spell checks for the comments.
 (add-hook 'salt-mode-hook
         (lambda ()
             (flyspell-mode 1)))
+#+END_SRC
+*** Flyspell Settings
+Hopefully get corrections to load everywhere.
+#+BEGIN_SRC emacs-lisp
+(map! :after flyspell
+      :map flyspell-mouse-map
+      :nvm "RET" #'flyspell-correct-word-generic)
 #+END_SRC
 ** Hugo Stuff
 Easy hugo I don't need right now.
@@ -430,13 +437,7 @@ trouble with relative exports so I have this one instead. Partially kanged from
 ~doom-emacs~.
 #+BEGIN_SRC emacs-lisp
 (def-package! org-download
-  :commands (org-download-dnd org-download-dnd-base64)
-  :init
-  ;; Add these manually so that org-download is lazy-loaded...
-  (add-to-list 'dnd-protocol-alist '("^\\(https?\\|ftp\\|file\\|nfs\\):" . +org-attach-download-dnd))
-  (add-to-list 'dnd-protocol-alist '("^data:" . org-download-dnd-base64))
-
-  (advice-add #'org-download-enable :override #'ignore)
+  :after org
   :config
 (setq-default org-download-image-dir "./img/"
               org-download-screenshot-method "gnome-screenshot"
@@ -567,7 +568,6 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 - The actual code is much more elegant in every way possible.
 - Seriously there has to be  a way to not have to do this.
   
-  
 *** TODO Safe Evals
 This enables the evaluation of these forms. Read more about this via
 ~docstrings~ sometime.
@@ -672,7 +672,6 @@ This is from [[https://www.reddit.com/r/emacs/comments/8tjgtu/cdlatex_and_genera
 ** Flycheck Additions
 These are basically meant to aid in development. The relevant linters are also
 added here.
-
 *** MELPA Helpers
 This includes settings for both flycheck and the packages it needs.
 #+BEGIN_SRC emacs-lisp
