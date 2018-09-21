@@ -241,6 +241,9 @@ allPackages:archLinux
 # sway base
 .config/sway/config:sway
 
+# Lockscreen
+.config/swaylock/config:sway
+
 # sway autostart
 
 # sway keybindings
