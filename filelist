@@ -235,6 +235,9 @@ allPackages:archLinux
 # Sway
 #######
 
+# wlroots screenshot script
+.local/bin/swaygrab.sh:sway
+
 # sway base
 .config/sway/config:sway
 
