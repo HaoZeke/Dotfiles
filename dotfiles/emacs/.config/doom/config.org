@@ -312,7 +312,13 @@ are a part of ~org-mode~.
   "m o n n" '(org-noter :wk "Go to note")
   ;; Insertions
   "m i" '(nil :wk "Insert")
-  "m i l" '(org-insert-link :wk "Link")
+  "m i l" '(org-insert-link :wk "Link/Image")
+  "m i i" '(org-insert-item :wk "Item")
+  "m i h" '(org-insert-heading :wk "Heading")
+  "m i s" '(org-insert-subheading :wk "Subheading")
+  "m i t" '(nil :wk "Todo")
+  "m i t h" '(org-insert-todo-heading :wk "Heading")
+  "m i t s" '(org-insert-todo-subheading :wk "Subheading")
   )
 #+END_SRC
 *** Anki Editor
@@ -322,7 +328,7 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 (nmap
 :prefix "SPC"
 :keymaps 'org-mode-map
-"m a" '(nil :wk "Do anki stuff")
+"m a" '(nil :wk "Anki")
 "m a p" '(anki-editor-push-notes :wk "Push notes")
 "m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
 "m a i" '(nil :wk "Insert notes")
@@ -571,10 +577,11 @@ This enables the evaluation of these forms. Read more about this via
 ** Troubleshooting
 These are strictly temporary hacks to resolve problems until they are fixed
 upstream.
-
-
+#+BEGIN_SRC emacs-lisp
+(after! doom-themes
+  (remove-hook 'doom-load-theme-hook #'doom-themes-treemacs-config))
+#+END_SRC
 ** Temporary
-
 *** LaTeX for Org mode
 Pretty this up. Consider using file templates or something. Atleast make a
 proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r/emacs/comments/54g578/anyone_go_from_using_latex_to_org_mode/][this reddit thread]].
