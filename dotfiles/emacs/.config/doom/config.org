@@ -291,8 +291,8 @@ Broken
 (nmap
   :prefix "SPC"
   :keymaps '(org-mode-map pdf-view-mode-map)
-  "m" '(ignore t :wk "Local Commands")
-  "m o" '(ignore t :wk "Org Commands")
+  "m" '(nil :wk "Local Commands")
+  "m o" '(nil :wk "Org Commands")
   "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
