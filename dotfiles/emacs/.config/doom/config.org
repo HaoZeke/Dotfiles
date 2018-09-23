@@ -18,6 +18,7 @@
     - [[#later-general][LATER General]]
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+    - [[#global-maps][Global Maps]]
     - [[#markdown-improvements][Markdown Improvements]]
     - [[#pdf-mode][Pdf Mode]]
     - [[#org-noter][Org Noter]]
@@ -255,6 +256,18 @@ The binding syntax of the future, TODAY!
  "a" 'helm-mini)
 ;; (my-leader-def 'normal 'override
 ;;   "a" 'org-agenda)
+#+END_SRC
+*** Global Maps
+**** Multiple Cursors
+These need practice. Many of these are already in the default configuration, but
+they are redefined here for mnemonic usage. Also to add the ~which-key~ hints.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "gz"
+  :keymaps 'global
+  "r" '(mc/edit-lines :wk "Span region")
+  "z" '(+evil/mc-make-cursor-here :wk "Place frozen cursor")
+  )
 #+END_SRC
 *** Markdown Improvements
 Local leader is already bound to `m` and there are few bindings, this just adds
