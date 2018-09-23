@@ -198,12 +198,12 @@ for now and carry on. Later this block can be prevented from being tangled.
 This does very little other than load it and remind it that ~SPC~ is the leader for the other bindings to work.
 #+BEGIN_SRC emacs-lisp
 (def-package! general)
-;; ;; Creating a constant for making future changes simpler
-;; (defconst my-leader "SPC")
-;; ;; Tell general all about it
-;; (general-create-definer my-leader-def
-;;   ;; :prefix my-leader
-;;   :prefix "SPC")
+;; Creating a constant for making future changes simpler
+(defconst my-leader "SPC")
+;; Tell general all about it
+(general-create-definer my-leader-def
+  :prefix my-leader)
+  ;; :prefix my-leader)
 ;; (general-create-definer my-local-leader-def
 ;;   ;; :prefix my-local-leader
 ;;   :prefix "SPC m")
@@ -244,7 +244,7 @@ The binding syntax of the future, TODAY!
 ;; ** Global Keybindings
 ;; Normal mode?
 (nmap
- :prefix "SPC"
+ :prefix my-leader
  "b d" #'kill-this-buffer
   ;; kill things
   "k" '(:ignore t :which-key "kill")
@@ -274,7 +274,7 @@ Local leader is already bound to `m` and there are few bindings, this just adds
 more.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps 'markdown-mode-map
   "m" '(ignore t :wk "Markdown Commands")
   "m i" '(ignore t :wk "Insert")
@@ -287,7 +287,7 @@ These bindings are essentially part of ~org-noter~ however, they do not actually
 need to be bound in ~org-mode~ files.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps '(pdf-view-mode-map)
   "m" '(ignore t :wk "Local Commands")
   "m o" '(ignore t :wk "Org Commands")
@@ -302,7 +302,7 @@ These bindings should probably be after ~org-noter~ is loaded.
 Broken
 #+BEGIN_SRC emacs-lisp :tangle no
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps '(org-mode-map pdf-view-mode-map)
   "m" '(nil :wk "Local Commands")
   "m o" '(nil :wk "Org Commands")
@@ -314,7 +314,7 @@ Apart from extension specific bindings, here we define useful functions which
 are a part of ~org-mode~.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps 'org-mode-map
   ;; Org Stuff
   "m o t" '(org-set-tags :wk "Set tags")
@@ -341,7 +341,7 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 ~org-mode~ so semantically it makes no sense to use ~o~ after the localleader.
 #+BEGIN_SRC emacs-lisp
 (nmap
-:prefix "SPC"
+:prefix my-leader
 :keymaps 'org-mode-map
 "m a" '(nil :wk "Anki")
 "m a p" '(anki-editor-push-notes :wk "Push notes")
@@ -419,7 +419,7 @@ The keymaps are defined in the following way:
   :general
   (:keymaps 'org-mode-map
             :states 'normal
-            :prefix "SPC"
+            :prefix my-leader
             "m r" '(nil :wk "Rifle (Helm)")
             "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
@@ -441,7 +441,7 @@ The keymaps are defined in the following way:
   :general
   (:keymaps 'org-mode-map
             :states 'normal
-            :prefix "SPC"
+            :prefix my-leader
             "m e m" '(org-mind-map-write :wk "Export mind-map") ))
 #+END_SRC
 *** Org Download
