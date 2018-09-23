@@ -316,10 +316,10 @@ are a part of ~org-mode~.
   "m i i" '(org-insert-item :wk "Item")
   "m i t" '(org-table-create-or-convert-from-region :wk "Table")
   "m i h" '(nil :wk "Heading")
-  "m i h h" '(nil :wk "Normal")
+  "m i h h" '(org-insert-heading :wk "Normal")
   "m i h t" '(org-insert-todo-heading :wk "Todo")
   "m i s" '(nil :wk "Subheading")
-  "m i s s" '(nil :wk "Normal")
+  "m i s s" '(org-insert-subheading :wk "Normal")
   "m i s t" '(org-insert-todo-subheading :wk "Todo")
   )
 #+END_SRC
