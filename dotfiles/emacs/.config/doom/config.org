@@ -314,11 +314,13 @@ are a part of ~org-mode~.
   "m i" '(nil :wk "Insert")
   "m i l" '(org-insert-link :wk "Link/Image")
   "m i i" '(org-insert-item :wk "Item")
-  "m i h" '(org-insert-heading :wk "Heading")
-  "m i s" '(org-insert-subheading :wk "Subheading")
-  "m i t" '(nil :wk "Todo")
-  "m i t h" '(org-insert-todo-heading :wk "Heading")
-  "m i t s" '(org-insert-todo-subheading :wk "Subheading")
+  "m i t" '(org-table-create-or-convert-from-region :wk "Table")
+  "m i h" '(nil :wk "Heading")
+  "m i h h" '(nil :wk "Normal")
+  "m i h t" '(org-insert-todo-heading :wk "Todo")
+  "m i s" '(nil :wk "Subheading")
+  "m i s s" '(nil :wk "Normal")
+  "m i s t" '(org-insert-todo-subheading :wk "Todo")
   )
 #+END_SRC
 *** Anki Editor
