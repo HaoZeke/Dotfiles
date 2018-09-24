@@ -15,7 +15,7 @@ archlinuxMono=common,linux,archLinux,monoMonitor,emacs
 archlinuxMulti=common,linux,archLinux,multiMonitor,emacs
 
 # Archlinux with Sway (wayland)
-archSwayMono=common,linux,archLinux,emacs,sway,wayland,xkbColemak
+archSwayMono=common,linux,archLinux,emacs,sway,wayland,xkbLayout
 
 # ArchLinux with xfce and bspwm
 almXFCE=common,linux,archLinux,monoMonitor,xfceSession,emacs,bspwm
@@ -111,7 +111,7 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 
 # XKB Settings
 ###############
-.colemak:xkbColemak
+.xkbEnv:xkbLayout
 
 # Emacs (doom)
 #################
