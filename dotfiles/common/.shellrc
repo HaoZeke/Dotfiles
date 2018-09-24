@@ -288,6 +288,13 @@ if [ -f ~/.waylandEnv ]; then
   . ~/.waylandEnv
 fi
 
+# XKB
+######
+
+if [ -f ~/.xkbEnv ]; then
+  . ~/.xkbEnv
+fi
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
