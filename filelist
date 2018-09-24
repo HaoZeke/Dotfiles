@@ -15,7 +15,7 @@ archlinuxMono=common,linux,archLinux,monoMonitor,emacs
 archlinuxMulti=common,linux,archLinux,multiMonitor,emacs
 
 # Archlinux with Sway (wayland)
-archSwayMono=common,linux,archLinux,emacs,sway,wayland
+archSwayMono=common,linux,archLinux,emacs,sway,wayland,xkbColemak
 
 # ArchLinux with xfce and bspwm
 almXFCE=common,linux,archLinux,monoMonitor,xfceSession,emacs,bspwm
@@ -108,6 +108,10 @@ myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublim
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
+
+# XKB Settings
+###############
+.colemak:xkbColemak
 
 # Emacs (doom)
 #################
@@ -245,9 +249,6 @@ allPackages:archLinux
 .config/swaylock/config:sway
 
 # sway autostart
-
-# Notification support
-exec --no-startup-id mako
 
 # sway keybindings
 
