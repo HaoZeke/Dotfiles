@@ -246,6 +246,9 @@ allPackages:archLinux
 
 # sway autostart
 
+# Notification support
+exec --no-startup-id mako
+
 # sway keybindings
 
 
