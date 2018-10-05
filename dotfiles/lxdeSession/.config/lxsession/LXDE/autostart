@@ -3,7 +3,6 @@
 @pulseaudio
 @thunar --daemon
 @nitrogen --restore
-@nm-applet
 @mpd
 @mpdscribble
 @synapse -s
