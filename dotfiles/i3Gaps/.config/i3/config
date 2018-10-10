@@ -77,13 +77,13 @@ floating_modifier $mod
  bindsym XF86MonBrightnessUp exec brightnessctl set +5%
 
 # start a terminal
-bindsym $mod+Return exec i3-sensible-terminal
+bindsym $mod+Return exec $term
 
 # kill focused window
-bindsym $mod+Shift+w kill
+bindsym $mod+w kill
 
 # start dmenu (a program launcher)
-bindsym $mod+space exec $menu
+bindsym ctrl+space exec $menu
 # There also is the (new) i3-dmenu-desktop which only displays applications
 # shipping a .desktop file. It is a wrapper around dmenu, so you need that
 # installed.
