@@ -196,6 +196,13 @@ mode "resize" {
 }
 bindsym $mod+r mode "resize"
 
+# exec_always termite --name subTerm
+# for_window [title="subTerm"] move to scratchpad, border 1pixel
+# bindsym Mod1+i [title="subTerm"] scratchpad show, move position 45px 0px
+
+# Notification daemon
+exec_always mako
+
 include /etc/sway/config.d/*
 include $XDG_CONFIG_HOME/sway/conf.d/*
 include $XDG_CONFIG_HOME/sway/conf.d/**/*
