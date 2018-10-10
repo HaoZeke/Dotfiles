@@ -234,6 +234,13 @@ allPackages:archLinux
 # sxhkd
 .config/sxhkd/sxhkdrc:bspwm
 
+# i3
+#####
+
+# Basics
+.config/i3/config:i3Gaps
+.config/i3/config.keycodes:i3Gaps
+
 # Wayland
 ###########
 
