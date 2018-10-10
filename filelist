@@ -241,6 +241,9 @@ allPackages:archLinux
 .config/i3/config:i3Gaps
 .config/i3/config.keycodes:i3Gaps
 
+# Bar
+.config/i3rust/i3.toml:i3Gaps
+
 # Wayland
 ###########
 
