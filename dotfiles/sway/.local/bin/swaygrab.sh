@@ -11,7 +11,7 @@ if [ -z "$filepath" ]; then
     echo "Usage: $(basename "$0") filepath"
     echo "If you specify \"clipboard\" as the file path the image will be copied to primary clipboard."
     echo "Creating a time-stamped image"
-    slurp | grim -g - $(xdg-user-dir PICTURES)/Pictures/Screenshots/$(date +'%Y-%m-%d-%H%M%S_grim.png')
+    slurp | grim -g - $HOME/Pictures/Screenshots/$(date +'%Y-%m-%d-%H%M%S_grim.png')
     exit 0
 fi
 
