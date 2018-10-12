@@ -34,6 +34,7 @@
     - [[#org-mind-map][Org Mind Map]]
     - [[#org-download][Org Download]]
   - [[#syntax-highlighting][Syntax Highlighting]]
+    - [[#direnv-highlighting][Direnv Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
@@ -462,7 +463,13 @@ trouble with relative exports so I have this one instead. Partially kanged from
 ** Syntax Highlighting
 This section is for setting up major modes for various file formats which are
 typically non-standard.
-
+*** TODO Direnv Highlighting
+~direnv~ is essentially a specialized bash script. Until I have time to make a
+proper font locking mode for it, this should suffice.
+#+BEGIN_SRC emacs-lisp
+(setq auto-mode-alist (append '(("\\.envrc$" . shell-script-mode))
+                              auto-mode-alist))
+#+END_SRC
 *** PKGBUILD Mode
 This is the non ~doom~ way of loading this.
 
