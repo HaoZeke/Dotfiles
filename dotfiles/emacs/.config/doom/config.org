@@ -38,6 +38,7 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
+  - [[#dockerfile-mode][Dockerfile Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
@@ -517,6 +518,17 @@ Need better font locking everywhere.
   :config
   (setq auto-mode-alist (append '(("\\.pug$" . pug-mode))
                               auto-mode-alist)))
+#+END_SRC
+** Dockerfile Mode
+[[https://github.com/spotify/dockerfile-mode][This]] package from spotify has support for building things as well as
+highlighting Dockerfiles.
+#+BEGIN_SRC emacs-lisp
+(def-package! dockerfile-mode
+  :config
+  (setq auto-mode-alist (append '(("Dockerfile\\'" . dockerfile-mode))
+                              auto-mode-alist))
+  (put 'dockerfile-image-name 'safe-local-variable #'stringp)
+  )
 #+END_SRC
 ** Functions
 *** Org-mode export pdf when saved

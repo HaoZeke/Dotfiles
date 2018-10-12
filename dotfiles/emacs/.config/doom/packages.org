@@ -24,6 +24,7 @@
     - [[#org-rifle][Org Rifle]]
     - [[#anki-mode][Anki Mode]]
   - [[#hugo-stuff][Hugo Stuff]]
+  - [[#dockerfile-mode][Dockerfile Mode]]
   - [[#reference-management][Reference Management]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#tup-mode][Tup Mode]]
@@ -133,6 +134,13 @@ Actually I would prefer to be able to export ~org-subtrees~ so, I need [[https:/
 (package! ox-hugo)
 #+END_SRC
 # TODO Fix this
+** Dockerfile Mode
+For syntax highlighting and inline builds. [[https://github.com/spotify/dockerfile-mode][From spotify]] weirdly.
+~## -*- docker-image-name: "your-image-name-here" -*-~ can be used to specify
+the image name.
+#+BEGIN_SRC emacs-lisp
+(package! dockerfile-mode)
+#+END_SRC
 ** Reference Management
 **** Zotero
 There are a bunch of ~zotero~ integrations for emacs, most notably, [[https://github.com/vspinu/zotelo][zotelo]], but
