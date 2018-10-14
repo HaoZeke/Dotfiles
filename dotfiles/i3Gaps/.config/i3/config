@@ -16,7 +16,8 @@
 set $mod Mod4
 set $font "pango:DejaVu Sans Mono 9"
 set $menu "rofi -show combi -show-icons -combi-modi \\"drun,run\\" -modi combi"
-set $term i3-sensible-terminal
+# I hate uxterm (i3-sensible-terminal)
+set $term termite
 # Workspaces
 set $ws1 "1"
 set $ws2 "2"
