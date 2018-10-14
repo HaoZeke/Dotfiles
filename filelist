@@ -17,6 +17,9 @@ archlinuxMulti=common,linux,archLinux,multiMonitor,emacs
 # Archlinux with Sway (wayland)
 archSwayMono=common,linux,archLinux,emacs,sway,wayland,xkbLayout
 
+# Archlinux with i3 Gaps
+archi3Mono=common,linux,archLinux,emacs,i3Gaps,monoMonitor,xkbLayout
+
 # ArchLinux with xfce and bspwm
 almXFCE=common,linux,archLinux,monoMonitor,xfceSession,emacs,bspwm
 almlXFCE=common,linux,archLinux,multiMonitor,xfceSession,emacs,bspwm
@@ -31,6 +34,9 @@ almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,emacs,bspwm
 
 # My current config. [desktop]
 myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublime,bspwm
+
+# My current config. [laptop]
+hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,xkblayout
 
 ##########
 # Groups #
@@ -230,6 +236,16 @@ allPackages:archLinux
 
 # sxhkd
 .config/sxhkd/sxhkdrc:bspwm
+
+# i3
+#####
+
+# Basics
+.config/i3/config:i3Gaps
+.config/i3/config.keycodes:i3Gaps
+
+# Bar
+.config/i3rust/i3.toml:i3Gaps
 
 # Wayland
 ###########
