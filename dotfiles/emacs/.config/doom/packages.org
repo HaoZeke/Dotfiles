@@ -17,6 +17,7 @@
   - [[#later-magit-additions][LATER Magit Additions]]
   - [[#later-key-chords-and-keybindings][LATER Key Chords and Keybindings]]
   - [[#org-additions][Org Additions]]
+    - [[#org-download][Org Download]]
     - [[#org-noter][Org Noter]]
     - [[#org-ref][Org Ref]]
     - [[#org-mind-map][Org Mind Map]]
@@ -29,6 +30,7 @@
     - [[#saltstack-mode][SaltStack Mode]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
+    - [[#pug-mode][Pug Mode]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
@@ -81,6 +83,11 @@ and very rational. However, I really can't wait. So.. This is a stop gap solutio
 
 The new ones need to be covered in the ~config.org~ file with the appropriate
 keybindings.
+*** Org Download
+Now I load it here since I don't use ~+attach~.
+#+BEGIN_SRC emacs-lisp
+(package! org-download)
+#+END_SRC
 
 *** TODO Org Noter
 This is sort of more of a ~pdf-tools~ extension and it needs it's own ~biblatex~
@@ -177,6 +184,11 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
 (package! lammps-mode
   :recipe (:fetcher github
                     :repo "HaoZeke/lammps-mode"))
+#+END_SRC
+*** Pug Mode
+I just like pugs.
+#+BEGIN_SRC emacs-lisp
+(package! pug-mode)
 #+END_SRC
 ** Flycheck Additions
 *** MELPA Helper
