@@ -18,6 +18,7 @@
     - [[#later-general][LATER General]]
     - [[#evil-setup-and-error-handling][Evil Setup and Error Handling]]
     - [[#spacemacs-equivalency][Spacemacs Equivalency]]
+    - [[#global-maps][Global Maps]]
     - [[#markdown-improvements][Markdown Improvements]]
     - [[#pdf-mode][Pdf Mode]]
     - [[#org-noter][Org Noter]]
@@ -26,11 +27,16 @@
     - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
   - [[#org-additions][Org Additions]]
+    - [[#ob-julia][Ob-Julia]]
+    - [[#org-babel][Org Babel]]
+    - [[#org-config][Org Config]]
     - [[#org-rifle][Org Rifle]]
     - [[#org-mind-map][Org Mind Map]]
+    - [[#org-download][Org Download]]
   - [[#syntax-highlighting][Syntax Highlighting]]
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
+    - [[#pug-mode][Pug Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
     - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
@@ -157,8 +163,7 @@ Also integrated upstream.
   (setq evil-magit-state 'normal))
 #+END_SRC
 *** SaltStack Settings
-I like having spell checks for the comments.
-
+I like having spell checks for everything.
 #+BEGIN_SRC emacs-lisp
 ;; Load it
 (def-package! salt-mode)
@@ -193,12 +198,12 @@ for now and carry on. Later this block can be prevented from being tangled.
 This does very little other than load it and remind it that ~SPC~ is the leader for the other bindings to work.
 #+BEGIN_SRC emacs-lisp
 (def-package! general)
-;; ;; Creating a constant for making future changes simpler
-;; (defconst my-leader "SPC")
-;; ;; Tell general all about it
-;; (general-create-definer my-leader-def
-;;   ;; :prefix my-leader
-;;   :prefix "SPC")
+;; Creating a constant for making future changes simpler
+(defconst my-leader "SPC")
+;; Tell general all about it
+(general-create-definer my-leader-def
+  :prefix my-leader)
+  ;; :prefix my-leader)
 ;; (general-create-definer my-local-leader-def
 ;;   ;; :prefix my-local-leader
 ;;   :prefix "SPC m")
@@ -239,7 +244,7 @@ The binding syntax of the future, TODAY!
 ;; ** Global Keybindings
 ;; Normal mode?
 (nmap
- :prefix "SPC"
+ :prefix my-leader
  "b d" #'kill-this-buffer
   ;; kill things
   "k" '(:ignore t :which-key "kill")
@@ -252,12 +257,24 @@ The binding syntax of the future, TODAY!
 ;; (my-leader-def 'normal 'override
 ;;   "a" 'org-agenda)
 #+END_SRC
+*** Global Maps
+**** Multiple Cursors
+These need practice. Many of these are already in the default configuration, but
+they are redefined here for mnemonic usage. Also to add the ~which-key~ hints.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix "gz"
+  :keymaps 'global
+  "r" '(mc/edit-lines :wk "Span region")
+  "z" '(+evil/mc-make-cursor-here :wk "Place frozen cursor")
+  )
+#+END_SRC
 *** Markdown Improvements
 Local leader is already bound to `m` and there are few bindings, this just adds
 more.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps 'markdown-mode-map
   "m" '(ignore t :wk "Markdown Commands")
   "m i" '(ignore t :wk "Insert")
@@ -270,7 +287,7 @@ These bindings are essentially part of ~org-noter~ however, they do not actually
 need to be bound in ~org-mode~ files.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps '(pdf-view-mode-map)
   "m" '(ignore t :wk "Local Commands")
   "m o" '(ignore t :wk "Org Commands")
@@ -285,10 +302,10 @@ These bindings should probably be after ~org-noter~ is loaded.
 Broken
 #+BEGIN_SRC emacs-lisp :tangle no
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps '(org-mode-map pdf-view-mode-map)
-  "m" '(ignore t :wk "Local Commands")
-  "m o" '(ignore t :wk "Org Commands")
+  "m" '(nil :wk "Local Commands")
+  "m o" '(nil :wk "Org Commands")
   "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
@@ -297,14 +314,26 @@ Apart from extension specific bindings, here we define useful functions which
 are a part of ~org-mode~.
 #+BEGIN_SRC emacs-lisp
 (nmap
-  :prefix "SPC"
+  :prefix my-leader
   :keymaps 'org-mode-map
+  ;; Org Stuff
   "m o t" '(org-set-tags :wk "Set tags")
   "m o p" '(nil :wk "Properties")
   "m o p s" '(org-set-property :wk "Set")
   "m o p d" '(org-delete-property :wk "Delete" )
   "m o p a" '(org-property-action :wk "Actions")
   "m o n n" '(org-noter :wk "Go to note")
+  ;; Insertions
+  "m i" '(nil :wk "Insert")
+  "m i l" '(org-insert-link :wk "Link/Image")
+  "m i i" '(org-insert-item :wk "Item")
+  "m i t" '(org-table-create-or-convert-from-region :wk "Table")
+  "m i h" '(nil :wk "Heading")
+  "m i h h" '(org-insert-heading :wk "Normal")
+  "m i h t" '(org-insert-todo-heading :wk "Todo")
+  "m i s" '(nil :wk "Subheading")
+  "m i s s" '(org-insert-subheading :wk "Normal")
+  "m i s t" '(org-insert-todo-subheading :wk "Todo")
   )
 #+END_SRC
 *** Anki Editor
@@ -312,9 +341,9 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 ~org-mode~ so semantically it makes no sense to use ~o~ after the localleader.
 #+BEGIN_SRC emacs-lisp
 (nmap
-:prefix "SPC"
+:prefix my-leader
 :keymaps 'org-mode-map
-"m a" '(nil :wk "Do anki stuff")
+"m a" '(nil :wk "Anki")
 "m a p" '(anki-editor-push-notes :wk "Push notes")
 "m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
 "m a i" '(nil :wk "Insert notes")
@@ -359,6 +388,27 @@ Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c9401
 
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** Ob-Julia
+So ~julia~ support is inbuilt, however the process variable needs to be set:
+#+BEGIN_SRC emacs-lisp
+(setq  inferior-julia-program-name "/bin/julia")
+#+END_SRC
+*** Org Babel
+Julia is not set. Other languages might also be needed here eventually.
+#+BEGIN_SRC emacs-lisp
+(after! 'org
+            (org-babel-do-load-languages 'org-babel-load-languages
+                                         (append org-babel-load-languages
+                                                 '(julia . t))))
+#+END_SRC
+
+*** Org Config
+These are just variables I need to set to prevent things from dying.
+**** Inline images
+These need to be disabled by default otherwise ~emacs~ stalls often.
+#+BEGIN_SRC emacs-lisp
+(setq org-startup-with-inline-images 'nil)
+#+END_SRC
 *** Org Rifle
 This probably needs to be refactored later. Or loaded elsewhere.
 The keymaps are defined in the following way:
@@ -369,9 +419,9 @@ The keymaps are defined in the following way:
   :general
   (:keymaps 'org-mode-map
             :states 'normal
-            :prefix "SPC"
+            :prefix my-leader
             "m r" '(nil :wk "Rifle (Helm)")
-            "m r h" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
+            "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
             "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
@@ -391,8 +441,23 @@ The keymaps are defined in the following way:
   :general
   (:keymaps 'org-mode-map
             :states 'normal
-            :prefix "SPC"
+            :prefix my-leader
             "m e m" '(org-mind-map-write :wk "Export mind-map") ))
+#+END_SRC
+*** Org Download
+This is already included in the standard doom setup. However, I was having
+trouble with relative exports so I have this one instead. Partially kanged from
+~doom-emacs~.
+#+BEGIN_SRC emacs-lisp
+(def-package! org-download
+  :after org
+  :config
+(setq-default org-download-image-dir "./img/"
+              org-download-screenshot-method "gnome-screenshot"
+              org-download-method 'directory
+              org-download-heading-lvl 1
+              )
+  )
 #+END_SRC
 ** Syntax Highlighting
 This section is for setting up major modes for various file formats which are
@@ -438,7 +503,14 @@ With macros.
                               '(("\\.lmp\\'" . lammps-mode))
                               ))
 #+END_SRC
-
+*** Pug Mode
+Need better font locking everywhere.
+#+BEGIN_SRC emacs-lisp
+(def-package! pug-mode
+  :config
+  (setq auto-mode-alist (append '(("\\.pug$" . pug-mode))
+                              auto-mode-alist)))
+#+END_SRC
 ** Functions
 *** Org-mode export pdf when saved
 This one is to generate pdfs whenever a buffer is saved. Mainly taken from
@@ -509,7 +581,6 @@ This is a catch all for the eventual ~org-mode~ based multiple target exports.
 - The actual code is much more elegant in every way possible.
 - Seriously there has to be  a way to not have to do this.
   
-  
 *** TODO Safe Evals
 This enables the evaluation of these forms. Read more about this via
 ~docstrings~ sometime.
@@ -521,10 +592,11 @@ This enables the evaluation of these forms. Read more about this via
 ** Troubleshooting
 These are strictly temporary hacks to resolve problems until they are fixed
 upstream.
-
-
+#+BEGIN_SRC emacs-lisp
+(after! doom-themes
+  (remove-hook 'doom-load-theme-hook #'doom-themes-treemacs-config))
+#+END_SRC
 ** Temporary
-
 *** LaTeX for Org mode
 Pretty this up. Consider using file templates or something. Atleast make a
 proper repo. This is really ad-hoc right now and from [[https://www.reddit.com/r/emacs/comments/54g578/anyone_go_from_using_latex_to_org_mode/][this reddit thread]].
@@ -614,7 +686,6 @@ This is from [[https://www.reddit.com/r/emacs/comments/8tjgtu/cdlatex_and_genera
 ** Flycheck Additions
 These are basically meant to aid in development. The relevant linters are also
 added here.
-
 *** MELPA Helpers
 This includes settings for both flycheck and the packages it needs.
 #+BEGIN_SRC emacs-lisp
