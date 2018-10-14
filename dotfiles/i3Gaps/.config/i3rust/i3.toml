@@ -1,11 +1,11 @@
 theme = "solarized-dark"
 icons = "awesome"
 
-[[block]]
-block = "xrandr"
-icons = true
-resolution = true
-interval = 2
+# [[block]]
+# block = "xrandr"
+# icons = true
+# resolution = true
+# interval = 2
 
 [[block]]
 block = "disk_space"
@@ -33,9 +33,6 @@ interval = 1
 format = "{1m}"
 
 [[block]]
-block = "sound"
-
-[[block]]
 block = "net"
 device = "wlp4s0"
 ssid = true
@@ -53,3 +50,6 @@ show = "both"
 block = "time"
 interval = 60
 format = "%a %d/%m %R"
+
+[[block]]
+block = "sound"
