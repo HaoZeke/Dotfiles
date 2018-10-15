@@ -224,6 +224,33 @@ workspace $ws8 output DVI-0
 workspace $ws9 output DVI-0
 workspace $ws10 output DVI-0
 
+#############
+# Autostart #
+#############
+# The order is important
+
+# Hide mice
+exec_always --no-startup-id xbanish
+exec_always --no-startup-id unclutter --timeout 1
+
+# WM Things
+exec_always bash $HOME/.local/bin/java_nonreparenting_wm_hack.sh
+exec_always compton --config ~/.config/compton.conf -b
+
+# Wallpaper Management
+exec_always nitrogen --restore
+
+# File Management
+exec_always udiskie -2
+exec_always thunar --restore
+
+# I have secrets
+exec_always gnome-encfs-manager
+
+# Some things I use
+exec_always flameshot
+
+# Scratchpad Stuff
 exec_always termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
 bindsym F1 [instance="subTerm"] scratchpad show
