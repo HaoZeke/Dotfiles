@@ -38,6 +38,7 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
+    - [[#rc-files][RC Files]]
   - [[#dockerfile-mode][Dockerfile Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
@@ -518,6 +519,13 @@ Need better font locking everywhere.
   :config
   (setq auto-mode-alist (append '(("\\.pug$" . pug-mode))
                               auto-mode-alist)))
+#+END_SRC
+*** RC Files
+These are usually encountered while building android stuff. They are handled
+well by ~conf-mode~.
+#+BEGIN_SRC emacs-lisp
+(setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
+                              auto-mode-alist))
 #+END_SRC
 ** Dockerfile Mode
 [[https://github.com/spotify/dockerfile-mode][This]] package from spotify has support for building things as well as
