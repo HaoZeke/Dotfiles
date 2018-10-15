@@ -205,6 +205,22 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
+#
+# Multi-head setup
+#
+
+# Find a better way (displays determined via xrandr)
+
+workspace $ws1 output VGA-0
+workspace $ws2 output VGA-0
+workspace $ws3 output VGA-0
+workspace $ws4 output VGA-0
+workspace $ws5 output VGA-0
+workspace $ws6 output DVI-0
+workspace $ws7 output DVI-0
+workspace $ws8 output DVI-0
+workspace $ws9 output DVI-0
+workspace $ws10 output DVI-0
 
 exec_always termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
