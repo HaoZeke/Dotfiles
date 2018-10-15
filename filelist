@@ -111,6 +111,7 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 .config/zathura/zathurarc
 .config/zathura/zathuraThemerc
 .config/tridactyl/tridactylrc
+.config/termite/config
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
