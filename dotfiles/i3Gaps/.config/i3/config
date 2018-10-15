@@ -15,7 +15,8 @@
 # Mod1 → Alt Key
 set $mod Mod4
 set $font "pango:DejaVu Sans Mono 9"
-set $menu "rofi -show combi -show-icons -combi-modi \\"drun,run\\" -modi combi"
+set $menu "rofi -show combi -show-icons -combi-modi \\"window,drun,run,ssh\\" -modi combi"
+set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 # I hate uxterm (i3-sensible-terminal)
 set $term termite
 # Workspaces
@@ -85,6 +86,7 @@ bindsym $mod+w kill
 
 # start dmenu (a program launcher)
 bindsym ctrl+space exec $menu
+bindsym ctrl+shift+space exec --no-startup-id $menuCalc
 # There also is the (new) i3-dmenu-desktop which only displays applications
 # shipping a .desktop file. It is a wrapper around dmenu, so you need that
 # installed.
