@@ -62,9 +62,9 @@ set $right semicolon
 floating_modifier $mod
 
 # Gaps
-# smart_gaps on
-# gaps outer 0
-# gaps inner 5
+smart_gaps on
+gaps outer 5
+gaps inner 5
 
 # Keybindings
 ##############
