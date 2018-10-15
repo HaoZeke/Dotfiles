@@ -1,3 +1,7 @@
+[options]
+use_xft = true
+# This is from nerd-fonts-fira-mono
+font = FuraMono Nerd Font 13
 
 # notMine
 ##########
