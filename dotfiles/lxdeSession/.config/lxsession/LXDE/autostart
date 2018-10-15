@@ -1,10 +1,6 @@
 @light-locker
 @udiskie -2
-@pulseaudio
-@thunar --daemon
 @nitrogen --restore
-@mpd
-@mpdscribble
 @synapse -s
 @java_nonreparenting
 @xscreensaver -no-splash
@@ -12,4 +8,9 @@
 @xfce4-panel --disable-wm-check
 @xbanish
 @unclutter --timeout 1
-@rygel
+@thunar --daemon
+@gnome-encfs-manager
+# These are now scu-enable things
+# @rygel
+# @pulseaudio
+# @mpd
