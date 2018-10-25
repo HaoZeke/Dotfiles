@@ -389,6 +389,25 @@ terminals and that makes sense, so I guess this is fine.
 
 Cancelled since [[https://github.com/hlissner/doom-emacs/commit/287460cb050c94010f4d8ded0fbfecf479c1772a][this commit]] on the ~develop~ branch.
 
+*** TeX Mode
+These are more semantic for me.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix my-leader
+  :keymaps 'latex-mode-map
+  ;; Folding Stuff
+  "m f" '(nil :wk "Fold Things")
+  "m f c" '(TeX-fold-comment :wk "Comment")
+  "m f e" '(TeX-fold-env :wk "Environment")
+  "m f m" '(TeX-fold-math :wk "Math")
+  ;; Insertions
+  "m i" '(nil :wk "Insert")
+  "m i m" '(helm-insert-latex-math :wk "Math Symbols")
+  "m i r" '(nil :wk "References")
+  "m i r h" '(helm-bibtex-with-local-bibliography :wk "Helm")
+  "m i r r" '(reftex-citation :wk "Reftex")
+  )
+#+END_SRC
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
 *** Ob-Julia
