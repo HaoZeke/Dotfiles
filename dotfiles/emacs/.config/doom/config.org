@@ -173,11 +173,12 @@ Also integrated upstream.
 I like having spell checks for everything.
 #+BEGIN_SRC emacs-lisp
 ;; Load it
-(def-package! salt-mode)
+(def-package! salt-mode
+  :config
 ;; Flyspell
 (add-hook 'salt-mode-hook
         (lambda ()
-            (flyspell-mode 1)))
+            (flyspell-mode 1))))
 #+END_SRC
 ** Hugo Stuff
 Easy hugo I don't need right now.
