@@ -40,6 +40,7 @@
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
     - [[#rc-files][RC Files]]
+    - [[#graphql-mode][GraphQL Mode]]
   - [[#aesthetics][Aesthetics]]
     - [[#dired-icons][Dired Icons]]
   - [[#dockerfile-mode][Dockerfile Mode]]
@@ -550,6 +551,11 @@ well by ~conf-mode~.
 #+BEGIN_SRC emacs-lisp
 (setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
                               auto-mode-alist))
+#+END_SRC
+*** GraphQL Mode
+This apparently only loads it for ~.graphql~ files...
+#+BEGIN_SRC emacs-lisp
+(def-package! graphql-mode)
 #+END_SRC
 ** Aesthetics
 *** TODO Dired Icons
