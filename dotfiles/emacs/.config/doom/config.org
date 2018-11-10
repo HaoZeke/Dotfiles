@@ -40,6 +40,8 @@
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
     - [[#rc-files][RC Files]]
+  - [[#aesthetics][Aesthetics]]
+    - [[#dired-icons][Dired Icons]]
   - [[#dockerfile-mode][Dockerfile Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
@@ -338,6 +340,8 @@ are a part of ~org-mode~.
   "m i s" '(nil :wk "Subheading")
   "m i s s" '(org-insert-subheading :wk "Normal")
   "m i s t" '(org-insert-todo-subheading :wk "Todo")
+  ;; Exports (excluding org-mind-map)
+  "m e d" '(org-export-dispatch :wk "Dispatch")
   )
 #+END_SRC
 *** Anki Editor
@@ -546,6 +550,15 @@ well by ~conf-mode~.
 #+BEGIN_SRC emacs-lisp
 (setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
                               auto-mode-alist))
+#+END_SRC
+** Aesthetics
+*** TODO Dired Icons
+Not much to configure. This should be a pull request to ~doom-emacs~.
+#+BEGIN_SRC emacs-lisp
+(def-package! all-the-icons-dired
+  :config
+  (add-hook 'dired-mode-hook 'all-the-icons-dired-mode)
+)
 #+END_SRC
 ** Dockerfile Mode
 [[https://github.com/spotify/dockerfile-mode][This]] package from spotify has support for building things as well as
