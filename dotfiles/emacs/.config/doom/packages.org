@@ -34,7 +34,6 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
-    - [[#graphql-mode][GraphQL Mode]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
@@ -207,11 +206,6 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
 I just like pugs.
 #+BEGIN_SRC emacs-lisp
 (package! pug-mode)
-#+END_SRC
-*** TODO GraphQL Mode
-[[github:davazp/graphql-mode][This]] seems to be a major mode, which is tiresome. Must look for a good minor mode.
-#+BEGIN_SRC emacs-lisp
-(package! graphql-mode)
 #+END_SRC
 ** Flycheck Additions
 *** MELPA Helper
