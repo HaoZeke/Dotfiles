@@ -276,6 +276,20 @@ they are redefined here for mnemonic usage. Also to add the ~which-key~ hints.
   "z" '(+evil/mc-make-cursor-here :wk "Place frozen cursor")
   )
 #+END_SRC
+**** Replace Stuff
+There are way too many of these to keep using ~helm~.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix my-leader
+  ;; replace things
+  "r" '(:ignore t :wk "replace")
+  "r s" '(replace-string :wk "String")
+  "r q" '(query-replace :wk "Query")
+  "r r" '(:ignore t :wk "Regexp")
+  "r r s" '(replace-regexp :wk "String")
+  "r r q" '(query-replace-regexp :wk "Query")
+  )
+#+END_SRC
 *** Markdown Improvements
 Local leader is already bound to `m` and there are few bindings, this just adds
 more.
