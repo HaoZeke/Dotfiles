@@ -325,8 +325,8 @@ Broken
 (nmap
   :prefix my-leader
   :keymaps '(org-mode-map pdf-view-mode-map)
-  "m" '(nil :wk "Local Commands")
-  "m o" '(nil :wk "Org Commands")
+  "m" '(:ignore t :wk "Local Commands")
+  "m o" '(:ignore t :wk "Org Commands")
   "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
@@ -338,24 +338,27 @@ are a part of ~org-mode~.
   :prefix my-leader
   :keymaps 'org-mode-map
   ;; Org Stuff
+  "m o" '(:ignore t :wk "Org")
   "m o t" '(org-set-tags :wk "Set tags")
-  "m o p" '(nil :wk "Properties")
+  "m o p" '(:ignore t :wk "Properties")
   "m o p s" '(org-set-property :wk "Set")
   "m o p d" '(org-delete-property :wk "Delete" )
   "m o p a" '(org-property-action :wk "Actions")
-  "m o n n" '(org-noter :wk "Go to note")
+  "m o n" '(:ignore t :wk "Noter")
+  "m o n n" '(org-noter :wk "Go To")
   ;; Insertions
-  "m i" '(nil :wk "Insert")
+  "m i" '(:ignore t :wk "Insert")
   "m i l" '(org-insert-link :wk "Link/Image")
   "m i i" '(org-insert-item :wk "Item")
   "m i t" '(org-table-create-or-convert-from-region :wk "Table")
-  "m i h" '(nil :wk "Heading")
+  "m i h" '(:ignore t :wk "Heading")
   "m i h h" '(org-insert-heading :wk "Normal")
   "m i h t" '(org-insert-todo-heading :wk "Todo")
-  "m i s" '(nil :wk "Subheading")
+  "m i s" '(:ignore t :wk "Subheading")
   "m i s s" '(org-insert-subheading :wk "Normal")
   "m i s t" '(org-insert-todo-subheading :wk "Todo")
   ;; Exports (excluding org-mind-map)
+  "m e" '(:ignore t :wk "Exports")
   "m e d" '(org-export-dispatch :wk "Dispatch")
   )
 #+END_SRC
@@ -366,10 +369,10 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 (nmap
 :prefix my-leader
 :keymaps 'org-mode-map
-"m a" '(nil :wk "Anki")
+"m a" '(:ignore t :wk "Anki")
 "m a p" '(anki-editor-push-notes :wk "Push notes")
 "m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
-"m a i" '(nil :wk "Insert notes")
+"m a i" '(:ignore t :wk "Insert notes")
 "m a i n" '(anki-editor-insert-note :wk "Insert a new note")
 "m a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
 )
@@ -416,14 +419,14 @@ These are more semantic for me.
   :prefix my-leader
   :keymaps '(latex-mode-map tex-mode-map LaTeX-mode-map)
   ;; Folding Stuff
-  "m f" '(nil :wk "Fold Things")
+  "m f" '(:ignore t :wk "Fold Things")
   "m f c" '(TeX-fold-comment :wk "Comment")
   "m f e" '(TeX-fold-env :wk "Environment")
   "m f m" '(TeX-fold-math :wk "Math")
   ;; Insertions
-  "m i" '(nil :wk "Insert")
+  "m i" '(:ignore t :wk "Insert")
   "m i m" '(helm-insert-latex-math :wk "Math Symbols")
-  "m i r" '(nil :wk "References")
+  "m i r" '(:ignore t :wk "References")
   "m i r h" '(helm-bibtex-with-local-bibliography :wk "Helm")
   "m i r r" '(reftex-citation :wk "Reftex")
   )
@@ -462,12 +465,12 @@ The keymaps are defined in the following way:
   (:keymaps 'org-mode-map
             :states 'normal
             :prefix my-leader
-            "m r" '(nil :wk "Rifle (Helm)")
+            "m r" '(:ignore t :wk "Rifle (Helm)")
             "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
             "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
-            "m r o" '(nil :wk "Occur (Persistent)")
+            "m r o" '(:ignore t :wk "Occur (Persistent)")
             "m r o b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r o e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r o d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
