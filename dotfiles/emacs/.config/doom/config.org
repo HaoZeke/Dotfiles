@@ -24,6 +24,7 @@
     - [[#org-noter][Org Noter]]
     - [[#org-mode-additions][Org Mode additions]]
     - [[#anki-editor-1][Anki Editor]]
+    - [[#cc-mode][CC Mode]]
     - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
     - [[#tex-mode][TeX Mode]]
@@ -375,6 +376,28 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 "m a i" '(:ignore t :wk "Insert notes")
 "m a i n" '(anki-editor-insert-note :wk "Insert a new note")
 "m a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
+)
+
+#+END_SRC
+*** CC Mode
+These are basically wrappers around various ~rtags~ functions.
+#+BEGIN_SRC emacs-lisp
+(nmap
+:prefix my-leader
+:keymaps 'c-mode-base-map
+"m" '(:ignore t :wk "Local Commands")
+"m r" '(:ignore t :wk "Rtags")
+"m r c" '(rtags-check-includes :wk "Check Includes")
+;; All the find commands
+"m r f" '(:ignore t :wk "Find")
+"m r f s" '(:ignore t :wk "Symbol")
+"m r f s a" '(rtags-find-symbol-at-point :wk "At point")
+"m r f s s" '(rtags-find-symbol :wk "Symbol")
+"m r f s c" '(:ignore t :wk "Current")
+"m r f s c f" '(rtags-find-symbol-current-file :wk "File")
+"m r f s c d" '(rtags-find-symbol-current-dir :wk "Directory")
+"m r f f" '(rtags-find-functions-called-by-this-function :wk "Functions")
+"m r f r" '(rtags-find-references :wk "References")
 )
 
 #+END_SRC
