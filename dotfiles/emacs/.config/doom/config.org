@@ -291,6 +291,13 @@ There are way too many of these to keep using ~helm~.
   "r r q" '(query-replace-regexp :wk "Query")
   )
 #+END_SRC
+**** No ESC
+The escape key for exiting things seems very painful.
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps '(insert visual normal)
+ "S-SPC" 'evil-force-normal-state)
+ #+END_SRC
 *** Markdown Improvements
 Local leader is already bound to `m` and there are few bindings, this just adds
 more.
