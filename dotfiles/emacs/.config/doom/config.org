@@ -24,8 +24,10 @@
     - [[#org-noter][Org Noter]]
     - [[#org-mode-additions][Org Mode additions]]
     - [[#anki-editor-1][Anki Editor]]
+    - [[#cc-mode][CC Mode]]
     - [[#evil-movement][Evil Movement]]
     - [[#neotree----treemacs][Neotree --> Treemacs]]
+    - [[#tex-mode][TeX Mode]]
   - [[#org-additions][Org Additions]]
     - [[#ob-julia][Ob-Julia]]
     - [[#org-babel][Org Babel]]
@@ -39,6 +41,8 @@
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
     - [[#rc-files][RC Files]]
+  - [[#aesthetics][Aesthetics]]
+    - [[#dired-icons][Dired Icons]]
   - [[#dockerfile-mode][Dockerfile Mode]]
   - [[#functions][Functions]]
     - [[#org-mode-export-pdf-when-saved][Org-mode export pdf when saved]]
@@ -169,11 +173,12 @@ Also integrated upstream.
 I like having spell checks for everything.
 #+BEGIN_SRC emacs-lisp
 ;; Load it
-(def-package! salt-mode)
+(def-package! salt-mode
+  :config
 ;; Flyspell
 (add-hook 'salt-mode-hook
         (lambda ()
-            (flyspell-mode 1)))
+            (flyspell-mode 1))))
 #+END_SRC
 ** Hugo Stuff
 Easy hugo I don't need right now.
@@ -272,6 +277,27 @@ they are redefined here for mnemonic usage. Also to add the ~which-key~ hints.
   "z" '(+evil/mc-make-cursor-here :wk "Place frozen cursor")
   )
 #+END_SRC
+**** Replace Stuff
+There are way too many of these to keep using ~helm~.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix my-leader
+  ;; replace things
+  "r" '(:ignore t :wk "replace")
+  "r s" '(replace-string :wk "String")
+  "r q" '(query-replace :wk "Query")
+  "r r" '(:ignore t :wk "Regexp")
+  "r r s" '(replace-regexp :wk "String")
+  "r r q" '(query-replace-regexp :wk "Query")
+  )
+#+END_SRC
+**** No ESC
+The escape key for exiting things seems very painful.
+#+BEGIN_SRC emacs-lisp
+(general-define-key
+ :keymaps '(insert visual normal)
+ "S-SPC" 'evil-force-normal-state)
+ #+END_SRC
 *** Markdown Improvements
 Local leader is already bound to `m` and there are few bindings, this just adds
 more.
@@ -283,7 +309,15 @@ more.
   "m i" '(ignore t :wk "Insert")
   "m i i" '(markdown-insert-image :wk "Image")
   "m i l" '(markdown-insert-link :wk "Link")
-  "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block"))
+  "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block")
+  "m i h" '(:ignore t :wk "Headings")
+  "m i h 1" '(markdown-insert-atx-1 :wk "One")
+  "m i h 2" '(markdown-insert-atx-1 :wk "Two")
+  "m i h 3" '(markdown-insert-atx-1 :wk "Three")
+  "m i h 4" '(markdown-insert-atx-1 :wk "Four")
+  "m i h 5" '(markdown-insert-atx-1 :wk "Five")
+  "m i h 6" '(markdown-insert-atx-1 :wk "Six")
+  )
 #+END_SRC
 *** Pdf Mode
 These bindings are essentially part of ~org-noter~ however, they do not actually
@@ -307,8 +341,8 @@ Broken
 (nmap
   :prefix my-leader
   :keymaps '(org-mode-map pdf-view-mode-map)
-  "m" '(nil :wk "Local Commands")
-  "m o" '(nil :wk "Org Commands")
+  "m" '(:ignore t :wk "Local Commands")
+  "m o" '(:ignore t :wk "Org Commands")
   "m o n n" '(org-noter :wk "Go to note")
   )
 #+END_SRC
@@ -320,23 +354,28 @@ are a part of ~org-mode~.
   :prefix my-leader
   :keymaps 'org-mode-map
   ;; Org Stuff
+  "m o" '(:ignore t :wk "Org")
   "m o t" '(org-set-tags :wk "Set tags")
-  "m o p" '(nil :wk "Properties")
+  "m o p" '(:ignore t :wk "Properties")
   "m o p s" '(org-set-property :wk "Set")
   "m o p d" '(org-delete-property :wk "Delete" )
   "m o p a" '(org-property-action :wk "Actions")
-  "m o n n" '(org-noter :wk "Go to note")
+  "m o n" '(:ignore t :wk "Noter")
+  "m o n n" '(org-noter :wk "Go To")
   ;; Insertions
-  "m i" '(nil :wk "Insert")
+  "m i" '(:ignore t :wk "Insert")
   "m i l" '(org-insert-link :wk "Link/Image")
   "m i i" '(org-insert-item :wk "Item")
   "m i t" '(org-table-create-or-convert-from-region :wk "Table")
-  "m i h" '(nil :wk "Heading")
+  "m i h" '(:ignore t :wk "Heading")
   "m i h h" '(org-insert-heading :wk "Normal")
   "m i h t" '(org-insert-todo-heading :wk "Todo")
-  "m i s" '(nil :wk "Subheading")
+  "m i s" '(:ignore t :wk "Subheading")
   "m i s s" '(org-insert-subheading :wk "Normal")
   "m i s t" '(org-insert-todo-subheading :wk "Todo")
+  ;; Exports (excluding org-mind-map)
+  "m e" '(:ignore t :wk "Exports")
+  "m e d" '(org-export-dispatch :wk "Dispatch")
   )
 #+END_SRC
 *** Anki Editor
@@ -346,12 +385,34 @@ These are only relevant to ~org-mode~. Nevertheless they are not part of
 (nmap
 :prefix my-leader
 :keymaps 'org-mode-map
-"m a" '(nil :wk "Anki")
+"m a" '(:ignore t :wk "Anki")
 "m a p" '(anki-editor-push-notes :wk "Push notes")
 "m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
-"m a i" '(nil :wk "Insert notes")
+"m a i" '(:ignore t :wk "Insert notes")
 "m a i n" '(anki-editor-insert-note :wk "Insert a new note")
 "m a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
+)
+
+#+END_SRC
+*** CC Mode
+These are basically wrappers around various ~rtags~ functions.
+#+BEGIN_SRC emacs-lisp
+(nmap
+:prefix my-leader
+:keymaps 'c-mode-base-map
+"m" '(:ignore t :wk "Local Commands")
+"m r" '(:ignore t :wk "Rtags")
+"m r c" '(rtags-check-includes :wk "Check Includes")
+;; All the find commands
+"m r f" '(:ignore t :wk "Find")
+"m r f s" '(:ignore t :wk "Symbol")
+"m r f s a" '(rtags-find-symbol-at-point :wk "At point")
+"m r f s s" '(rtags-find-symbol :wk "Symbol")
+"m r f s c" '(:ignore t :wk "Current")
+"m r f s c f" '(rtags-find-symbol-current-file :wk "File")
+"m r f s c d" '(rtags-find-symbol-current-dir :wk "Directory")
+"m r f f" '(rtags-find-functions-called-by-this-function :wk "Functions")
+"m r f r" '(rtags-find-references :wk "References")
 )
 
 #+END_SRC
@@ -394,16 +455,16 @@ These are more semantic for me.
 #+BEGIN_SRC emacs-lisp
 (nmap
   :prefix my-leader
-  :keymaps 'latex-mode-map
+  :keymaps '(latex-mode-map tex-mode-map LaTeX-mode-map)
   ;; Folding Stuff
-  "m f" '(nil :wk "Fold Things")
+  "m f" '(:ignore t :wk "Fold Things")
   "m f c" '(TeX-fold-comment :wk "Comment")
   "m f e" '(TeX-fold-env :wk "Environment")
   "m f m" '(TeX-fold-math :wk "Math")
   ;; Insertions
-  "m i" '(nil :wk "Insert")
+  "m i" '(:ignore t :wk "Insert")
   "m i m" '(helm-insert-latex-math :wk "Math Symbols")
-  "m i r" '(nil :wk "References")
+  "m i r" '(:ignore t :wk "References")
   "m i r h" '(helm-bibtex-with-local-bibliography :wk "Helm")
   "m i r r" '(reftex-citation :wk "Reftex")
   )
@@ -442,12 +503,12 @@ The keymaps are defined in the following way:
   (:keymaps 'org-mode-map
             :states 'normal
             :prefix my-leader
-            "m r" '(nil :wk "Rifle (Helm)")
+            "m r" '(:ignore t :wk "Rifle (Helm)")
             "m r b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
             "m r a" '(helm-org-rifle-agenda-files :wk "Rifle agenda")
-            "m r o" '(nil :wk "Occur (Persistent)")
+            "m r o" '(:ignore t :wk "Occur (Persistent)")
             "m r o b" '(helm-org-rifle-current-buffer :wk "Rifle buffer")
             "m r o e" '(helm-org-rifle :wk "Rifle every open buffer")
             "m r o d" '(helm-org-rifle-directory :wk "Rifle from org-directory")
@@ -545,6 +606,15 @@ well by ~conf-mode~.
 #+BEGIN_SRC emacs-lisp
 (setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
                               auto-mode-alist))
+#+END_SRC
+** Aesthetics
+*** TODO Dired Icons
+Not much to configure. This should be a pull request to ~doom-emacs~.
+#+BEGIN_SRC emacs-lisp
+(def-package! all-the-icons-dired
+  :config
+  (add-hook 'dired-mode-hook 'all-the-icons-dired-mode)
+)
 #+END_SRC
 ** Dockerfile Mode
 [[https://github.com/spotify/dockerfile-mode][This]] package from spotify has support for building things as well as
