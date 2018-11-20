@@ -9,6 +9,8 @@
     - [[#visual-tweaks][Visual tweaks]]
     - [[#helm-changes][Helm changes]]
     - [[#kill-spellcheck][Kill spellcheck]]
+  - [[#spacemacs-stuff][Spacemacs Stuff]]
+    - [[#add-to-hooks][Add To Hooks]]
   - [[#package-settings][Package Settings]]
     - [[#magit-aids][Magit Aids]]
     - [[#saltstack-settings][SaltStack Settings]]
@@ -49,6 +51,10 @@
     - [[#org-mode-export-tex-when-saved][Org-mode export tex when saved]]
     - [[#caveats][Caveats]]
     - [[#helper-function][Helper function]]
+    - [[#smarter-clang-formatting][Smarter Clang Formatting]]
+  - [[#hooks][Hooks]]
+    - [[#caveats-1][Caveats]]
+    - [[#before-save-hooks][Before Save Hooks]]
   - [[#safe-evals-and-variables][Safe Evals and Variables]]
     - [[#safe-variables][Safe variables]]
     - [[#safe-evals][Safe Evals]]
@@ -133,6 +139,26 @@ for other random buffers.
 (setq-hook! 'LaTeX-mode-hook +spellcheck-immediately nil)
 #+END_SRC
 
+** Spacemacs Stuff
+These are basically functions kanged directly from the [[https://github.com/syl20bnr/spacemacs][spacemacs repo]].
+*** Add To Hooks
+I guess this is the neatest way to work with hooks.
+#+BEGIN_SRC emacs-lisp
+;; from https://github.com/cofi/dotfiles/blob/master/emacs.d/config/cofi-util.el#L38
+(defun spacemacs/add-to-hooks (fun hooks)
+  "Add function to hooks"
+  (dolist (hook hooks)
+    (add-hook hook fun)))
+
+(defun spacemacs/add-all-to-hook (hook &rest funs)
+  "Add functions to hook."
+  (spacemacs/add-to-hook hook funs))
+
+(defun spacemacs/add-to-hook (hook funs)
+  "Add list of functions to hook."
+  (dolist (fun funs)
+ (add-hook hook fun)))
+#+END_SRC
 ** Package Settings
 These should eventually go into a different module.
 Each of these.
