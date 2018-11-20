@@ -53,6 +53,7 @@
   - [[#hooks][Hooks]]
     - [[#caveats-1][Caveats]]
     - [[#before-save-hooks][Before Save Hooks]]
+    - [[#disable-auto-rdm][Disable Auto RDM]]
   - [[#safe-evals-and-variables][Safe Evals and Variables]]
     - [[#safe-variables][Safe variables]]
     - [[#safe-evals][Safe Evals]]
@@ -695,6 +696,12 @@ Currently I only need to use the clang formatting hook here.
 (add-hook! (c-mode c++-mode cc-mode) #'haozeke/clang-format-buffer-smart-on-save)
                         #+END_SRC
 
+*** Disable Auto RDM
+This conflicts with the ArchLinux ~systemctl --user start rdm~ thing.
+#+BEGIN_SRC emacs-lisp
+; Do not automatically try to run rdm
+(remove-hook 'c-mode-common-hook #'+cc|init-rtags)
+#+END_SRC
 ** Safe Evals and Variables
 *** Safe variables
 The problem is that ~packages.el~ isn't being produced by the clever little ugly
