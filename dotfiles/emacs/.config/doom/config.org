@@ -670,9 +670,10 @@ Figure out if I can replicate this some other way. Taken from [[https://github.c
 This is taken from [[https://eklitzke.org/smarter-emacs-clang-format][this blog]].
 #+BEGIN_SRC emacs-lisp
 (defun haozeke/clang-format-buffer-conditional ()
-  "Reformats the buffer if .clang-format exists in the projectile root."
+(interactive)
+  "Reformat buffer if .clang-format exists in the projectile root."
   (when (f-exists? (expand-file-name ".clang-format" (projectile-project-root)))
-    (clang-format-buffer)))
+    (+format|buffer)))
 #+END_SRC
 ** Safe Evals and Variables
 *** Safe variables
