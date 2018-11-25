@@ -614,11 +614,17 @@ well by ~conf-mode~.
                               auto-mode-alist))
 #+END_SRC
 *** JVM Languages
-Since ~java+meghnada~, and ~clojure~ are covered by the standard ~doom~ config, these include
+Since ~java+meghnada~, ~clojure~, and ~scala~ are covered by the standard ~doom~ config,
+the rest of these need to be loaded here.
 #+BEGIN_SRC emacs-lisp
 (def-package! kotlin-mode
   :config
   (setq auto-mode-alist (append '(("\\.kt$" . kotlin-mode))
+                              auto-mode-alist)))
+
+(def-package! groovy-mode
+  :config
+  (setq auto-mode-alist (append '(("\\.groovy$" . groovy-mode))
                               auto-mode-alist)))
 #+END_SRC
 ** Aesthetics
