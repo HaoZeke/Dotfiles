@@ -41,6 +41,7 @@
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
     - [[#rc-files][RC Files]]
+    - [[#jvm-languages][JVM Languages]]
   - [[#aesthetics][Aesthetics]]
     - [[#dired-icons][Dired Icons]]
   - [[#dockerfile-mode][Dockerfile Mode]]
@@ -611,6 +612,14 @@ well by ~conf-mode~.
 #+BEGIN_SRC emacs-lisp
 (setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
                               auto-mode-alist))
+#+END_SRC
+*** JVM Languages
+Since ~java+meghnada~, and ~clojure~ are covered by the standard ~doom~ config, these include
+#+BEGIN_SRC emacs-lisp
+(def-package! kotlin-mode
+  :config
+  (setq auto-mode-alist (append '(("\\.kt$" . kotlin-mode))
+                              auto-mode-alist)))
 #+END_SRC
 ** Aesthetics
 *** TODO Dired Icons
