@@ -602,9 +602,7 @@ With macros.
 Need better font locking everywhere.
 #+BEGIN_SRC emacs-lisp
 (def-package! pug-mode
-  :config
-  (setq auto-mode-alist (append '(("\\.pug$" . pug-mode))
-                              auto-mode-alist)))
+  :mode "/\\.pug$/")
 #+END_SRC
 *** RC Files
 These are usually encountered while building android stuff. They are handled
@@ -618,14 +616,10 @@ Since ~java+meghnada~, ~clojure~, and ~scala~ are covered by the standard ~doom~
 the rest of these need to be loaded here.
 #+BEGIN_SRC emacs-lisp
 (def-package! kotlin-mode
-  :config
-  (setq auto-mode-alist (append '(("\\.kt$" . kotlin-mode))
-                              auto-mode-alist)))
+  :mode "/\\.kt$/")
 
 (def-package! groovy-mode
-  :config
-  (setq auto-mode-alist (append '(("\\.groovy$" . groovy-mode))
-                              auto-mode-alist)))
+  :mode "/\\.groovy$/")
 #+END_SRC
 ** Aesthetics
 *** TODO Dired Icons
@@ -641,9 +635,8 @@ Not much to configure. This should be a pull request to ~doom-emacs~.
 highlighting Dockerfiles.
 #+BEGIN_SRC emacs-lisp
 (def-package! dockerfile-mode
+  :mode "Dockerfile\\'"
   :config
-  (setq auto-mode-alist (append '(("Dockerfile\\'" . dockerfile-mode))
-                              auto-mode-alist))
   (put 'dockerfile-image-name 'safe-local-variable #'stringp)
   )
 #+END_SRC
