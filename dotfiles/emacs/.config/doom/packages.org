@@ -213,6 +213,8 @@ Currently the languages I care about (apart from Java) are:
 #+BEGIN_SRC emacs-lisp
 ; Kotlin > Java
 (package! kotlin-mode)
+; Groovy -> Testing
+(package! groovy-mode)
 #+END_SRC
 ** Flycheck Additions
 *** MELPA Helper
