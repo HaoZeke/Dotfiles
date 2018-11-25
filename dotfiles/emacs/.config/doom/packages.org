@@ -34,6 +34,7 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
+    - [[#jvm-languages][JVM Languages]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
@@ -206,6 +207,12 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
 I just like pugs.
 #+BEGIN_SRC emacs-lisp
 (package! pug-mode)
+#+END_SRC
+*** JVM Languages
+Currently the languages I care about (apart from Java) are:
+#+BEGIN_SRC emacs-lisp
+; Kotlin > Java
+(package! kotlin-mode)
 #+END_SRC
 ** Flycheck Additions
 *** MELPA Helper
