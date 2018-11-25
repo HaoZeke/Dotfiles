@@ -97,7 +97,7 @@
       ;hy                ; readability of scheme w/ speed of python
       ;(java +meghanada) ; the poster child for carpal tunnel syndrome
       javascript        ; all(hope(abandon(ye(who(enter(here))))))
-      julia             ; a better, faster MATLAB
+      ;; julia             ; a better, faster MATLAB
        (latex            ; writing papers in Emacs has never been so fun
         +unicode-math    ; adding better math support
         +latexmk         ; No other option TBH
@@ -124,7 +124,7 @@
       ;racket            ; a DSL for DSLs
       ;rest              ; Emacs as a REST client
       ruby              ; 1.step do {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
-      rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+      ;; rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
       ;scala             ; java, but good
       sh                ; she sells (ba|z)sh shells on the C xor
        ;; +fish)            ; Fish support
