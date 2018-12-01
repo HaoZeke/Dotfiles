@@ -3,7 +3,9 @@ use_xft = true
 # This is from nerd-fonts-fira-mono
 font = FuraMono Nerd Font 13
 browser = firefox-developer-edition
-
+# Length of the scrollback buffer, 0 disabled the scrollback buffer
+# and setting it to a negative value means "infinite scrollback"
+scrollback_lines = -1
 # notMine
 ##########
 # This is from https://github.com/khamer/base16-termite/blob/master/themes/base16-onedark.config
