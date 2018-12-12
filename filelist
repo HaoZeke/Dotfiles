@@ -103,6 +103,7 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 .local/bin/installHelpers/texlive.profile
 .local/bin/shellHelpers/bash2zshpromt
 .local/bin/webHelpers/netlify-git-api
+.local/bin/webHelpers/idm.sh
 
 # Configs #
 .config/nvim/init.vim
