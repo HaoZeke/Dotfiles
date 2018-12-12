@@ -33,7 +33,8 @@ almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession,emacs,bspwm
 almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,emacs,bspwm
 
 # My current config. [desktop]
-myarchbox=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublime,bspwm
+hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublime,bspwm
+hzhome_i3=common,linux,archLinux,multiMonitor,emacs,sublime,i3Gaps,sway,wayland,xkblayout
 
 # My current config. [laptop]
 hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,xkblayout
