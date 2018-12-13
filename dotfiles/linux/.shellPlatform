@@ -61,8 +61,9 @@ fi
 # XDG Paths
 ############
 
-export XDG_DATA_HOME=$XDG_DATA_HOME:/usr/share
-export XDG_DATA_DIRS=$XDG_DATA_HOME:/usr/share
+# Use xdg-user-dirs-update instead
+#export XDG_DATA_HOME=$XDG_DATA_HOME:/usr/share
+#export XDG_DATA_DIRS=$XDG_DATA_HOME:/usr/share
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Emacs Stuff (cross platform)
