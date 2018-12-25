@@ -297,6 +297,17 @@ There are way too many of these to keep using ~helm~.
   "r r q" '(query-replace-regexp :wk "Query")
   )
 #+END_SRC
+**** Lookup
+These were bound to really weird things.
+#+BEGIN_SRC emacs-lisp
+(nmap
+  :prefix my-leader
+  ;; look things up
+  "l" '(:ignore t :wk "lookup")
+  "l o" '(+lookup/online-select :wk "Online")
+  "l f" '(+lookup/file :wk "File")
+  )
+#+END_SRC
 **** No ESC
 The escape key for exiting things seems very painful.
 #+BEGIN_SRC emacs-lisp
