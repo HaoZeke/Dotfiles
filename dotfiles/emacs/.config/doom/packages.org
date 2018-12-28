@@ -34,6 +34,7 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
+    - [[#nix-mode][Nix Mode]]
     - [[#jvm-languages][JVM Languages]]
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
@@ -207,6 +208,12 @@ Mantained [[https://github.com/HaoZeke/lammps-mode][by me]] now.
 I just like pugs.
 #+BEGIN_SRC emacs-lisp
 (package! pug-mode)
+#+END_SRC
+*** Nix Mode
+For building more cross-os stuff. This is the [[https://github.com/NixOS/nix-mode][official package]], but will look
+into binding and using [[github:travisbhartwell/nix-emacs][nix-emacs]] as well.
+#+BEGIN_SRC emacs-lisp
+(package! nix-mode)
 #+END_SRC
 *** JVM Languages
 Currently the languages I care about (apart from Java) are:
