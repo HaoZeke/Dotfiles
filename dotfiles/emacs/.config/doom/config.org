@@ -359,33 +359,33 @@ need to be bound in ~org-mode~ files.
 Apart from extension specific bindings, here we define useful functions which
 are a part of ~org-mode~.
 #+BEGIN_SRC emacs-lisp
-(nmap
-  :prefix my-leader
-  :keymaps 'org-mode-map
-  ;; Org Stuff
-  "m o" '(:ignore t :wk "Org")
-  "m o t" '(org-set-tags :wk "Set tags")
-  "m o p" '(:ignore t :wk "Properties")
-  "m o p s" '(org-set-property :wk "Set")
-  "m o p d" '(org-delete-property :wk "Delete" )
-  "m o p a" '(org-property-action :wk "Actions")
-  "m o n" '(:ignore t :wk "Noter")
-  "m o n n" '(org-noter :wk "Go To")
-  ;; Insertions
-  "m i" '(:ignore t :wk "Insert")
-  "m i l" '(org-insert-link :wk "Link/Image")
-  "m i i" '(org-insert-item :wk "Item")
-  "m i t" '(org-table-create-or-convert-from-region :wk "Table")
-  "m i h" '(:ignore t :wk "Heading")
-  "m i h h" '(org-insert-heading :wk "Normal")
-  "m i h t" '(org-insert-todo-heading :wk "Todo")
-  "m i s" '(:ignore t :wk "Subheading")
-  "m i s s" '(org-insert-subheading :wk "Normal")
-  "m i s t" '(org-insert-todo-subheading :wk "Todo")
-  ;; Exports (excluding org-mind-map)
-  "m e" '(:ignore t :wk "Exports")
-  "m e d" '(org-export-dispatch :wk "Dispatch")
-  )
+(map! :localleader
+      :map org-mode-map
+      (:prefix "o"
+        :desc "Tags" "t" 'org-set-tags
+        (:prefix ("p" . "Properties")
+          :desc "Set" "s" 'org-set-property
+          :desc "Delete" "d" 'org-delete-property
+          :desc "Actions" "a" 'org-property-action
+          )
+        )
+      (:prefix ("i" . "Insert")
+        :desc "Link/Image" "l" 'org-insert-link
+        :desc "Item" "o" 'org-insert-item
+        :desc "Table" "t" 'org-table-create-or-convert-from-region
+        (:prefix ("h" . "Headings")
+          :desc "Normal" "h" 'org-insert-heading
+          :desc "Todo" "t" 'org-insert-todo-heading
+          )
+        (:prefix ("s" . "Subheadings")
+          :desc "Normal" "s" 'org-insert-subheading
+          :desc "Todo" "t" 'org-insert-todo-subheading
+          )
+        (:prefix ("e" . "Exports")
+          :desc "Dispatch" "d" 'org-export-dispatch
+          )
+        )
+      )
 #+END_SRC
 *** Anki Editor
 These are only relevant to ~org-mode~. Nevertheless they are not part of
