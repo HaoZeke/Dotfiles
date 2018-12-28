@@ -40,6 +40,7 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
+    - [[#nix-mode][Nix Mode]]
     - [[#rc-files][RC Files]]
     - [[#jvm-languages][JVM Languages]]
   - [[#aesthetics][Aesthetics]]
@@ -613,6 +614,12 @@ Need better font locking everywhere.
 #+BEGIN_SRC emacs-lisp
 (def-package! pug-mode
   :mode "/\\.pug$/")
+#+END_SRC
+*** Nix Mode
+Seems like the latest fad.
+#+BEGIN_SRC emacs-lisp
+(def-package! nix-mode
+  :mode "/\\.nix$/")
 #+END_SRC
 *** RC Files
 These are usually encountered while building android stuff. They are handled
