@@ -319,22 +319,19 @@ The escape key for exiting things seems very painful.
 Local leader is already bound to `m` and there are few bindings, this just adds
 more.
 #+BEGIN_SRC emacs-lisp
-(nmap
-  :prefix my-leader
-  :keymaps 'markdown-mode-map
-  "m" '(ignore t :wk "Markdown Commands")
-  "m i" '(ignore t :wk "Insert")
-  "m i i" '(markdown-insert-image :wk "Image")
-  "m i l" '(markdown-insert-link :wk "Link")
-  "m i c" '(markdown-insert-gfm-code-block :wk "Github Code Block")
-  "m i h" '(:ignore t :wk "Headings")
-  "m i h 1" '(markdown-insert-atx-1 :wk "One")
-  "m i h 2" '(markdown-insert-atx-1 :wk "Two")
-  "m i h 3" '(markdown-insert-atx-1 :wk "Three")
-  "m i h 4" '(markdown-insert-atx-1 :wk "Four")
-  "m i h 5" '(markdown-insert-atx-1 :wk "Five")
-  "m i h 6" '(markdown-insert-atx-1 :wk "Six")
-  )
+(map! :localleader
+      :map markdown-mode-map
+      :prefix ("i" . "Insert")
+      :desc "Image"   "i" 'markdown-insert-image
+      :desc "Link"    "l" 'markdown-insert-link
+      :desc "Github Code Block" "c" 'markdown-insert-gfm-code-block
+      (:prefix ("h" . "Headings")
+        :desc "One"   "1" 'markdown-insert-atx-1
+        :desc "Two"   "2" 'markdown-insert-atx-2
+        :desc "Three" "3" 'markdown-insert-atx-3
+        :desc "Four"  "4" 'markdown-insert-atx-4
+        :desc "Five"  "5" 'markdown-insert-atx-5
+        :desc "Six"   "6" 'markdown-insert-atx-6))
 #+END_SRC
 *** Pdf Mode
 These bindings are essentially part of ~org-noter~ however, they do not actually
