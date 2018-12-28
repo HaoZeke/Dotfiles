@@ -333,32 +333,27 @@ more.
         :desc "Five"  "5" 'markdown-insert-atx-5
         :desc "Six"   "6" 'markdown-insert-atx-6))
 #+END_SRC
+*** Org Noter
+These bindings should probably be after ~org-noter~ is loaded.
+#+BEGIN_SRC emacs-lisp
+(map! :localleader
+      :map (org-mode-map pdf-view-mode-map)
+      (:prefix ("o" . "Org")
+        (:prefix ("n" . "Noter")
+          :desc "Noter" "n" 'org-noter
+          )))
+#+END_SRC
 *** Pdf Mode
 These bindings are essentially part of ~org-noter~ however, they do not actually
 need to be bound in ~org-mode~ files.
 #+BEGIN_SRC emacs-lisp
-(nmap
-  :prefix my-leader
-  :keymaps '(pdf-view-mode-map)
-  "m" '(ignore t :wk "Local Commands")
-  "m o" '(ignore t :wk "Org Commands")
-  "m o n" '(ignore t :wk "org-noter commands")
-  "m o n n" '(org-noter :wk "Go to note")
-  "m o n i" '(org-noter-insert-note :wk "Insert note")
-  )
-#+END_SRC
-# TODO Figure out why the maps don't overlay (fix thing below)
-*** Org Noter
-These bindings should probably be after ~org-noter~ is loaded.
-Broken
-#+BEGIN_SRC emacs-lisp :tangle no
-(nmap
-  :prefix my-leader
-  :keymaps '(org-mode-map pdf-view-mode-map)
-  "m" '(:ignore t :wk "Local Commands")
-  "m o" '(:ignore t :wk "Org Commands")
-  "m o n n" '(org-noter :wk "Go to note")
-  )
+; localleader is SPC m
+(map! :localleader
+      :map pdf-view-mode-map
+      (:prefix "o"
+        (:prefix "n"
+          :desc "Insert" "i" 'org-noter-insert-note
+          )))
 #+END_SRC
 *** Org Mode additions
 Apart from extension specific bindings, here we define useful functions which
