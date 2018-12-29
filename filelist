@@ -125,9 +125,20 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 # Emacs (doom)
 #################
 
+# Config
 .config/doom/config.org:emacs
 .config/doom/init.el:emacs
 .config/doom/packages.org:emacs
+
+# Snippets #
+
+# Org
+.config/doom/snippets/org-mode/maximaMath:emacs
+.config/doom/snippets/org-mode/nowebCode:emacs
+# Markdown
+.config/doom/snippets/markdown-mode/columns:emacs
+.config/doom/snippets/markdown-mode/pandocDiv:emacs
+.config/doom/snippets/markdown-mode/rjsNotes:emacs
 
 # Sublime Text (me only)
 ########################
