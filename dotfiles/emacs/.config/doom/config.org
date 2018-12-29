@@ -277,16 +277,16 @@ they are redefined here for mnemonic usage. Also to add the ~which-key~ hints.
 **** Replace Stuff
 There are way too many of these to keep using ~helm~.
 #+BEGIN_SRC emacs-lisp
-(nmap
-  :prefix my-leader
-  ;; replace things
-  "r" '(:ignore t :wk "replace")
-  "r s" '(replace-string :wk "String")
-  "r q" '(query-replace :wk "Query")
-  "r r" '(:ignore t :wk "Regexp")
-  "r r s" '(replace-regexp :wk "String")
-  "r r q" '(query-replace-regexp :wk "Query")
-  )
+(map! :leader
+      (:prefix ("r" . "Replace")
+      :desc "String" "s" 'replace-string
+      :desc "Query" "q" 'query-replace
+      (:prefix ("r" . "Regexp")
+        :desc "String" "s" 'replace-regexp
+        :desc "Query" "q" 'query-replace-regexp
+        )
+      )
+      )
 #+END_SRC
 **** Lookup
 These were bound to really weird things.
