@@ -382,17 +382,18 @@ are a part of ~org-mode~.
 These are only relevant to ~org-mode~. Nevertheless they are not part of
 ~org-mode~ so semantically it makes no sense to use ~o~ after the localleader.
 #+BEGIN_SRC emacs-lisp
-(nmap
-:prefix my-leader
-:keymaps 'org-mode-map
-"m a" '(:ignore t :wk "Anki")
-"m a p" '(anki-editor-push-notes :wk "Push notes")
-"m a r" '(anki-editor-retry-failure-notes :wk "Retry failed notes")
-"m a i" '(:ignore t :wk "Insert notes")
-"m a i n" '(anki-editor-insert-note :wk "Insert a new note")
-"m a i c" '(anki-editor-insert-note :wk "Insert a new cloze")
-)
-
+(map! :localleader
+      :map org-mode-map
+      (:prefix ("a" . "Anki")
+        :desc "Push" "p" 'anki-editor-push-notes
+        :desc "Retry" "r" 'anki-editor-retry-failure-notes
+        :desc "Insert" "n" 'anki-editor-insert-note
+        (:prefix ("c" . "Cloze")
+          :desc "Dwim" "d" 'anki-editor-cloze-dwim
+          :desc "Region" "r" 'anki-editor-cloze-region
+          )
+        )
+ )
 #+END_SRC
 *** CC Mode
 These are basically wrappers around various ~rtags~ functions.
