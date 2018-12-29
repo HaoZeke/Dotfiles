@@ -88,12 +88,10 @@ files anyway.
 
 ** Personal Information
 Let's set some variables with basic user information.
-
 #+BEGIN_SRC emacs-lisp
 (setq user-full-name "Rohit Goswami (HaoZeke)"
       user-mail-address "rohit.goswami@aol.com")
 #+END_SRC
-
 ** Doom Emacs Stuff
 *** Visual tweaks
 **** Font Face
@@ -242,19 +240,27 @@ unable to navigate with one hand on the mouse anymore.
 **** Kill buffer
 Also it's inconvinient to have a key chord requiring two hands to close a
 buffer.
-
-***** Doom method (pre-general)
-Hopefully this won't be necessary.
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp
+(defconst my-leader "SPC")
 ; Bind a new key chord
 (map!
  (:leader
    (:prefix "b"
-     :desc "Kill buffer" :n "d" #'kill-this-buffer)))
+     :desc "Kill buffer" "d" #'kill-this-buffer)
+   (:prefix ("k" . "kill")
+     :desc "Save and kill" "e" 'save-buffers-kill-terminal
+     :desc "Kill buffer" "b" 'my-kill-this-buffer
+     :desc "Delete frame" "f" 'delete-frame
+   (:prefix ("o" . "Other")
+     :desc "Frames" "f" 'delete-other-frames
+     :desc "Windows" "w" 'delete-other-windows
+     )
+   )
+   ))
 #+END_SRC
 ***** general.el
 The binding syntax of the future, TODAY!
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
 ;; ** Global Keybindings
 ;; Normal mode?
 (nmap
