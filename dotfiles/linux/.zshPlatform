@@ -11,16 +11,16 @@ export PATH=$PATH:/usr/local/MATLAB/R2017a/bin
 #####################
 
 # Programs
-if which rg >/dev/null 2>&1; then
-  zplug "BurntSushi/ripgrep", \
-      from:gh-r, \
-      as:command, \
-      rename-to:rg, \
-      use:"*64*linux*"
-  # zplug "jedahan/ripz"]
-  # Ripgrep aliases
-  alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
-fi
+# if which rg >/dev/null 2>&1; then
+#   zplug "BurntSushi/ripgrep", \
+#       from:gh-r, \
+#       as:command, \
+#       rename-to:rg, \
+#       use:"*64*linux*"
+#   # zplug "jedahan/ripz"]
+#   # Ripgrep aliases
+#   alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
+# fi
 
 if which fzf >/dev/null 2>&1; then
   zplug "junegunn/fzf-bin", \
