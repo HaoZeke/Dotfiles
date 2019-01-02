@@ -199,10 +199,10 @@ fi
 
 # Nix
 if [[ $- = *i* ]]; then
-  if [[ -d /nix ]]; then
-    . $HOME/.nix-profile/etc/profile.d/nix.sh
-  elif [[ -f /etc/profile.d/nix.sh ]]; then
+  if [[ -f /etc/profile.d/nix.sh ]]; then
           . /etc/profile.d/nix.sh
+  elif [[ -d /nix ]]; then
+    . $HOME/.nix-profile/etc/profile.d/nix.sh
     else
       echo "You don't have nix installed"
   fi
