@@ -112,6 +112,11 @@ I prefer the regular diminished font size, even for the childframes.
 ;; Undo the helm text enlargement in childframes
 (setq +helm-posframe-text-scale 0)
 #+END_SRC
+**** Saner Dashboard
+I have trouble at work with the current DOOM dashboard.
+#+BEGIN_SRC emacs-lisp
+(setq +doom-dashboard-banner-file (expand-file-name "banner.png" doom-private-dir))
+#+END_SRC
 *** Helm changes
 This makes `helm` behave more like `ivy` while working with directories.
 #+BEGIN_SRC emacs-lisp
