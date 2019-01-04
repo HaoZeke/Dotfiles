@@ -177,7 +177,6 @@ Easy hugo I don't need right now.
 #+BEGIN_SRC emacs-lisp
 (def-package! ox-hugo
   :after ox)
-(def-package! ox-hugo-auto-export)
 #+END_SRC
 ** Anki Editor
 # TODO Add to doom as a module
