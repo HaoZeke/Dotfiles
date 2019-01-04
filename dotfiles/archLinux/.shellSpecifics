@@ -196,11 +196,6 @@ export CPATH=$CPATH:/usr/local/include
 # Gaussian
 export PATH=$PATH:$HOME/.local/g16
 
-# Python Path
-##############
-
-export PYTHONPATH=$PYTHONPATH:/home/$USER/Git/Github/espresso:/home/$USER/Git/Github/Linux/acd_fuse:/usr/share/amazon/pyacd
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
