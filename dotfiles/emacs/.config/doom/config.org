@@ -114,7 +114,8 @@ I prefer the regular diminished font size, even for the childframes.
 (setq +helm-posframe-text-scale 0)
 #+END_SRC
 **** Saner Dashboard
-I have trouble at work with the current DOOM dashboard.
+I have trouble at work with the current DOOM dashboard. This one is from the
+~doom-emacs~ lead developer, as found on Discord.
 #+BEGIN_SRC emacs-lisp
 (setq +doom-dashboard-banner-file (expand-file-name "banner.png" doom-private-dir))
 #+END_SRC
