@@ -29,6 +29,7 @@
     - [[#neotree----treemacs][Neotree --> Treemacs]]
     - [[#tex-mode][TeX Mode]]
   - [[#org-additions][Org Additions]]
+    - [[#file-handling][File Handling]]
     - [[#ob-julia][Ob-Julia]]
     - [[#org-babel][Org Babel]]
     - [[#org-config][Org Config]]
@@ -471,6 +472,20 @@ These are more semantic for me.
 #+END_SRC
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** File Handling
+This controls what is used to open links in ~org~ documents. Since there are
+only a few defaults defined, I am just prepending them to my changes instead of
+dealing with ~append~ and stuff.
+#+BEGIN_SRC emacs-lisp
+(defcustom org-file-apps
+  '((auto-mode . emacs)
+    ("\\.mm\\'" . default)
+    ("\\.x?html?\\'" . default)
+    ("\\.pdf\\'" . default)
+    ("\\.png\\'" . viewnior)
+    ("\\.jpg\\'" . viewnior)
+    )
+#+END_SRC
 *** Ob-Julia
 So ~julia~ support is inbuilt, however the process variable needs to be set:
 #+BEGIN_SRC emacs-lisp
