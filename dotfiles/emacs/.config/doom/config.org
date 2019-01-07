@@ -478,14 +478,14 @@ This controls what is used to open links in ~org~ documents. Since there are
 only a few defaults defined, I am just prepending them to my changes instead of
 dealing with ~append~ and stuff.
 #+BEGIN_SRC emacs-lisp
-(defcustom org-file-apps
+(setq org-file-apps
   '((auto-mode . emacs)
     ("\\.mm\\'" . default)
     ("\\.x?html?\\'" . default)
     ("\\.pdf\\'" . default)
     ("\\.png\\'" . viewnior)
     ("\\.jpg\\'" . viewnior)
-    )
+    ))
 #+END_SRC
 *** Ob-Julia
 So ~julia~ support is inbuilt, however the process variable needs to be set:
