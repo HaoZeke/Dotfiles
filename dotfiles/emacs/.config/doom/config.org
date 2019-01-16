@@ -167,6 +167,14 @@ Also integrated upstream.
   :init
   (setq evil-magit-state 'normal))
 #+END_SRC
+**** Magit Annex
+Barely any setup.
+#+BEGIN_SRC emacs-lisp
+(def-package! magit-annex
+  :after magit)
+(def-package! git-annex
+  :after dired)
+#+END_SRC
 *** SaltStack Settings
 I like having spell checks for everything.
 #+BEGIN_SRC emacs-lisp
