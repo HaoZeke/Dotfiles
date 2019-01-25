@@ -18,6 +18,7 @@ set $font "pango:DejaVu Sans Mono 9"
 set $menu "rofi -show combi -show-icons -combi-modi \\"window,run,ssh\\" -modi combi"
 set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 set $passwordManager "/opt/enpass/Enpass showassistant"
+set $screenshotTask "teiler --quickcopy area"
 # I hate uxterm (i3-sensible-terminal)
 set $term termite
 # Workspaces
@@ -88,6 +89,8 @@ bindsym $mod+w kill
 # start dmenu (a program launcher)
 bindsym $mod+space exec $menu
 bindsym $mod+shift+space exec --no-startup-id $menuCalc
+# Copy a screenshot to the clipboard
+bindsym $mod+o exec $screenshotTask
 
 # Call the registered password manager
 bindsym $mod+slash exec $passwordManager
