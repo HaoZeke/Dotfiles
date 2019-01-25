@@ -200,6 +200,9 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 # From https://github.com/karlding/base16-tilix
 .config/tilix/schemes/base16-spacemacs.json:linux
 
+# Teiler (Screenshoter)
+.config/teiler/config:linux
+
 # ArchLinux
 #################
 
