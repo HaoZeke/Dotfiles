@@ -84,6 +84,13 @@ These have been added upstream in ~develop~.
 Actually [[https://github.com/alphapapa/magit-todos][magit-todos]] has been added upstream which collates all ~todo~ items.
 There might still be workflows where [[https://github.com/danielma/magit-org-todos.el][magit-org-todos]] is useful since that
 displays a global ~todo.org~ file.
+** Git Annex
+This is actually a [[https://github.com/magit/magit-annex][magit addition]]. The [[https://github.com/jwiegley/git-annex-el][git-annex dired extension]] shares a common
+interface and it makes sense to add it here.
+#+BEGIN_SRC emacs-lisp
+(package! magit-annex)
+(package! git-annex)
+#+END_SRC
 ** LATER Key Chords and Keybindings
 It turns out that the switch to [[https://github.com/noctuid/general.el][general.el]] is both inevitable (doom version 2.1)
 and very rational. However, I really can't wait. So.. This is a stop gap solution.

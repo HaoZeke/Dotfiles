@@ -19,13 +19,13 @@
        (company          ; the ultimate code completion backend
         +childframe      ; a better UI for company (Emacs 26+)
         +auto)           ; as-you-type code completion
-      ;; (helm             ; the *other* search engine for love and life
-      ;;   +childframe      ; a better UI for helm (Emacs 26+)
-      ;;   +fuzzy)          ; enable fuzzy search backend for helm
+      (helm             ; the *other* search engine for love and life
+        +childframe      ; a better UI for helm (Emacs 26+)
+        +fuzzy)          ; enable fuzzy search backend for helm
       ;ido               ; the other *other* search engine...
-       (ivy              ; a search engine for love and life
-        +childframe      ; a better UI for ivy (Emacs 26+)
-        +fuzzy)          ; enable fuzzy search backend for ivy
+       ;; (ivy              ; a search engine for love and life
+       ;;  +childframe      ; a better UI for ivy (Emacs 26+)
+       ;;  +fuzzy)          ; enable fuzzy search backend for ivy
 
        :ui
       doom              ; what makes DOOM look the way it does
@@ -94,7 +94,7 @@
       ;elixir            ; erlang done right
       ;elm               ; care for a cup of TEA?
        emacs-lisp        ; drown in parentheses
-      ;ess               ; emacs speaks statistics
+      ess               ; emacs speaks statistics
       go                ; the hipster dialect
       ;(haskell +intero) ; a language that's lazier than I am
       ;hy                ; readability of scheme w/ speed of python
@@ -110,7 +110,7 @@
        (markdown         ; writing docs for people to ignore
         +pandoc)         ; can I get that in "* format?"
       ;nim               ; python + lisp at the speed of c
-      ;nix               ; I hereby declare "nix geht mehr!"
+      nix               ; I hereby declare "nix geht mehr!"
       ;ocaml             ; an objective camel
        (org              ; organize your plain life in plain text
         ;; +attach          ; custom attachment system
@@ -160,5 +160,4 @@
        ;; a Spacemacs-inspired keybinding scheme, a custom yasnippet library,
        ;; and additional ex commands for evil-mode. Use it as a reference for
        ;; your own modules.
-       (default +bindings +snippets))
-; (default +bindings +snippets)
+       (default +bindings +snippets +smartparens))
