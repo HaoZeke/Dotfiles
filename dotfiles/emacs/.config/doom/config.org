@@ -29,6 +29,7 @@
     - [[#neotree----treemacs][Neotree --> Treemacs]]
     - [[#tex-mode][TeX Mode]]
   - [[#org-additions][Org Additions]]
+    - [[#file-handling][File Handling]]
     - [[#ob-julia][Ob-Julia]]
     - [[#org-babel][Org Babel]]
     - [[#org-config][Org Config]]
@@ -40,7 +41,6 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
-    - [[#nix-mode][Nix Mode]]
     - [[#rc-files][RC Files]]
     - [[#jvm-languages][JVM Languages]]
   - [[#aesthetics][Aesthetics]]
@@ -113,6 +113,12 @@ I prefer the regular diminished font size, even for the childframes.
 ;; Undo the helm text enlargement in childframes
 (setq +helm-posframe-text-scale 0)
 #+END_SRC
+**** Saner Dashboard
+I have trouble at work with the current DOOM dashboard. This one is from the
+~doom-emacs~ lead developer, as found on Discord.
+#+BEGIN_SRC emacs-lisp
+(setq +doom-dashboard-banner-file (expand-file-name "banner.png" doom-private-dir))
+#+END_SRC
 *** Helm changes
 This makes `helm` behave more like `ivy` while working with directories.
 #+BEGIN_SRC emacs-lisp
@@ -160,6 +166,14 @@ Also integrated upstream.
 (def-package! evil-magit :after magit
   :init
   (setq evil-magit-state 'normal))
+#+END_SRC
+**** Magit Annex
+Barely any setup.
+#+BEGIN_SRC emacs-lisp
+(def-package! magit-annex
+  :after magit)
+(def-package! git-annex
+  :after dired)
 #+END_SRC
 *** SaltStack Settings
 I like having spell checks for everything.
@@ -225,6 +239,7 @@ unable to navigate with one hand on the mouse anymore.
 Also it's inconvinient to have a key chord requiring two hands to close a
 buffer.
 #+BEGIN_SRC emacs-lisp
+; Compatibility, delete when fully migrated
 (defconst my-leader "SPC")
 ; Bind a new key chord
 (map!
@@ -465,6 +480,20 @@ These are more semantic for me.
 #+END_SRC
 ** Org Additions
 These are numerous and complicated enough to be in a segment of their own.
+*** File Handling
+This controls what is used to open links in ~org~ documents. Since there are
+only a few defaults defined, I am just prepending them to my changes instead of
+dealing with ~append~ and stuff.
+#+BEGIN_SRC emacs-lisp
+(setq org-file-apps
+  '((auto-mode . emacs)
+    ("\\.mm\\'" . default)
+    ("\\.x?html?\\'" . default)
+    ("\\.pdf\\'" . default)
+    ("\\.png\\'" . viewnior)
+    ("\\.jpg\\'" . viewnior)
+    ))
+#+END_SRC
 *** Ob-Julia
 So ~julia~ support is inbuilt, however the process variable needs to be set:
 #+BEGIN_SRC emacs-lisp
@@ -527,7 +556,7 @@ trouble with relative exports so I have this one instead. Partially kanged from
   :after org
   :config
 (setq-default org-download-image-dir "./img/"
-              org-download-screenshot-method "gnome-screenshot"
+              org-download-screenshot-method "scrot -s %s"
               org-download-method 'directory
               org-download-heading-lvl 1
               )
@@ -579,12 +608,6 @@ Need better font locking everywhere.
 #+BEGIN_SRC emacs-lisp
 (def-package! pug-mode
   :mode "/\\.pug$/")
-#+END_SRC
-*** Nix Mode
-Seems like the latest fad.
-#+BEGIN_SRC emacs-lisp
-(def-package! nix-mode
-  :mode "/\\.nix$/")
 #+END_SRC
 *** RC Files
 These are usually encountered while building android stuff. They are handled
