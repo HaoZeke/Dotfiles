@@ -51,9 +51,11 @@
 
       :editor
       ;parinfer          ; turn lisp into python, sort of
+      ;lispy             ; vim for lisp, for people who dont like vim
        rotate-text       ; cycle region at point between text candidates
        multiple-cursors  ; editing in many places at once
-       format            ; Uses tidy for html
+       (format +onsave)  ; Automated prettiness
+       fold              ; (nigh) universal code folding
 
        :emacs
        (dired            ; making dired pretty [functional]
@@ -63,57 +65,60 @@
        ediff             ; comparing files in Emacs
       electric          ; smarter, keyword-based electric-indent
       ;eshell           ; a consistent, cross-platform shell (WIP)
-      hideshow          ; basic code-folding support
       imenu             ; an imenu sidebar and searchable code index
       term              ; terminals in Emacs
       vc                ; version-control and Emacs, sitting in a tree
 
        :tools
+      ;ansible
+      ;docker
       editorconfig      ; let someone else argue about tabs vs spaces
-      ;ein               ; tame Jupyter notebooks with emacs
+      ;ein              ; tame Jupyter notebooks with emacs
       gist              ; interacting with github gists
-      ;macos             ; MacOS-specific commands
-      ;make              ; run make tasks from Emacs
-       magit             ;
-      ;password-store    ; password manager for nerds
-       pdf               ; pdf enhancements
-      ;prodigy           ; FIXME managing external services & code builders
-      ;rgb               ; creating color strings
+      ;macos            ; MacOS-specific commands
+      ;make             ; run make tasks from Emacs
+      magit             ; a git porcelain for Emacs
+      ;password-store   ; password manager for nerds
+      pdf               ; pdf enhancements
+      ;prodigy          ; FIXME managing external services & code builders
+      ;rgb              ; creating color strings
       tmux              ; an API for interacting with tmux
-      ;upload            ; map local to remote projects via ssh/ftp
+      ;upload           ; map local to remote projects via ssh/ftp
       wakatime
 
        :lang
-      ;assembly          ; assembly for fun or debugging
-      (cc +irony +rtags); C/C++/Obj-C madness
-      ;crystal           ; ruby at the speed of c
-      ;clojure           ; java with a lisp
-      ;csharp            ; unity, .NET, and mono shenanigans
-       data              ; config/data formats
-      ;erlang            ; an elegant language for a more civilized age
-      ;elixir            ; erlang done right
-      ;elm               ; care for a cup of TEA?
-       emacs-lisp        ; drown in parentheses
-      ess               ; emacs speaks statistics
-      go                ; the hipster dialect
-      (haskell +intero) ; a language that's lazier than I am
-      ;hy                ; readability of scheme w/ speed of python
-      ;(java +meghanada) ; the poster child for carpal tunnel syndrome
-      javascript        ; all(hope(abandon(ye(who(enter(here))))))
-      ;; julia             ; a better, faster MATLAB
-       (latex            ; writing papers in Emacs has never been so fun
-        +unicode-math    ; adding better math support
-        +latexmk         ; No other option TBH
-        +preview-pane)   ; Eh why not.
-      ;ledger            ; an accounting system in Emacs
+      ;assembly           ; assembly for fun or debugging
+      (cc +irony +rtags)  ; C/C++/Obj-C madness
+      ;;clojure           ; java with a lisp
+      ;;common-lisp       ; if you've seen one lisp, you've seen them all
+      ;;coq               ; proofs-as-programs
+      ;;crystal           ; ruby at the speed of c
+      ;;csharp            ; unity, .NET, and mono shenanigans
+      ;;data              ; config/data formats
+      ;erlang             ; an elegant language for a more civilized age
+      ;elixir             ; erlang done right
+      ;elm                ; care for a cup of TEA?
+      emacs-lisp          ; drown in parentheses
+      ess                 ; emacs speaks statistics
+      go                  ; the hipster dialect
+      (haskell +intero)   ; a language that's lazier than I am
+      ;hy                 ; readability of scheme w/ speed of python
+      ;(java +meghanada)  ; the poster child for carpal tunnel syndrome
+      javascript          ; all(hope(abandon(ye(who(enter(here))))))
+      ;; julia            ; a better, faster MATLAB
+       (latex             ; writing papers in Emacs has never been so fun
+        +unicode-math     ; adding better math support
+        +latexmk          ; No other option TBH
+        +preview-pane)    ; Eh why not.
+      ;ledger             ; an accounting system in Emacs
       lua               ; one-based indices? one-based indices
        (markdown         ; writing docs for people to ignore
         +pandoc)         ; can I get that in "* format?"
       ;nim               ; python + lisp at the speed of c
-      nix               ; I hereby declare "nix geht mehr!"
+      nix                ; I hereby declare "nix geht mehr!"
       ;ocaml             ; an objective camel
        (org              ; organize your plain life in plain text
-        ;; +attach          ; custom attachment system
+        ;; +attach       ; custom attachment system
         +babel           ; running code in org
         +capture         ; org-capture in and outside of Emacs
         +export          ; Exporting org to whatever you want
@@ -122,18 +127,19 @@
       ;php               ; perl's insecure younger brother
       ;plantuml          ; diagrams for confusing people more
       ;purescript        ; javascript, but functional
-      python            ; beautiful is better than ugly
+      python             ; beautiful is better than ugly
       ;qt                ; the 'cutest' gui framework ever
       ;racket            ; a DSL for DSLs
       ;rest              ; Emacs as a REST client
-      ruby              ; 1.step do {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
-      ;; rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+      ruby               ; 1.step do {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+      ;; rust            ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
       ;scala             ; java, but good
-      sh                ; she sells (ba|z)sh shells on the C xor
-       ;; +fish)            ; Fish support
+      sh                 ; she sells (ba|z)sh shells on the C xor
+       ;; +fish)         ; Fish support
       ;solidity          ; do you need a blockchain? No.
       ;swift             ; who asked for emoji variables?
-      web               ; the tubes
+      web                ; the tubes
+     ;;vala              ; GObjective-C
 
        ;; Applications are complex and opinionated modules that transform Emacs
        ;; toward a specific purpose. They may have additional dependencies and
@@ -143,9 +149,9 @@
       ;irc               ; how neckbeards socialize
       ;(rss +org)        ; emacs as an RSS reader
       ;twitter           ; twitter client https://twitter.com/vnought
-      (write            ; emacs as a word processor (latex + org + markdown)
-      +wordnut         ; wordnet (wn) search
-      +langtool)       ; a proofreader (grammar/style check) for Emacs
+      (write             ; emacs as a word processor (latex + org + markdown)
+      +wordnut           ; wordnet (wn) search
+      +langtool)         ; a proofreader (grammar/style check) for Emacs
 
        :collab
       ;floobits          ; peer programming for a price
