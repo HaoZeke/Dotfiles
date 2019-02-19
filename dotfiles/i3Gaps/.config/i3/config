@@ -255,9 +255,6 @@ exec_always thunar --restore
 # I have secrets
 exec_always gnome-encfs-manager
 
-# Some things I use
-exec_always flameshot
-
 # Scratchpad Stuff
 exec_always termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
