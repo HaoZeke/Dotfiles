@@ -10,9 +10,6 @@
         +devdocs         ; ...on devdocs.io online
         +docsets)        ; ...or in Dash docsets locally
        snippets          ; my elves. They type so I don't have to
-       spellcheck        ; tasing you for misspelling mispelling
-       (syntax-checker   ; tasing you for every semicolon you forget
-        +childframe)     ; use childframes for error popups (Emacs 26+ only)
        workspaces        ; tab emulation, persistence & separate workspaces
 
        :completion
@@ -62,7 +59,6 @@
        +ranger         ; bringing the goodness of ranger to dired
        +icons          ; colorful icons for dired-mode
         )
-       ediff             ; comparing files in Emacs
       electric          ; smarter, keyword-based electric-indent
       ;eshell           ; a consistent, cross-platform shell (WIP)
       imenu             ; an imenu sidebar and searchable code index
@@ -84,7 +80,10 @@
       ;rgb              ; creating color strings
       tmux              ; an API for interacting with tmux
       ;upload           ; map local to remote projects via ssh/ftp
-      wakatime
+      wakatime          ; stats for coders
+      flyspell          ; tasing you for misspelling mispelling
+      (flycheck         ; tasing you for every semicolon you forget
+       +childframe)     ; use childframes for error popups (Emacs 26+ only)
 
        :lang
       ;assembly           ; assembly for fun or debugging
