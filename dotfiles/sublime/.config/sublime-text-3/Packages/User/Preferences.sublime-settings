@@ -99,7 +99,7 @@
 		"node_modules/**"
 	],
 	"close_windows_when_empty": false,
-	"color_scheme": "Packages/User/SublimeLinter/Asphalt (SL).tmTheme",
+	"color_scheme": "Packages/Ecmascript Syntax/carthage.tmTheme",
 	"folder_exclude_patterns":
 	[
 		".svn",
@@ -110,7 +110,7 @@
 		".cache"
 	],
 	"font_face": "Meslo LG L Regular Nerd Font Complete",
-	"font_size": 15,
+	"font_size": 10,
 	"icon_file_type_enable": true,
 	"ignored_packages":
 	[
