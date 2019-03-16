@@ -894,7 +894,8 @@ it has better support for working with multiple documents linked to one file.
 This just scratches the surface of these templates, but it's a good enough
 start.
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'org-capture-templates
+(after! org-capture
+  (add-to-list 'org-capture-templates
          '("a"               ; key
            "Article"         ; name
            entry             ; type
@@ -904,6 +905,7 @@ start.
            :empty-lines 1    ; properties
            :created t        ; properties
            ) org-capture-templates)
+)
 #+END_SRC
 *** Reftex
 Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
