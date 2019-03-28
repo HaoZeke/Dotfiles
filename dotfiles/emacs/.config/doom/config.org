@@ -378,6 +378,7 @@ are a part of ~org-mode~.
       (:prefix ("i" . "Insert")
         :desc "Link/Image" "l" 'org-insert-link
         :desc "Item" "o" 'org-insert-item
+        :desc "Footnote" "f" 'org-footnote-action
         :desc "Table" "t" 'org-table-create-or-convert-from-region
         (:prefix ("h" . "Headings")
           :desc "Normal" "h" 'org-insert-heading
