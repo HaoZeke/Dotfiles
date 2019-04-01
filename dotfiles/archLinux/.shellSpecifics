@@ -54,7 +54,7 @@ orphans() {
   if [[ ! -n $(pacaur -Qdt) ]]; then
     echo "No orphans to remove."
   else
-    sudo powerpill -Rns $(powerpill -Qdtq)
+    sudo pacman -Rns $(pacman -Qdtq)
   fi
 }
 
@@ -93,14 +93,6 @@ else
   echo "You seem to be missing ccache"
 fi
 
-# Gets powerpill to work with pacaur
-if which powerpill >/dev/null 2>&1; then
-  export PACMAN='powerpill'
-else
-  echo "You seem to be missing powerpill"
-fi
-
-
 # Java Fixes
 
 # MATLAB Helper
@@ -114,8 +106,6 @@ export JAVA_FONTS=/usr/share/fonts/TTF
 
 # Exports
 ###########
-
-export EDITOR='emacs -nw'
 
 # NPM Stuff (not needed with nvm)
 # export npm_config_prefix=~/.node_modules
