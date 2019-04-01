@@ -4,7 +4,7 @@
 # Shamelessly kanged from here:
 # https://stackoverflow.com/questions/7997399/bash-script-to-check-pdfs-are-ocrd 
 # Only searches for text on the first 5 pages
-# Modified to have red text. Also to do possibly ocr the thing.
+# Modified to have red text. Also to possibly ocr the thing.
 
 # -*- mode: shell-script-mode -*-
 
@@ -16,7 +16,7 @@ if [ "$MYFONTS" = '' ] || [ "$MYFONTS" = '[none]' ]; then
         echo "Converting to ${1%.*}_ocr.pdf with ocrmypdf"
         echo "$(tput setaf 7)"
         ocrmypdf --deskew --clean --rotate-pages \
-            --jobs 8 -v --output-type pdfa "$1" "${1%.*}_ocr.pdf"
+            --jobs 4 -v --output-type pdfa "$1" "${1%.*}_ocr.pdf"
     elif [[ -x "$(which pypdfocr)" ]]; then
         echo "$(tput setaf 2) Looking for config files at $XDG_CONFIG_HOME/pypdfocr/config.yml" 
         echo "$(tput setaf 3)"
