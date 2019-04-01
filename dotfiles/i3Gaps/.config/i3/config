@@ -249,14 +249,10 @@ exec_always compton --config ~/.config/compton.conf -b
 exec_always nitrogen --restore
 
 # File Management
-exec_always udiskie -2
-exec_always thunar --restore
+exec_always udiskie --no-automount --notify --tray --use-udisks2
 
 # I have secrets
 exec_always gnome-encfs-manager
-
-# Some things I use
-exec_always flameshot
 
 # Scratchpad Stuff
 exec_always termite --name=subTerm

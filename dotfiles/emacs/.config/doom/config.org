@@ -377,6 +377,7 @@ are a part of ~org-mode~.
       (:prefix ("i" . "Insert")
         :desc "Link/Image" "l" 'org-insert-link
         :desc "Item" "o" 'org-insert-item
+        :desc "Footnote" "f" 'org-footnote-action
         :desc "Table" "t" 'org-table-create-or-convert-from-region
         (:prefix ("h" . "Headings")
           :desc "Normal" "h" 'org-insert-heading
@@ -733,6 +734,12 @@ This enables the evaluation of these forms. Read more about this via
 #+BEGIN_SRC emacs-lisp :tangle no
 (add-to-list 'safe-local-eval-forms (eval add-hook 'after-save-hook haozeke/org-save-and-export))
 #+END_SRC
+*** Asynchronous Exports
+As per this [[https://superuser.com/a/898717/899764][interesting answer on the superuser forums]], I need to set
+~org-export-async-init-file~.
+#+BEGIN_SRC emacs-lisp
+(setq org-export-async-init-file (concat doom-private-dir "local/async-ox.el"))
+#+END_SRC
 ** Troubleshooting
 These are strictly temporary hacks to resolve problems until they are fixed
 upstream.
@@ -893,7 +900,8 @@ it has better support for working with multiple documents linked to one file.
 This just scratches the surface of these templates, but it's a good enough
 start.
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'org-capture-templates
+(after! org-capture
+  (add-to-list 'org-capture-templates
          '("a"               ; key
            "Article"         ; name
            entry             ; type
@@ -903,6 +911,7 @@ start.
            :empty-lines 1    ; properties
            :created t        ; properties
            ) org-capture-templates)
+)
 #+END_SRC
 *** Reftex
 Actually I don't really use ~reftex~ since I'm using heavier tools now, but it
