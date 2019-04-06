@@ -41,7 +41,8 @@
     - [[#pkgbuild-mode][PKGBUILD Mode]]
     - [[#lammps-mode][LAMMPS Mode]]
     - [[#pug-mode][Pug Mode]]
-    - [[#rc-files][RC Files]]
+    - [[#conf-mode-files][Conf Mode Files]]
+    - [[#fortran][FORTRAN]]
     - [[#jvm-languages][JVM Languages]]
   - [[#aesthetics][Aesthetics]]
   - [[#dockerfile-mode][Dockerfile Mode]]
@@ -611,11 +612,19 @@ Need better font locking everywhere.
 (def-package! pug-mode
   :mode "/\\.pug$/")
 #+END_SRC
-*** RC Files
-These are usually encountered while building android stuff. They are handled
-well by ~conf-mode~.
+*** Conf Mode Files
+The ~rc~ files are usually encountered while building android stuff. They are handled
+well by ~conf-mode~. Turns out that ~vmd~ files also look just like ~conf-mode~ things...
 #+BEGIN_SRC emacs-lisp
-(setq auto-mode-alist (append '(("\\.rc$" . conf-mode))
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("\\.rc$" . conf-mode))
+                              '(("\\.vmd$" . conf-mode))
+                              ))
+#+END_SRC
+*** FORTRAN
+Strangely the default settings do not pick up a bunch of fortran files.
+#+BEGIN_SRC emacs-lisp
+(setq auto-mode-alist (append '(("\\.F90$" . fortran-mode))
                               auto-mode-alist))
 #+END_SRC
 *** JVM Languages
