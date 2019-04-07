@@ -690,6 +690,16 @@ This is taken from [[https://eklitzke.org/smarter-emacs-clang-format][this blog]
   (when (f-exists? (expand-file-name ".clang-format" (projectile-project-root)))
     (+format|buffer)))
 #+END_SRC
+*** Org-mode export to Markdown
+This is a convinience function for working with ~nanoc~.
+#+BEGIN_SRC emacs-lisp
+(defun haozeke/org-pandoc-markdown (&optional &rest pargs)
+  "Simple interpolation for use with Taskfiles"
+  (async-shell-command
+   (concat "pandoc -f org -t markdown -s " (pargs) " " (buffer-name) " -o "
+           (file-name-sans-extension (buffer-name)) ".md"))
+    )
+#+END_SRC
 ** Hooks
 *** TODO Caveats
 Move all the hooks to this section if possible.
