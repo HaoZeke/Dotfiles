@@ -693,11 +693,16 @@ This is taken from [[https://eklitzke.org/smarter-emacs-clang-format][this blog]
 *** Org-mode export to Markdown
 This is a convinience function for working with ~nanoc~.
 #+BEGIN_SRC emacs-lisp
-(defun haozeke/org-pandoc-markdown (&optional &rest pargs)
-  "Simple interpolation for use with Taskfiles"
+(cl-defun haozeke/org-pandoc-markdown (&optional
+                                         (output
+                                          (file-name-sans-extension (buffer-name)))
+                                         (pargs 'nil)
+                                          )
+  "A wrapper to generate yaml metadata markdown files. Takes an optional
+  file-name-sans-extension followed by pandoc arguments"
   (async-shell-command
-   (concat "pandoc -f org -t markdown -s " (pargs) " " (buffer-name) " -o "
-           (file-name-sans-extension (buffer-name)) ".md"))
+   (concat "pandoc -f org -t markdown -s " pargs " " (buffer-name) " -o "
+           output ".md"))
     )
 #+END_SRC
 ** Hooks
