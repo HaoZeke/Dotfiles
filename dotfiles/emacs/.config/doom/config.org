@@ -135,6 +135,16 @@ for other random buffers.
 #+BEGIN_SRC emacs-lisp
 (setq-hook! 'LaTeX-mode-hook +spellcheck-immediately nil)
 #+END_SRC
+**** Snippets
+I am not sure if these need to be initialized.
+#+BEGIN_SRC emacs-lisp
+; hlissner
+(def-package! emacs-snippets
+  :after yasnippet)
+; AndreaCrotti
+(def-package! yasnippet-snippets
+  :after yasnippet)
+#+END_SRC
 ** Package Settings
 These should eventually go into a different module.
 Each of these.
@@ -303,6 +313,18 @@ There are way too many of these to keep using ~helm~.
         )
       )
       )
+#+END_SRC
+**** Insert Unicode
+This should hopefully propogate across all modes.
+#+BEGIN_SRC emacs-lisp
+(map! :leader
+      (:prefix ("i" . "Insert")
+       :desc "Unicode" "u" 'insert-char
+       :desc "Snippet" "s" '+snippets/expand-on-region
+       :desc "From Clipboard" "y" '+default/yank-pop
+       :desc "From Evil Registers" "r" 'counsel-evil-registers
+      )
+)
 #+END_SRC
 **** Lookup
 These were bound to really weird things.
