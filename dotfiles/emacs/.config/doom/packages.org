@@ -39,6 +39,8 @@
   - [[#flycheck-additions][Flycheck Additions]]
     - [[#melpa-helper][MELPA Helper]]
   - [[#snippets][Snippets]]
+    - [[#doom][Doom]]
+    - [[#standard][Standard]]
   - [[#math-support][Math support]]
 
 ** About this file
@@ -238,15 +240,22 @@ This is for linting files before submitting to MELPA.
 (package! flycheck-package)
 #+END_SRC
 ** Snippets
-These are actually from the ~doom-emacs~ guy...
-
+These are from [[https://github.com/hlissner][hlissner]].
+*** Doom
 #+BEGIN_SRC emacs-lisp
 (package! emacs-snippets
   :recipe (:fetcher github
            :repo "hlissner/emacs-snippets"
            :files ("*")))
 #+END_SRC
-
+*** Standard
+These are from the [[https://github.com/AndreaCrotti/yasnippet-snippets][official snippets repo]].
+#+BEGIN_SRC emacs-lisp
+(package! yasnippet-snippets
+  :recipe (:fetcher github
+           :repo "AndreaCrotti/yasnippet-snippets"
+           :files ("*")))
+#+END_SRC
 # Local Variables:
 # eval: (add-hook (quote after-save-hook) (lambda nil (org-babel-tangle)) nil t)
 # End:
