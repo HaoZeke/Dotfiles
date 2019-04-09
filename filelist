@@ -118,6 +118,10 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
 
+# User Systemd #
+.config/systemd/user/emacs.service
+.config/systemd/user/calibre-server.service
+
 # XKB Settings
 ###############
 .xkbEnv:xkbLayout
