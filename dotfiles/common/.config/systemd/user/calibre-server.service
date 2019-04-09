@@ -1,0 +1,11 @@
+[Unit]
+Description=Calibre local server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/calibre-server --port 8796
+
+[Install]
+WantedBy=default.target
