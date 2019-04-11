@@ -5,6 +5,7 @@ These are various settings for essential utilities. [zsh,tmux,vim]
 
 This is now managed with [dotgit](https://github.com/kobus-v-schoor/dotgit).
 
+As of the 11th of April, 2019, the configuration for my `emacs` setup, with `doom-emacs` has been moved to [a repository of its own](https://github.com/HaoZeke/dotDoom).
 ### Usage
 Several targets (groups) have been defined.
 
