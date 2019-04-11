@@ -7,37 +7,34 @@
 # Generic Linux
 genLinux=common,linux,doom
 
-# Doom Emacs ONLY
-doomEmacs=emacs
-
 # Archlinux Barebones
-archlinuxMono=common,linux,archLinux,monoMonitor,emacs
-archlinuxMulti=common,linux,archLinux,multiMonitor,emacs
+archlinuxMono=common,linux,archLinux,monoMonitor
+archlinuxMulti=common,linux,archLinux,multiMonitor
 
 # Archlinux with Sway (wayland)
-archSwayMono=common,linux,archLinux,emacs,sway,wayland,xkbLayout
+archSwayMono=common,linux,archLinux,sway,wayland,xkbLayout
 
 # Archlinux with i3 Gaps
-archi3Mono=common,linux,archLinux,emacs,i3Gaps,monoMonitor,xkbLayout
+archi3Mono=common,linux,archLinux,i3Gaps,monoMonitor,xkbLayout
 
 # ArchLinux with xfce and bspwm
-almXFCE=common,linux,archLinux,monoMonitor,xfceSession,emacs,bspwm
-almlXFCE=common,linux,archLinux,multiMonitor,xfceSession,emacs,bspwm
+almXFCE=common,linux,archLinux,monoMonitor,xfceSession,bspwm
+almlXFCE=common,linux,archLinux,multiMonitor,xfceSession,bspwm
 
 # ArchLinux with lxde and bspwm
-almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession,emacs,bspwm
-almLXDE=common,linux,archLinux,monoMonitor,lxdeSession,emacs,bspwm
+almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession,bspwm
+almLXDE=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
 
 # Archlinux with no session manager
-almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession,emacs,bspwm
-almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,emacs,bspwm
+almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession,bspwm
+almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
 
 # My current config. [desktop]
-hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,emacs,sublime,bspwm
-hzhome_i3=common,linux,archLinux,multiMonitor,emacs,sublime,i3Gaps,sway,wayland,xkblayout
+hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,sublime,bspwm
+hzhome_i3=common,linux,archLinux,multiMonitor,sublime,i3Gaps,sway,wayland,xkblayout
 
 # My current config. [laptop]
-hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,xkblayout
+hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout
 
 ##########
 # Groups #
@@ -125,26 +122,6 @@ hzarchtpad=common,linux,archLinux,monoMonitor,emacs,sublime,i3Gaps,sway,wayland,
 # XKB Settings
 ###############
 .xkbEnv:xkbLayout
-
-# Emacs (doom)
-#################
-
-# Config
-.config/doom/config.org:emacs
-.config/doom/init.el:emacs
-.config/doom/packages.org:emacs
-.config/doom/banner.png:emacs
-.config/doom/local/async-ox.el:emacs
-
-# Snippets #
-
-# Org
-.config/doom/snippets/org-mode/maximaMath:emacs
-.config/doom/snippets/org-mode/nowebCode:emacs
-# Markdown
-.config/doom/snippets/markdown-mode/columns:emacs
-.config/doom/snippets/markdown-mode/pandocDiv:emacs
-.config/doom/snippets/markdown-mode/rjsNotes:emacs
 
 # Sublime Text (me only)
 ########################
