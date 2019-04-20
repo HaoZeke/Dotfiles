@@ -210,9 +210,6 @@ allPackages:archLinux
 .config/compton.conf:archLinux
 .config/powerline:archLinux
 
-# trizen
-.config/trizen/trizen.conf:archLinux
-
 # Thunar
 .config/Thunar/uca.xml:archLinux
 .config/Thunar/renamerrc:archLinux
