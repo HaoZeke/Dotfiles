@@ -15,7 +15,7 @@
 # Mod1 → Alt Key
 set $mod Mod4
 set $font "pango:DejaVu Sans Mono 9"
-set $menu "rofi -show combi -show-icons -combi-modi \\"window,run,ssh\\" -modi combi"
+set $menu "rofi -show"
 set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 set $passwordManager "/opt/enpass/Enpass showassistant"
 set $screenshotTask "teiler --quickcopy area"
