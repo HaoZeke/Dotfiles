@@ -46,6 +46,8 @@ set searchurls.rs https://doc.rust-lang.org/std/?search=%s
 set searchurls.w http://en.wikipedia.org/w/index.php?title=Special%3ASearch&search=%s
 set searchurls.yt https://www.youtube.com/results?search_query=%s
 set searchurls.vc https://www.vocabulary.com/dictionary/%s
+set searchurls.g https://www.google.com/search?hl=en&q=%s
+set searchurls.ddg https://duckduckgo.com/?q=%s&t=ffab&atb=v147-1&ia=web
 set searchurls.gh https://github.com/search?q=%s
 set searchurls.gl https://gitlab.com/search?utf8=%E2%9C%93&snippets=&scope=&search=%s
 set searchurls.gsc https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=%s&btnG=
