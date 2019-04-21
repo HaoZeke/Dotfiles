@@ -86,8 +86,8 @@ bindsym $mod+Return exec $term
 # kill focused window
 bindsym $mod+w kill
 
-# start dmenu (a program launcher)
-bindsym $mod+space exec $menu
+# start rofi (a program launcher)
+bindsym --release $mod+space exec $menu
 bindsym $mod+shift+space exec --no-startup-id $menuCalc
 # Copy a screenshot to the clipboard
 bindsym $mod+o exec $screenshotTask
