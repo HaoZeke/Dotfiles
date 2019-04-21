@@ -1,5 +1,5 @@
 configuration {
-/*	modi: "window,run,ssh";*/
+	modi: "combi,calc,ssh";
 /*	width: 50;*/
 /*	lines: 15;*/
 /*	columns: 1;*/
@@ -16,7 +16,7 @@ configuration {
 /*	ssh-command: "{terminal} -e {ssh-client} {host}";*/
 /*	run-command: "{cmd}";*/
 /*	run-list-command: "";*/
-/*	run-shell-command: "{terminal} -e {cmd}";*/
+	run-shell-command: "{terminal} -e {cmd}; read -n 1 -s";
 /*	window-command: "xkill -id {window}";*/
 /*	window-match-fields: "all";*/
 /*	icon-theme: ;*/
@@ -27,13 +27,13 @@ configuration {
 /*	sort: false;*/
 /*	sorting-method: ;*/
 /*	case-sensitive: false;*/
-/*	cycle: true;*/
-/*	sidebar-mode: false;*/
+	cycle: true;
+	sidebar-mode: true;
 /*	eh: 1;*/
 /*	auto-select: false;*/
 /*	parse-hosts: false;*/
 /*	parse-known-hosts: true;*/
-/*	combi-modi: "window,run";*/
+	combi-modi: "window,drun";
 /*	matching: "normal";*/
 /*	tokenize: true;*/
 /*	m: "-5";*/
