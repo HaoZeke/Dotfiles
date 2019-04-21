@@ -37,19 +37,24 @@ set allowautofocus false
 " Search Strings
 "
 
-searchsetkeyword cmake https://cmake.org/cmake/help/latest/search.html?q=%s&check_keywords=yes&area=default
-searchsetkeyword cpp http://en.cppreference.com/mwiki/index.php?title=Special%3ASearch&search=%s
-searchsetkeyword crate https://crates.io/search?q=%s
-searchsetkeyword php http://php.net/search.php?show=quickref&=&pattern=%s
-searchsetkeyword py https://docs.python.org/3/search.html?q=%s&check_keywords=yes&area=default
-searchsetkeyword rs https://doc.rust-lang.org/std/?search=%s
-searchsetkeyword w http://en.wikipedia.org/w/index.php?title=Special%3ASearch&search=%s
-searchsetkeyword yt https://www.youtube.com/results?search_query=%s
-searchsetkeyword vc https://www.vocabulary.com/dictionary/%s
-searchsetkeyword gh https://github.com/search?q=%s
-searchsetkeyword gl https://gitlab.com/search?utf8=%E2%9C%93&snippets=&scope=&search=%s
-searchsetkeyword gsc https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=%s&btnG=
-
+set searchurls.cmake https://cmake.org/cmake/help/latest/search.html?q=%s&check_keywords=yes&area=default
+set searchurls.cpp http://en.cppreference.com/mwiki/index.php?title=Special%3ASearch&search=%s
+set searchurls.crate https://crates.io/search?q=%s
+set searchurls.php http://php.net/search.php?show=quickref&=&pattern=%s
+set searchurls.py https://docs.python.org/3/search.html?q=%s&check_keywords=yes&area=default
+set searchurls.rs https://doc.rust-lang.org/std/?search=%s
+set searchurls.w http://en.wikipedia.org/w/index.php?title=Special%3ASearch&search=%s
+set searchurls.yt https://www.youtube.com/results?search_query=%s
+set searchurls.vc https://www.vocabulary.com/dictionary/%s
+set searchurls.gh https://github.com/search?q=%s
+set searchurls.gl https://gitlab.com/search?utf8=%E2%9C%93&snippets=&scope=&search=%s
+set searchurls.gsc https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=%s&btnG=
+set searchurls.lbb http://libgen.io/search.php?req=%s&lg_topic=libgen&open=0&view=simple&res=25&phrase=1&column=def
+set searchurls.lbf http://libgen.io/foreignfiction/index.php?s=%s&f_lang=0&f_columns=0&f_ext=0&f_group=1
+set searchurls.lbs http://libgen.io/scimag/index.php?s=%s
+set searchurls.lbc http://libgen.io/comics/index.php?s=%s&res=25&sorted=0&mask=0&show=0
+set searchurls.lbm http://libgen.io/magz/index.php?s=%s
+set searchurls.mb https://forum.mobilism.org/search.php?keywords=%s&sr=topics&sf=titleonly
 
 "
 " Binds
