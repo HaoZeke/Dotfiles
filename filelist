@@ -178,6 +178,9 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 # Uncrustify
 .config/uncrustify/uncrustify_cpp.cfg:linux
 
+# Rofi
+.config/rofi/config.rasi:linux
+
 # Tilix
 # From https://github.com/karlding/base16-tilix
 .config/tilix/schemes/base16-spacemacs.json:linux
