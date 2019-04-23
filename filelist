@@ -183,6 +183,7 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 
 # Redshift
 .config/redshift/redshift.conf:linux
+.config/redshift/hooks/brightness.sh:linux
 
 # Tilix
 # From https://github.com/karlding/base16-tilix
