@@ -181,6 +181,9 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 # Rofi
 .config/rofi/config.rasi:linux
 
+# Redshift
+.config/redshift/redshift.conf:linux
+
 # Tilix
 # From https://github.com/karlding/base16-tilix
 .config/tilix/schemes/base16-spacemacs.json:linux
