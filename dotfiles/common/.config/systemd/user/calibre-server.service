@@ -6,6 +6,7 @@ After=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/calibre-server --port 8796
+ExecStop=killall -9 calibre-server
 
 [Install]
 WantedBy=default.target
