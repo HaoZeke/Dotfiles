@@ -118,6 +118,7 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 # User Systemd #
 .config/systemd/user/emacs.service
 .config/systemd/user/calibre-server.service
+.config/systemd/user/tmux.service
 
 # XKB Settings
 ###############
