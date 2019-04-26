@@ -155,6 +155,8 @@ zplug "changyuheng/zsh-interactive-cd"
 zplug "mollifier/cd-gitroot"
 zplug "bobsoppe/zsh-ssh-agent", use:ssh-agent.zsh, from:github
 zplug "zdharma/history-search-multi-word"
+zplug "urbainvaes/fzf-marks"
+
 # Manage NVM better (needs settings before being loaded)
 export NVM_LAZY_LOAD=true
 zplug "lukechilds/zsh-nvm"
