@@ -114,6 +114,7 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
+.local/share/applications/org-protocol.desktop
 
 # User Systemd #
 .config/systemd/user/emacs.service
