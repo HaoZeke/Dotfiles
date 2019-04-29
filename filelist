@@ -338,6 +338,7 @@ allPackages:archLinux
 ##############
 
 crontab:myArchBox
+.fzf-marks:myArchBox
 
 # Configs #
 
