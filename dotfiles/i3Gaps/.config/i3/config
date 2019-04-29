@@ -15,7 +15,7 @@
 # Mod1 → Alt Key
 set $mod Mod4
 set $font "pango:DejaVu Sans Mono 9"
-set $menu "rofi -show combi -show-icons -combi-modi \\"window,run,ssh\\" -modi combi"
+set $menu "rofi -show"
 set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 set $passwordManager "/opt/enpass/Enpass showassistant"
 set $screenshotTask "teiler --quickcopy area"
@@ -86,8 +86,8 @@ bindsym $mod+Return exec $term
 # kill focused window
 bindsym $mod+w kill
 
-# start dmenu (a program launcher)
-bindsym $mod+space exec $menu
+# start rofi (a program launcher)
+bindsym --release $mod+space exec $menu
 bindsym $mod+shift+space exec --no-startup-id $menuCalc
 # Copy a screenshot to the clipboard
 bindsym $mod+o exec $screenshotTask
@@ -258,6 +258,9 @@ exec_always gnome-encfs-manager
 exec_always termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
 bindsym F1 [instance="subTerm"] scratchpad show
+
+# Part of my redshift setup from the archwiki
+exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
 
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
