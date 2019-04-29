@@ -34,7 +34,7 @@ hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,sublime,b
 hzhome_i3=common,linux,archLinux,multiMonitor,sublime,i3Gaps,sway,wayland,xkblayout
 
 # My current config. [laptop]
-hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout
+hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
 
 ##########
 # Groups #
