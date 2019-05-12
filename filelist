@@ -345,14 +345,6 @@ crontab:myArchBox
 # mpd
 .config/mpd/mpd.conf:myArchBox
 
-# uGet
-.config/uGet/category/0000.json:myArchBox
-.config/uGet/category/0001.json:myArchBox
-.config/uGet/category/0002.json:myArchBox
-.config/uGet/category/0003.json:myArchBox
-.config/uGet/category/0004.json:myArchBox
-.config/uGet/Setting.json:myArchBox
-
 # CherryTree
 .config/cherrytree/config.cfg:myArchBox
 
