@@ -194,6 +194,9 @@ hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblay
 # Teiler (Screenshoter)
 .config/teiler/config:linux
 
+# Spotifyd
+.config/spotifyd/spotifyd.conf:linux
+
 # ArchLinux
 #################
 
