@@ -36,6 +36,9 @@ hzhome_i3=common,linux,archLinux,multiMonitor,sublime,i3Gaps,sway,wayland,xkblay
 # My current config. [laptop]
 hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
 
+# For my builds
+hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
+
 ##########
 # Groups #
 ##########
