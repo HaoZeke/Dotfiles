@@ -356,7 +356,6 @@ crontab:myArchBox
 
 # Nitrogen
 .config/nitrogen/nitrogen.cfg:myArchBox
-.config/nitrogen/bg-saved.cfg:myArchBox
 
 # Xfce4 Specifics
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
