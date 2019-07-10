@@ -301,6 +301,9 @@ else
   echo "You appear to be missing tmux"
 fi
 
+# Snap for rofi
+################
+export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop
 # Platform
 #############
 
