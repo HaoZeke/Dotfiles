@@ -177,9 +177,6 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .config/kitty/kittyMain.conf:linux
 .config/kitty/kittySub.conf:linux
 
-# Viewnoir
-.config/viewnior/viewnior.conf:linux
-
 # Uncrustify
 .config/uncrustify/uncrustify_cpp.cfg:linux
 
