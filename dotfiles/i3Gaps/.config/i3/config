@@ -79,6 +79,10 @@ gaps inner 5
  bindsym XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
  bindsym XF86MonBrightnessDown exec light -U 10
  bindsym XF86MonBrightnessUp exec light -A 10
+ bindsym XF86AudioPlay exec audacious --play-pause
+ bindsym XF86AudioStop exec audacious --stop
+ bindsym XF86AudioPrev exec audacious --rew
+ bindsym XF86AudioNext exec audacious --fwd
 
 # start a terminal
 bindsym $mod+Return exec $term
