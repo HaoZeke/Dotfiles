@@ -351,9 +351,6 @@ crontab:myArchBox
 # CherryTree
 .config/cherrytree/config.cfg:myArchBox
 
-# Nitrogen
-.config/nitrogen/nitrogen.cfg:myArchBox
-
 # Xfce4 Specifics
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
