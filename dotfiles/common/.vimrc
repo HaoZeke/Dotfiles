@@ -212,6 +212,7 @@ autocmd GUIEnter * set visualbell t_vb=
 nnoremap ; :
 "Spacemacs Esc
 imap fd <Esc>
+imap fd <Shift><SPC> 
 "Fake Sudo
 cmap w!! w !sudo tee % >/dev/null
 " Allow j and k to be more normal.
@@ -323,21 +324,23 @@ let g:UltiSnipsEditSplit="vertical"
 let g:tex_flavor = 'latex'
 
 " Vimtex
-  let g:vimtex_view_general_viewer = 'okular'
-  let g:vimtex_view_general_options = '--unique @pdf\#src:@line@tex'
-  let g:vimtex_view_general_options_latexmk = '--unique'
-  let g:vimtex_latexmk_options= '--bibtex --silent -shell-escape -quiet --synctex=-1 -src-specials -pdf'
+  let g:vimtex_view_general_viewer = 'zathura'
+  let g:vimtex_view_method = 'zathura'
+  let g:vimtex_latexmk_engine = '-pdfxe'
+"  let g:vimtex_view_general_options = '--unique @pdf\#src:@line@tex'
+"  let g:vimtex_view_general_options_latexmk = '--unique'
+  let g:vimtex_latexmk_options= '--bibtex --silent -shell-escape -quiet --synctex=-1 -src-specials -pdfxe'
   let g:vimtex_quickfix_ignored_warnings = [
         \ 'Underfull',
         \ 'Overfull',
         \ 'specifier changed to',
         \ 'wrong kind of dash'
       \ ]
-"let g:vimtex_complete_enabled
-"let g:vimtex_complete_patterns.ref
-"let g:vimtex_complete_patterns.bib
-"let g:vimtex_complete_close_braces
-"let g:vimtex_complete_recursive_bib
+" let g:vimtex_complete_enabled
+" let g:vimtex_complete_patterns.ref
+" let g:vimtex_complete_patterns.bib
+" let g:vimtex_complete_close_braces
+" let g:vimtex_complete_recursive_bib
 
 "YouCompleteMe
   if !exists('g:ycm_semantic_triggers')
