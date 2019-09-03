@@ -12,7 +12,7 @@ set adjust-open width
 # primary clipboard
 # primary uses Shift+Insert to paste
 # clipboard uses the traditional method to paste
-set selection-clipboard primary
+set selection-clipboard clipboard
 
 # Try the database
 # plain null sql
