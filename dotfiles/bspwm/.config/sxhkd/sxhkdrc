@@ -83,6 +83,11 @@ ctrl + shift + super + Return
 super + ctrl + Return
   gnome-screenshot -i
 
+# Application Launcher
+# Synapse was being buggy
+super + space
+  rofi -show combi -show-icons -combi-modi "drun,run" -modi combi
+
 #
 # Dropdowns
 #
