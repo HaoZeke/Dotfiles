@@ -91,6 +91,7 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .local/bin/fileHelpers/replace.sh
 .local/bin/gitHelpers/gh2https
 .local/bin/gitHelpers/gh2ssh
+.local/bin/gitHelpers/ipynb_drop_output.py
 .local/bin/installHelpers/getClean
 .local/bin/installHelpers/getDotGit
 .local/bin/installHelpers/getGREwords
