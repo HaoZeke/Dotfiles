@@ -115,6 +115,7 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .config/zathura/zathuraThemerc
 .config/tridactyl/tridactylrc
 .config/termite/config
+.config/git/attributes
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
