@@ -56,8 +56,7 @@ if [ ! -d $appDir ]; then
 elif [[ $(findmnt -M "$appDir") ]]; then
     echo "Mounted"
     # Added later
-    killall -9 $1
-    encfs -u $appDir
+    killall -9 $1  && encfs -u $appDir
     exit 1
 else
     echo "Not mounted"
