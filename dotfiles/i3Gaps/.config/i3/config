@@ -84,6 +84,9 @@ gaps inner 5
  bindsym XF86AudioPrev exec audacious --rew
  bindsym XF86AudioNext exec audacious --fwd
 
+# Lock screen
+bindsym $mod+Escape exec --no-startup-id sleep 1 && xset dpms force suspend
+
 # start a terminal
 bindsym $mod+Return exec $term
 
