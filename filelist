@@ -258,6 +258,9 @@ allPackages:archLinux
 # Bar
 .config/i3rust/i3.toml:i3Gaps
 
+# Lockscreen
+.local/bin/i3LockHelper:i3Gaps
+
 # Wayland
 ###########
 
