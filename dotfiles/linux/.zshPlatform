@@ -34,6 +34,9 @@ if which brew >/dev/null 2>&1; then
   zplug "zpm-zsh/linuxbrew"
 fi
 
+# The plugin itself checks for pyenv
+zplug "plugins/pyenv",   from:oh-my-zsh
+
 if which exa >/dev/null 2>&1; then
   zplug "ogham/exa", \
     from:gh-r, \
