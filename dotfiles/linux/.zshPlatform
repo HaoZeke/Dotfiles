@@ -66,6 +66,10 @@ if which fzf >/dev/null 2>&1; then
   fi
 fi
 
+# OMZ Stuff
+
+# The plugin itself checks for pyenv
+zplug "plugins/pyenv",   from:oh-my-zsh
 
 # Emacs Stuff (cross platform)
 # Local Variables:
