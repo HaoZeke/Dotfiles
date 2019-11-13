@@ -8,3 +8,9 @@
 # OMZ
 
 zplug "plugins/archlinux",                from:oh-my-zsh
+
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
