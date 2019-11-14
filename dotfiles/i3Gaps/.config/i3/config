@@ -258,6 +258,9 @@ exec_always nitrogen --restore
 # File Management
 exec_always udiskie --no-automount --notify --tray --use-udisks2
 
+# Load WiFi Helper
+exec_always nm-applet
+
 # I have secrets
 exec_always gnome-encfs-manager
 
