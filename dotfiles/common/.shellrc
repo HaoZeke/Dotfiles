@@ -51,6 +51,9 @@ if which exa >/dev/null 2>&1; then
   alias ls=exa
 fi
 
+# Indian Time
+alias indiaTime="TZ=Asia/Kolkata date +'Asia/Kolkata %a, %b %d, %Y %r'"
+
 # Functions
 ############
 
