@@ -132,11 +132,11 @@ bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
 
 # move across monitors Mod1->Alt, there isn't really a screen to the right so it
-# will only work on the left key for now
-bindsym $mod+Shift+Mod1+$left move workspace to output left
-bindsym $mod+Shift+Mod1+$right move workspace to output right
-bindsym $mod+Shift+Mod1+Left move workspace to output left
-bindsym $mod+Shift+Mod1+Right move workspace to output right
+# # will only work on the left key for now
+# bindsym $mod+Shift+Mod1+$left move workspace to output left
+# bindsym $mod+Shift+Mod1+$right move workspace to output right
+# bindsym $mod+Shift+Mod1+Left move workspace to output left
+# bindsym $mod+Shift+Mod1+Right move workspace to output right
 
 # you can "split" the current object of your focus with
 # $mod+v or $mod+v, for horizontal and vertical splits
