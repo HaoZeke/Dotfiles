@@ -1,5 +1,6 @@
 dotdoom : /home/haozeke/.config/doom
-doom-emacs : /home/haozeke/.emacs.d
 conf : /home/haozeke/.config
 npambi : /home/haozeke/Git/Gitlab/Me/npambiReam
 dotfiles : /home/haozeke/Git/Github/Dotfiles
+doom-emacs : /home/haozeke/.emacs.d
+scmeUnif : /home/haozeke/Git/Gitlab/TheochemUI/scmeUnified
