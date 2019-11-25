@@ -99,7 +99,7 @@
 		"node_modules/**"
 	],
 	"close_windows_when_empty": false,
-	"color_scheme": "Packages/Ecmascript Syntax/carthage.tmTheme",
+	"color_scheme": "Packages/Color Scheme - Default/Monokai.tmTheme",
 	"folder_exclude_patterns":
 	[
 		".svn",
@@ -121,6 +121,8 @@
 		"ayu",
 		"Base16 Color Schemes",
 		"BeautifyLatex",
+		"Boxy Theme",
+		"Boxy Theme Addon - Font Face",
 		"BracketHighlighter",
 		"C++ Starting Kit",
 		"Clickable URLs",
@@ -132,6 +134,7 @@
 		"DoxyDoc",
 		"Google Search",
 		"Google Spell Check",
+		"GoSublime",
 		"HTML Boilerplate",
 		"HTML5",
 		"HTMLAttributes",
@@ -165,6 +168,7 @@
 		"Theme - Spacegray",
 		"Tmux",
 		"Travis YML Lint",
+		"UnicodeTeX",
 		"Vuejs Complete Package",
 		"Wombatish color scheme"
 	],
