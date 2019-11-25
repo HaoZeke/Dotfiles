@@ -21,8 +21,8 @@ EndOffset=0
 StartOffsetMode=THUNAR_SBR_OFFSET_MODE_RIGHT
 
 [ThunarSbrReplaceRenamer]
-Regexp=FALSE
-Replacement=
 CaseSensitive=FALSE
-Pattern=egghead -
+Replacement=
+Pattern=.png
+Regexp=FALSE
 
