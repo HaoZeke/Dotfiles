@@ -274,6 +274,9 @@ exec_always gnome-encfs-manager
 # Listen to lock events
 exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
 
+# Put Thunderbrid in a tray
+exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
+
 # Scratchpad Stuff
 exec_always termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
