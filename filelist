@@ -260,6 +260,7 @@ allPackages:archLinux
 
 # Lockscreen
 .local/bin/i3LockHelper:i3Gaps
+.local/bin/thundertray.pl:i3Gaps
 
 # Wayland
 ###########
