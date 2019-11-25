@@ -66,6 +66,11 @@ if which fzf >/dev/null 2>&1; then
   fi
 fi
 
+# ASDF Stuff
+# Stolen from https://github.com/juliogc/dotfiles/blob/master/.zshrc
+# zplug "asdf-vm/asdf", from:github, use:"asdf.sh"
+# zplug "asdf-vm/asdf", from:github, use:"completions/asdf.bash", defer:1
+
 # OMZ Stuff
 
 # The plugin itself checks for pyenv
