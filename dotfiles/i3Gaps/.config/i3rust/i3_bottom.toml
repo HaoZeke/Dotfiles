@@ -55,6 +55,12 @@ icons = "awesome"
 # block = "sound"
 
 [[block]]
+block = "time"
+format = "India: %I:%M %p"
+timezone = "Asia/Kolkata"
+interval = 60
+
+[[block]]
 block = "weather"
 format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
 service = { name = "openweathermap", units = "metric" }
