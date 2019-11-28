@@ -1,11 +1,12 @@
 # Based off the config by dikiaap https://github.com/dikiaap/dotfiles/blob/master/.dunst/dunstrc
+# Also from the comments by Kaligule https://github.com/Kaligule/dunst-config/blob/master/dunstrc
+# There's the default: /usr/share/dunst/dunstrc
 [global]
-    monitor = 0
-    follow = mouse
+    follow = mouse # Disables monitor
     geometry = "320x5-15+15"
     indicate_hidden = yes
     shrink = no
-    transparency = 0
+    transparency = 10
     notification_height = 0
     separator_height = 2
     padding = 10
@@ -15,7 +16,7 @@
     separator_color = frame
     sort = yes
     idle_threshold = 120
-    font = Source Sans Pro 10
+    font = Source Sans Pro 14
     line_height = 0
     markup = full
     format = "<span foreground='#f3f4f5'><b>%s %p</b></span>\n%b"
@@ -40,8 +41,24 @@
     mouse_left_click = close_current
     mouse_middle_click = do_action
     mouse_right_click = close_all
+    # Advanced
+    # dmenu from https://github.com/thornycrackers/.dotfiles/commit/6487503c90e55d1fa67706d45e4c30245ac74e8d
+    dmenu = /usr/bin/env rofi -dmenu -p dunst
+# Experimental features that may or may not work correctly. Do not expect them
+# to have a consistent behaviour across releases.
+[experimental]
+# Calculate the dpi to use on a per-monitor basis.
+# If this setting is enabled the Xft.dpi value will be ignored and instead
+# dunst will attempt to calculate an appropriate dpi value for each monitor
+# using the resolution and physical size. This might be useful in setups
+# where there are multiple screens with very different dpi values.
+    per_monitor_dpi = true
 
 [shortcuts]
+    # shortcuts are specified as [modifier+][modifier+]...key
+    # available modifiers are 'ctrl', 'mod1' (the alt-key), 'mod2', 'mod3'
+    # and 'mod4' (windows-key)
+    # xev might be helpful to find names for keys
     close = ctrl+space
     close_all = ctrl+shift+space
     history = ctrl+grave
