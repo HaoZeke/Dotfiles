@@ -262,6 +262,9 @@ allPackages:archLinux
 .local/bin/i3LockHelper:i3Gaps
 .local/bin/thundertray.pl:i3Gaps
 
+# Notifications
+.config/dunst/dunstrc:i3Gaps
+
 # Wayland
 ###########
 
