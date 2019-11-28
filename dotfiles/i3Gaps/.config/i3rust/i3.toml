@@ -44,7 +44,7 @@ interval = 1
 [[block]]
 block = "battery"
 interval = 10
-show = "both"
+format = "{percentage}% {time}"
 
 [[block]]
 block = "time"
