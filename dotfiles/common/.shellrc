@@ -215,9 +215,6 @@ fi
 # For ssh-add
 eval $(ssh-agent) >/dev/null 2>&1
 
-# Grab my keys
-eval $(gpg --decrypt $HOME/.config/keys.sh.gpg)
-
 # Common Exports
 ###################
 
