@@ -256,7 +256,8 @@ allPackages:archLinux
 .config/i3/config.keycodes:i3Gaps
 
 # Bar
-.config/i3rust/i3.toml:i3Gaps
+.config/i3rust/i3_top.toml:i3Gaps
+.config/i3rust/i3_bottom.toml:i3Gaps
 
 # Lockscreen
 .local/bin/i3LockHelper:i3Gaps

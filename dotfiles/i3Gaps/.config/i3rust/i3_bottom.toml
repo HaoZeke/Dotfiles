@@ -1,0 +1,65 @@
+theme = "solarized-dark"
+icons = "awesome"
+
+# [[block]]
+# block = "xrandr"
+# icons = true
+# resolution = true
+# interval = 2
+
+# [[block]]
+# block = "disk_space"
+# path = "/"
+# alias = "/"
+# info_type = "available"
+# unit = "GB"
+# interval = 20
+# warning = 20.0
+# alert = 10.0
+
+# [[block]]
+# block = "memory"
+# display_type = "memory"
+# format_mem = "{Mup}%"
+# format_swap = "{SUp}%"
+
+# [[block]]
+# block = "cpu"
+# interval = 1
+
+# [[block]]
+# block = "load"
+# interval = 1
+# format = "{1m}"
+
+# [[block]]
+# block = "net"
+# device = "wlan0"
+# ssid = true
+# # ip = true
+# speed_up = false
+# # graph_up = true
+# interval = 1
+
+# [[block]]
+# block = "battery"
+# interval = 10
+# format = "{percentage}% {time}"
+
+# [[block]]
+# block = "time"
+# interval = 60
+# format = "%a %d/%m %I:%M %p"
+
+# [[block]]
+# block = "sound"
+
+# [[block]]
+# block = "weather"
+# format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
+# service = { name = "openweathermap", api_key = "a5f0d7a91474e3bb952beb7a5251494d", city_id = "3413829", units = "metric" }
+
+[[block]]
+block = "music"
+buttons = ["prev","play", "next"]
+on_collapsed_click = "spotify"
