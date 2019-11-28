@@ -68,4 +68,5 @@ service = { name = "openweathermap", units = "metric" }
 [[block]]
 block = "music"
 buttons = ["prev","play", "next"]
-on_collapsed_click = "spotify"
+marquee = false
+on_collapsed_click = "kdocker /usr/bin/spotify"
