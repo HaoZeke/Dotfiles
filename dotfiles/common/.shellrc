@@ -5,25 +5,25 @@
 # Warnings
 ############
 if ! which git >/dev/null 2>&1; then
-  echo "You do not have git.\n DO NOT DO ANYTHING WITHOUT GIT\n"
-  echo "You might want to install brew with getBrew\n"
-  echo "Once you have brew just run\nbrew install git"
+	echo "You do not have git.\n DO NOT DO ANYTHING WITHOUT GIT\n"
+	echo "You might want to install brew with getBrew\n"
+	echo "Once you have brew just run\nbrew install git"
 fi
 
 # Exports
 ##########
 
-if [ ! $DISPLAY ] ; then
-    if [ "$SSH_CLIENT" ] ; then
-        export DISPLAY=`echo $SSH_CLIENT|cut -f1 -d\ `:0.0
-    fi
+if [ ! $DISPLAY ]; then
+	if [ "$SSH_CLIENT" ]; then
+		export DISPLAY=$(echo $SSH_CLIENT | cut -f1 -d\ ):0.0
+	fi
 fi
 
 # Aliases
 ###########
 
 if [ ! -f ~/blank/ ]; then
-  mkdir -p ~/blank/
+	mkdir -p ~/blank/
 fi
 
 alias foldel='time rsync -avv --delete /home/$USER/blank/ '
@@ -48,7 +48,7 @@ alias emacs='emacs -nw'
 
 # Better ls
 if which exa >/dev/null 2>&1; then
-  alias ls=exa
+	alias ls=exa
 fi
 
 # Indian Time
@@ -62,129 +62,130 @@ alias indiaTime="TZ=Asia/Kolkata date +'Asia/Kolkata %a, %b %d, %Y %r'"
 
 # Spit out a deduplicated PATH
 pathdup() {
-if [ -n "$PATH" ]; then
-old_PATH=$PATH:; PATH=
- while [ -n "$old_PATH" ]; do
-x=${old_PATH%%:*}       # the first remaining entry
-case $PATH: in
-*:"$x":*) ;;         # already there
-*) PATH=$PATH:$x;;    # not there yet
- esac
-old_PATH=${old_PATH#*:}
-done
-PATH=${PATH#:}
-unset old_PATH x
-fi
+	if [ -n "$PATH" ]; then
+		old_PATH=$PATH:
+		PATH=
+		while [ -n "$old_PATH" ]; do
+			x=${old_PATH%%:*} # the first remaining entry
+			case $PATH: in
+			*:"$x":*) ;; # already there
+			*) PATH=$PATH:$x ;; # not there yet
+			esac
+			old_PATH=${old_PATH#*:}
+		done
+		PATH=${PATH#:}
+		unset old_PATH x
+	fi
 }
 
 # Calibre Upgrade
 caliup() {
-  sudo -v && wget --no-check-certificate -nv -O- https://download.calibre-ebook.com/linux-installer.py | sudo python -c "import sys; main=lambda:sys.stderr.write('Download failed\n'); exec(sys.stdin.read()); main()"
+	sudo -v && wget --no-check-certificate -nv -O- https://download.calibre-ebook.com/linux-installer.py | sudo python -c "import sys; main=lambda:sys.stderr.write('Download failed\n'); exec(sys.stdin.read()); main()"
 }
 
 # Transfer.sh
-transfer() { 
-    # check arguments
-    if [ $# -eq 0 ]; then 
-        echo "No arguments specified." >&2
-        echo "Usage:" >&2
-        echo "  transfer <file|directory>" >&2
-        echo "  ... | transfer <file_name>" >&2
-        return 1
-    fi
-    
-    # upload stdin or file
-    if tty -s; then 
-        file="$1"
-        if [ ! -e "$file" ]; then
-            echo "$file: No such file or directory" >&2
-            return 1
-        fi
-        
-        file_name=$(basename "$file" | sed -e 's/[^a-zA-Z0-9._-]/-/g') 
-        
-        # upload file or directory
-        if [ -d "$file" ]; then
-            # transfer directory
-            file_name="$file_name.zip" 
-            (cd "$file" && zip -r -q - .) | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
-        else 
-            # transfer file
-            cat "$file" | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
-        fi
-    else 
-        # transfer pipe
-        file_name=$1
-        curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
-    fi
+transfer() {
+	# check arguments
+	if [ $# -eq 0 ]; then
+		echo "No arguments specified." >&2
+		echo "Usage:" >&2
+		echo "  transfer <file|directory>" >&2
+		echo "  ... | transfer <file_name>" >&2
+		return 1
+	fi
+
+	# upload stdin or file
+	if tty -s; then
+		file="$1"
+		if [ ! -e "$file" ]; then
+			echo "$file: No such file or directory" >&2
+			return 1
+		fi
+
+		file_name=$(basename "$file" | sed -e 's/[^a-zA-Z0-9._-]/-/g')
+
+		# upload file or directory
+		if [ -d "$file" ]; then
+			# transfer directory
+			file_name="$file_name.zip"
+			(cd "$file" && zip -r -q - .) | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+		else
+			# transfer file
+			cat "$file" | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+		fi
+	else
+		# transfer pipe
+		file_name=$1
+		curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+	fi
 }
 
 # Image resizer
 smartresize() {
-   mogrify -path $3 -filter Triangle -define filter:support=2 -thumbnail $2 -unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 -quality 82 -define jpeg:fancy-upsampling=off -define png:compression-filter=5 -define png:compression-level=9 -define png:compression-strategy=1 -define png:exclude-chunk=all -interlace none -colorspace sRGB $1
+	mogrify -path $3 -filter Triangle -define filter:support=2 -thumbnail $2 -unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 -quality 82 -define jpeg:fancy-upsampling=off -define png:compression-filter=5 -define png:compression-level=9 -define png:compression-strategy=1 -define png:exclude-chunk=all -interlace none -colorspace sRGB $1
 }
 
 # Libgen Downloader
-libgen () {
-local args=$1
-local genio='http://libgen.io/book/index.php?md5='
-local genrus='http://gen.lib.rus.ec/book/index.php?md5='
+libgen() {
+	local args=$1
+	local genio='http://libgen.io/book/index.php?md5='
+	local genrus='http://gen.lib.rus.ec/book/index.php?md5='
 
-if [ -z "${args##*$genio*}" ] ;then
-  local cHashgenio=${@#$genio}
-  echo "[DEBUG] ARGS=${args}"
-  echo "[INFO] The hash will be extracted."
-  local MD5=${cHashgenio}
-elif [ -z "${args##*$genrus*}" ]; then
-  local cHashgenrus=${@#$genrus}
-  echo "[DEBUG] ARGS=${args}"
-  echo "[INFO] The hash will be extracted."
-  local MD5=${cHashgenrus}
-else
-  echo "[DEBUG] ARGS=${args}"
-  local MD5=${args}
-fi
-echo "[INFO] MD5=${MD5}"
+	if [ -z "${args##*$genio*}" ]; then
+		local cHashgenio=${@#$genio}
+		echo "[DEBUG] ARGS=${args}"
+		echo "[INFO] The hash will be extracted."
+		local MD5=${cHashgenio}
+	elif [ -z "${args##*$genrus*}" ]; then
+		local cHashgenrus=${@#$genrus}
+		echo "[DEBUG] ARGS=${args}"
+		echo "[INFO] The hash will be extracted."
+		local MD5=${cHashgenrus}
+	else
+		echo "[DEBUG] ARGS=${args}"
+		local MD5=${args}
+	fi
+	echo "[INFO] MD5=${MD5}"
 
-# The whole Key thing stops working
-# local URL='http://libgen.io/get.php?md5='
-# local KEY=$(curl -sL "${URL}${MD5}" | grep -oE "key=[^']*" | cut -d'=' -f2)
-# echo "[INFO] KEY=${KEY}"
+	# The whole Key thing stops working
+	# local URL='http://libgen.io/get.php?md5='
+	# local KEY=$(curl -sL "${URL}${MD5}" | grep -oE "key=[^']*" | cut -d'=' -f2)
+	# echo "[INFO] KEY=${KEY}"
 
-# local FURL="${URL}${MD5}&key=${KEY}"
+	# local FURL="${URL}${MD5}&key=${KEY}"
 
-# Non-Key
-local altURL='http://libgen.io/ads.php?md5='
-local FURL="${altURL}${MD5}"
+	# Non-Key
+	local altURL='http://libgen.io/ads.php?md5='
+	local FURL="${altURL}${MD5}"
 
-if which aria2c >/dev/null 2>&1; then
-  aria2c -j2 "$FURL"
-elif which wget >/dev/null 2>&1; then
-  wget -v -c "${FURL}" -O "${MD5}.libgen"
-  wget --trust-server-names -v -c "${FURL}"
-else
-  curl -L -J -O "${FURL}" --progress-bar
-fi
+	if which aria2c >/dev/null 2>&1; then
+		aria2c -j2 "$FURL"
+	elif which wget >/dev/null 2>&1; then
+		wget -v -c "${FURL}" -O "${MD5}.libgen"
+		wget --trust-server-names -v -c "${FURL}"
+	else
+		curl -L -J -O "${FURL}" --progress-bar
+	fi
 
-# Check Hash
-# md5sum $file???? == $MD5
+	# Check Hash
+	# md5sum $file???? == $MD5
 }
 
 getCloud() {
-  fileName=$(curl -sI  "${1}" | grep -o -E 'filename=.*$' | sed -e 's/filename=//')
-  echo $fileName
-  if [[ ! -a $fileName ]]; then
-    if which aria2c >/dev/null 2>&1; then
-      aria2c -j2 "$1"
-    elif which wget >/dev/null 2>&1; then
-      wget -v -c "${1}"
-      wget --trust-server-names -v -c "${1}"
-    else
-      curl -L -J -O "${1}" --progress-bar
-    fi
-  else
-    echo "This file already exists."
-  fi
+	fileName=$(curl -sI "${1}" | grep -o -E 'filename=.*$' | sed -e 's/filename=//')
+	echo $fileName
+	if [[ ! -a $fileName ]]; then
+		if which aria2c >/dev/null 2>&1; then
+			aria2c -j2 "$1"
+		elif which wget >/dev/null 2>&1; then
+			wget -v -c "${1}"
+			wget --trust-server-names -v -c "${1}"
+		else
+			curl -L -J -O "${1}" --progress-bar
+		fi
+	else
+		echo "This file already exists."
+	fi
 }
 
 # Sources
@@ -192,50 +193,50 @@ getCloud() {
 
 # GRE Word List
 if [[ $- = *i* ]]; then
-  if [[ -d $HOME/.local/greWords/gre-cli-words ]]; then
-  $HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
-  echo "\n"
-  else
-    echo "You don't have gre-cli-words setup, try running getGREwords"
-  fi
+	if [[ -d $HOME/.local/greWords/gre-cli-words ]]; then
+		$HOME/.local/greWords/gre-cli-words/random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
+		echo "\n"
+	else
+		echo "You don't have gre-cli-words setup, try running getGREwords"
+	fi
 fi
 
 # Nix
 if [[ $- = *i* ]]; then
-  if [[ -f /etc/profile.d/nix.sh ]]; then
-          . /etc/profile.d/nix.sh
-  elif [[ -d /nix ]]; then
-    . $HOME/.nix-profile/etc/profile.d/nix.sh
-    else
-      echo "You don't have nix installed"
-  fi
+	if [[ -f /etc/profile.d/nix.sh ]]; then
+		. /etc/profile.d/nix.sh
+	elif [[ -d /nix ]]; then
+		. $HOME/.nix-profile/etc/profile.d/nix.sh
+	else
+		echo "You don't have nix installed"
+	fi
 fi
 
 # For ssh-add
-eval $(ssh-agent) >/dev/null 2>&1;
+eval $(ssh-agent) >/dev/null 2>&1
 
 # Common Exports
 ###################
 
 # Nord (from dircolors)
-export LS_COLORS='rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:';
+export LS_COLORS='rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'
 
 if which nvim >/dev/null 2>&1; then
-  alias vim=nvim
-  alias vi=nvim
-  export EDITOR=nvim
+	alias vim=nvim
+	alias vi=nvim
+	export EDITOR=nvim
 else
-  export EDITOR=vim
+	export EDITOR=vim
 fi
 
 if ! which fzf >/dev/null 2>&1 && [[ $- = *i* ]]; then
-  if ! which rg >/dev/null 2>&1 && [[ $- = *i* ]]; then
-    echo "Please get ripgrep working"
-  else
-    export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
-    export FZF_DEFAULT_OPTS="--extended --ansi --multi"
-  fi
-  echo "Please get fzf working"
+	if ! which rg >/dev/null 2>&1 && [[ $- = *i* ]]; then
+		echo "Please get ripgrep working"
+	else
+		export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
+		export FZF_DEFAULT_OPTS="--extended --ansi --multi"
+	fi
+	echo "Please get fzf working"
 fi
 
 # LANGUAGE must be set by en_US
@@ -299,9 +300,9 @@ export SXHKD_SHELL=/usr/bin/zsh
 # alias tmux="tmux -2"
 
 if which tmux >/dev/null 2>&1; then
-  getTpm
+	getTpm
 else
-  echo "You appear to be missing tmux"
+	echo "You appear to be missing tmux"
 fi
 
 # Snap for rofi
@@ -311,29 +312,28 @@ export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop
 #############
 
 if [ -f ~/.shellPlatform ]; then
-  . ~/.shellPlatform
+	. ~/.shellPlatform
 fi
-
 
 # Specifics
 #############
 
 if [ -f ~/.shellSpecifics ]; then
-  . ~/.shellSpecifics
+	. ~/.shellSpecifics
 fi
 
 # Wayland
 #############
 
 if [ -f ~/.waylandEnv ]; then
-  . ~/.waylandEnv
+	. ~/.waylandEnv
 fi
 
 # XKB
 ######
 
 if [ -f ~/.xkbEnv ]; then
-  . ~/.xkbEnv
+	. ~/.xkbEnv
 fi
 
 # Emacs Stuff (cross platform)
