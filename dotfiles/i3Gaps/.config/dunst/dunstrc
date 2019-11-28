@@ -38,8 +38,15 @@
     verbosity = mesg
     corner_radius = 0
     force_xinerama = false
-    mouse_left_click = close_current
-    mouse_middle_click = do_action
+    # Defines action of mouse event
+    # Possible values are:
+    # * none: Don't do anything.
+    # * do_action: If the notification has exactly one action, or one is marked as default,
+    #              invoke it. If there are multiple and no default, open the context menu.
+    # * close_current: Close current notification.
+    # * close_all: Close all notifications.
+    mouse_left_click = do_action
+    mouse_middle_click = close_current
     mouse_right_click = close_all
     # Advanced
     # dmenu from https://github.com/thornycrackers/.dotfiles/commit/6487503c90e55d1fa67706d45e4c30245ac74e8d
