@@ -3,7 +3,7 @@
 # There's the default: /usr/share/dunst/dunstrc
 [global]
     follow = mouse # Disables monitor
-    geometry = "320x5-15+15"
+    geometry = "320x5-15+25"
     indicate_hidden = yes
     shrink = no
     transparency = 10
@@ -16,7 +16,7 @@
     separator_color = frame
     sort = yes
     idle_threshold = 120
-    font = Source Sans Pro 14
+    font = Source Sans Pro 12
     line_height = 0
     markup = full
     format = "<span foreground='#f3f4f5'><b>%s %p</b></span>\n%b"
@@ -52,7 +52,7 @@
 # dunst will attempt to calculate an appropriate dpi value for each monitor
 # using the resolution and physical size. This might be useful in setups
 # where there are multiple screens with very different dpi values.
-    per_monitor_dpi = true
+    # per_monitor_dpi = true
 
 [shortcuts]
     # shortcuts are specified as [modifier+][modifier+]...key
