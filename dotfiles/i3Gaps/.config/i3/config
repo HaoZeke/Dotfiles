@@ -261,19 +261,19 @@ exec_always --no-startup-id unclutter --timeout 1
 
 # WM Things
 exec_always bash $HOME/.local/bin/java_nonreparenting_wm_hack.sh
-exec_always picom --config ~/.config/compton.conf -b
+exec picom --config ~/.config/compton.conf -b
 
 # Wallpaper Management
 exec_always nitrogen --restore
 
 # File Management
-exec_always udiskie --no-automount --notify --tray --use-udisks2
+exec udiskie --no-automount --notify --tray --use-udisks2
 
 # Load WiFi Helper
-exec_always nm-applet
+exec nm-applet
 
 # I have secrets
-exec_always gnome-encfs-manager
+exec gnome-encfs-manager
 
 # Listen to lock events
 exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
@@ -282,7 +282,7 @@ exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
 exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
 
 # Scratchpad Stuff
-exec_always termite --name=subTerm
+exec termite --name=subTerm
 for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
 bindsym F1 [instance="subTerm"] scratchpad show
 
