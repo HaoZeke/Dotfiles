@@ -116,6 +116,7 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .config/tridactyl/tridactylrc
 .config/termite/config
 .config/git/attributes
+.config/keys.sh.gpg
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
