@@ -58,3 +58,8 @@ block = "sound"
 # block = "weather"
 # format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
 # service = { name = "openweathermap", api_key = "a5f0d7a91474e3bb952beb7a5251494d", city_id = "3413829", units = "metric" }
+
+[[block]]
+block = "music"
+buttons = ["prev","play", "next"]
+on_collapsed_click = "spotify"
