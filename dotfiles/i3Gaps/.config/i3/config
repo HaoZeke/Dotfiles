@@ -261,7 +261,7 @@ exec_always --no-startup-id unclutter --timeout 1
 
 # WM Things
 exec_always bash $HOME/.local/bin/java_nonreparenting_wm_hack.sh
-exec_always compton --config ~/.config/compton.conf -b -d
+exec_always picom --config ~/.config/compton.conf -b
 
 # Wallpaper Management
 exec_always nitrogen --restore
