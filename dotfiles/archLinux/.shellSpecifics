@@ -180,6 +180,9 @@ export CPATH=$CPATH:/usr/local/include
 # Gaussian
 export PATH=$PATH:$HOME/.local/g16
 
+# Add the path for android-sdk-platform-tools
+export PATH=$PATH:/opt/android-sdk/platform-tools/
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
