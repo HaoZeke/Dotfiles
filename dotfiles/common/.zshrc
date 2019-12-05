@@ -95,11 +95,15 @@ POWERLEVEL9K_VCS_UNTRACKED_BACKGROUND='black'
 POWERLEVEL9K_VCS_MODIFIED_FOREGROUND='blue'
 POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
 
+# Control knobs
+# POWERLEVEL9K_PYENV_PROMPT_ALWAYS_SHOW='true'
+# POWERLEVEL9K_RBENV_PROMPT_ALWAYS_SHOW='true'
+
 # Right
 POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline rvm virtualenv vcs)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs)
 
 zplug "bhilburn/powerlevel9k", use:powerlevel9k.zsh-theme, defer:3
 
