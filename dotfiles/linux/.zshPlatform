@@ -73,8 +73,9 @@ fi
 
 # OMZ Stuff
 
-# The plugin itself checks for pyenv
-zplug "plugins/pyenv",   from:oh-my-zsh
+# These plugins check for the binaries (pyenv, rbenv)
+zplug "plugins/pyenv", from:oh-my-zsh
+zplug "plugins/rbenv", from:oh-my-zsh
 
 # Emacs Stuff (cross platform)
 # Local Variables:
