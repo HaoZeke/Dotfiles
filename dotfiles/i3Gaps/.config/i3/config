@@ -281,6 +281,9 @@ exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
 # Put Thunderbrid in a tray
 exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
 
+# I like to know what I do
+exec --no-startup-id rescuetime
+
 # Scratchpad Stuff
 exec termite --name=mainScratch --exec="tmux new -s mainScratch"
 for_window [instance="mainScratch"] border 1pixel, resize set 631 1132, move position 0 0, move to scratchpad
