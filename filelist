@@ -59,6 +59,8 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .direnvrc
 .gtkrc-2.0
 .Xmodmap
+# Personal Dictionary
+.aspell.en.pws
 
 # GDB init is actually from gdb-dashboard with some additions
 # Update frequently
