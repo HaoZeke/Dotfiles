@@ -1,3 +1,4 @@
+# TOML Ref: https://github.com/toml-lang/toml
 theme = "solarized-dark"
 icons = "awesome"
 
