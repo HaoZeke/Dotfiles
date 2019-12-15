@@ -284,6 +284,9 @@ exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
 # I like to know what I do
 exec --no-startup-id rescuetime
 
+# Atleast this helps me spell Álfheimar
+exec --no-startup-id copyq
+
 # Scratchpad Stuff
 exec termite --name=mainScratch --exec="tmux new -s mainScratch"
 for_window [instance="mainScratch"] border 1pixel, resize set 631 1132, move position 0 0, move to scratchpad
