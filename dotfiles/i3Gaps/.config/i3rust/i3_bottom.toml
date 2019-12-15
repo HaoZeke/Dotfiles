@@ -63,7 +63,11 @@ interval = 60
 [[block]]
 block = "weather"
 format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
-service = { name = "openweathermap", units = "metric" }
+[service] # Table format instead of the inline table {} format
+name = "openweathermap"
+city_id = "1267995" # Kanpur
+# city_id = "3413829", # Reykjavik
+units = "metric"
 
 [[block]]
 block = "music"
