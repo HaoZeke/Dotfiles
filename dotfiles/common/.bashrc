@@ -2,20 +2,19 @@
 . ~/.shellrc
 
 #################
-#  Common Bash  # 
+#  Common Bash  #
 #################
 
-# Platform 
+# Platform
 #############
 
 if [ -f ~/.bashPlatform ]; then
-  . ~/.bashPlatform
+	. ~/.bashPlatform
 fi
 
-
-# Specifics 
+# Specifics
 #############
 
 if [ -f ~/.bashSpecifics ]; then
-  . ~/.bashSpecifics
+	. ~/.bashSpecifics
 fi
