@@ -1,5 +1,27 @@
+# TOML Ref: https://github.com/toml-lang/toml
 theme = "solarized-dark"
 icons = "awesome"
+
+[[block]]
+block = "time"
+format = "India: %I:%M %p"
+timezone = "Asia/Kolkata"
+interval = 60
+
+[[block]]
+block = "weather"
+format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
+[service] # Table format instead of the inline table {} format
+name = "openweathermap"
+city_id = "1267995" # Kanpur
+# city_id = "3413829", # Reykjavik
+units = "metric"
+
+[[block]]
+block = "music"
+buttons = ["prev","play", "next"]
+marquee = false
+on_collapsed_click = "kdocker /usr/bin/spotify"
 
 # [[block]]
 # block = "xrandr"
@@ -53,24 +75,3 @@ icons = "awesome"
 
 # [[block]]
 # block = "sound"
-
-[[block]]
-block = "time"
-format = "India: %I:%M %p"
-timezone = "Asia/Kolkata"
-interval = 60
-
-[[block]]
-block = "weather"
-format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
-[service] # Table format instead of the inline table {} format
-name = "openweathermap"
-city_id = "1267995" # Kanpur
-# city_id = "3413829", # Reykjavik
-units = "metric"
-
-[[block]]
-block = "music"
-buttons = ["prev","play", "next"]
-marquee = false
-on_collapsed_click = "kdocker /usr/bin/spotify"
