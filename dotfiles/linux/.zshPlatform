@@ -23,46 +23,61 @@ export PATH=$PATH:/usr/local/MATLAB/R2017a/bin
 # fi
 
 if which fzf >/dev/null 2>&1; then
-  zplug "junegunn/fzf-bin", \
-      from:gh-r, \
-      as:command, \
-      rename-to:fzf, \
-      use:"*linux*amd64*"
+	zplug "junegunn/fzf-bin", \
+		from:gh-r, \
+		as:command, \
+		rename-to:fzf, \
+		use:"*linux*amd64*"
 fi
 
 if which brew >/dev/null 2>&1; then
-  zplug "zpm-zsh/linuxbrew"
+	zplug "zpm-zsh/linuxbrew"
+fi
+
+if which gibo >/dev/null 2>&1; then
+	zplug "simonwhitaker/gibo"
+else
+	echo "Please install gibo for managing .gitignore files"
 fi
 
 if which exa >/dev/null 2>&1; then
-  zplug "ogham/exa", \
-    from:gh-r, \
-    as:command, \
-    rename-to:exa, \
-    use:"*linux*"
+	zplug "ogham/exa", \
+		from:gh-r, \
+		as:command, \
+		rename-to:exa, \
+		use:"*linux*"
 fi
 
 if which archiver >/dev/null 2>&1; then
-  zplug "mholt/archiver", \
-    from:gh-r, \
-    as:command, \
-    rename-to:archiver, \
-    use:"*linux*amd64*"
+	zplug "mholt/archiver", \
+		from:gh-r, \
+		as:command, \
+		rename-to:archiver, \
+		use:"*linux*amd64*"
 fi
 
 if which fzf >/dev/null 2>&1; then
-  if which git-fzf >/dev/null 2>&1; then
-    zplug 'b4b4r07/git-fzf', hook-build:'make'
-    zplug 'b4b4r07/git-fzf', \
-        as:command, \
-        use:'bin/(git-*).zsh', \
-    rename-to:'$1'
-  fi
+	if which git-fzf >/dev/null 2>&1; then
+		zplug 'b4b4r07/git-fzf', hook-build:'make'
+		zplug 'b4b4r07/git-fzf', \
+			as:command, \
+			use:'bin/(git-*).zsh', \
+			rename-to:'$1'
+	fi
 fi
 
+# ASDF Stuff
+# Stolen from https://github.com/juliogc/dotfiles/blob/master/.zshrc
+# zplug "asdf-vm/asdf", from:github, use:"asdf.sh"
+# zplug "asdf-vm/asdf", from:github, use:"completions/asdf.bash", defer:1
+
+# OMZ Stuff
+
+# These plugins check for the binaries (pyenv, rbenv)
+zplug "plugins/pyenv", from:oh-my-zsh
+zplug "plugins/rbenv", from:oh-my-zsh
 
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
 # End:
-
