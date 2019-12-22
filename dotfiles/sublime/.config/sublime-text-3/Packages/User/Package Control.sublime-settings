@@ -2,6 +2,10 @@
 	"bootstrapped": true,
 	"in_process_packages":
 	[
+		"Boxy Theme",
+		"Boxy Theme Addon - Font Face",
+		"GoSublime",
+		"UnicodeTeX"
 	],
 	"installed_packages":
 	[
