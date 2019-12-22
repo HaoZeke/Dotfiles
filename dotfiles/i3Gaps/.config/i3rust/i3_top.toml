@@ -1,3 +1,4 @@
+# TOML Ref: https://github.com/toml-lang/toml
 theme = "solarized-dark"
 icons = "awesome"
 
@@ -34,7 +35,7 @@ format = "{1m}"
 
 [[block]]
 block = "net"
-device = "wlp4s0"
+device = "wlan0"
 ssid = true
 # ip = true
 speed_up = false
@@ -44,7 +45,7 @@ interval = 1
 [[block]]
 block = "battery"
 interval = 10
-show = "both"
+format = "{percentage}% {time}"
 
 [[block]]
 block = "time"
@@ -53,3 +54,8 @@ format = "%a %d/%m %I:%M %p"
 
 [[block]]
 block = "sound"
+
+# [[block]]
+# block = "weather"
+# format = "{weather} ({location}) {temp}°, {wind} m/s {direction}"
+# service = { name = "openweathermap", api_key = "a5f0d7a91474e3bb952beb7a5251494d", city_id = "3413829", units = "metric" }

@@ -59,6 +59,8 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .direnvrc
 .gtkrc-2.0
 .Xmodmap
+# Personal Dictionary
+.aspell.en.pws
 
 # GDB init is actually from gdb-dashboard with some additions
 # Update frequently
@@ -116,6 +118,7 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .config/tridactyl/tridactylrc
 .config/termite/config
 .config/git/attributes
+.config/keys.sh.gpg
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
@@ -256,7 +259,15 @@ allPackages:archLinux
 .config/i3/config.keycodes:i3Gaps
 
 # Bar
-.config/i3rust/i3.toml:i3Gaps
+.config/i3rust/i3_top.toml:i3Gaps
+.config/i3rust/i3_bottom.toml:i3Gaps
+
+# Lockscreen
+.local/bin/i3LockHelper:i3Gaps
+.local/bin/thundertray.pl:i3Gaps
+
+# Notifications
+.config/dunst/dunstrc:i3Gaps
 
 # Wayland
 ###########

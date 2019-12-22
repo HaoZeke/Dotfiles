@@ -84,6 +84,9 @@ gaps inner 5
  bindsym XF86AudioPrev exec audacious --rew
  bindsym XF86AudioNext exec audacious --fwd
 
+# Lock screen
+bindsym $mod+Escape exec --no-startup-id sleep 1 && xset dpms force suspend
+
 # start a terminal
 bindsym $mod+Return exec $term
 
@@ -127,6 +130,13 @@ bindsym $mod+Shift+Left move left
 bindsym $mod+Shift+Down move down
 bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
+
+# move across monitors Mod1->Alt, there isn't really a screen to the right so it
+# # will only work on the left key for now
+# bindsym $mod+Shift+Mod1+$left move workspace to output left
+# bindsym $mod+Shift+Mod1+$right move workspace to output right
+# bindsym $mod+Shift+Mod1+Left move workspace to output left
+# bindsym $mod+Shift+Mod1+Right move workspace to output right
 
 # you can "split" the current object of your focus with
 # $mod+v or $mod+v, for horizontal and vertical splits
@@ -184,6 +194,10 @@ bindsym $mod+Shift+7 move container to workspace $ws7
 bindsym $mod+Shift+8 move container to workspace $ws8
 bindsym $mod+Shift+9 move container to workspace $ws9
 bindsym $mod+Shift+0 move container to workspace $ws10
+
+# Move workspace to other monitor (left right is essentially the same with two
+# monitors)
+bindsym $mod+Shift+m move workspace to output right
 
 # reload the configuration file
 bindsym $mod+Shift+c reload
@@ -247,21 +261,36 @@ exec_always --no-startup-id unclutter --timeout 1
 
 # WM Things
 exec_always bash $HOME/.local/bin/java_nonreparenting_wm_hack.sh
-exec_always compton --config ~/.config/compton.conf -b
+exec picom --config ~/.config/compton.conf -b
 
 # Wallpaper Management
 exec_always nitrogen --restore
 
 # File Management
-exec_always udiskie --no-automount --notify --tray --use-udisks2
+exec udiskie --no-automount --notify --tray --use-udisks2
+
+# Load WiFi Helper
+exec nm-applet
 
 # I have secrets
-exec_always gnome-encfs-manager
+exec gnome-encfs-manager
+
+# Listen to lock events
+exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
+
+# Put Thunderbrid in a tray
+exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
+
+# I like to know what I do
+exec --no-startup-id rescuetime
+
+# Atleast this helps me spell Álfheimar
+exec --no-startup-id copyq
 
 # Scratchpad Stuff
-exec_always termite --name=subTerm
-for_window [instance="subTerm"] move to scratchpad, border 1pixel, resize set 525 225, move position 0 0
-bindsym F1 [instance="subTerm"] scratchpad show
+exec termite --name=mainScratch --exec="tmux new -s mainScratch"
+for_window [instance="mainScratch"] border 1pixel, resize set 631 1132, move position 0 0, move to scratchpad
+bindsym F1 [instance="mainScratch"] scratchpad show
 
 # Part of my redshift setup from the archwiki
 exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
@@ -272,7 +301,7 @@ exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
 #         status_command i3status
 # }
 bar {
-    status_command    i3status-rs ~/.config/i3rust/i3.toml
+    status_command    i3status-rs ~/.config/i3rust/i3_top.toml
     position          top
     workspace_buttons yes
     tray_output       primary
@@ -289,3 +318,21 @@ bar {
     }
 }
 
+
+bar {
+    status_command   eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_bottom.toml
+    position          bottom
+    workspace_buttons no
+    tray_output none
+    font pango:DejaVu Sans Mono, FontAwesome 12
+
+    colors {
+        separator #666666
+        background #222222
+        statusline #dddddd
+        focused_workspace #0088CC #0088CC #ffffff
+        active_workspace #333333 #333333 #ffffff
+        inactive_workspace #333333 #333333 #888888
+        urgent_workspace #2f343a #900000 #ffffff
+    }
+}

@@ -1,5 +1,7 @@
 dotdoom : /home/haozeke/.config/doom
-doom-emacs : /home/haozeke/.emacs.d
 conf : /home/haozeke/.config
-npambi : /home/haozeke/Git/Gitlab/Me/npambiReam
 dotfiles : /home/haozeke/Git/Github/Dotfiles
+doom-emacs : /home/haozeke/.emacs.d
+d-SEAMS Core : /home/haozeke/Git/Github/d-SEAMS/seams-core
+d-seams : /home/haozeke/Git/Gitlab/Mine/jcomchem_dseams
+scmeUnif : /home/haozeke/Git/Gitlab/TheochemUI/scmeUnified
