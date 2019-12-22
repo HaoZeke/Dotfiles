@@ -6,8 +6,8 @@
 ##########
 
 alias ratemi='sudo reflector --verbose  -l 20 -p http --sort rate --save /etc/pacman.d/mirrorlist' # --country 'India'
-alias pacunlock="sudo rm /var/lib/pacman/db.lck"   # Delete the lock file /var/lib/pacman/db.lck
-alias paclock="sudo touch /var/lib/pacman/db.lck"  # Create the lock file /var/lib/pacman/db.lck
+alias pacunlock="sudo rm /var/lib/pacman/db.lck"                                                   # Delete the lock file /var/lib/pacman/db.lck
+alias paclock="sudo touch /var/lib/pacman/db.lck"                                                  # Create the lock file /var/lib/pacman/db.lck
 
 alias mediaserve='rygel --config=/home/$USER/.config/rygel.conf'
 alias pizza.py='~/Git/Github/pizza-9Oct15/src/pizza.py'
@@ -30,7 +30,6 @@ alias Storage='/run/media/$USER/Storage'
 # WINEARCH=win32 WINEPREFIX=~/.wine-ie6 winetricks ie6
 alias ie6=' WINEARCH=win32 WINEPREFIX=~/.wine-ie6 wine ~/.wine-ie6/drive_c/Program\ Files/Internet\ Explorer/IEXPLORE.EXE'
 
-
 # Check later  $$
 
 # Encfs Safe Files
@@ -45,31 +44,29 @@ alias plexDocker='docker run plex'
 # Convert this!!
 alias calibreDocker='calibre-server --port 8264 --userdb /run/media/$USER/Storage/Library/calServUsers.sqlite --enable-auth --daemonize --log=/$HOME/.calServLog'
 
-
 # Functions
 #############
 
 # Orphaned Packages.
 orphans() {
-  if [[ ! -n $(pacaur -Qdt) ]]; then
-    echo "No orphans to remove."
-  else
-    sudo pacman -Rns $(pacman -Qdtq)
-  fi
+	if [[ ! -n $(pacaur -Qdt) ]]; then
+		echo "No orphans to remove."
+	else
+		sudo pacman -Rns $(pacman -Qdtq)
+	fi
 }
 
 droidBuild() {
-  echo "Setting up environment variables\n"
-  export USE_HOST_LEX=yes       # Prevent builds breaking..
-  # Sets the right path for linkers. cm-12.1 only.
-  #export LD_LIBRARY_PATH=/run/media/$USER/Storage/AndBuild/cm-12.1/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8/lib/
-  echo "Getting the right Python\n"
-  source /run/media/$USER/Storage/AndBuild/venv/bin/activate
-  echo "Getting the right tools for Gello \n"
-  export PATH=$HOME/Git/Github/Linux/depot_tools:$PATH
-  echo "Enjoy.\n"
+	echo "Setting up environment variables\n"
+	export USE_HOST_LEX=yes # Prevent builds breaking..
+	# Sets the right path for linkers. cm-12.1 only.
+	#export LD_LIBRARY_PATH=/run/media/$USER/Storage/AndBuild/cm-12.1/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8/lib/
+	echo "Getting the right Python\n"
+	source /run/media/$USER/Storage/AndBuild/venv/bin/activate
+	echo "Getting the right tools for Gello \n"
+	export PATH=$HOME/Git/Github/Linux/depot_tools:$PATH
+	echo "Enjoy.\n"
 }
-
 
 # Sources
 ##########
@@ -87,10 +84,10 @@ test -f /$HOME/Git/Github/amber16/amber.sh && source /$HOME/Git/Github/amber16/a
 ###########
 
 if which ccache >/dev/null 2>&1; then
-  ccache -M 50G  >/dev/null
-  export USE_CCACHE=1
+	ccache -M 50G >/dev/null
+	export USE_CCACHE=1
 else
-  echo "You seem to be missing ccache"
+	echo "You seem to be missing ccache"
 fi
 
 # Java Fixes
@@ -179,6 +176,9 @@ export CPATH=$CPATH:/usr/local/include
 
 # Gaussian
 export PATH=$PATH:$HOME/.local/g16
+
+# Add the path for android-sdk-platform-tools
+export PATH=$PATH:/opt/android-sdk/platform-tools/
 
 # Emacs Stuff (cross platform)
 # Local Variables:
