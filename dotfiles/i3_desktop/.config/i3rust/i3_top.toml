@@ -35,17 +35,17 @@ format = "{1m}"
 
 [[block]]
 block = "net"
-device = "wlan0"
+device = "enp3s0"
 ssid = true
 # ip = true
 speed_up = false
 # graph_up = true
 interval = 1
 
-[[block]]
-block = "battery"
-interval = 10
-format = "{percentage}% {time}"
+# [[block]]
+# block = "battery"
+# interval = 10
+# format = "{percentage}% {time}"
 
 [[block]]
 block = "time"
