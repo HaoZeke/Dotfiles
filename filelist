@@ -31,10 +31,11 @@ almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
 
 # My current config. [desktop]
 hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,sublime,bspwm
-hzhome_i3=common,linux,archLinux,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
+hzhome_i3=common,linux,archLinux,sublime,i3Gaps,i3_desktop,sway,wayland,xkblayout,myArchBox
 
 # My current config. [laptop]
-hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
+hzarchtpad_sway=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
+hzarchtpad_i3=common,linux,archLinux,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox
 
 # For my builds
 hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
@@ -251,16 +252,12 @@ allPackages:archLinux
 # sxhkd
 .config/sxhkd/sxhkdrc:bspwm
 
-# i3
-#####
+# i3Gaps
+########
 
 # Basics
 .config/i3/config:i3Gaps
 .config/i3/config.keycodes:i3Gaps
-
-# Bar
-.config/i3rust/i3_top.toml:i3Gaps
-.config/i3rust/i3_bottom.toml:i3Gaps
 
 # Lockscreen
 .local/bin/i3LockHelper:i3Gaps
@@ -268,6 +265,20 @@ allPackages:archLinux
 
 # Notifications
 .config/dunst/dunstrc:i3Gaps
+
+# i3_desktop
+############
+
+# Bar
+.config/i3rust/i3_top.toml:i3_desktop
+.config/i3rust/i3_bottom.toml:i3_desktop
+
+# i3_laptop
+############
+
+# Bar
+.config/i3rust/i3_top.toml:i3_laptop
+.config/i3rust/i3_bottom.toml:i3_laptop
 
 # Wayland
 ###########
