@@ -31,7 +31,7 @@ almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
 
 # My current config. [desktop]
 hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,sublime,bspwm
-hzhome_i3=common,linux,archLinux,multiMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
+hzhome_i3=common,linux,archLinux,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
 
 # My current config. [laptop]
 hzarchtpad=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
