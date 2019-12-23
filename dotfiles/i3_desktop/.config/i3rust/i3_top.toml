@@ -53,4 +53,15 @@ interval = 60
 format = "%a %d/%m %I:%M %p"
 
 [[block]]
+block = "weather"
+
+# service = { name="openweathermap", city_id="1267995", units="metric" }
+# [service] # Table format instead of the inline table {} format
+[block.service]
+name = "openweathermap"
+city_id = "1267995" # Kanpur
+# city_id = "3413829" # Reykjavík
+units = "metric"
+
+[[block]]
 block = "sound"
