@@ -35,7 +35,7 @@ format = "{1m}"
 
 [[block]]
 block = "net"
-device = "enp3s0"
+device = "wlan0"
 ssid = true
 # ip = true
 speed_up = false
