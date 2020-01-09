@@ -270,7 +270,7 @@ exec_always nitrogen --restore
 exec udiskie --no-automount --notify --tray --use-udisks2
 
 # Load WiFi Helper
-exec nm-applet
+exec nm-applet --sm-disable
 
 # I have secrets
 exec gnome-encfs-manager
