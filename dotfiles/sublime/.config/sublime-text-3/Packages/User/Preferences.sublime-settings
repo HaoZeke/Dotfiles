@@ -114,6 +114,7 @@
 	"icon_file_type_enable": true,
 	"ignored_packages":
 	[
+		"A File Icon",
 		"AcademicMarkdown",
 		"AndroidImport",
 		"AngularJS",
@@ -129,9 +130,11 @@
 		"CSS Completions",
 		"CSS Unminifier",
 		"Diffy",
+		"Dockerfile Syntax Highlighting",
 		"DocPy",
 		"Dotfiles Syntax Highlighting",
 		"DoxyDoc",
+		"Ecmascript Syntax",
 		"Google Search",
 		"Google Spell Check",
 		"GoSublime",
@@ -143,6 +146,7 @@
 		"Javascript Beautify",
 		"Jekyll",
 		"JSONLint",
+		"Julia",
 		"LaTeX-cwl",
 		"LaTeXing",
 		"Makefile",
@@ -161,6 +165,7 @@
 		"Seti_UX",
 		"SideBarEnhancements",
 		"SqlBeautifier",
+		"SSH Config",
 		"SublimeLinter",
 		"SublimeLinter-contrib-sass-lint",
 		"SublimeLinter-json",
@@ -168,9 +173,13 @@
 		"Theme - Spacegray",
 		"Tmux",
 		"Travis YML Lint",
+		"TypeScript Syntax",
+		"Unicode Character Insert",
 		"UnicodeTeX",
 		"Vuejs Complete Package",
-		"Wombatish color scheme"
+		"WakaTime",
+		"Wombatish color scheme",
+		"zzz A File Icon zzz"
 	],
 	"ignored_words":
 	[
