@@ -112,6 +112,25 @@ layout_golang() {
   PATH_add bin
 }
 
+########
+# Node #
+########
+
+# From https://github.com/direnv/direnv/wiki/Node
+
+# Usage: use nvm version-string
+
+use_nvm() {
+  local node_version=$1
+
+  nvm_sh=~/.nvm/nvm.sh
+  if [[ -e $nvm_sh ]]; then
+    source $nvm_sh
+    nvm use $node_version
+  fi
+}
+
+
 #######
 # Nix #
 #######
@@ -266,3 +285,6 @@ if ! validateVersion; then
 	exit 1
 fi
 
+# Local Variables:
+# mode: sh
+# End:
