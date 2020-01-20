@@ -281,7 +281,7 @@ exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
 # # Put Thunderbrid in a tray
 # exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
 # Now I use mailspring
-exec --no-startup-id mailspring
+exec --no-startup-id mailspring&
 
 # I like to know what I do
 exec --no-startup-id rescuetime
