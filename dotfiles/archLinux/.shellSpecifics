@@ -162,6 +162,9 @@ export PATH="$HOME/Git/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH"
 # Add snaps to the path
 export PATH="$PATH:/var/lib/snapd/snap/bin"
 
+# Add the tlmgr TeX Installation
+export PATH="$PATH:/usr/local/texlive/2019/bin/x86_64-linux"
+
 # Build Paths
 ###############
 
