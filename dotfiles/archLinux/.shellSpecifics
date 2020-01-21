@@ -162,9 +162,6 @@ export PATH="$HOME/Git/Github/Dotfiles/Scripts:$HOME/.node_modules/bin:$PATH"
 # Add snaps to the path
 export PATH="$PATH:/var/lib/snapd/snap/bin"
 
-# Add ruby gems to the path
-export PATH="$PATH:/$HOME/.gem/ruby/2.5.0/bin"
-
 # Build Paths
 ###############
 
