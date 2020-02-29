@@ -1,3 +1,4 @@
+set auto-load safe-path /
 python
 
 # GDB dashboard - Modular visual interface for GDB in Python.
