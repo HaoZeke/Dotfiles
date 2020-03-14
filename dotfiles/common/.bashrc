@@ -1,3 +1,10 @@
+# No Root
+##########
+
+if [ -f ~/.norootrc ]; then
+	. ~/.norrotrc
+fi
+
 # First load shell agnostic functions
 . ~/.shellrc
 
