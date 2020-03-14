@@ -252,6 +252,10 @@ export groupid=$(id -g)
 # Path Additions
 ##################
 
+if [ -f ~/.norootrc ]; then
+	export PATH=$HOME/.linuxbrew/bin:$PATH
+fi
+
 # For the bundled scripts
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$PATH:$HOME/.local/bin/cronDrivers"
