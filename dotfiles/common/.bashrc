@@ -2,7 +2,7 @@
 ##########
 
 if [ -f ~/.norootrc ]; then
-	. ~/.norrotrc
+	. ~/.norootrc
 fi
 
 # First load shell agnostic functions
