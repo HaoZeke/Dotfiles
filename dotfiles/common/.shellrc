@@ -252,9 +252,7 @@ export groupid=$(id -g)
 # Path Additions
 ##################
 
-if [ -f ~/.norootrc ]; then
-	export PATH=$HOME/.linuxbrew/bin:$PATH
-fi
+export PATH=$HOME/.linuxbrew/bin:$PATH
 
 # For the bundled scripts
 export PATH="$HOME/.local/bin:$PATH"
