@@ -37,6 +37,9 @@ hzhome_i3=common,linux,archLinux,sublime,i3Gaps,i3_desktop,sway,wayland,xkblayou
 hzarchtpad_sway=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
 hzarchtpad_i3=common,linux,archLinux,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox
 
+# No root stuff
+hzhpc=common,linux,archLinux,sublime,i3Gaps,noRoot
+
 # For my builds
 hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 
@@ -378,3 +381,9 @@ crontab:myArchBox
 # Xfce4 Specifics
 .config/xfce4/xfconf/xfce-perchannel-xml/displays.xml:myArchBox
 .config/xfce4/panel/xfce4-notes-plugin-12.rc:myArchBox
+
+
+# noRoot
+#########
+
+.norootrc:noRoot
