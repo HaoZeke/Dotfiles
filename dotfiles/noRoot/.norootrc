@@ -5,14 +5,6 @@ if [[ $(ps -p $$ -ocomm=) != "zsh" ]]; then
 	exec zsh
 fi
 
-# Can't think of why this would be used where root is present
-export PATH=$HOME/.linuxbrew/bin:$PATH
-
-# Will need this primarily where not root
-if [[ -n "$PS1" ]] && [[ -z "$TMUX" ]] && [[ -n "$SSH_CONNECTION" ]]; then
-	tmux attach-session -t ssh_tmux || tmux new-session -s ssh_tmux
-fi
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
