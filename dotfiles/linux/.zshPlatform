@@ -46,17 +46,6 @@ if which fzf >/dev/null 2>&1; then
 	fi
 fi
 
-# ASDF Stuff
-# Stolen from https://github.com/juliogc/dotfiles/blob/master/.zshrc
-# zplug "asdf-vm/asdf", from:github, use:"asdf.sh"
-# zplug "asdf-vm/asdf", from:github, use:"completions/asdf.bash", defer:1
-
-# OMZ Stuff
-
-# These plugins check for the binaries (pyenv, rbenv)
-zplug "plugins/pyenv", from:oh-my-zsh
-zplug "plugins/rbenv", from:oh-my-zsh
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
