@@ -233,7 +233,6 @@ allPackages:archLinux
 
 # Thunar
 .config/Thunar/uca.xml:archLinux
-.config/Thunar/renamerrc:archLinux
 
 # Xfce4 Panel Widgets
 .config/xfce4/panel/cpugraph-16.rc:archLinux
