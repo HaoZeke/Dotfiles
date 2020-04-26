@@ -10,26 +10,6 @@ export PATH=$PATH:/usr/local/MATLAB/R2017a/bin
 # Extra zPlug Stuff
 #####################
 
-# Programs
-# if which rg >/dev/null 2>&1; then
-#   zplug "BurntSushi/ripgrep", \
-#       from:gh-r, \
-#       as:command, \
-#       rename-to:rg, \
-#       use:"*64*linux*"
-#   # zplug "jedahan/ripz"]
-#   # Ripgrep aliases
-#   alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
-# fi
-
-if which fzf >/dev/null 2>&1; then
-	zplug "junegunn/fzf-bin", \
-		from:gh-r, \
-		as:command, \
-		rename-to:fzf, \
-		use:"*linux*amd64*"
-fi
-
 if which brew >/dev/null 2>&1; then
 	zplug "zpm-zsh/linuxbrew"
 fi
