@@ -117,6 +117,9 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .local/bin/webHelpers/netlify-git-api
 .local/bin/webHelpers/idm.sh
 
+# from http://ai.eecs.umich.edu/people/dreeves/mash/
+.local/bin/mash
+
 # Configs #
 .config/nvim/init.vim
 .config/neofetch/config.conf
