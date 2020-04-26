@@ -63,6 +63,10 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .direnvrc
 .gtkrc-2.0
 .Xmodmap
+
+# Readline settings
+.inputrc
+
 # Personal Dictionary
 .aspell.en.pws
 
