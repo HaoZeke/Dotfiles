@@ -2,18 +2,10 @@
 	"bootstrapped": true,
 	"in_process_packages":
 	[
-		"A File Icon",
 		"Boxy Theme",
 		"Boxy Theme Addon - Font Face",
-		"Dockerfile Syntax Highlighting",
-		"Ecmascript Syntax",
 		"GoSublime",
-		"Julia",
-		"SSH Config",
-		"TypeScript Syntax",
-		"Unicode Character Insert",
-		"UnicodeTeX",
-		"WakaTime"
+		"UnicodeTeX"
 	],
 	"installed_packages":
 	[
