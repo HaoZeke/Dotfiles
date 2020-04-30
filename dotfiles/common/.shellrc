@@ -214,7 +214,7 @@ fif() {
 # Modified fast-p (https://github.com/bellecp/fast-p)
 pf() {
     open=zathura
-    rg --files . | rg ".pdf$" \
+    ag -U -g ".pdf$" \
     | fast-p \
     | fzf --read0 --reverse -e -d $'\t'  \
         --preview-window down:80% --preview '
