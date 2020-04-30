@@ -99,7 +99,7 @@
 		"node_modules/**"
 	],
 	"close_windows_when_empty": false,
-	"color_scheme": "Packages/Color Scheme - Default/Monokai.tmTheme",
+	"color_scheme": "Packages/Theme - Alpenglow/Alpenglow-twilight.tmTheme",
 	"folder_exclude_patterns":
 	[
 		".svn",
@@ -204,7 +204,7 @@
 	"tab_size": 2,
 	"tabs_padding_small": true,
 	"tabs_small": true,
-	"theme": "Asphalt-blue.sublime-theme",
+	"theme": "Default.sublime-theme",
 	"translate_tabs_to_spaces": true,
 	"vintageous_use_ctrl_keys": false
 }
