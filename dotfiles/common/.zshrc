@@ -139,7 +139,6 @@ zplug "plugins/history",                    from:oh-my-zsh
 zplug "plugins/history-substring-search",   from:oh-my-zsh
 zplug "plugins/github",                     from:oh-my-zsh
 zplug "plugins/git",                        from:oh-my-zsh
-zplug "plugins/gulp",                       from:oh-my-zsh
 zplug "plugins/systemadmin",                from:oh-my-zsh
 zplug "plugins/sudo",                       from:oh-my-zsh
 zplug "plugins/systemd",                    from:oh-my-zsh
@@ -150,7 +149,6 @@ zplug "plugins/rbenv", from:oh-my-zsh
 
 # No OMZ
 zplug "j-arnaiz/common-aliases"
-zplug "hcgraf/zsh-sudo"
 
 # Colors and Highlighting
 zplug "zdharma/fast-syntax-highlighting", defer:2
