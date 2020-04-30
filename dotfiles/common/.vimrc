@@ -43,7 +43,7 @@ call plug#begin()
     Plug 'wakatime/vim-wakatime'
 
     " Group dependencies, vim-snippets depends on ultisnips
-    Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
+    " Plug 'SirVer/ultisnips' | Plug 'honza/vim-snippets'
       
     " Awesome syntax checker.
     " REQUIREMENTS: See :h syntastic-intro
