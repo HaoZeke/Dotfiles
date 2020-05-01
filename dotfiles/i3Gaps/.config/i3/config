@@ -19,6 +19,7 @@ set $menu "rofi -show"
 set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 set $passwordManager "/opt/enpass/Enpass showassistant"
 set $screenshotTask "teiler --quickcopy area"
+set $noteTask "$HOME/.emacs.d/bin/org-capture"
 # I hate uxterm (i3-sensible-terminal)
 set $term termite
 # Workspaces
@@ -98,6 +99,9 @@ bindsym --release $mod+space exec $menu
 bindsym $mod+shift+space exec --no-startup-id $menuCalc
 # Copy a screenshot to the clipboard
 bindsym $mod+o exec $screenshotTask
+
+# Call the note taking task
+bindsym $mod+n exec $noteTask
 
 # Call the registered password manager
 bindsym $mod+slash exec $passwordManager
