@@ -36,3 +36,5 @@ set statusbar-home-tilde true
 
 # Put themes in a separate file
 include zathuraThemerc
+# Put colemak bindings in a separate file
+include zathuraColemak
