@@ -35,7 +35,7 @@ hzhome_i3=common,linux,archLinux,sublime,i3Gaps,i3_desktop,sway,wayland,xkblayou
 
 # My current config. [laptop]
 hzarchtpad_sway=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
-hzarchtpad_i3=common,linux,archLinux,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox
+hzarchtpad_i3=common,linux,archLinux,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak
 
 # No root stuff
 hzhpc=common,linux,archLinux,sublime,i3Gaps,noRoot
@@ -139,6 +139,11 @@ hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
 .config/systemd/user/emacs.service
 .config/systemd/user/calibre-server.service
 .config/systemd/user/tmux.service
+
+# Colemak
+##########
+.config/zathura/zathuraColemak:colemak
+.zshColemak:colemak
 
 # XKB Settings
 ###############
