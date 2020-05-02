@@ -101,7 +101,11 @@ bindsym $mod+shift+space exec --no-startup-id $menuCalc
 bindsym $mod+o exec $screenshotTask
 
 # Call the note taking task
-bindsym $mod+n exec $noteTask
+bindsym $mod+k exec $noteTask
+# n of the qwerty, for colemak
+
+# Easyfocus
+bindsym $mod+s exec i3-easyfocus
 
 # Call the registered password manager
 bindsym $mod+slash exec $passwordManager
