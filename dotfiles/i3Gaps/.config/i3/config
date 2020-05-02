@@ -278,14 +278,22 @@ exec nm-applet --sm-disable
 
 # I have secrets
 exec gnome-encfs-manager
+exec cryptomator
 
 # Listen to lock events
 exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
 
+# Emacs speedup
+exec --no-startup-id emacs --daemon
+
 # # Put Thunderbrid in a tray
 # exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
+
 # Now I use mailspring
-exec --no-startup-id mailspring&
+exec --no-startup-id mailspring --background
+
+# Need to keep things backed up
+exec --no-startup-id insync start
 
 # I like to know what I do
 exec --no-startup-id rescuetime
