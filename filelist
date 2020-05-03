@@ -282,6 +282,7 @@ allPackages:archLinux
 
 # Lockscreen
 .lockscreen.png:i3Gaps
+.config/multilock/config:i3Gaps
 
 # i3_desktop
 ############

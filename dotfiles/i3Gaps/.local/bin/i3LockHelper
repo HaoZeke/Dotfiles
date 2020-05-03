@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
 xset s off dpms 0 10 0
-i3lock-multimonitor -i $HOME/.lockscreen.png
+/usr/bin/multilockscreen --lock
 # i3lock ${1:---color=4c7899} --ignore-empty-password --show-failed-attempts --nofork
 xset s off -dpms
