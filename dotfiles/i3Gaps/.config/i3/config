@@ -161,10 +161,10 @@ bindsym $mod+f fullscreen toggle
 bindsym $mod+t layout toggle all
 
 # toggle tiling / floating
-bindsym $mod+s floating toggle
+bindsym $mod+Shift+t floating toggle
 
 # change focus between tiling / floating windows
-bindsym $mod+shift+s focus mode_toggle
+bindsym $mod+Shift+s focus mode_toggle
 
 # focus the parent container
 bindsym $mod+a focus parent
@@ -212,7 +212,7 @@ bindsym $mod+Shift+c reload
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
 bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
-bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
+bindsym $mod+Shift+x exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
 
 # resize window (you can also use the mouse for that)
 mode "resize" {
