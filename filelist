@@ -280,6 +280,9 @@ allPackages:archLinux
 # Notifications
 .config/dunst/dunstrc:i3Gaps
 
+# Lockscreen
+.lockscreen.png:i3Gaps
+
 # i3_desktop
 ############
 
