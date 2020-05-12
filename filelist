@@ -240,7 +240,7 @@ allPackages:archLinux
 
 # Configs #
 
-.config/compton.conf:archLinux
+.config/picom.conf:archLinux
 .config/powerline:archLinux
 
 # Thunar
