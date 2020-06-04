@@ -1,4 +1,3 @@
-unmap N
 map h scroll left
 map n scroll down
 map e scroll up
@@ -14,4 +13,8 @@ map <PageUp> navigate previous
 map <PageDown> navigate next
 
 map q quit
-map Z quit
+map <S-Z> quit
+
+;; Local Variables:
+;; mode: conf
+;; End:
