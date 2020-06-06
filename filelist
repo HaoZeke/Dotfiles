@@ -64,6 +64,10 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .gtkrc-2.0
 .Xmodmap
 
+# R stuff
+.Rprofile
+.R/Makevars
+
 # Readline settings
 .inputrc
 
@@ -162,12 +166,12 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/sublime-text-3/Packages/User/.jsbeautifyrc:sublime
 .config/sublime-text-3/Packages/User/Autoconf.sublime-settings:sublime
 .config/sublime-text-3/Packages/User/Automake.sublime-settings:sublime
-.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap:sublime
+.config/sublime-text-3/Packages/User/Default\ (Linux).sublime-keymap:sublime
 .config/sublime-text-3/Packages/User/HTML(Nunjucks).sublime-settings:sublime
 .config/sublime-text-3/Packages/User/HTMLPrettify.sublime-settings:sublime
 .config/sublime-text-3/Packages/User/javascript.dom.sublime-settings:sublime
 .config/sublime-text-3/Packages/User/javascript.sublime-settings:sublime
-.config/sublime-text-3/Packages/User/JavaScript (Babel).sublime-settings:sublime
+.config/sublime-text-3/Packages/User/JavaScript\ (Babel).sublime-settings:sublime
 .config/sublime-text-3/Packages/User/Jekyll.sublime-settings:sublime
 .config/sublime-text-3/Packages/User/Matlab.sublime-settings:sublime
 .config/sublime-text-3/Packages/User/Nunjucks.sublime-settings:sublime
