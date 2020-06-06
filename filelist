@@ -8,40 +8,40 @@
 genLinux=common,linux,doom
 
 # Archlinux Barebones
-archlinuxMono=common,linux,archLinux,monoMonitor
-archlinuxMulti=common,linux,archLinux,multiMonitor
+archlinuxMono=common,linux,archLinux,nixpkgs,monoMonitor
+archlinuxMulti=common,linux,archLinux,nixpkgs,multiMonitor
 
 # Archlinux with Sway (wayland)
-archSwayMono=common,linux,archLinux,sway,wayland,xkbLayout
+archSwayMono=common,linux,archLinux,nixpkgs,sway,wayland,xkbLayout
 
 # Archlinux with i3 Gaps
-archi3Mono=common,linux,archLinux,i3Gaps,monoMonitor,xkbLayout
+archi3Mono=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,xkbLayout
 
 # ArchLinux with xfce and bspwm
-almXFCE=common,linux,archLinux,monoMonitor,xfceSession,bspwm
-almlXFCE=common,linux,archLinux,multiMonitor,xfceSession,bspwm
+almXFCE=common,linux,archLinux,nixpkgs,monoMonitor,xfceSession,bspwm
+almlXFCE=common,linux,archLinux,nixpkgs,multiMonitor,xfceSession,bspwm
 
 # ArchLinux with lxde and bspwm
-almlLXDE=common,linux,archLinux,multiMonitor,lxdeSession,bspwm
-almLXDE=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
+almlLXDE=common,linux,archLinux,nixpkgs,multiMonitor,lxdeSession,bspwm
+almLXDE=common,linux,archLinux,nixpkgs,monoMonitor,lxdeSession,bspwm
 
 # Archlinux with no session manager
-almlnoSession=common,linux,archLinux,multiMonitor,lxdeSession,bspwm
-almnoSession=common,linux,archLinux,monoMonitor,lxdeSession,bspwm
+almlnoSession=common,linux,archLinux,nixpkgs,multiMonitor,lxdeSession,bspwm
+almnoSession=common,linux,archLinux,nixpkgs,monoMonitor,lxdeSession,bspwm
 
 # My current config. [desktop]
-hzhome_bspwm=common,linux,archLinux,multiMonitor,myArchBox,lxdeSession,sublime,bspwm
-hzhome_i3=common,linux,archLinux,sublime,i3Gaps,i3_desktop,sway,wayland,xkblayout,myArchBox
+hzhome_bspwm=common,linux,archLinux,nixpkgs,multiMonitor,myArchBox,lxdeSession,sublime,bspwm
+hzhome_i3=common,linux,archLinux,nixpkgs,sublime,i3Gaps,i3_desktop,sway,wayland,xkblayout,myArchBox
 
 # My current config. [laptop]
-hzarchtpad_sway=common,linux,archLinux,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
-hzarchtpad_i3=common,linux,archLinux,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak
+hzarchtpad_sway=common,linux,archLinux,nixpkgs,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
+hzarchtpad_i3=common,linux,archLinux,nixpkgs,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak
 
 # No root stuff
-hzhpc=common,linux,archLinux,sublime,i3Gaps,noRoot
+hzhpc=common,linux,archLinux,nixpkgs,sublime,i3Gaps,noRoot
 
 # For my builds
-hzArchiso=common,linux,archLinux,i3Gaps,monoMonitor,sway,wayland
+hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 
 ##########
 # Groups #
