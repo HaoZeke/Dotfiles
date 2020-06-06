@@ -44,8 +44,8 @@
 	<icon>utilities-terminal</icon>
 	<name>Open Terminal</name>
 	<unique-id>1510592188640559-1</unique-id>
-	<command>tilix %d</command>
-	<description>Opens Terminix</description>
+	<command>termite %d</command>
+	<description>Opens Termite</description>
 	<patterns>*</patterns>
 	<startup-notify/>
 	<directories/>
