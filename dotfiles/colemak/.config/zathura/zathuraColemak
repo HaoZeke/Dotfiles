@@ -35,8 +35,8 @@ map [index] o toggle_index
 # hjkl →  hnei
 map [index] n navigate_index down
 map [index] e navigate_index up
-map [index] i navigate_index collapse
-map [index] h navigate_index expand
+map [index] h navigate_index collapse
+map [index] i navigate_index expand
 
 map [index] H navigate_index collapse-all
 map [index] I navigate_index expand-all
