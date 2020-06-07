@@ -50,6 +50,7 @@ map [index] Q quit
 # https://github.com/pwmt/zathura/blob/develop/doc/man/zathurarc.5.rst
 # https://github.com/igwan/dotfiles/blob/66d9eee0ffe4e4f67dedbbc5a28167559cbfa056/zathura/.config/zathura/zathurarc
 # https://github.com/deterenkelt/dotfiles/blob/9674e4c974f0c2cb52302c36bcae7f3cfa4aa3d5/.config/zathura/zathurarc
+# https://wiki.archlinux.org/index.php/Zathura
 
 ;; Local Variables:
 ;; mode: conf
