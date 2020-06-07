@@ -419,7 +419,7 @@ fi
 # Nix
 ######
 
-if ! which nix-env >/dev/null 2>&1; then
+if which nix-env >/dev/null 2>&1; then
 	. ~/.nixEnv
 fi
 
