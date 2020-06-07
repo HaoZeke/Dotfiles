@@ -6,8 +6,8 @@ map i scroll right
 map N scroll half-down
 map E scroll half-up
 
-map k search next
-map K search previous
+map k search forward
+map K search backward
 
 map <PageUp> navigate previous
 map <PageDown> navigate next
