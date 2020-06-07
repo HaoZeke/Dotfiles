@@ -1,7 +1,7 @@
 # from https://chpc.utah.edu/documentation/software/r-language.php
-CFLAGS += -wd308
-CXXFLAGS += -wd308
-CPPFLAGS += -wd308
-PKG_CFLAGS += -wd308
-PKG_CXXFLAGS += -wd308
-PKG_CPPFLAGS += -wd308
+# CFLAGS += -wd308
+# CXXFLAGS += -wd308
+# CPPFLAGS += -wd308
+# PKG_CFLAGS += -wd308
+# PKG_CXXFLAGS += -wd308
+# PKG_CPPFLAGS += -wd308
