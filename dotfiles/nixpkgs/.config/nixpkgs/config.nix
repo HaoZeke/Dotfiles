@@ -32,6 +32,15 @@
           knitr
           tidyverse
           tidybayes
+          devtools
+          modelr
+          cowplot
+          ggrepel
+          RColorBrewer
+          purrr
+          forcats
+          rstan
+          # Devtools Stuff
           rethinking
           tidybayes_rethinking
         ];
