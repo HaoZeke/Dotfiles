@@ -28,18 +28,26 @@
     in {
       rEnv = super.rWrapper.override {
         packages = with self.rPackages; [
-          ggplot2
-          knitr
           tidyverse
-          tidybayes
           devtools
           modelr
+          purrr
+          forcats
+          # Plotting tools
+          ggplot2
           cowplot
           ggrepel
           RColorBrewer
-          purrr
-          forcats
+          # Stan Stuff
           rstan
+          tidybayes
+          # Text Utilities
+          orgutils
+          latex2exp
+          kableExtra
+          knitr
+          data_table
+          printr
           # Devtools Stuff
           rethinking
           tidybayes_rethinking
