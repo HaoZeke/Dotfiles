@@ -55,3 +55,8 @@
       };
     };
 }
+
+# Local Variables:
+# firestarter: "nix-env -f '<nixpkgs>' -iA rEnv"
+# firestarter-default-type: (quote failure)
+# End:
