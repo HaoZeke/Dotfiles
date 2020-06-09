@@ -33,6 +33,14 @@
           modelr
           purrr
           forcats
+          ####################
+          # Machine Learning #
+          ####################
+          # MLR3
+          mlr3
+          mlr3viz
+          mlr3learners
+          mlr3pipelines
           # Plotting tools
           ggplot2
           cowplot
