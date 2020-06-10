@@ -28,35 +28,68 @@
     in {
       rEnv = super.rWrapper.override {
         packages = with self.rPackages; [
+          # Tidyverse
           tidyverse
-          devtools
           modelr
           purrr
           forcats
+          gridExtra
+          broom
+          # Plotting
+          ggplot2
+          ggfortify
+          cowplot
+          ggrepel
+          RColorBrewer
+          corrplot
           ####################
           # Machine Learning #
           ####################
+          caret
           # MLR3
           mlr3
           mlr3viz
           mlr3learners
           mlr3pipelines
-          # Plotting tools
-          ggplot2
-          cowplot
-          ggrepel
-          RColorBrewer
           # Stan Stuff
           rstan
           tidybayes
-          # Text Utilities
+          # Drivers
+          e1071 # Misc collection, includes fourier
+          pvclust # Better clustering
+          # Time series
+          forecast
+          swdft
+          # Validation
+          mgcv
+          # Random Forests
+          ranger
+          # PCA
+          FactoMineR
+          factoextra
+          # Regression
+          lindia
+          rpart
+          #############
+          # Utilities #
+          #############
+
+          # Text
           orgutils
           latex2exp
           kableExtra
           knitr
           data_table
           printr
-          # Devtools Stuff
+
+          # Other
+          microbenchmark
+
+          ############
+          # Devtools #
+          ############
+          devtools
+          # Built above
           rethinking
           tidybayes_rethinking
         ];
