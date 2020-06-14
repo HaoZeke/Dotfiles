@@ -28,20 +28,24 @@
     in {
       rEnv = super.rWrapper.override {
         packages = with self.rPackages; [
-          # Tidyverse
+          # Tidyverse and More
           tidyverse
           modelr
           purrr
           forcats
           gridExtra
           broom
+          future
           # Plotting
           ggplot2
+          gganimate
+          GGally
           ggfortify
           cowplot
           ggrepel
           RColorBrewer
           corrplot
+          rpart_plot
           ####################
           # Machine Learning #
           ####################
@@ -51,6 +55,7 @@
           mlr3viz
           mlr3learners
           mlr3pipelines
+          mlr3filters
           # Stan Stuff
           rstan
           tidybayes
@@ -62,8 +67,11 @@
           swdft
           # Validation
           mgcv
-          # Random Forests
+          # Forests and Trees
+          xgboost
           ranger
+          DALEX
+          DALEXtra
           # PCA
           FactoMineR
           factoextra
@@ -84,6 +92,9 @@
 
           # Other
           microbenchmark
+
+          # Network
+          webchem
 
           ############
           # Devtools #
