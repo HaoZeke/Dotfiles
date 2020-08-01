@@ -21,7 +21,8 @@ set $passwordManager "/opt/enpass/Enpass showassistant"
 set $screenshotTask "teiler --quickcopy area"
 set $noteTask "$HOME/.emacs.d/bin/org-capture"
 # I hate uxterm (i3-sensible-terminal)
-set $term termite
+# termite was great, alacritty is faster by a bit
+set $term alacritty
 # Workspaces
 set $ws1 "1"
 set $ws2 "2"
