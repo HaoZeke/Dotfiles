@@ -318,6 +318,9 @@ bindsym F1 [instance="mainScratch"] scratchpad show
 # Part of my redshift setup from the archwiki
 exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
 
+# A much better alternative redshit, in C
+exec --no-startup-id /usr/bin/clight
+
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 # bar {
