@@ -83,8 +83,8 @@ gaps inner 5
  bindsym XF86AudioRaiseVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') +5%
  bindsym XF86AudioLowerVolume exec pactl set-sink-volume $(pacmd list-sinks |awk '/* index:/{print $3}') -5%
  bindsym XF86AudioMute exec pactl set-sink-mute $(pacmd list-sinks |awk '/* index:/{print $3}') toggle
- bindsym XF86MonBrightnessDown exec light -U 10
- bindsym XF86MonBrightnessUp exec light -A 10
+ bindsym XF86MonBrightnessDown exec brillo -e -U 10
+ bindsym XF86MonBrightnessUp exec brillo -e -A 10
  bindsym XF86AudioPlay exec audacious --play-pause
  bindsym XF86AudioStop exec audacious --stop
  bindsym XF86AudioPrev exec audacious --rew
