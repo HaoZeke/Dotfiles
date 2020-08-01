@@ -101,6 +101,9 @@ call plug#begin()
     " Less
     Plug 'groenewege/vim-less'
 
+    " I need Colemak
+    Plug 'jooize/vim-colemak'
+
     " Python
     Plug 'klen/python-mode'
     Plug 'jmcantrell/vim-virtualenv'  " This should fix the virtualenvs.
@@ -211,8 +214,7 @@ autocmd GUIEnter * set visualbell t_vb=
 "nnoremap <F2> :set invpaste paste?<CR>
 nnoremap ; :
 "Spacemacs Esc
-imap fd <Esc>
-imap fd <Shift><SPC> 
+inoremap <S-Space> <ESC>
 "Fake Sudo
 cmap w!! w !sudo tee % >/dev/null
 " Allow j and k to be more normal.
