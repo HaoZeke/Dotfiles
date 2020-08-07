@@ -1,0 +1,13 @@
+if [ -d /etc/profile.d ]; then
+	for i in /etc/profile.d/*.sh; do
+		if [ -r $i ]; then
+			. $i
+		fi
+	done
+fi
+ml restore
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
