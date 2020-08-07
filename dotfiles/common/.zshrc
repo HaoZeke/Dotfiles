@@ -130,6 +130,11 @@ if [ -f ~/.zshSpecifics ]; then
   . ~/.zshSpecifics
 fi
 
+# HPC
+#######
+if [ -f ~/.zshlmod ]; then
+  . ~/.zshlmod
+fi
 
 # Common zPlug stuff
 ######################
