@@ -356,6 +356,7 @@ export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop
 # Common Configuration
 ######################
 
+export SSH_ASKPASS=lxqt-openssh-askpass
 export PAGER=less
 # Less status line
 export LESS='-R -f -X -i -P ?f%f:(stdin). ?lb%lb?L/%L.. [?eEOF:?pb%pb\%..]'
