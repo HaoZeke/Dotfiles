@@ -1,0 +1,15 @@
+if [ -d /etc/profile.d ]; then
+	setopt no_nomatch
+	for i in /etc/profile.d/*.sh; do
+		if [ -r $i ]; then
+			. $i
+		fi
+		setopt nomatch
+	done
+fi
+ml restore
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
