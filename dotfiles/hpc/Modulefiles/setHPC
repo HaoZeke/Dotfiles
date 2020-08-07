@@ -1,0 +1,16 @@
+#%Module1.0#####################################################################
+
+proc ModulesHelp { } {
+puts stderr " "
+puts stderr "This module sets paths for manually installed libraries"
+}
+module-whatis "Name: setHPC"
+module-whatis "Category: path helper"
+
+set             version             master
+ 
+
+prepend-path    PATH                /users/home/rog32/.hpc/bin
+prepend-path    MANPATH             /users/home/rog32/.hpc/share/man
+prepend-path    INCLUDE             /users/home/rog32/.hpc/include
+prepend-path    LD_LIBRARY_PATH     /users/home/rog32/.hpc/lib
