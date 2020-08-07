@@ -413,6 +413,7 @@ crontab:myArchBox
 #########
 
 .norootrc:noRoot
+.bash_profile:noRoot
 
 # hpc
 #######
