@@ -148,7 +148,7 @@ zplug "plugins/pyenv", from:oh-my-zsh
 zplug "plugins/rbenv", from:oh-my-zsh
 
 # No OMZ
-zplug "j-arnaiz/common-aliases"
+# zplug "j-arnaiz/common-aliases"
 
 # Colors and Highlighting
 zplug "zdharma/fast-syntax-highlighting", defer:2
