@@ -317,7 +317,7 @@ for_window [instance="mainScratch"] border 1pixel, resize set 631 1132, move pos
 bindsym F1 [instance="mainScratch"] scratchpad show
 
 # Part of my redshift setup from the archwiki
-exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
+# exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
 
 # A much better alternative redshit, in C
 # exec --no-startup-id /usr/bin/clight
