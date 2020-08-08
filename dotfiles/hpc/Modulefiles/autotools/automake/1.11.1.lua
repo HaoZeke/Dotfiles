@@ -1,0 +1,5 @@
+local home    = os.getenv("HOME")
+local version = myModuleVersion()
+local pkgName = myModuleName()
+local pkg     = pathJoin(home,"pkg",pkgName,version,"bin")
+prepend_path("PATH", pkg)
