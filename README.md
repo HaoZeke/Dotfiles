@@ -8,6 +8,8 @@ This is now managed with [dotgit](https://github.com/kobus-v-schoor/dotgit).
 
 As of the 11th of April, 2019, the configuration for my `emacs` setup, with `doom-emacs` has been moved to [a repository of its own](https://github.com/HaoZeke/dotDoom).
 
+As of the 7th of August, 2020, the HPC cluster [Lmod](https://lmod.readthedocs.io) configuration has been moved to [a repository of its own](https://github.com/HaoZeke/hzHPC_lmod).
+
 ### Usage
 
 Several targets (groups) have been defined.
