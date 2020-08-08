@@ -28,7 +28,6 @@ cp -r dotgit/bin/dotgit* ~/.local/bin
 cat dotgit/bin/bash_completion >> ~/.bash_completion
 rm -rf dotgit
 # echo 'export PATH="$PATH:$HOME/.bin"' >> ~/.bashrc
-echo 'export PATH="$PATH:$HOME/.bin"' >> ~/.zshrc
 ```
 
 Then get use these:
