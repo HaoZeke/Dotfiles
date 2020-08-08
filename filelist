@@ -384,5 +384,13 @@ crontab:myArchBox
 
 .bashlmod:hpc
 .zshlmod:hpc
+
+# Modules
 Modulefiles/newBoost:hpc
 Modulefiles/setHPC:hpc
+# Autotools
+Modulefiles/autotools/autoconf/2.64.lua:hpc
+Modulefiles/autotools/automake/1.11.1.lua:hpc
+Modulefiles/autotools/autotools.lua:hpc
+Modulefiles/autotools/libtool/2.4.lua:hpc
+Modulefiles/autotools/m4/1.4.14.lua:hpc
