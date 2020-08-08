@@ -1,6 +1,0 @@
-{
-	"synonyms": {
-		"loz": "mdlgwhtlozenge"
-	},
-	"ignore_syntax": ["latex", "tex", "latexing", "latexing beamer"]
-}
