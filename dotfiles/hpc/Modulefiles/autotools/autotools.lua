@@ -6,4 +6,4 @@ if (os.getenv("USER") ~= "root") then
 append_path("PATH", ".")
 end
 -- 2 --
-load("m4","autoconf","automake","libtool")
+load("autotools/m4/1.4.14","autotools/autoconf/2.64","autotools/automake/1.11.1","autotools/libtool/2.4")
