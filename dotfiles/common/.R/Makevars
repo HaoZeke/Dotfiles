@@ -1,4 +1,5 @@
 # from https://chpc.utah.edu/documentation/software/r-language.php
+# C=clang
 # CFLAGS += -wd308
 # CXXFLAGS += -wd308
 # CPPFLAGS += -wd308
