@@ -130,6 +130,11 @@ if [ -f ~/.zshSpecifics ]; then
   . ~/.zshSpecifics
 fi
 
+# HPC
+#######
+if [ -f ~/.zshlmod ]; then
+  . ~/.zshlmod
+fi
 
 # Common zPlug stuff
 ######################
@@ -222,3 +227,8 @@ alias cdg=cd-gitroot
 if [[ "${ZSH_PROFILE}" == 1 ]]; then
 zprof
 fi
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:

@@ -7,6 +7,10 @@
 # Generic Linux
 genLinux=common,linux,doom
 
+# HPC Stuff
+hzhpc=common,linux,doom,noRoot,hpc
+# hpc essentially adds lmod stuff
+
 # Archlinux Barebones
 archlinuxMono=common,linux,archLinux,nixpkgs,monoMonitor
 archlinuxMulti=common,linux,archLinux,nixpkgs,multiMonitor
@@ -36,9 +40,6 @@ hzhome_i3=common,linux,archLinux,nixpkgs,sublime,i3Gaps,i3_desktop,sway,wayland,
 # My current config. [laptop]
 hzarchtpad_sway=common,linux,archLinux,nixpkgs,monoMonitor,sublime,i3Gaps,sway,wayland,xkblayout,myArchBox
 hzarchtpad_i3=common,linux,archLinux,nixpkgs,sublime,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak
-
-# No root stuff
-hzhpc=common,linux,archLinux,nixpkgs,sublime,i3Gaps,noRoot
 
 # For my builds
 hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
@@ -415,3 +416,12 @@ crontab:myArchBox
 #########
 
 .norootrc:noRoot
+.bash_profile:noRoot
+
+# hpc
+#######
+
+.bashlmod:hpc
+.zshlmod:hpc
+Modulefiles/newBoost:hpc
+Modulefiles/setHPC:hpc
