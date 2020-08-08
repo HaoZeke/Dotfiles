@@ -23,8 +23,8 @@ As far as dotgit and the configs go simply grab it like so:
 
 ```bash
 git clone https://github.com/kobus-v-schoor/dotgit.git
-mkdir -p ~/.bin
-cp -r dotgit/bin/dotgit* ~/.bin
+mkdir -p ~/.local/bin
+cp -r dotgit/bin/dotgit* ~/.local/bin
 cat dotgit/bin/bash_completion >> ~/.bash_completion
 rm -rf dotgit
 # echo 'export PATH="$PATH:$HOME/.bin"' >> ~/.bashrc
