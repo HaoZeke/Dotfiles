@@ -135,6 +135,7 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/termite/config
 .config/git/attributes
 .config/keys.sh.gpg
+.config/alacritty/alacritty.yml
 
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
