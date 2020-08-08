@@ -1,0 +1,5 @@
+#!/bin/sh
+xinput --map-to-output 'Wacom Pen and multitouch sensor Finger touch' eDP1
+xinput --map-to-output 'Wacom Pen and multitouch sensor Pen stylus' eDP1
+xinput --map-to-output 'Wacom Pen and multitouch sensor Pen eraser' eDP1
+notify-send "Screen configuration changed"
