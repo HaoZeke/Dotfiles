@@ -309,6 +309,9 @@ allPackages:archLinux
 .config/i3rust/i3_top.toml:i3_laptop
 .config/i3rust/i3_bottom.toml:i3_laptop
 
+# autorandr
+.config/autorandr/postswitch:i3_laptop
+
 # Wayland
 ###########
 
