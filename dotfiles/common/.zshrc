@@ -144,7 +144,7 @@ zplug "plugins/sudo",                       from:oh-my-zsh
 zplug "plugins/systemd",                    from:oh-my-zsh
 zplug "plugins/rsync",                      from:oh-my-zsh
 # Handlers
-zplug "plugins/pyenv", from:oh-my-zsh
+# zplug "plugins/pyenv", from:oh-my-zsh
 zplug "plugins/rbenv", from:oh-my-zsh
 
 # No OMZ
