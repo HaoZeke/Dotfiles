@@ -177,6 +177,9 @@ zplug "ascii-soup/zsh-url-highlighter"
 zplug "molovo/tipz"
 zplug "srijanshetty/zsh-pip-completion"
 
+# Nix shell
+zplug "chisui/zsh-nix-shell"
+
 # Install plugins if there are plugins that have not been installed
 if ! zplug check --verbose; then
     printf "Install? [y/N]: "
