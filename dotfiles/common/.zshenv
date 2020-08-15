@@ -104,7 +104,7 @@ export INTERACTIVE_FILTER="fzf:peco:percol:gof:pick"
 bindkey '\ew' kill-region # [Esc-w] - Kill from the cursor to the mark
 
 # From https://github.com/bunnyfly/dotfiles/blob/master/zshrc
-bindkey -v # Use vim key bindings
+# bindkey -v # Use vim key bindings
 
 if [ -f ~/.zshColemak ]; then
 	. ~/.zshColemak
