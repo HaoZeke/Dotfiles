@@ -84,7 +84,7 @@ source ~/.zplug/init.zsh
 # Shell Theme
 ###############
 
-# Power level 9k #
+# Power level 10k #
 
 # source ~/.shell_prompt.sh
 POWERLEVEL9K_MODE='nerdfont-complete'
@@ -103,9 +103,9 @@ POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
 POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs nix_shell)
 
-zplug "bhilburn/powerlevel9k", use:powerlevel9k.zsh-theme, defer:3
+zplug "romkatv/powerlevel10k", as:theme, depth:1, defer:3
 
 # Bullet Train #
 
