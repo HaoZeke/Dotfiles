@@ -105,7 +105,7 @@ POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs ti
 # Left
 POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs nix_shell)
 
-zplug "romkatv/powerlevel10k", as:theme, depth:1, defer:3
+zplug "romkatv/powerlevel10k", as:theme, depth:1
 
 # Bullet Train #
 
