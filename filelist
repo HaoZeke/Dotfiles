@@ -65,9 +65,6 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .gtkrc-2.0
 .Xmodmap
 
-# Nix glibc
-.nixEnv
-
 # R stuff
 .Rprofile
 .R/Makevars
@@ -154,6 +151,7 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/nixpkgs/config.nix:nixpkgs
 .config/systemd/user/lorri.service:nixpkgs
 .config/systemd/user/lorri.socket:nixpkgs
+.nixEnv:nixpkgs
 
 # Colemak
 ##########

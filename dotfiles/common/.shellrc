@@ -420,7 +420,7 @@ fi
 # Nix
 ######
 
-if which nix-env >/dev/null 2>&1; then
+if [ -f ~/.nixEnv ]; then
 	. ~/.nixEnv
 fi
 
