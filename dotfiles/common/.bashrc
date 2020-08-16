@@ -12,6 +12,10 @@ fi
 #  Common Bash  #
 #################
 
+# Works only in bash
+# Version comparision
+function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+
 # Platform
 #############
 
