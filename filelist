@@ -146,8 +146,8 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/systemd/user/calibre-server.service
 .config/systemd/user/tmux.service
 
-# Nix
-######
+# Nixpkgs
+##########
 .config/nixpkgs/config.nix:nixpkgs
 .config/systemd/user/lorri.service:nixpkgs
 .config/systemd/user/lorri.socket:nixpkgs
