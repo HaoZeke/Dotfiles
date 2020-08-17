@@ -55,6 +55,7 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .shellrc
 .bashrc
 .zshenv
+.p10k.zsh
 .zshrc
 .vimrc
 .tmux.conf
