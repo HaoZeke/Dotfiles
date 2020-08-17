@@ -2,13 +2,12 @@
 # ArchLinux zsh extensions  #
 #############################
 
-# Extra zPlug Stuff
+# Extra zinit Stuff
 #####################
 
 # OMZ
-
-zplug "plugins/archlinux",                from:oh-my-zsh
-
+zinit ice svn
+zinit snippet OMZ::plugins/archlinux
 
 # Emacs Stuff (cross platform)
 # Local Variables:
