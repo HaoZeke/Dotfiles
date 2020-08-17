@@ -81,18 +81,22 @@ r() {
 # Plugin Management
 #####################
 
-if [[ ! -d ~/.zplug ]]; then
-    git clone https://github.com/zplug/zplug ~/.zplug
-    source ~/.zplug/init.zsh && zplug update --self
+if [[ ! -d ~/.zinit ]]; then
+    mkdir ~/.zinit
+    git clone https://github.com/zdharma/zinit.git ~/.zinit/bin
 fi
 
-source ~/.zplug/init.zsh
+source ~/.zinit/bin/zinit.zsh
 
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
 
 # Shell Theme
 ###############
 
 # Power level 10k #
+
+zplugin ice depth=1; zplugin light romkatv/powerlevel10k
 
 # source ~/.shell_prompt.sh
 POWERLEVEL9K_MODE='nerdfont-complete'
@@ -112,8 +116,6 @@ POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs ti
 
 # Left
 POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs nix_shell)
-
-zplug "romkatv/powerlevel10k", as:theme, depth:1
 
 # Bullet Train #
 
@@ -144,60 +146,89 @@ if [ -f ~/.zshlmod ]; then
   . ~/.zshlmod
 fi
 
-# Common zPlug stuff
+# Common zinit stuff
 ######################
 
 # OMZ Plugins
-zplug "plugins/history",                    from:oh-my-zsh
-zplug "plugins/history-substring-search",   from:oh-my-zsh
-zplug "plugins/github",                     from:oh-my-zsh
-zplug "plugins/git",                        from:oh-my-zsh
-zplug "plugins/systemadmin",                from:oh-my-zsh
-zplug "plugins/sudo",                       from:oh-my-zsh
-zplug "plugins/systemd",                    from:oh-my-zsh
-zplug "plugins/rsync",                      from:oh-my-zsh
-# Handlers
-# zplug "plugins/pyenv", from:oh-my-zsh
-zplug "plugins/rbenv", from:oh-my-zsh
+zinit snippet OMZ::plugins/git/git.plugin.zsh
+zinit snippet OMZ::plugins/history/history.plugin.zsh
+zinit snippet OMZ::plugins/github/github.plugin.zsh
+zinit ice svn
+zinit snippet OMZ::plugins/history-substring-search
+zinit snippet OMZ::plugins/systemadmin
+zinit snippet OMZ::plugins/sudo
+zinit snippet OMZ::plugins/systemd
+zinit snippet OMZ::plugins/rsync
 
-# No OMZ
-# zplug "j-arnaiz/common-aliases"
+# Handlers
+zinit ice svn
+zinit snippet OMZ::plugins/pyenv
+zinit snippet OMZ::plugins/rbenv
+zinit snippet OMZ::plugins/common-aliases
+unalias fd # Currently masks fd
 
 # Colors and Highlighting
-zplug "zdharma/fast-syntax-highlighting", defer:2
-zplug "zlsun/solarized-man"
+zinit light "zdharma/fast-syntax-highlighting"
+zinit light "zlsun/solarized-man"
+
+# Nix shell
+zinit light "chisui/zsh-nix-shell"
 
 # Misc
-zplug "b4b4r07/enhancd", use:init.sh
-zplug "changyuheng/zsh-interactive-cd"
-zplug "mollifier/cd-gitroot"
-zplug "bobsoppe/zsh-ssh-agent", use:ssh-agent.zsh, from:github
-zplug "zdharma/history-search-multi-word"
-zplug "urbainvaes/fzf-marks"
+zinit ice proto'git' pick'init.sh'
+zinit light "b4b4r07/enhancd"
+zinit light "changyuheng/zsh-interactive-cd"
+zinit light "mollifier/cd-gitroot"
+zinit ice proto'git' pick'ssh-agent.zsh'
+zinit light "bobsoppe/zsh-ssh-agent"
+zinit light "zdharma/history-search-multi-word"
+zinit light "urbainvaes/fzf-marks"
 
 # Manage NVM better (needs settings before being loaded)
 export NVM_LAZY_LOAD=true
-zplug "lukechilds/zsh-nvm"
+zinit light "lukechilds/zsh-nvm"
 
 # Completions
-zplug "zsh-users/zsh-completions"
-zplug "ascii-soup/zsh-url-highlighter"
-zplug "molovo/tipz"
-zplug "srijanshetty/zsh-pip-completion"
+zinit ice blockf
+zinit light "zsh-users/zsh-completions"
+zinit light "ascii-soup/zsh-url-highlighter"
+zinit light "molovo/tipz"
+zinit light "srijanshetty/zsh-pip-completion"
 
-# Nix shell
-zplug "chisui/zsh-nix-shell"
+# Suggestions
+zinit ice wait lucid atload'_zsh_autosuggest_start'
+zinit light zsh-users/zsh-autosuggestions
 
-# Install plugins if there are plugins that have not been installed
-if ! zplug check --verbose; then
-    printf "Install? [y/N]: "
-    if read -q; then
-        echo; zplug install
-    fi
-fi
+############
+# Programs #
+############
+# junegunn/fzf-bin
+zinit ice from"gh-r" as"program"
+zinit light junegunn/fzf-bin
 
-# Then, source plugins and add commands to $PATH
-zplug load
+# sharkdp/fd
+zinit ice as"command" from"gh-r" mv"fd* -> fd" pick"fd/fd"
+zinit light sharkdp/fd
+
+# sharkdp/bat
+zinit ice as"command" from"gh-r" mv"bat* -> bat" pick"bat/bat"
+zinit light sharkdp/bat
+
+# ogham/exa, replacement for ls
+zinit ice wait"2" lucid from"gh-r" as"program" mv"exa* -> exa"
+zinit light ogham/exa
+
+# mvdan/sh
+zinit ice from"gh-r" as"program" mv"shfmt* -> shfmt"
+zinit light mvdan/sh
+
+# Archive helper
+zinit ice as"command" from"gh-r" mv"archiver* -> archiver" pick"archiver/archiver"
+zinit light mholt/archiver
+
+# Better git
+zinit ice as"program" make pick"bin/git-fzf.zsh"
+zinit light 'b4b4r07/git-fzf'
 
 # Settings for plugins #
 
