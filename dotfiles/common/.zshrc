@@ -228,6 +228,10 @@ zinit light mvdan/sh
 zinit ice as"command" from"gh-r" mv"archiver* -> archiver" pick"archiver/archiver"
 zinit light mholt/archiver
 
+# Makefile alternative
+zinit ice as"command" from"gh-r" bpick"*.tar.gz" mv"task* -> task" pick"task/task"
+zinit light "go-task/task"
+
 # Better git
 zinit ice as"program" make pick"bin/git-fzf.zsh"
 zinit light 'b4b4r07/git-fzf'
