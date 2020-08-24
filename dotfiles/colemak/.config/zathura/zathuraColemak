@@ -52,6 +52,6 @@ map [index] Q quit
 # https://github.com/deterenkelt/dotfiles/blob/9674e4c974f0c2cb52302c36bcae7f3cfa4aa3d5/.config/zathura/zathurarc
 # https://wiki.archlinux.org/index.php/Zathura
 
-;; Local Variables:
-;; mode: conf
-;; End:
+# Local Variables:
+# mode: conf
+# End:
