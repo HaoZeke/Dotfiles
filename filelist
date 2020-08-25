@@ -139,6 +139,9 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/keys.sh.gpg
 .config/alacritty/alacritty.yml
 
+# GTK3
+.config/gtk-3.0/settings.ini
+
 # Desktop Entries #
 .local/share/applications/emacs-client.desktop
 .local/share/applications/org-protocol.desktop
