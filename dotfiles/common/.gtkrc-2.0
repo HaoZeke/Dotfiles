@@ -4,8 +4,9 @@
 # spacemacs (https://github.com/dawikur/base16-gruvbox-scheme)
 
 # Themes
-gtk-color-scheme = "Adwaita-Dark"
+gtk-color-scheme = "Adwaita-dark"
 gtk-icon-theme-name="Flat-Remix-Blue-Dark"
+gtk-cursor-theme-size=0
 gtk-cursor-theme-name="Paper"
 
 # Fonts
@@ -21,10 +22,14 @@ gtk-can-change-accels=1
 gtk-menu-bar-popup-delay=0
 gtk-menu-popdown-delay=0
 gtk-menu-popup-delay=0
+gtk-button-images=1
+gtk-menu-images=1
+gtk-enable-event-sounds=1
+gtk-enable-input-feedback-sounds=1
 
 # Filechooser
 [Filechooser Settings]
-StartupMode=cwd
+StartupMode=recent
 LocationMode=path-bar
 ShowHidden=true
 ShowSizeColumn=true
