@@ -3,9 +3,39 @@
 # By Nasser Alshammari (https://github.com/nashamri/spacemacs-theme)
 # spacemacs (https://github.com/dawikur/base16-gruvbox-scheme)
 
-gtk-color-scheme = "bg_color:#1f2022\nfg_color:#a3a3a3\nbase_color:#1f2022\ntext_color:#a3a3a3\nselected_bg_color:#444155\nselected_fg_color:#a3a3a3\ntooltip_bg_color:#1f2022\ntooltip_fg_color:#b8b8b8\ntitlebar_bg_color:#1f2022\ntitlebar_fg_color:#4f97d7\nmenubar_bg_color:#1f2022\nmenubar_fg_color:#4f97d7\ntoolbar_bg_color:#1f2022\ntoolbar_fg_color:#b1951d\nmenu_bg_color:#1f2022\nmenu_fg_color:#a3a3a3\npanel_bg_color:#1f2022\npanel_fg_color:#67b11d\nlink_color:#ffa500"
-gtk-font-name="DejaVu Sans 10"  
-gtk-xft-antialias=0  
+# Themes
+gtk-color-scheme = "Adwaita-Dark"
+gtk-icon-theme-name="Flat-Remix-Blue-Dark"
+gtk-cursor-theme-name="Paper"
+
+# Fonts
+gtk-font-name="Fira Sans Book 16"
+gtk-xft-antialias=1
 gtk-xft-hinting=1  
 gtk-xft-hintstyle="hintfull"  
 gtk-xft-rgba="rgb"
+
+# Also kang from https://config.phundrak.com/
+# Menus
+gtk-can-change-accels=1
+gtk-menu-bar-popup-delay=0
+gtk-menu-popdown-delay=0
+gtk-menu-popup-delay=0
+
+# Filechooser
+[Filechooser Settings]
+StartupMode=cwd
+LocationMode=path-bar
+ShowHidden=true
+ShowSizeColumn=true
+ViewMode=list-view
+IconViewScale=-1
+# Position
+GeometryX=566
+GeometryY=202
+# Size
+GeometryWidth=800
+GeometryHeight=400
+# Sort
+SortColumn=modified
+SortOrder=descending
