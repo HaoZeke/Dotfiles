@@ -112,6 +112,14 @@
           # Network
           webchem
 
+          # Mixed Linear Models
+          xtable
+          emmeans
+          car
+          lmerTest
+          skimr
+          broom
+
           ############
           # Devtools #
           ############
