@@ -7,6 +7,17 @@
         extraOptions =
           "experimental-features = nix-command flakes recursive-nix";
       };
+      ascii = with self.rPackages;
+        buildRPackage {
+          name = "ascii";
+          src = self.fetchFromGitHub {
+            owner = "mclements";
+            repo = "ascii";
+            rev = "c8598ee7963cc635373457120b5eecd5933bd6f3";
+            sha256 = "0xqihbfyn7s9f32j2jamj7yjm3mzg5smfbrdpyiwdncbrigkr1zq";
+          };
+          propagatedBuildInputs = [ digest codetools survival ];
+        };
       rethinking = with self.rPackages;
         buildRPackage {
           name = "rethinking";
@@ -108,6 +119,7 @@
           # Built above
           rethinking
           tidybayes_rethinking
+          ascii
         ];
       };
     };
