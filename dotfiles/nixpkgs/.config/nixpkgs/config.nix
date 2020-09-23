@@ -2,6 +2,11 @@
   packageOverrides = super:
     let
       self = super.pkgs;
+      nix = {
+        package = self.nixFlakes;
+        extraOptions =
+          "experimental-features = nix-command flakes recursive-nix";
+      };
       rethinking = with self.rPackages;
         buildRPackage {
           name = "rethinking";
