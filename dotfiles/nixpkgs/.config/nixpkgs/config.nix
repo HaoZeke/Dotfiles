@@ -24,8 +24,8 @@
           src = self.fetchFromGitHub {
             owner = "rmcelreath";
             repo = "rethinking";
-            rev = "ed5759876b2c2123f16425ea715a70fec2dfafaf";
-            sha256 = "1qip6x3f6j9lmcmck6sjrj50a5azqfl6rfhp4fdj7ddabpb8n0z0";
+            rev = "3b48ec8dfda4840b9dce096d0cb9406589ef7923";
+            sha256 = "1cinz87q0z9vxpmz98r5y2vby3z8av9p8w283ihzvy4pc1fz0r9b";
           };
           propagatedBuildInputs = [ coda MASS mvtnorm loo shape rstan dagitty ];
         };
