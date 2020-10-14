@@ -16,6 +16,7 @@ zstyle ':completion:*' menu select
 # Options
 unsetopt menu_complete # do not autoselect the first completion entry
 unsetopt flowcontrol
+unsetopt nomatch # fixes rake completions https://thoughtbot.com/blog/how-to-use-arguments-in-a-rake-task
 
 setopt auto_cd
 setopt multios
