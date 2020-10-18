@@ -18,6 +18,17 @@
           };
           propagatedBuildInputs = [ digest codetools survival ];
         };
+      scholarnetwork = with self.rPackages;
+        buildRPackage {
+          name = "scholarnetwork";
+          src = self.fetchFromGitHub {
+            owner = "pablobarbera";
+            repo = "scholarnetwork";
+            rev = "11f37da8ab097c298f03eb9f1ee3233e9110c2d7";
+            sha256 = "15kg0gjap4a910q33cyrpvixmn2wmzdcnjwv9qh4r5vfdlsnwxlp";
+          };
+          propagatedBuildInputs = [ igraph scholar stringr networkD3 ];
+        };
       rethinking = with self.rPackages;
         buildRPackage {
           name = "rethinking";
@@ -128,6 +139,7 @@
           rethinking
           tidybayes_rethinking
           ascii
+          scholarnetwork
         ];
       };
     };
