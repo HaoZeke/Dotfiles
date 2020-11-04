@@ -20,6 +20,7 @@ set $menuCalc "rofi -show calc -modi calc -no-show-match -no-sort"
 set $passwordManager "/opt/enpass/Enpass showassistant"
 set $screenshotTask "teiler --quickcopy area"
 set $noteTask "$HOME/.emacs.d/bin/org-capture"
+set $lockManager "xss-lock -- ~/.local/bin/i3LockHelper"
 # I hate uxterm (i3-sensible-terminal)
 # termite was great, alacritty is faster by a bit
 set $term alacritty
@@ -287,20 +288,20 @@ exec udiskie --no-automount --notify --tray --use-udisks2
 exec nm-applet --sm-disable
 
 # I have secrets
-exec gnome-encfs-manager
+# exec gnome-encfs-manager # unused
 exec cryptomator
 
 # Listen to lock events
-exec --no-startup-id xss-lock -- ~/.local/bin/i3LockHelper
+exec --no-startup-id $lockManager
 
 # Emacs speedup
 exec --no-startup-id emacs --daemon
 
 # # Put Thunderbrid in a tray
-# exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
+exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
 
 # Now I use mailspring
-exec --no-startup-id mailspring --background
+# exec --no-startup-id mailspring --background
 
 # Need to keep things backed up
 exec --no-startup-id insync start
