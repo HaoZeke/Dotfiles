@@ -297,8 +297,8 @@ exec --no-startup-id $lockManager
 # Emacs speedup
 exec --no-startup-id emacs --daemon
 
-# # Put Thunderbrid in a tray
-exec --no-startup-id perl $HOME/.local/bin/thundertray.pl
+# Put Thunderbrid in a tray
+exec --no-startup-id kdocker thunderbird
 
 # Now I use mailspring
 # exec --no-startup-id mailspring --background
