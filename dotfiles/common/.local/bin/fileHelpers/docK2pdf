@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# Get a filename
+case "$#" in
+0)
+	echo "No arguments, so enter the filename, WITH the extension"
+	read -p 'Document: ' docfile
+	;;
+1)
+	echo "OK, using the filename"
+	docfile="$1"
+	;;
+*)
+	echo "Illegal number of parameters"
+	exit
+	;;
+esac
+# Get basename
+basename="${docfile%.*}"
+ext="${docfile##*\.}"
+echo "Basename ${basename} with $ext from $docfile"
+echo "Making a local store for the outputs"
+mkdir -p "$HOME/auraHDopt"
+
+case "$ext" in
+"djvu")
+	echo "Converting djvu to pdf via ps and running k2pdfopt"
+	djvups "${basename}.djvu" "${basename}.ps"
+	ps2pdf "${basename}.ps" "${basename}.pdf"
+	# The newline is for simulating the Enter key
+	echo | k2pdfopt "${basename}.pdf" -wrap -hy -ws -0.2 -dev kbhd -x
+	echo "Cleaning up"
+	mv "${basename}_k2opt.pdf" "$HOME/auraHDopt"
+	rm -rf "${basename}.{ps,pdf}"
+	;;
+"pdf")
+	echo "Converting pdf with gs and running k2pdfopt"
+	gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen \
+		-dNOPAUSE -dQUIET -dBATCH -sOutputFile="${basename}gs.pdf" "${basename}.pdf"
+	echo | k2pdfopt "${basename}gs.pdf" -wrap -hy -ws -0.2 -dev kbhd -x
+	echo "Cleaning up"
+	rm "${basename}gs.pdf" -rf
+	mv "${basename}gs_k2opt.pdf" "$HOME/auraHDopt"
+	;;
+*)
+	echo "Illegal file type"
+	exit
+	;;
+esac

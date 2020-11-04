@@ -105,6 +105,7 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .local/bin/fileHelpers/isoFuseMount
 .local/bin/fileHelpers/isoFuseUmount
 .local/bin/fileHelpers/convRmd.sh
+.local/bin/fileHelpers/docK2pdf
 .local/bin/fileHelpers/replace.sh
 .local/bin/gitHelpers/gh2https
 .local/bin/gitHelpers/gh2ssh
