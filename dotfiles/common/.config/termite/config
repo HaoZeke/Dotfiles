@@ -1,11 +1,13 @@
 [options]
 use_xft = true
 # This is from nerd-fonts-fira-code since mono is depreciated
-font = FuraCode Nerd Font 13
-browser = waterfox
+# Used to be FuraCode Nerd Font
+font = Attribute Mono 26
+browser = google-chrome
 # Length of the scrollback buffer, 0 disabled the scrollback buffer
 # and setting it to a negative value means "infinite scrollback"
 scrollback_lines = -1
+
 # notMine
 ##########
 # This is from https://github.com/khamer/base16-termite/blob/master/themes/base16-onedark.config
@@ -14,10 +16,10 @@ scrollback_lines = -1
 # Author: Lalit Magant (http://github.com/tilal6991)
 
 foreground          = #abb2bf
-foreground_bold     = #b6bdca
-cursor              = #b6bdca
+foreground_bold     = #abb2bf
+cursor              = #abb2bf
 cursor_foreground   = #282c34
-background          = rgba(40, 44, 52)
+background          = #282c34
 
 # 16 color space
 
@@ -58,4 +60,3 @@ color18 = #353b45
 color19 = #3e4451
 color20 = #565c64
 color21 = #b6bdca
-
