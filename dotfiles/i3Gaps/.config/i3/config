@@ -298,7 +298,7 @@ exec --no-startup-id $lockManager
 exec --no-startup-id emacs --daemon
 
 # Put Thunderbrid in a tray
-exec --no-startup-id kdocker thunderbird
+exec --no-startup-id kdocker -d 10 thunderbird
 
 # Now I use mailspring
 # exec --no-startup-id mailspring --background
