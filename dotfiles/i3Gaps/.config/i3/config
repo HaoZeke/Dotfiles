@@ -313,9 +313,12 @@ exec --no-startup-id rescuetime
 exec --no-startup-id copyq
 
 # Scratchpad Stuff
-exec alacritty --class mS --command tmux new -s mS
-for_window [class="Alacritty" instance="mS"] border 1pixel, resize set 50 ppt 35 ppt, move position 0 0, move to scratchpad
-bindsym F1 [class="Alacritty" instance="mS"] scratchpad show
+# exec alacritty --class mS --command tmux new -s mS
+# for_window [class="Alacritty" instance="mS"] border 1pixel, resize set 50 ppt 35 ppt, move position 0 0, move to scratchpad
+# bindsym F1 [class="Alacritty" instance="mS"] scratchpad show
+exec termite --class="mS" -e "tmux new -s mS"
+for_window [class="mS"] border 1pixel, resize set 50 ppt 35 ppt, move position 0 0, move to scratchpad
+bindsym F1 [class="mS"] scratchpad show
 
 # Part of my redshift setup from the archwiki
 # exec --no-startup-id /usr/lib/geoclue-2.0/demos/agent
