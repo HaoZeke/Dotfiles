@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Times a command more robustly
+start_time=$(date +%s)
+$1
+end_time=$(date +%s)
+echo execution time was $(($end_time - $start_time)) s, which is $(bc <<<"scale=3; $(($end_time - $start_time))/60") minutes.
