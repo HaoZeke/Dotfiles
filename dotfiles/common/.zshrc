@@ -159,13 +159,11 @@ zinit snippet OMZ::plugins/systemadmin
 zinit snippet OMZ::plugins/sudo
 zinit snippet OMZ::plugins/systemd
 zinit snippet OMZ::plugins/rsync
+zinit snippet OMZ::plugins/common-aliases/common-aliases.plugin.zsh
 
 # Handlers
-zinit ice svn
-zinit snippet OMZ::plugins/pyenv
-zinit snippet OMZ::plugins/rbenv
-zinit snippet OMZ::plugins/common-aliases
-unalias fd # Currently masks fd
+# zinit snippet OMZ::plugins/pyenv
+# zinit snippet OMZ::plugins/rbenv
 
 # Colors and Highlighting
 zinit light "zdharma/fast-syntax-highlighting"
@@ -283,3 +281,6 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+
+source "/home/haozeke/.local/share/dephell/_dephell_zsh_autocomplete"
