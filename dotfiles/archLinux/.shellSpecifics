@@ -108,7 +108,7 @@ export JAVA_FONTS=/usr/share/fonts/TTF
 # export npm_config_prefix=~/.node_modules
 
 # Horrible hack for themes to work
-export XDG_CURRENT_DESKTOP=KDE
+# export XDG_CURRENT_DESKTOP=KDE
 
 export MPD_HOST='192.168.31.4'
 
