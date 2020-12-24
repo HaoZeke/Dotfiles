@@ -3,15 +3,15 @@ configuration {
 /*	width: 50;*/
 /*	lines: 15;*/
 /*	columns: 1;*/
-	font: "Fira Mono 12";
+	font: "Fira Mono 16";
 /*	bw: 1;*/
 /*	location: 0;*/
 /*	padding: 5;*/
 /*	yoffset: 0;*/
 /*	xoffset: 0;*/
 /*	fixed-num-lines: true;*/
-/*	show-icons: false;*/
-/*	terminal: "rofi-sensible-terminal";*/
+	show-icons: true;
+	terminal: "alacritty";
 /*	ssh-client: "ssh";*/
 /*	ssh-command: "{terminal} -e {ssh-client} {host}";*/
 /*	run-command: "{cmd}";*/
@@ -19,7 +19,7 @@ configuration {
 	run-shell-command: "{terminal} -e {cmd}; read -n 1 -s";
 /*	window-command: "xkill -id {window}";*/
 /*	window-match-fields: "all";*/
-/*	icon-theme: ;*/
+	icon-theme: "Flat-Remix-Blue-Dark";
 /*	drun-match-fields: "name,generic,exec,categories";*/
 /*	drun-show-actions: false;*/
 /*	drun-display-format: "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";*/
