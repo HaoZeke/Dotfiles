@@ -13,8 +13,8 @@
           src = self.fetchFromGitHub {
             owner = "mclements";
             repo = "ascii";
-            rev = "c8598ee7963cc635373457120b5eecd5933bd6f3";
-            sha256 = "0xqihbfyn7s9f32j2jamj7yjm3mzg5smfbrdpyiwdncbrigkr1zq";
+            rev = "0aba97c523f9b663c0d453a3bbe66558bb2355bf";
+            sha256 = "0ygy4s9hcr97bbw6m232cn1fjxi61cbv9n0v39dcbgkszrx2am3g";
           };
           propagatedBuildInputs = [ digest codetools survival ];
         };
@@ -52,17 +52,34 @@
           propagatedBuildInputs =
             [ dplyr tibble rlang MASS tidybayes rethinking rstan ];
         };
+      mixedup = with self.rPackages;
+        buildRPackagee {
+          name = "mixedup";
+          src = self.fetchFromGitHub {
+            owner = "mjskay";
+            repo = "tidybayes.rethinking";
+            rev = "df903c88f4f4320795a47c616eef24a690b433a4";
+            sha256 = "1jl3189zdddmwm07z1mk58hcahirqrwx211ms0i1rzbx5y4zak0c";
+          };
+          propagatedBuildInputs = [ lme4 ];
+        };
     in {
       rEnv = super.rWrapper.override {
         packages = with self.rPackages; [
           # Tidyverse and More
+          tidymodels
           tidyverse
           modelr
           purrr
           forcats
           gridExtra
           broom
+          broom_mixed
           future
+          pkgdown
+          # Symengine
+          symengine
+          odeintr
           # Plotting
           ggplot2
           gganimate
@@ -73,6 +90,19 @@
           RColorBrewer
           corrplot
           rpart_plot
+          lattice
+          dotwhisker
+          # redres
+          afex
+          sjPlot
+          sjmisc
+          glmmTMB
+          simr
+          merTools
+          predictmeans
+          tufte
+          prettydoc
+          htmlTable
           ####################
           # Machine Learning #
           ####################
@@ -116,6 +146,7 @@
           knitr
           data_table
           printr
+          stargazer
 
           # Other
           microbenchmark
@@ -129,7 +160,14 @@
           car
           lmerTest
           skimr
-          broom
+          multcomp
+          nlme
+          nlmeU
+          lme4
+          haven
+          MuMIn
+          rms
+          tableone
 
           ############
           # Devtools #
@@ -144,8 +182,3 @@
       };
     };
 }
-
-# Local Variables:
-# firestarter: "nix-env -f '<nixpkgs>' -iA rEnv"
-# firestarter-default-type: (quote failure)
-# End:
