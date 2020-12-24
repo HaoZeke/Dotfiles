@@ -2,7 +2,7 @@
 use_xft = true
 # This is from nerd-fonts-fira-code since mono is depreciated
 # Used to be FuraCode Nerd Font
-font = Attribute Mono 26
+font = Attribute Mono 20
 browser = google-chrome
 # Length of the scrollback buffer, 0 disabled the scrollback buffer
 # and setting it to a negative value means "infinite scrollback"
