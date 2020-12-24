@@ -6,3 +6,5 @@ fi
 # Local Variables:
 # mode: shell-script
 # End:
+
+export PATH="$HOME/.poetry/bin:$PATH"
