@@ -83,7 +83,7 @@ caliup() {
 	sudo -v && wget --no-check-certificate -nv -O- https://download.calibre-ebook.com/linux-installer.py | sudo python -c "import sys; main=lambda:sys.stderr.write('Download failed\n'); exec(sys.stdin.read()); main()"
 }
 
-# Transfer.sh
+# Transfer.sh is dead, switched hosts
 transfer() {
 	# check arguments
 	if [ $# -eq 0 ]; then
@@ -108,15 +108,15 @@ transfer() {
 		if [ -d "$file" ]; then
 			# transfer directory
 			file_name="$file_name.zip"
-			(cd "$file" && zip -r -q - .) | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+			(cd "$file" && zip -r -q - .) | curl --progress-bar --upload-file "-" "https://filepush.co/upload/$file_name" | tee /dev/null
 		else
 			# transfer file
-			cat "$file" | curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+			cat "$file" | curl --progress-bar --upload-file "-" "https://filepush.co/upload/$file_name" | tee /dev/null
 		fi
 	else
 		# transfer pipe
 		file_name=$1
-		curl --progress-bar --upload-file "-" "https://transfer.sh/$file_name" | tee /dev/null
+		curl --progress-bar --upload-file "-" "https://filepush.co/upload/$file_name" | tee /dev/null
 	fi
 }
 
