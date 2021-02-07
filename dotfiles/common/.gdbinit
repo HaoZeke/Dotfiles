@@ -409,6 +409,7 @@ class Dashboard(gdb.Command):
         Dashboard.parse_inits(False)
         # GDB overrides
         run('set pagination off')
+        run('set print symbol-filename on')
         # enable and display if possible (program running)
         dashboard.enable()
         dashboard.redisplay()
