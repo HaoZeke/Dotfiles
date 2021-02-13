@@ -61,11 +61,11 @@ It is necessary for the following packagages to be installed.
 
 #### TO-DO
 
-- Consolidate multi and single monitor setups (panel remaining)
-- Add update scripts for the install helpers
-- ~~Switch from tilda to tdrop+kitty (dropdowns)~~
-- Use a more monitor aware panel
-- Use a configuration management system like puppet, ansible or saltstack for full automation
-- Add aura setups for Salt
-- Finish creating targets including
-  - Root target
+- [ ] Add update scripts for the install helpers
+- [x] ~~Switch from tilda to tdrop+kitty (dropdowns)~~
+- [x] ~~Consolidate multi and single monitor setups (panel remaining)~~
+- [x] ~~Use a more monitor aware panel~~
+- [ ] Use a configuration management system like puppet, ansible or saltstack for full automation
+- [ ] Add aura setups for Salt
+- [ ] Finish creating targets including
+  - [ ] Root target
