@@ -79,6 +79,10 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 # GDB init is actually from gdb-dashboard with some additions
 # Update frequently
 .gdbinit
+# Personal, loaded in gdb-dashboard
+.gdbinit.d/init
+.gdbinit.d/dashboard
+.gdbinit.d/eigen.py
 
 # Borg
 .borg_exclusions
@@ -141,9 +145,6 @@ hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
 .config/git/attributes
 .config/keys.sh.gpg
 .config/alacritty/alacritty.yml
-# GDB init is actually from gdb-dashboard with some additions
-# Update frequently
-.config/gdb/gdbinit
 
 # GTK3
 .config/gtk-3.0/settings.ini
