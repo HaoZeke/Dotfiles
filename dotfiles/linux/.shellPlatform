@@ -41,12 +41,6 @@ else
   echo "You seem to be missing direnv"
 fi
 
-if command -v mmake >/dev/null 2>&1; then
-  alias make=mmake
-else
-  echo "You seem to be missing mmake"
-fi
-
 # Crossover Paths
 ###################
 
