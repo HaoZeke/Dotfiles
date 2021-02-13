@@ -298,6 +298,9 @@ exec --no-startup-id $lockManager
 # Emacs speedup
 exec --no-startup-id emacs --daemon
 
+# Stretchly
+exec --no-startup-id stretchly
+
 # Put Thunderbrid in a tray
 exec --no-startup-id kdocker -d 10 thunderbird
 
