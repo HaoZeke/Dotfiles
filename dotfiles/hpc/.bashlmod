@@ -5,7 +5,7 @@ if [ -d /etc/profile.d ]; then
 		fi
 	done
 fi
-ml restore
+module restore
 
 # Emacs Stuff (cross platform)
 # Local Variables:

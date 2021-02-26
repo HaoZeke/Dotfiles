@@ -7,7 +7,7 @@ if [ -d /etc/profile.d ]; then
 		setopt nomatch
 	done
 fi
-ml restore
+module restore
 
 # Emacs Stuff (cross platform)
 # Local Variables:
