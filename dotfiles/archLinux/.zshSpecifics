@@ -6,7 +6,6 @@
 #####################
 
 # OMZ
-zinit ice svn
 zinit snippet OMZ::plugins/archlinux
 
 # Emacs Stuff (cross platform)
