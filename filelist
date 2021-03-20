@@ -39,7 +39,7 @@ hzhome_i3=common,linux,archLinux,nixpkgs,i3Gaps,i3_desktop,sway,wayland,xkblayou
 
 # My current config. [laptop]
 hzarchtpad_sway=common,linux,archLinux,nixpkgs,monoMonitor,i3Gaps,sway,wayland,xkblayout,myArchBox
-hzarchtpad_i3=common,linux,archLinux,nixpkgs,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak
+hzarchtpad_i3=common,linux,archLinux,nixpkgs,i3Gaps,i3_laptop,sway,wayland,xkblayout,myArchBox,colemak,astroid
 
 # For my builds
 hzArchiso=common,linux,archLinux,nixpkgs,i3Gaps,monoMonitor,sway,wayland
@@ -400,3 +400,9 @@ crontab:myArchBox
 
 .bashlmod:hpc
 .zshlmod:hpc
+
+# astroid
+##########
+
+.config/astroid/config:astroid
+.config/astroid/poll.sh:astroid
