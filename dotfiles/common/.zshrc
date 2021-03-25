@@ -211,8 +211,8 @@ zinit ice as"command" from"gh-r" mv"fd* -> fd" pick"fd/fd"
 zinit light sharkdp/fd
 
 # sharkdp/bat
-zinit ice as"command" from"gh-r" mv"bat* -> bat" pick"bat/bat"
-zinit light sharkdp/bat
+# zinit ice as"command" from"gh-r" mv"bat* -> bat" pick"bat/bat"
+# zinit light sharkdp/bat
 
 # ogham/exa, replacement for ls
 zinit ice wait"2" lucid from"gh-r" as"program" mv"exa* -> exa"
