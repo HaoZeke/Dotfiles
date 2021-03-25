@@ -207,16 +207,16 @@ zinit ice from"gh-r" as"program"
 zinit light junegunn/fzf-bin
 
 # sharkdp/fd
-zinit ice as"command" from"gh-r" mv"fd* -> fd" pick"fd/fd"
-zinit light sharkdp/fd
+# zinit ice as"command" from"gh-r" mv"fd* -> fd" pick"fd/fd"
+# zinit light sharkdp/fd
 
 # sharkdp/bat
 # zinit ice as"command" from"gh-r" mv"bat* -> bat" pick"bat/bat"
 # zinit light sharkdp/bat
 
 # ogham/exa, replacement for ls
-zinit ice wait"2" lucid from"gh-r" as"program" mv"exa* -> exa"
-zinit light ogham/exa
+# zinit ice wait"2" lucid from"gh-r" as"program" mv"exa* -> exa"
+# zinit light ogham/exa
 
 # mvdan/sh
 zinit ice from"gh-r" as"program" mv"shfmt* -> shfmt"
