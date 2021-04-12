@@ -40,9 +40,6 @@ alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
 # Make directory
 alias md='mkdir -p'
 
-# Colors
-alias ls='ls --color=auto'
-
 # Emacs for the terminal
 alias emacs='emacs -nw'
 
