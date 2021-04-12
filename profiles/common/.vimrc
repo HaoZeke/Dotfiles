@@ -291,7 +291,7 @@ let g:ctrlp_match_func = { 'match': 'pymatcher#PyMatch' }
     if has("gui_running")
        " any code here affects gvim but not console vim
 set background=dark
-set guifont=Attribute\ Mono\ 15
+set guifont=CaskaydiaCove\ Nerd\ Font\ Regular\ 15
  " Don’t blink cursor in normal mode
 set guicursor=n:blinkon0
 " Better line-height
