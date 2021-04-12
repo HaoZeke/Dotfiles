@@ -37,6 +37,9 @@ vars = [ "macOS/mac-vars.toml" ]
 hooks = [ "echo \"Welcome to the MacOS configuration\"" ]
 [profiles.macos.dots]
 nix_darwin = { source = "macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
+yabairc = { source = "macOS/tilingWM/yabairc", target = ".config/yabai/yabairc" }
+skhdrc = { source = "macOS/tilingWM/skhdrc", target = ".config/skhd/skhdrc" }
+spacebarrc = { source = "macOS/tilingWM/spacebarrc", target = ".config/spacebar/spacebarrc" }
 
 #########
 # Linux #

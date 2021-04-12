@@ -1,5 +1,12 @@
 #!/usr/bin/env sh
 
-SPACEBAR_HEIGHT=$(spacebar -m config height)
-yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
+# Rules
+yabai -m rule --add app='System Preferences' manage=off
+yabai -m rule --add app='Live' manage=off
 yabai -m rule --add app="^Emacs$" manage=on
+# Spacebar helper
+# $(spacebar -m config height)
+SPACEBAR_HEIGHT=26
+yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
+# Floating windows are always on top
+yabai -m config window_topmost on
