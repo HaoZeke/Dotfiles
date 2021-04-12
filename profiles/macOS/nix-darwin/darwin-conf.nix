@@ -17,13 +17,17 @@
     tmux
     htop
     cmake
+    neofetch
     wakatime
     # Managers
     rustup
+    # Languages
+    # R # broken for now
     # Nix
     nixfmt
     nox
     lorri
+    # xquartz # A mac requirement for x11 and cairo
   ];
 
   # Use a custom configuration.nix location.
@@ -44,4 +48,6 @@
   # Manage users better
   users.nix.configureBuildUsers = true;
 
+  # Needed for X11
+  nixpkgs.config.allowUnfree = true;
 }
