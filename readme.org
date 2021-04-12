@@ -11,6 +11,12 @@ We expect [[https://rustup.rs/][rustup]].
 #+begin_code bash
 rustup install stable
 cargo install toml-bombadil
+cd $DOTS # This is wherever the repo is
+bombadil install -c bombadil.toml
+#+end_code
+Now we are ready to use any of the profiles present. Currently for the base:
+#+begin_code bash
+bombadil link
 #+end_code
 * License
 This is still under the Unlicense.
