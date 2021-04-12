@@ -1,6 +1,8 @@
 { config, pkgs, ... }:
 
-{
+# getEnv concept from here https://github.com/peel/dotfiles/blob/c2c24d50aa3d36185a4f557ed1db7a8f5dd1f02b/setup/darwin/config.nix
+let home = builtins.getEnv "HOME";
+in {
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
@@ -69,23 +71,8 @@
   #   builtins.readFile ./service_confs/skhdrc; # Managed by bombadili
   services.skhd = {
     enable = true;
-    skhdConfig = ''
-      # open terminal
-      cmd - return : /Applications/NixManualApps/Alacritty.app/Contents/MacOS/alacritty
-      cmd - q : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --single-instance -d
-      # focus window
-      lalt - h : yabai -m window --focus west
-      lalt - j : yabai -m window --focus south
-      lalt - k : yabai -m window --focus north
-      lalt - l : yabai -m window --focus east
-      cmd - j : yabai -m window --focus prev
-      cmd - k : yabai -m window --focus next
-      # float / unfloat window and center on screen
-      lalt - t : yabai -m window --toggle float;\
-                 yabai -m window --grid 4:4:1:1:2:2
-      # toggle window zoom
-      lalt - d : yabai -m window --toggle zoom-parent
-    '';
+    skhdConfig =
+      builtins.readFile "${home}/.config/skhd/skhdrc"; # Managed by bombadili
   };
 
   # yabai #
@@ -119,15 +106,8 @@
       window_gap = 10;
     };
 
-    extraConfig = ''
-      # Rules
-      yabai -m rule --add app='System Preferences' manage=off
-      yabai -m rule --add app='Live' manage=off
-      yabai -m rule --add app="^Emacs$" manage=on
-      # Spacebar helper
-      SPACEBAR_HEIGHT=$(spacebar -m config height)
-      yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
-    '';
+    extraConfig =
+      builtins.readFile "${home}/.config/yabai/yabairc"; # Managed by bombadili
   };
 
   # Spacebar #
