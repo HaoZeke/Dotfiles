@@ -12,4 +12,5 @@ vars = [ "profiles/common/vars.toml" ]
 # Note that these are meant to be part of the common profile
 alacritty = { source = "profiles/common/.config/alacritty/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
 [profiles.macos.dots]
+vars = [ "profiles/macOS/vars.toml" ]
 nix_darwin = { source = "profiles/macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
