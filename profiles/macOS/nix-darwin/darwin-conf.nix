@@ -22,6 +22,7 @@ in {
     cmake
     neofetch
     wakatime
+    gibo
     # Version control
     git
     subversion
@@ -29,6 +30,8 @@ in {
     rustup
     # Languages
     # R # broken for now
+    texlive.combined.scheme-full
+    pandoc
     # Nix
     nixfmt
     nox
