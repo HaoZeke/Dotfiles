@@ -13,6 +13,7 @@
     ripgrep
     fd
     fzf
+    exa
     zsh
     tmux
     htop
