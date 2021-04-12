@@ -1,0 +1,6 @@
+[user]
+	name = __[real_name]__
+	email = __[git_email]__
+	signingkey = 9CCCE36402CB49A6
+[commit]
+    gpgsign = true

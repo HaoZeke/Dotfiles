@@ -13,7 +13,14 @@ vars = [ "common/vars.toml" ]
 [settings.dots]
 # A dot entry representing a symlink, `source` is relative to `dotfiles_dir` 
 # and `target` shall be relative to $HOME directory or absolute.
+ 
+# Git #
+git_config = { source = "common/git/config", target = ".gitconfig" }
+# Alacritty #
 alacritty = { source = "common/.config/alacritty/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
+# Neovim #
+vimrc = { source = "common/.vimrc", target = ".vimrc" }
+neovim = { source = "common/.config/nvim/init.vim", target = ".config/nvim/init.vim" }
 
 #########
 # MacOS #
