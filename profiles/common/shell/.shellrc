@@ -312,6 +312,13 @@ export PATH="$PATH:$HOME/.local/bin/webHelpers"
 
 # NVM is now handled by zsh-nvm
 
+# Fixes python venvs
+# curl https://pyenv.run | bash
+export WORKON_HOME=~/.venvs
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
 # Go Paths
 ###########
 
