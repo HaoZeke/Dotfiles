@@ -1,16 +1,33 @@
 # Path to your dotfiles relative to your $HOME directory
-dotfiles_dir = "Git/Github/Dotfiles"
+dotfiles_dir = "Git/Github/Dotfiles/profiles"
+
+##########
+# Common #
+##########
 [settings]
 # An array of toml files paths containing the variables to inject in your templatize dotfiles
 # You can have multiple var files as long as variable names does not colide. 
-vars = [ "profiles/common/vars.toml" ]
+vars = [ "common/vars.toml" ]
 # An array of post install shell commands
 # hooks = ["sway reload" ]
 [settings.dots]
 # A dot entry representing a symlink, `source` is relative to `dotfiles_dir` 
 # and `target` shall be relative to $HOME directory or absolute.
-# Note that these are meant to be part of the common profile
-alacritty = { source = "profiles/common/.config/alacritty/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
+alacritty = { source = "common/.config/alacritty/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
+
+#########
+# MacOS #
+#########
+[profiles.macos]
+vars = [ "macOS/mac-vars.toml" ]
+hooks = [ "echo \"Welcome to the MacOS configuration\"" ]
 [profiles.macos.dots]
-vars = [ "profiles/macOS/vars.toml" ]
-nix_darwin = { source = "profiles/macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
+nix_darwin = { source = "macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
+
+#########
+# Linux #
+#########
+[profiles.linux]
+vars = ["linux/linux-vars.toml"]
+[profiles.linux.dots]
+termiti = { source = "linux/.config/termite/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
