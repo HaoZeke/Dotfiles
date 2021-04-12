@@ -1,0 +1,45 @@
+vim/plugged
+vim/.netrwhist
+*.cache
+Sublime Text 3/Settings/Package Control.cache
+Thunar/accels.scm
+Thunar/renamerrc
+Sublime Text 3/Settings/Package Control.last-run
+Sublime Text 3/Settings/Package Control.ca-list
+Sublime Text 3/Settings/Package Control.ca-bundle
+Sublime Text 3/Settings/Package Control.system-ca-bundle
+Sublime Text 3/Settings/Package Control.cache
+Sublime Text 3/Settings/Package Control.ca-certs
+dmz
+*#*
+*:
+.dots/
+
+# MacOS Gitignore
+# From https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk

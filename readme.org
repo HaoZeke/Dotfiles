@@ -1,0 +1,16 @@
+* Dots
+These are ~dotfiles~ for various essential utilities mostly based around a tiling mouseless workflow. Prominently there are a lot of commandline configurations including ~zsh~, ~tmux~, ~neovim~ and others.
+
+These have a long history; and older versions were managed by ~dotgit~ before that project transitioned to being re-written in ~python~. Furthermore, as mentioned in an older ~readme~, as of As of the 11th of April, 2019, the configuration for my `emacs` setup, with `doom-emacs` has been moved to [[https://github.com/HaoZeke/dotDoom][a repository of its own]]. Additionally, my primary device switched from being ArchLinux based to a macOS setup.
+
+Currently these are managed with [[https://github.com/oknozor/toml-bombadil][toml-bombadil]].
+** Usage
+At the moment there are fewer install targets compared to the earlier set.
+*** Tooling
+We expect [[https://rustup.rs/][rustup]].
+#+begin_code bash
+rustup install stable
+cargo install toml-bombadil
+#+end_code
+* License
+This is still under the Unlicense.
