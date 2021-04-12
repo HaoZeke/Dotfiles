@@ -18,5 +18,9 @@ Now we are ready to use any of the profiles present. Currently for the base:
 #+begin_code bash
 bombadil link
 #+end_code
+Other profiles can be selected in an equally intuitive manner.
+#+begin_code bash
+bombadil link -p macos
+#+end_code
 * License
 This is still under the Unlicense.
