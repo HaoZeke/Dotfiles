@@ -9,8 +9,9 @@
     # GUI
     emacs
     alacritty
-    # Base Toolset
+    # Base Tools
     git
+    gnupg
     ripgrep
     fd
     zsh
