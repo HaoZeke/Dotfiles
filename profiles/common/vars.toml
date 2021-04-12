@@ -1,3 +1,7 @@
+# User Variables
+real_name = "Rohit Goswami"
+git_email = "rog32@hi.is"
+ 
 # Defaults
 terminal = "termite"
 
