@@ -1,2 +1,5 @@
 # Defaults
 terminal = "alacritty"
+ 
+# Machine type
+machine_type = "universal-darwin"
