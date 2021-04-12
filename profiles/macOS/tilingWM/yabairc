@@ -10,3 +10,8 @@ SPACEBAR_HEIGHT=26
 yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
 # Floating windows are always on top
 yabai -m config window_topmost on
+# Signals
+# Initially kanged from here: https://github.com/skyuplam/dotfiles/blob/master/nix/nixpkgs/darwin/configuration.nix
+yabai -m signal --add event=window_destroyed action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
+yabai -m signal --add event=application_terminated action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
+     
