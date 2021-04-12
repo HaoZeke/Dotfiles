@@ -10,12 +10,16 @@ in {
     # GUI
     emacs
     alacritty
+    zathura
     # Base Tools
     gnupg
     ripgrep
     fd
     fzf
     exa
+    bat
+    tree
+    hub
     zsh
     tmux
     htop
@@ -30,7 +34,7 @@ in {
     rustup
     # Languages
     # R # broken for now
-    texlive.combined.scheme-full
+    # texlive.combined.scheme-full # pointless, use homebrew or texlive installer
     pandoc
     # Nix
     nixfmt
