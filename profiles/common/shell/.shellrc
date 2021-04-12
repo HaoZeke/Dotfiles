@@ -289,6 +289,9 @@ export groupid=$(id -g)
 # Linuxbrew
 export PATH=$HOME/.linuxbrew/bin:$PATH
 
+# TeX (overloaded variables with bombadil)
+export PATH="/usr/local/texlive/__[tex_year]__/bin/__[machine_type]__/:$PATH"
+
 # Poetry
 export PATH="$HOME/.poetry/bin:$PATH"
 

@@ -17,3 +17,6 @@ red = "#FF301B"
 green = "#A0E521"
 yellow = "#FFC620"
 blue = "#1BA6FA"
+
+# TeX Vars
+tex_year = "2021"
