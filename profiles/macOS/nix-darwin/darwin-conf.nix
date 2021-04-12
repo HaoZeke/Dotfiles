@@ -9,16 +9,19 @@
     emacs
     alacritty
     # Base Tools
-    git
     gnupg
     ripgrep
     fd
+    fzf
     zsh
     tmux
     htop
     cmake
     neofetch
     wakatime
+    # Version control
+    git
+    subversion
     # Managers
     rustup
     # Languages
