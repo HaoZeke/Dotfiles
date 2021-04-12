@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+SPACEBAR_HEIGHT=$(spacebar -m config height)
+yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
+yabai -m rule --add app="^Emacs$" manage=on
