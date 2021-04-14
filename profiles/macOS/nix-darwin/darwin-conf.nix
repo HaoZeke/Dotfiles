@@ -26,12 +26,16 @@ in {
     cmake
     neofetch
     wakatime
+    wget
+    clang-tools # clang-format and a whole lot more
     gibo
+    hugo
     # Version control
     git
     subversion
     # Managers
     rustup
+    # rbenv # better off with brew
     # Languages
     # R # broken for now
     # texlive.combined.scheme-full # pointless, use homebrew or texlive installer
@@ -40,10 +44,14 @@ in {
     nixfmt
     nox
     lorri
+    niv
+    # bundix
+    # nodePackages.node2nix
     # MacOS
     yabai
     skhd
     spacebar
+    # pngpaste # An image clipboard helper, use homebrew for now
     # xquartz # A mac requirement for x11 and cairo
   ];
 
