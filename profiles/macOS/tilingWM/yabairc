@@ -4,10 +4,15 @@
 yabai -m rule --add app='System Preferences' manage=off
 yabai -m rule --add app='Live' manage=off
 yabai -m rule --add app="^Emacs$" manage=on
+# Should float
+yabai -m rule --add app="Digital Color Meter" manage=off
+yabai -m rule --add app="^Digital Color Meter$" sticky=on
+yabai -m rule --add app="Color Picker" manage=off
+yabai -m rule --add app="^Color Picker$" sticky=on
 # Spacebar helper
 # $(spacebar -m config height)
 SPACEBAR_HEIGHT=26
-yabai -m config external_bar all:$SPACEBAR_HEIGHT:0
+yabai -m config external_bar all:$SPACEBAR_HEIGHT:0 # windows:+y_offset:-y_offset
 # Floating windows are always on top
 yabai -m config window_topmost on
 # Signals
