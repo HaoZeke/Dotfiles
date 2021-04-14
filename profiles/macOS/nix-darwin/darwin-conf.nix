@@ -103,8 +103,8 @@ in {
       #      window_border_width        = 5;
       #active_window_border_color = "0xff81a1c1";
       #normal_window_border_color = "0xff3b4252";
-      #focus_follows_mouse        = "autoraise";
-      mouse_follows_focus = "on";
+      focus_follows_mouse = "autoraise";
+      mouse_follows_focus = "off";
       window_placement = "second_child";
       window_opacity = "off";
       window_topmost = "on";
