@@ -1,0 +1,7 @@
+Host github.com
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/github_hz
+
+Host gitlab.com
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/gitlab_hz

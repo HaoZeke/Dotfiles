@@ -23,6 +23,7 @@ bombadil link -p macos
 ** Forking Guide
 Some parts of the configuration *must* be changed. For a minimally invasive change just modify the ~vars~ files. In particular:
 - Git :: This contains my settings, along with my signing key, so these will need to be changed
+- SSH :: The keys very likely need to be changed
 ** Spinoffs and Changes
 As of the 11th of April, 2019, the configuration for my `emacs` setup, with `doom-emacs` has been moved to [a repository of its own](https://github.com/HaoZeke/dotDoom).
 

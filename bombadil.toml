@@ -28,6 +28,8 @@ zshenv = { source = "common/shell/zsh/.zshenv", target = ".zshenv" }
 zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
 # Tmux #
 tmuxconf =  { source = "common/shell/tmux/.tmux.conf", target = ".tmux.conf" }
+# ssh #
+sshconf =  { source = "common/ssh/config", target = ".ssh/config" }
 
 #########
 # MacOS #
