@@ -5,7 +5,7 @@ spack:
       'openssl', 'gmp', 'mpfr',
       'mpc', 'perl', 'boost',
       'zlib', 'cmake', 'bison',
-      'flex', 'pcre', 'jq',
+      'flex', 'pcre', 'jq', 'patch',
       'bzip2', 'sqlite', 'editline',
       'ncurses', 'texinfo', 'brotli'
       ]
