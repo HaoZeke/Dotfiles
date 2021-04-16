@@ -3,8 +3,8 @@ spack:
   specs: [
       'zsh', 'tmux', 'git',
       'openssl', 'gmp', 'mpfr',
-      'mpc', 'perl', 'boost',
-      'zlib', 'cmake', 'bison',
+      'mpc', 'perl', 'boost', 'subversion', 
+      'zlib', 'cmake', 'bison', 'bdw-gc',
       'flex', 'pcre', 'jq', 'patch',
       'bzip2', 'sqlite', 'editline',
       'ncurses', 'texinfo', 'brotli'
