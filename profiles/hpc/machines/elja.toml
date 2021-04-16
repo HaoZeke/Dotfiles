@@ -3,5 +3,7 @@ github_id = "elja_gh_hz"
 gitlab_id = "elja_gl_hz"
 
 # Spack
+user = "rog32"
 hpc_os = "centos8"
-mamba_home = "$HOME/.mamba_venvs/intBase"
+base_home = "/users/home/%user"
+mamba_home = "%base_home/.mamba_venvs/intBase"
