@@ -1,0 +1,27 @@
+spack:
+  definitions:
+    - compilers: ['%gcc', '%clang']
+    - when: arch.satisfies('x86_64:')
+      compilers: ['%intel']
+    - mpis: [mvapich2@2.3.1]
+    - packages: [hdf5+mpi]
+    - interactive: [
+      'zsh', 'tmux', 'git',
+      'openssl', 'gmp', 'mpfr',
+      'mpc', 'perl', 'boost',
+      'zlib', 'cmake', 'bison',
+      'flex', 'pcre', 'jq',
+      'bzip2', 'sqlite', 'editline',
+      'ncurses', 'texinfo', 'brotli'
+      ]
+
+  specs:
+  - $compilers
+  - matrix:
+    - [$mpis]
+    - [$%compilers]
+  - matrix:
+    - [$interactive]
+    - [$packages]
+    - [$^mpis]
+    - [$%compilers]
