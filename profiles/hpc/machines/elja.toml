@@ -4,3 +4,4 @@ gitlab_id = "elja_gl_hz"
 
 # Spack
 hpc_os = "centos8"
+hpc_name = "linux-centos8-cascadelake"
