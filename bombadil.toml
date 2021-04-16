@@ -9,7 +9,7 @@ dotfiles_dir = "Git/Github/Dotfiles/profiles"
 # You can have multiple var files as long as variable names does not colide. 
 vars = [ "common/vars.toml" ]
 # An array of post install shell commands
-hooks = ["chmod 600 ~/.ssh/config" ]
+hooks = ["bash -c \"chmod 600 ~/.ssh/config\""]
 [settings.dots]
 # A dot entry representing a symlink, `source` is relative to `dotfiles_dir` 
 # and `target` shall be relative to $HOME directory or absolute.
