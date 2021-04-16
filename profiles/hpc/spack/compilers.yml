@@ -2,10 +2,10 @@ compilers::
 - compiler:
     spec: gcc@mamba
     paths:
-      cc: __[mamba_home]__/bin/gcc
-      cxx: __[mamba_home]__/bin/g++
-      f77: __[mamba_home]__/bin/gfortran
-      fc: __[mamba_home]__/bin/gfortran
+      cc: __[base_home]__/__[mamba_home]__/bin/gcc
+      cxx: __[base_home]__/__[mamba_home]__/bin/g++
+      f77: __[base_home]__/__[mamba_home]__/bin/gfortran
+      fc: __[base_home]__/__[mamba_home]__/bin/gfortran
     flags: {}
     operating_system: __[hpc_os]__
     target: x86_64
