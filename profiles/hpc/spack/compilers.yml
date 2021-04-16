@@ -1,4 +1,4 @@
-compilers::
+compilers:
 - compiler:
     spec: gcc@mamba
     paths:
@@ -6,6 +6,19 @@ compilers::
       cxx: __[base_home]__/__[mamba_home]__/bin/g++
       f77: __[base_home]__/__[mamba_home]__/bin/gfortran
       fc: __[base_home]__/__[mamba_home]__/bin/gfortran
+    flags: {}
+    operating_system: __[hpc_os]__
+    target: x86_64
+    modules: []
+    environment: {}
+    extra_rpaths: []
+- compiler:
+    spec: gcc@9.3.0
+    paths:
+      cc: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/gcc
+      cxx: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/g++
+      f77: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/gfortran
+      fc: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/gfortran
     flags: {}
     operating_system: __[hpc_os]__
     target: x86_64
