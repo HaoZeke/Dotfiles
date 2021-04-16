@@ -1,2 +1,5 @@
+# SSH
+github_id = "elja_gh_hz"
+gitlab_id = "elja_gl_hz"
 # Machine type
 machine_type = "x86_64-linux"
