@@ -57,4 +57,4 @@ termiti = { source = "linux/.config/termite/alacritty.yml", target = ".config/al
 [profiles.hpc]
 vars = ["hpc/hpc-vars.toml"]
 [profiles.hpc.dots]
-spack_modules = { source = "spack/modules.yml", target = ".spack/modules.yaml" }
+spack_modules = { source = "hpc/spack/modules.yml", target = ".spack/modules.yaml" }
