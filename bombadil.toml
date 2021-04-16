@@ -9,7 +9,7 @@ dotfiles_dir = "Git/Github/Dotfiles/profiles"
 # You can have multiple var files as long as variable names does not colide. 
 vars = [ "common/vars.toml" ]
 # An array of post install shell commands
-hooks = ["bash -c \"chmod 600 ~/.ssh/config\""]
+# hooks = ["bash -c \"chmod 600 ~/.ssh/config\""]
 [settings.dots]
 # A dot entry representing a symlink, `source` is relative to `dotfiles_dir` 
 # and `target` shall be relative to $HOME directory or absolute.
@@ -29,7 +29,7 @@ zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
 # Tmux #
 tmuxconf =  { source = "common/shell/tmux/.tmux.conf", target = ".tmux.conf" }
 # ssh #
-sshconf =  { source = "common/ssh/config", target = ".ssh/config" }
+sshconf =  { source = "common/ssh/config", target = ".ssh/config", permissions = 600 }
 
 #########
 # MacOS #
@@ -64,7 +64,7 @@ spack_modules = { source = "hpc/spack/modules.yml", target = ".spack/modules.yam
 
 # Submodules #
 [profiles.elja]
-vars = ["hpc/machines/elja.toml", "hpc/machines/ihpc.toml"]
+vars = ["hpc/machines/ihpc.toml", "hpc/machines/elja.toml"]
 [profiles.elja.dots]
 # Spack
 spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/linux/compilers.yaml" }

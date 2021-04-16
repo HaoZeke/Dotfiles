@@ -4,4 +4,3 @@ gitlab_id = "elja_gl_hz"
 
 # Spack
 hpc_os = "centos8"
-mamba_home = "%base_home/.mamba_venvs/intBase"
