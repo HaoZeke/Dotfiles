@@ -1,7 +1,7 @@
 Host github.com
   IdentitiesOnly yes
-  IdentityFile ~/.ssh/github_hz
+  IdentityFile ~/.ssh/__[github_id]__
 
 Host gitlab.com
   IdentitiesOnly yes
-  IdentityFile ~/.ssh/gitlab_hz
+  IdentityFile ~/.ssh/__[gitlab_id]__
