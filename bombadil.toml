@@ -50,3 +50,11 @@ skhdrc = { source = "macOS/tilingWM/skhdrc", target = ".config/skhd/skhdrc" }
 vars = ["linux/linux-vars.toml"]
 [profiles.linux.dots]
 termiti = { source = "linux/.config/termite/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
+
+#######
+# HPC #
+#######
+[profiles.hpc]
+vars = ["hpc/hpc-vars.toml"]
+[profiles.hpc.dots]
+spack_modules = { source = "spack/modules.yml", target = ".spack/modules.yaml" }
