@@ -65,5 +65,6 @@ spack_modules = { source = "hpc/spack/modules.yml", target = ".spack/modules.yam
 # Submodules #
 [profiles.elja]
 vars = ["hpc/machines/elja.toml", "hpc/machines/ihpc.toml"]
+[profiles.elja.dots]
 # Spack
 spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/linux/compilers.yaml" }
