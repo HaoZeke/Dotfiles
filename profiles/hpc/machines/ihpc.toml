@@ -2,3 +2,4 @@
 user = "rog32"
 base_home = "/users/home/rog32"
 mamba_home = ".mamba_venvs/intBase"
+ohpc_pub = "/opt/ohpc/pub"
