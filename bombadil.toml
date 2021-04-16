@@ -61,10 +61,9 @@ vars = ["hpc/hpc-vars.toml"]
 condarc = { source = "hpc/conda/.condarc", target = ".condarc" }
 # Spack
 spack_modules = { source = "hpc/spack/modules.yml", target = ".spack/modules.yaml" }
+spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/linux/compilers.yaml" }
+spack_interactive = { source = "hpc/spack/envs/interactive.yml", target = "spack/var/spack/environments/spack.yaml" }
 
 # Submodules #
 [profiles.elja]
 vars = ["hpc/machines/ihpc.toml", "hpc/machines/elja.toml"]
-[profiles.elja.dots]
-# Spack
-spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/linux/compilers.yaml" }
