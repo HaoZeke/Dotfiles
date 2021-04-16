@@ -60,7 +60,7 @@ vars = ["hpc/hpc-vars.toml"]
 # Conda / Mamba
 condarc = { source = "hpc/conda/.condarc", target = ".condarc" }
 # Spack
-spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/compilers.yaml" }
+spack_compilers = { source = "hpc/spack/compilers.yml", target = ".spack/linux/compilers.yaml" }
 spack_modules = { source = "hpc/spack/modules.yml", target = ".spack/modules.yaml" }
 
 # Submodules #
