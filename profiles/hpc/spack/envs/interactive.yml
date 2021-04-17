@@ -12,7 +12,7 @@ spack:
       'bison', 'flex', 'boost', 'xz',
       'curl', 'libxml2', 'autoconf', 'pkgconf',
       'autogen', 'automake', 'autoconf-archive',
-      'bzip2', 'sqlite', 'editline', 'pkg-conf'
+      'bzip2', 'sqlite', 'editline', 'pkg-config'
       ]
   specs:
     - $compilers
