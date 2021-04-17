@@ -1,6 +1,6 @@
 compilers:
 - compiler:
-    spec: gcc@9.3.0
+    spec: ohpcgcc@9.3.0
     paths:
       cc: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/gcc
       cxx: __[ohpc_pub]__/compiler/gcc/9.3.0/bin/g++
