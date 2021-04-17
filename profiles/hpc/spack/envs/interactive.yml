@@ -4,15 +4,18 @@ spack:
     - packages: [
       'zsh', 'tmux', 'git',
       'openssl', 'gmp', 'mpfr',
-      'mpc', 'perl', 'boost', 
-      'zlib', 'cmake', 'bison', 'bdw-gc',
-      'flex', 'pcre', 'jq', 'patch',
-      'bzip2', 'sqlite', 'editline',
-      'ncurses', 'texinfo', 'brotli'
+      'mpc', 'perl', 'cmake',
+      'pcre', 'jq', 'patch',
+      'ncurses', 'texinfo', 'zlib',
+      # Nix
+      'libseccomp', 'bdw-gc', 'brotli',
+      'bison', 'flex', 'boost', 'xz',
+      'curl', 'xmllint', 'xsltproc',
+      'bzip2', 'sqlite', 'editline'
       ]
   specs:
     - $compilers
-    - ['subversion%gcc@9.3.0']
+    # - 'subversion%gcc@9.3.0'
     - matrix:
        - [$packages]
        - [$%compilers]
