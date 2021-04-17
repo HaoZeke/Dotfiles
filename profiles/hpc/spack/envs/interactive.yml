@@ -10,7 +10,7 @@ spack:
       # Nix
       'libseccomp', 'bdw-gc', 'brotli',
       'bison', 'flex', 'boost', 'xz',
-      'curl', 'xmllint', 'xsltproc',
+      'curl', 'libxml2',
       'bzip2', 'sqlite', 'editline'
       ]
   specs:
