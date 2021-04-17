@@ -67,3 +67,5 @@ spack_interactive = { source = "hpc/spack/envs/interactive.yml", target = "spack
 # Submodules #
 [profiles.elja]
 vars = ["hpc/machines/ihpc.toml", "hpc/machines/elja.toml"]
+[profiles.garpur]
+vars = ["hpc/machines/ihpc.toml", "hpc/machines/garpur.toml"]

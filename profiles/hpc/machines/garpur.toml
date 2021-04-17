@@ -1,0 +1,7 @@
+# SSH
+github_id = "garpur_gh_hz"
+gitlab_id = "garpur_gl_hz"
+
+# Spack
+hpc_os = "centos7"
+hpc_name = "linux-centos7-skylake"
