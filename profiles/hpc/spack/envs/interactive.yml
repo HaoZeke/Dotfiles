@@ -1,4 +1,9 @@
 spack:
+  packages:
+    nix:
+      version: [2.3.10]
+      variants: |
+        storedir=$HOME/nix/store statedir=$HOME/nix/var doc=False sandboxing=False
   definitions:
     - compilers: ['gcc@10.2.0']
     - packages: [
@@ -15,10 +20,6 @@ spack:
       'autogen', 'automake', 'autoconf-archive',
       'bzip2', 'sqlite', 'editline', 'pkg-config'
       ]
-      nix:
-        version: [2.3.10]
-        variants: |
-          storedir=$HOME/nix/store statedir=$HOME/nix/var doc=False sandboxing=False
   specs:
     - $compilers
     # - 'subversion%gcc@9.3.0'
