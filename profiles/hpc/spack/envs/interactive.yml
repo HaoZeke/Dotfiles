@@ -1,4 +1,9 @@
 spack:
+  packages:
+    nix:
+      version: [2.3.10]
+      variants: |
+        storedir=$HOME/nix/store statedir=$HOME/nix/var doc=False sandboxing=False
   definitions:
     - compilers: ['gcc@10.2.0']
     - packages: [
@@ -8,8 +13,9 @@ spack:
       'pcre', 'jq', 'patch',
       'ncurses', 'texinfo', 'zlib',
       # Nix
-      'libseccomp', 'bdw-gc', 'brotli',
-      'bison', 'flex', 'boost', 'xz',
+      'libseccomp', 'bdw-gc', 'brotli', 'libsodium',
+      'libcpuid', 'googletest', 'nlohmann-json',
+      'bison', 'flex', 'boost', 'xz', 'libarchive',
       'curl', 'libxml2', 'autoconf', 'pkgconf',
       'autogen', 'automake', 'autoconf-archive',
       'bzip2', 'sqlite', 'editline', 'pkg-config'
