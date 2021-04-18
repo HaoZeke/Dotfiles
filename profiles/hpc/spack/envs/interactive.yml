@@ -3,7 +3,7 @@ spack:
     nix:
       version: [2.3.10]
       variants: |
-        storedir=$HOME/nix/store statedir=$HOME/nix/var doc=False sandboxing=False
+        storedir=__[base_home]__/nix/store statedir=__[base_home]__/nix/var doc=False sandboxing=False
   definitions:
     - compilers: ['gcc@10.2.0']
     - packages: [
