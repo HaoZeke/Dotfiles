@@ -1,10 +1,15 @@
 #!/usr/bin/env sh
 
 # Rules
-yabai -m rule --add app='System Preferences' manage=off
-yabai -m rule --add app='Live' manage=off
 yabai -m rule --add app="^Emacs$" manage=on
+# Mail Helper
+yabai -m rule --add app="^MailMate$" manage=on 
 # Should float
+yabai -m rule --add label="Preferences" app="Preferences$" sticky=on layer=above manage=off
+yabai -m rule --add label="Preferences" title="Settings$" sticky=on layer=above manage=off
+yabai -m rule --add label="Preferences" app='System Preferences' sticky=on layer=above manage=off
+yabai -m rule --add app='Live' manage=off
+
 yabai -m rule --add app="Digital Color Meter" manage=off
 yabai -m rule --add app="^Digital Color Meter$" sticky=on
 yabai -m rule --add app="Color Picker" manage=off
@@ -13,8 +18,6 @@ yabai -m rule --add app="^Color Picker$" sticky=on
 # $(spacebar -m config height)
 SPACEBAR_HEIGHT=26
 yabai -m config external_bar all:$SPACEBAR_HEIGHT:0 # windows:+y_offset:-y_offset
-# Floating windows are always on top
-yabai -m config window_topmost on
 # Signals
 # Initially kanged from here: https://github.com/skyuplam/dotfiles/blob/master/nix/nixpkgs/darwin/configuration.nix
 yabai -m signal --add event=window_destroyed action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
