@@ -41,20 +41,21 @@ in {
     # texlive.combined.scheme-full # pointless, use homebrew or texlive installer
     pandoc
     # Nix
-    nixfmt
+    # nixfmt
     nox
     lorri
     niv
+    mosh
     # bundix
     # nodePackages.node2nix
     # MacOS
     yabai
     skhd
     spacebar
+    pinentry_mac gnupg
     # pngpaste # An image clipboard helper, use homebrew for now
     # xquartz # A mac requirement for x11 and cairo
   ];
-
   # Use a custom configuration.nix location.
   # $ darwin-rebuild switch -I darwin-config=$HOME/.config/nixpkgs/darwin/configuration.nix
   # environment.darwinConfig = "$HOME/.config/nixpkgs/darwin/configuration.nix";
@@ -92,7 +93,11 @@ in {
     skhdConfig =
       builtins.readFile "${home}/.config/skhd/skhdrc"; # Managed by bombadili
   };
-
+  # gpg #
+  programs.gnupg.agent = {
+        enable = true;
+        enableSSHSupport = true;
+      };
   # yabai #
   services.yabai = {
     enable = true;
