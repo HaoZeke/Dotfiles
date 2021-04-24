@@ -108,11 +108,11 @@ in {
       #      window_border_width        = 5;
       #active_window_border_color = "0xff81a1c1";
       #normal_window_border_color = "0xff3b4252";
-      focus_follows_mouse = "autoraise";
+      focus_follows_mouse = "autofocus";
       mouse_follows_focus = "off";
       window_placement = "second_child";
       window_opacity = "off";
-      window_topmost = "on";
+      window_topmost = "on"; # Floating windows on top
       window_shadow = "float";
       active_window_opacity = "1.0";
       normal_window_opacity = "1.0";
@@ -128,9 +128,8 @@ in {
       right_padding = 10;
       window_gap = 10;
     };
-
     extraConfig =
-      builtins.readFile "${home}/.config/yabai/yabairc"; # Managed by bombadili
+      builtins.readFile "${home}/.config/yabai/yabairc"; # Managed by bombadili, has rules and signals
   };
 
   # Spacebar #
