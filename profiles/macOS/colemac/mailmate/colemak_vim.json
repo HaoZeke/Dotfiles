@@ -1,0 +1,96 @@
+{
+	// Based on: https://mail.google.com/support/bin/answer.py?answer=6594
+	// Also based on my own colemak modifications
+
+	"@\U000A" = "send:"; // ⌘+return
+	"@\U000D" = "send:"; // ⌘+enter
+
+	"c"	= "newMessage:";
+	"/"	= "searchAllMessages:";
+	"n"	= "nextMessage:";
+	"e"	= "previousMessage:";
+	"h" = "collapseThread:";
+	"i" = "expandThread:";
+	"H" = "rootOfThread:";
+	"I" = "lastOfThread:";
+	"N" = "nextThread:";
+	"E" = "previousThread:";
+	"o"	= "openMessages:"; // Gmail: Also expands or collapses a message if you are in 'Conversation View.'
+	"x" = ( "deleteMessage:", "nextMessage:" ); // Defaults to going to the previous message
+	"a"	= "archive:";
+	"m"	= ( "toggleMuteState:", "archive:" ); // FIXME: Should be 'markAsMuted:'
+	"s"	= "toggleFlag:";
+	"!"	= "moveToJunk:";
+	"r"	= "reply:";
+	"R"	= "replyAll:";
+	"f"	= "forwardMessage:";
+	"^s"	= "saveDocument:";
+	// l Label	
+	"v"	= "moveToMailbox:";
+
+	"I"	= ( "setTag:", "\\Seen", "nextMessage:");
+	"U"	= ( "removeTag:", "\\Seen");
+
+	// Only in MailMate
+ 	"N"	= "moveDownAndModifySelection:";
+	"P"	= "moveUpAndModifySelection:";
+	"J"	= "moveDownAndModifySelection:";
+	"K"	= "moveUpAndModifySelection:";
+	"Z"	= "redo:";
+
+	// Combo keys
+	"g" = {
+		"a" = ( "goToMailbox:", "ALL_MESSAGES" );
+		"s" = ( "goToMailbox:", "FLAGGED" );
+		// g then c	Go to 'Contacts'	Takes you to your Contacts list.
+		"d" = ( "goToMailbox:", "DRAFTS" );
+		"l" = "goToMailbox:";
+		"i" = ( "goToMailbox:", "INBOX" );
+		"t" = ( "goToMailbox:", "SENT" );
+	};
+
+	"*" = {
+		"a" = "selectAll:";
+		"n" = "deselectAll:";
+		"r" = ( "selectWithFilter:", "#flags.flag = '\\Seen'"); // Selects all mail you've read.
+		"u" = ( "selectWithFilter:", "#flags.flag !=[x] '\\Seen'"); // Selects all unread mail.
+		"s" = ( "selectWithFilter:", "#flags.flag = '\\Flagged'"); // Selects all starred mail.
+		"t" = ( "selectWithFilter:", "#flags.flag !=[x] '\\Flagged'"); // Selects all unstarred mail.
+	};
+	
+	// Kanged from https://brettterpstra.com/2019/08/26/mailmate-and-tagging/
+	// Combo keys for tagging
+	"m" = {
+		"a" = ( "toggleTag:", "aiche" );
+		"i" = ( "toggleTag:", "important" );
+		"w" = ( "toggleTag:", "work" );
+		"h" = ( "toggleTag:", "hannes" );
+		"t" = ( "toggleTag:", "todo" );
+		"x" = ( "toggleTag:", "expense" );
+		"c" = ( "toggleTag:", "code" );
+		"s" = ( "toggleTag:", "codeinplace" ); // Stanford --> Code in place
+		"u" = ( "toggleTag:", "ipam" ); // UCLA --> IPAM
+	};
+}
+
+/*
+Not included above:
+
+u	Return to conversation list	Refreshes your page and returns you to the inbox, or list of conversations.
+x	Select conversation	Automatically checks and selects a conversation so that you can archive, apply a label, or choose an action from the drop-down menu to apply to that conversation.
++	Mark as important	Helps Gmail learn what's important to you by marking misclassified messages. (Specific to Priority Inbox)
+-	Mark as unimportant	Helps Gmail learn what's not important to you by marking misclassified messages. (Specific to Priority Inbox)
+
+[	Archive and previous	Removes the current view's label from your conversation and moves to the previous one.
+]	Archive and next	Removes the current view's label from your conversation and moves to the next one.
+y	Remove from Current View* Automatically removes the message or conversation from your current view.
+ From 'Inbox,' 'y' means Archive
+ From 'Starred,' 'y' means Unstar
+ From 'Trash,' 'y' means Move to inbox
+ From any label, 'y' means Remove the label
+ * 'y' has no effect if you're in 'Spam,' 'Sent,' or 'All Mail.'
+.	Show more actions	Displays the 'More Actions' drop-down menu.
+
+y then o	Archive and next	Archives your conversation and moves to the next one.
+	
+*/
