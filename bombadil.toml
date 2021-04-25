@@ -42,6 +42,11 @@ nix_darwin = { source = "macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/dar
 yabairc = { source = "macOS/tilingWM/yabairc", target = ".config/yabai/yabairc" }
 spacebarrc = { source = "macOS/tilingWM/spacebarrc", target = ".config/spacebar/spacebarrc" }
 skhdrc = { source = "macOS/tilingWM/skhdrc", target = ".config/skhd/skhdrc" }
+# colemak for macos #
+[profiles.colemac]
+vars = [ "macOS/colemac/colemac-vars.toml" ]
+[profiles.colemac.dots]
+mailmate = { source = "macOS/colemac/mailmate/colemak_vim.json", target = "Library/Application Support/MailMate/Resources/KeyBindings/ColemakVim.plist" }
 
 #########
 # Linux #
