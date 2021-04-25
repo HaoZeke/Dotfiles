@@ -20,6 +20,7 @@ in {
     bat
     tree
     hub
+    jq
     zsh
     tmux
     htop
@@ -83,21 +84,22 @@ in {
   ############
   # Services #
   ############
-  # Strongly kanged from https://github.com/xanderle/config/blob/main/darwin-configuration.nix
-
-  # SKHD #
-  # services.skhd.skhdConfig =
-  #   builtins.readFile ./service_confs/skhdrc; # Managed by bombadili
-  services.skhd = {
-    enable = true;
-    skhdConfig =
-      builtins.readFile "${home}/.config/skhd/skhdrc"; # Managed by bombadili
-  };
   # gpg #
   programs.gnupg.agent = {
         enable = true;
         enableSSHSupport = true;
       };
+
+  # Strongly kanged from https://github.com/xanderle/config/blob/main/darwin-configuration.nix
+  # SKHD #
+  # services.skhd.skhdConfig =
+  #   builtins.readFile ./service_confs/skhdrc; # Managed by bombadili
+  services.skhd = {
+    enable = true;
+    package = pkgs.skhd;
+    skhdConfig =
+      builtins.readFile "${home}/.config/skhd/skhdrc"; # Managed by bombadili
+  };
   # yabai #
   services.yabai = {
     enable = true;
