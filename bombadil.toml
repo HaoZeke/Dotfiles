@@ -1,5 +1,6 @@
 # Path to your dotfiles relative to your $HOME directory
 dotfiles_dir = "Git/Github/Dotfiles/profiles"
+gpg_user_id = "rog32@hi.is"
 
 ##########
 # Common #
