@@ -8,17 +8,17 @@ spack:
     - compilers: ['gcc@10.2.0']
     - packages: [
       'zsh', 'tmux', 'git',
-      'openssl', 'gmp', 'mpfr',
+      'gmp', 'mpfr',
       'mpc', 'perl', 'cmake',
       'pcre', 'jq', 'patch',
       'ncurses', 'texinfo', 'zlib',
       # Nix
       'libseccomp', 'bdw-gc', 'brotli', 'libsodium',
-      'libcpuid', 'googletest', 'nlohmann-json',
-      'bison', 'flex', 'boost', 'xz', 'libarchive',
-      'curl', 'libxml2', 'autoconf', 'pkgconf',
-      'autogen', 'automake', 'autoconf-archive',
-      'bzip2', 'sqlite', 'editline', 'pkg-config'
+      'libcpuid', 'googletest', 'nlohmann-json', 'openssl',
+      'bison', 'flex', 'boost+coroutine+context cxxstd=17', 'xz', 'libarchive',
+      'curl', 'libxml2', 'autoconf', 'pkgconf', 'm4',
+      'autogen', 'automake', 'autoconf-archive', 'libtool',
+      'bzip2', 'sqlite', 'editline', 'pkg-config', 'automake'
       ]
   specs:
     - $compilers
