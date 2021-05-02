@@ -34,8 +34,12 @@ export PATH="$PATH:$HOME/.local/bin/webHelpers"
 # curl https://pyenv.run | bash
 export WORKON_HOME=~/.venvs
 export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
+if which pyenv >/dev/null 2>&1; then
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+else
+	echo "You seem to be missing pyenv"
+fi
 
 # Go Paths
 ###########
