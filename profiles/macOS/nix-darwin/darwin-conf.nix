@@ -12,6 +12,7 @@ in {
     alacritty
     zathura
     # Base Tools
+    starship
     gnupg
     ripgrep
     fd
