@@ -1,0 +1,5 @@
+# Defaults
+terminal = "termite"
+
+# Machine type
+machine_type = "x86_64-linux"

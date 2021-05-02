@@ -15,6 +15,22 @@ hooks = ["bash -c \"chmod 600 ~/.ssh/config\""]
 # A dot entry representing a symlink, `source` is relative to `dotfiles_dir` 
 # and `target` shall be relative to $HOME directory or absolute.
  
+# Shells #
+# POSIX
+posix_warn = { source = "common/shell/posix/00_warnings.sh", target = ".config/shellrc/shell.d/00_warnings.sh" }
+posix_alias = { source = "common/shell/posix/01_alias_def.sh", target = ".config/shellrc/shell.d/01_alias_def.sh" }
+posix_func = { source = "common/shell/posix/02_func_def.sh", target = ".config/shellrc/shell.d/02_func_def.sh" }
+posix_exports = { source = "common/shell/posix/03_exports.sh", target = ".config/shellrc/shell.d/03_exports.sh" }
+posix_sources = { source = "common/shell/posix/04_sources.sh", target = ".config/shellrc/shell.d/04_sources.sh" }
+posix_paths = { source = "common/shell/posix/05_paths.sh", target = ".config/shellrc/shell.d/05_paths.sh" }
+posix_prog_conf = { source = "common/shell/posix/06_prog_conf.sh", target = ".config/shellrc/shell.d/06_prog_conf.sh" }
+# Base Shell
+shellrc = { source = "common/shell/.shellrc", target = ".shellrc" }
+# Zsh
+zshenv = { source = "common/shell/zsh/.zshenv", target = ".zshenv" }
+zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
+# Bash
+bashrc =  { source = "common/shell/bash/bashrc", target = ".bashrc" }
 # Git #
 git_config = { source = "common/git/config", target = ".gitconfig" }
 # Alacritty #
@@ -22,11 +38,6 @@ alacritty = { source = "common/.config/alacritty/alacritty.yml", target = ".conf
 # Neovim #
 vimrc = { source = "common/.vimrc", target = ".vimrc" }
 neovim = { source = "common/.config/nvim/init.vim", target = ".config/nvim/init.vim" }
-# Base Shell #
-shellrc = { source = "common/shell/.shellrc", target = ".shellrc" }
-# Zsh #
-zshenv = { source = "common/shell/zsh/.zshenv", target = ".zshenv" }
-zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
 # Tmux #
 tmuxconf =  { source = "common/shell/tmux/.tmux.conf", target = ".tmux.conf" }
 # ssh #
@@ -60,6 +71,18 @@ mailmate = { source = "macOS/colemac/mailmate/colemak_vim.json", target = "Libra
 vars = ["linux/linux-vars.toml"]
 [profiles.linux.dots]
 termiti = { source = "linux/.config/termite/alacritty.yml", target = ".config/alacritty/alacritty.yml" }
+
+# ArchLinux #
+[profiles.archlinux]
+vars = ["archlinux/archlinux-vars.toml"]
+[profiles.archlinux.dots]
+archlinux_warn = { source = "archlinux/shell/posix/07_00_warnings.sh", target = ".config/shellrc/shell.d/07_00_warnings.sh" }
+archlinux_alias = { source = "archlinux/shell/posix/07_01_alias_def.sh", target = ".config/shellrc/shell.d/07_01_alias_def.sh" }
+archlinux_func = { source = "archlinux/shell/posix/07_02_func_def.sh", target = ".config/shellrc/shell.d/07_02_func_def.sh" }
+archlinux_exports = { source = "archlinux/shell/posix/07_03_exports.sh", target = ".config/shellrc/shell.d/07_03_exports.sh" }
+archlinux_sources = { source = "archlinux/shell/posix/07_04_sources.sh", target = ".config/shellrc/shell.d/07_04_sources.sh" }
+archlinux_paths = { source = "archlinux/shell/posix/07_05_paths.sh", target = ".config/shellrc/shell.d/07_05_paths.sh" }
+archlinux_prog_conf = { source = "archlinux/shell/posix/07_06_prog_conf.sh", target = ".config/shellrc/shell.d/07_06_prog_conf.sh" }
 
 #######
 # HPC #
