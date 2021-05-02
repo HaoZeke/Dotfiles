@@ -31,6 +31,10 @@ zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
 tmuxconf =  { source = "common/shell/tmux/.tmux.conf", target = ".tmux.conf" }
 # ssh #
 sshconf =  { source = "common/ssh/config", target = ".ssh/config" }
+# Browsers #
+# tridactyl
+tridactylrc = { source = "common/browsers/firefox/tridactyl/tridactylrc", target = ".config/tridactyl/tridactylrc" }
+tridactylodark = { source = "common/browsers/firefox/tridactyl/base16-onedark.css", target = ".config/tridactyl/themes/base16-onedark.css" }
 
 #########
 # MacOS #
