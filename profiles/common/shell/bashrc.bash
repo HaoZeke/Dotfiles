@@ -18,3 +18,7 @@ if [ -d $shellHome/bash.d ]; then
 		source $file
 	done
 fi
+
+# Load starship
+# TODO: Update to test that this exists
+eval "$(starship init bash)"

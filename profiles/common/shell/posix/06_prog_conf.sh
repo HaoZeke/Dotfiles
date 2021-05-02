@@ -1,3 +1,6 @@
+# For ssh-add
+eval $(ssh-agent) >/dev/null 2>&1
+
 # Rclone Config
 RCLONE_STATS=5s
 

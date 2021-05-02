@@ -25,12 +25,17 @@ posix_sources = { source = "common/shell/posix/04_sources.sh", target = ".config
 posix_paths = { source = "common/shell/posix/05_paths.sh", target = ".config/shellrc/shell.d/05_paths.sh" }
 posix_prog_conf = { source = "common/shell/posix/06_prog_conf.sh", target = ".config/shellrc/shell.d/06_prog_conf.sh" }
 # Base Shell
-shellrc = { source = "common/shell/.shellrc", target = ".shellrc" }
+shellrc = { source = "common/shell/shellrc.sh", target = ".shellrc" }
 # Zsh
-zshenv = { source = "common/shell/zsh/.zshenv", target = ".zshenv" }
-zshrc = { source = "common/shell/zsh/.zshrc", target = ".zshrc" }
+zshrc = { source = "common/shell/zshrc.zsh", target = ".zshrc" }
+zshenv = { source = "common/shell/zsh/zshenv.zsh", target = ".zshenv" }
+zsh_keys = { source = "common/shell/zsh/01_keys.zsh", target = ".config/shellrc/zsh.d/01_keys.zsh" }
+zsh_func = { source = "common/shell/zsh/02_func_def.zsh", target = ".config/shellrc/zsh.d/02_func_def.zsh" }
+zsh_plugins = { source = "common/shell/zsh/03_plugins.zsh", target = ".config/shellrc/zsh.d/03_plugins.zsh" }
+zsh_sources = { source = "common/shell/zsh/04_sources.zsh", target = ".config/shellrc/zsh.d/04_sources.zsh" }
+zsh_theme = { source = "common/shell/zsh/04a_theme.zsh", target = ".config/shellrc/zsh.d/04a_theme.zsh" }
 # Bash
-bashrc =  { source = "common/shell/bash/bashrc", target = ".bashrc" }
+bashrc =  { source = "common/shell/bashrc.bash", target = ".bashrc" }
 # Git #
 git_config = { source = "common/git/config", target = ".gitconfig" }
 # Alacritty #
