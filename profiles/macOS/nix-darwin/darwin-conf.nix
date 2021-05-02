@@ -19,7 +19,7 @@ in {
     exa
     bat
     tree
-    hub
+    direnv
     jq
     zsh
     tmux
@@ -31,9 +31,13 @@ in {
     clang-tools # clang-format and a whole lot more
     gibo
     hugo
+    ispell
+    aspell
     # Version control
     git
     subversion
+    gh
+    hub
     # Managers
     rustup
     # rbenv # better off with brew
@@ -41,8 +45,10 @@ in {
     # R # broken for now
     # texlive.combined.scheme-full # pointless, use homebrew or texlive installer
     pandoc
+    # pandoc-crossref # todo
     # Nix
     # nixfmt
+    nix-direnv
     nox
     lorri
     niv
