@@ -44,9 +44,15 @@ in {
     gibo
     hugo
     ispell
-    aspell
+    (aspellWithDicts (dict: [
+          dict.en
+          dict.en-computers
+          dict.en-science
+    ]))
+    imagemagick
     # Version control
     git
+    git-lfs
     subversion
     gh
     hub
