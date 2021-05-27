@@ -60,9 +60,13 @@ in {
     rustup
     # rbenv # better off with brew
     # Languages
+    # nim # broken
     # R # broken for now
+    # V8 # Javascript
+    # v8 # broken https://github.com/NixOS/nixpkgs/pull/120936
     # texlive.combined.scheme-full # pointless, use homebrew or texlive installer
     pandoc
+    licensor
     # pandoc-crossref # todo
     # Nix
     # nixfmt
@@ -127,7 +131,7 @@ in {
   # yabai #
   services.yabai = {
     enable = true;
-    package = pkgs.yabai;
+    package = yabai;
     enableScriptingAddition = true;
     config = {
            window_border              = "on";
@@ -138,7 +142,7 @@ in {
       mouse_follows_focus = "off";
       window_placement = "second_child";
       window_opacity = "off";
-      window_topmost = "on"; # Floating windows on top
+      window_topmost = "off"; # Floating windows on top
       window_shadow = "float";
       active_window_opacity = "1.0";
       normal_window_opacity = "1.0";
