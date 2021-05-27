@@ -1,0 +1,62 @@
+* Firefox Configuration
+Over the years firefox has gotten more and more annoying about allowing customizations.
+** Tree Style Tabs
+This set is *not* managed by ~bombadil~. The configuration of the styles must be done through the addon settings page.
+*** Hiding the tab bar
+Consider the snippets of wisdom regarding compatibility [[https://github.com/piroor/treestyletab/wiki/Code-snippets-for-custom-style-rules#for-userchromecss][from the wiki]].
+#+begin_quote
+You need to set toolkit.legacyUserProfileCustomizations.stylesheets to true with about:config, otherwise userChrome.css (and userContent.css) in your profile is simply ignored by Firefox.
+#+end_quote
+
+The corresponding ~userChrome.css~ ([[https://www.howtogeek.com/334716/how-to-customize-firefoxs-user-interface-with-userchrome.css/][see here]] for its location) contents shall be (from [[https://github.com/Timvde/UserChrome-Tweaks/blob/master/tabs/hide-tabs-macos.css][here]]):
+#+begin_src css
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/*
+ * This style will hide the tab bar. For MacOS Big Sur
+ *
+ * Contributor(s): Isaac-Newt, Ivan0xFF, millerdev, AMomchilov
+ */
+
+#titlebar {
+  visibility: collapse;
+}
+
+/* Position window controls */
+#TabsToolbar .titlebar-buttonbox-container {
+  display: block;
+  position: absolute;
+  visibility: visible;
+}
+
+/* Reposition the close/maximize/minimize buttons for the "normal" toolbar density  */
+/* When the UI density is set to "normal", the `uidensity` attribute is undefined.  */
+/* `window.document.documentElement.getAttribute("uidensity")` will be null.        */
+:root:not([uidensity]) #TabsToolbar .titlebar-buttonbox-container {
+  margin-left: 12px;
+  margin-top: 12px;
+}
+
+/* Reposition the close/maximize/minimize buttons for the "compact" toolbar density */
+:root[uidensity="compact"] #TabsToolbar .titlebar-buttonbox-container {
+  margin-left: 10px;
+  margin-top: 9px;
+}
+
+#TabsToolbar .titlebar-buttonbox.titlebar-color {
+  margin-left: 0px !important;
+}
+
+/*
+ * Make room for window controls and a bit of extra space for window drag/move.
+ * Only apply this style when not in fullscreen mode.
+ */
+#main-window:not([inFullscreen]) #nav-bar {
+  padding: 0px 0px 0px 70px !important;
+}
+
+#+end_src
+** Tridactyl
+This is still configured in the modern style with ~bombadil~, with the native extension. Best used with the ~beta~ versions, and remember to run ~source~ to load from the configuration file.
