@@ -1,0 +1,60 @@
+/* Tab numbering and counting */
+#tabbar {
+  counter-reset: vtabs atabs tabs;
+  /* vtabs tracks visible tabs, atabs tracks active tabs, tabs tracks all tabs */
+}
+tab-item:not(.collapsed):not(.discarded) {
+  counter-increment: vtabs atabs tabs;
+}
+tab-item:not(.collapsed) {
+  counter-increment: vtabs tabs;
+}
+tab-item:not(.discarded) {
+  counter-increment: atabs tabs;
+}
+tab-item {
+  counter-increment: tabs;
+}
+
+/* Numbering of tabs #1601, #2220 */
+
+tab-item .extra-items-container.behind {
+  z-index: unset !important;
+}
+tab-item .extra-items-container.behind::after {
+  background: Highlight;
+  color: HighlightText;
+  content: counter(vtabs);
+  font-size: x-small;
+  right: 0.2em;
+  padding: 0.2em;
+  pointer-events: none;
+  position: absolute;
+  bottom: 0.2em;
+
+  z-index: 1000;
+}
+
+/* Show only on hover */
+
+tab-item .extra-items-container.behind::after {
+  opacity: 0;
+  transition: 0.2s;
+}
+tab-item:hover .extra-items-container.behind::after {
+  opacity: 1;
+}
+
+/* Hide header for Tree Style Tab */
+
+#sidebar-box[sidebarcommand="treestyletab_piro_sakura_ne_jp-sidebar-action"] #sidebar-header {
+  display: none;
+}
+
+/* Auto-hide sidebar when fullscreen #1548 */
+
+#main-window[inFullscreen] #sidebar-box,
+#main-window[inFullscreen] #sidebar-splitter {
+  display: none !important;
+  width: 0px !important;
+}
