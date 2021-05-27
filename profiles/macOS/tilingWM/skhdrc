@@ -1,5 +1,9 @@
-# Open Alacritty 
+# lalt --- option key
+# cmd --- alt equivalent
+# Open Alacritty
 lalt - return : open -na ~/Applications/Nix\ Apps/Alacritty.app
+# Kill
+lalt - w : yabai -m window --close
 # focus window
 lalt - h : yabai -m window --focus west
 lalt - n : yabai -m window --focus south 
@@ -7,16 +11,22 @@ lalt - e : yabai -m window --focus north
 lalt - i : yabai -m window --focus east 
 
 # swap managed window
-shift + alt - h : yabai -m window --swap west 
-shift + alt - j : yabai -m window --swap south 
-shift + alt - k : yabai -m window --swap north 
-shift + alt - l : yabai -m window --swap east 
+shift + lalt - h : yabai -m window --swap west
+shift + lalt - n : yabai -m window --swap south
+shift + lalt - e : yabai -m window --swap north
+shift + lalt - i : yabai -m window --swap east
 
 # move managed window
 shift + cmd - h : yabai -m window --warp west 
-shift + cmd - j : yabai -m window --warp south 
-shift + cmd - k : yabai -m window --warp north 
-shift + cmd - l : yabai -m window --warp east
+shift + cmd - n : yabai -m window --warp south
+shift + cmd - e : yabai -m window --warp north
+shift + cmd - i : yabai -m window --warp east
+
+shift + cmd - z : yabai -m space --display west
+shift + cmd - x : yabai -m space --display east
+
+# destroy desktop
+shift + cmd - w : yabai -m space --destroy
 
 # balance size of windows
 shift + alt - 0 : yabai -m space --balance
