@@ -1,16 +1,27 @@
 { config, pkgs, ... }:
 
 # getEnv concept from here https://github.com/peel/dotfiles/blob/c2c24d50aa3d36185a4f557ed1db7a8f5dd1f02b/setup/darwin/config.nix
-let home = builtins.getEnv "HOME";
+let
+  home = builtins.getEnv "HOME";
+  yabai = pkgs.yabai.overrideAttrs (o: rec {
+    version = "3.3.9";
+    src = builtins.fetchTarball {
+      url = "https://github.com/koekeishiya/yabai/releases/download/v${version}/yabai-v${version}.tar.gz";
+      sha256 = "0xyx5b4jqafqd71f5413v215rn68f2xqdwxcdfsxn4s1nw36xmvd";
+    };});
 in {
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
   environment.systemPackages = with pkgs; [
     neovim
+    # Terminal files
+    ranger
+    pistol
     # GUI
-    emacs
+    #emacs # refreshes a lot
+    emacsMacport
     alacritty
-    zathura
+    # zathura # Use brew which is patched https://github.com/zegervdv/homebrew-zathura
     # Base Tools
     starship
     gnupg
