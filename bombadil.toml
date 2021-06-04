@@ -53,6 +53,9 @@ rangerrc =  { source = "common/.config/ranger/myranger.cfg", target = ".config/r
 riflerrc =  { source = "common/.config/ranger/rifle.cfg", target = ".config/ranger/rifle.cfg" }
 pistolrrc =  { source = "common/.config/pistol/pistol.conf", target = ".config/pistol/pistol.conf" }
 
+# LaTeX
+latexmkrrc =  { source = "common/.latexmkrc", target = ".latexmkrc" }
+
 # Browsers #
 # tridactyl
 tridactylrc = { source = "common/browsers/firefox/tridactyl/tridactylrc", target = ".config/tridactyl/tridactylrc" }
