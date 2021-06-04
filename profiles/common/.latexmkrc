@@ -21,5 +21,25 @@ $clean_ext .= ' %R.ist %R.xdy';
 add_cus_dep('glo', 'gls', 0, 'run_makeglossaries');
 add_cus_dep('acn', 'acr', 0, 'run_makeglossaries');
 
+# Overwrite `unlink_or_move` to support clean directory.
+use File::Path 'rmtree';
+sub unlink_or_move {
+    if ( $del_dir eq '' ) {
+        foreach (@_) {
+            if (-d $_) {
+                rmtree $_;
+            } else {
+                unlink $_;
+            }
+        }
+    }
+    else {
+        foreach (@_) {
+            if (-e $_ && ! rename $_, "$del_dir/$_" ) {
+                warn "$My_name:Cannot move '$_' to '$del_dir/$_'\n";
+            }
+        }
+    }
+}
 # Partially derived from:
 # https://github.com/iswunistuttgart/latex-boilerplate/blob/master
