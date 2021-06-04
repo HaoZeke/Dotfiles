@@ -1,5 +1,32 @@
+#!/usr/bin/env perl
+
 # PDF settings
-$pdf_previewer = 'zathura';
+# Previewer described here: https://github.com/YukihiroMasuoka/dotfiles/blob/master/latexmk/.latexmkrc
+if ($^O eq 'MSWin32') {
+  if (-f 'C:/Program Files/SumatraPDF/SumatraPDF.exe') {
+    $pdf_previewer = '"C:/Program Files/SumatraPDF/SumatraPDF.exe" -reuse-instance';
+  }
+  elsif (-f 'C:/Program Files (x86)/SumatraPDF/SumatraPDF.exe') {
+    $pdf_previewer = '"C:/Program Files (x86)/SumatraPDF/SumatraPDF.exe" -reuse-instance';
+  }
+  elsif (-f "~/AppData/Local/SumatraPDF/SumatraPDF.exe") {
+      $pdf_previewer = '"~/AppData/Local/SumatraPDF/SumatraPDF.exe" -reuse-instance';
+  }
+  elsif (-f "C:/SumatraPDF/SumatraPDF.exe") {
+      $pdf_previewer = '"C:/SumatraPDF/SumatraPDF.exe" -reuse-instance';
+  }
+  else {
+    $pdf_previewer = 'texworks';
+  }
+}
+else {
+    if (-f "/mnt/c/SumatraPDF/SumatraPDF.exe"){ # for wsl settings
+	$pdf_previewer = '"/mnt/c/SumatraPDF/SumatraPDF.exe" -reuse-instance';
+    }
+    else {
+	$pdf_previewer = 'zathura'; # macos and linux
+    }
+}
 
 # More cleaning
 $clean_ext = 'bbl fdb_latexmk fls nav pdfsync pyg pytxcode run.xml ' .
