@@ -68,10 +68,26 @@ tridactylodark = { source = "common/browsers/firefox/tridactyl/base16-onedark.cs
 vars = [ "macOS/mac-vars.toml" ]
 hooks = [ "echo \"Welcome to the MacOS configuration\"", "skhd -r" ]
 [profiles.macos.dots]
-nix_darwin = { source = "macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
 yabairc = { source = "macOS/tilingWM/yabairc", target = ".config/yabai/yabairc" }
 spacebarrc = { source = "macOS/tilingWM/spacebarrc", target = ".config/spacebar/spacebarrc" }
 skhdrc = { source = "macOS/tilingWM/skhdrc", target = ".config/skhd/skhdrc" }
+# Nix
+nix_darwin = { source = "macOS/nix-darwin/darwin-conf.nix", target=".nixpkgs/darwin-configuration.nix" }
+# Niv for overlays
+nxo_niv_json = { source = "macOS/nix-darwin/overlays/nix/sources.json", target=".nixpkgs/overlays/nix/sources.json" }
+nxo_niv_nix = { source = "macOS/nix-darwin/overlays/nix/sources.nix", target=".nixpkgs/overlays/nix/sources.nix" }
+nxo_default = { source = "macOS/nix-darwin/overlays/default.nix", target=".nixpkgs/overlays/default.nix" }
+# Emacs 28 with Native Completion
+nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".nixoverlays/emacs-native.nix" }
+
+
+###########
+# Colemak #
+###########
+[profiles.colemak]
+vars = ["colemak/common.toml"]
+[profiles.colemak.dots]
+# zathura_colemak = { source = "common/.config/zathura/zathuraThemerc", target = ".config/zathura/zathuraThemerc" }
 # colemak for macos #
 [profiles.colemac]
 vars = [ "macOS/colemac/colemac-vars.toml" ]

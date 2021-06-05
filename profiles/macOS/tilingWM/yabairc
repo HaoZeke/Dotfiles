@@ -2,6 +2,7 @@
 
 # Rules
 yabai -m rule --add app="^Emacs$" manage=on
+yabai -m rule --add app="^Emacs$" title="posframe" manage=off
 # Mail Helper
 yabai -m rule --add app="^MailMate$" manage=on
 # Should float
