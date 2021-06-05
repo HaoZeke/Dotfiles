@@ -1,6 +1,11 @@
 #!/usr/bin/env perl
 
 # PDF settings
+$pdf_mode=1;
+$pdflatex="xelatex --shell-escape %O %S";
+# enable deletion of *.bbl at "latexmk -c"
+$bibtex_use = 2;
+
 # Previewer described here: https://github.com/YukihiroMasuoka/dotfiles/blob/master/latexmk/.latexmkrc
 if ($^O eq 'MSWin32') {
   if (-f 'C:/Program Files/SumatraPDF/SumatraPDF.exe') {
@@ -32,7 +37,10 @@ else {
 $clean_ext = 'bbl fdb_latexmk fls nav pdfsync pyg pytxcode run.xml ' .
              'snm synctex.gz thm upa vrb _minted-%R pythontex-files-%R ' .
              '**/*-eps-converted-to.pdf';
-$clean_ext .= " acr acn alg glo gls glg"; # Glossary files
+
+# Generated files clean better
+@generated_exts = qw(acn acr alg aux code ist fls glg glo gls idx ind lof lot out thm toc tpt);
+
 # Glossary support
 push @generated_exts, 'glo', 'gls', 'glg';
 push @generated_exts, 'acn', 'acr', 'alg';
