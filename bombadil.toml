@@ -56,6 +56,10 @@ pistolrrc =  { source = "common/.config/pistol/pistol.conf", target = ".config/p
 # LaTeX
 latexmkrrc =  { source = "common/.latexmkrc", target = ".latexmkrc" }
 
+# Zathura
+zathurarc = { source = "common/.config/zathura/zathurarc", target = ".config/zathura/zathurarc" }
+zathuratheme = { source = "common/.config/zathura/zathuraThemerc", target = ".config/zathura/zathuraThemerc" }
+
 # Browsers #
 # tridactyl
 tridactylrc = { source = "common/browsers/firefox/tridactyl/tridactylrc", target = ".config/tridactyl/tridactylrc" }
@@ -87,7 +91,7 @@ nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".ni
 [profiles.colemak]
 vars = ["colemak/common.toml"]
 [profiles.colemak.dots]
-# zathura_colemak = { source = "common/.config/zathura/zathuraThemerc", target = ".config/zathura/zathuraThemerc" }
+zathura_colemak = { source = "colemak/zathuraKeys", target = ".config/zathura/zathuraColemak" }
 # colemak for macos #
 [profiles.colemac]
 vars = [ "macOS/colemac/colemac-vars.toml" ]
