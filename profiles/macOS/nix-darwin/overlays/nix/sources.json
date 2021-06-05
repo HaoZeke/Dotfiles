@@ -1,0 +1,50 @@
+{
+    "emacs-nativecomp": {
+        "branch": "master",
+        "description": "Mirror of GNU Emacs",
+        "homepage": "http://www.gnu.org/software/emacs/",
+        "owner": "emacs-mirror",
+        "repo": "emacs",
+        "rev": "7b50ed553faa6de6d51bf07d12d106ca61ab3ac4",
+        "sha256": "03lxpd451hii6as2z74k42zk6nxdky5yqc925z20kyir1m0x8gcp",
+        "type": "tarball",
+        "url": "https://github.com/emacs-mirror/emacs/archive/7b50ed553faa6de6d51bf07d12d106ca61ab3ac4.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "emacs-overlay": {
+        "branch": "master",
+        "description": "Bleeding edge emacs overlay [maintainer=@adisbladis] ",
+        "homepage": "",
+        "owner": "nix-community",
+        "repo": "emacs-overlay",
+        "rev": "a98e92e3c7df7137816cb96be3c4c19e291f8131",
+        "sha256": "1dwhclp0rrgbrfjv8l9x51jn3pl0g2w3kn9grlknp56qdjniqgh0",
+        "type": "tarball",
+        "url": "https://github.com/nix-community/emacs-overlay/archive/a98e92e3c7df7137816cb96be3c4c19e291f8131.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "master",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "nmattia",
+        "repo": "niv",
+        "rev": "1819632b5823e0527da28ad82fecd6be5136c1e9",
+        "sha256": "08jz17756qchq0zrqmapcm33nr4ms9f630mycc06i6zkfwl5yh5i",
+        "type": "tarball",
+        "url": "https://github.com/nmattia/niv/archive/1819632b5823e0527da28ad82fecd6be5136c1e9.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "master",
+        "description": "Nix Packages collection",
+        "homepage": "",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c11aaff283211929bc1f990f55350be9656e6a8f",
+        "sha256": "0pdp9x7rm4h33a6v4z4p868bbxkd257yf2z56crr83val0iqw6jm",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/c11aaff283211929bc1f990f55350be9656e6a8f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}
