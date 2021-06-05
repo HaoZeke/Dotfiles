@@ -10,3 +10,5 @@
 	insteadOf = https://github.com/
 [url "git@gitlab.com:"]
 	insteadOf = https://gitlab.com/
+[gpg]
+	program = __[gpg_path]__

@@ -3,3 +3,6 @@ terminal = "alacritty"
  
 # Machine type
 machine_type = "universal-darwin"
+
+# Program paths
+gpg_path = "/run/current-system/sw/bin/gpg" # nix
