@@ -78,7 +78,7 @@ nxo_niv_json = { source = "macOS/nix-darwin/overlays/nix/sources.json", target="
 nxo_niv_nix = { source = "macOS/nix-darwin/overlays/nix/sources.nix", target=".nixpkgs/overlays/nix/sources.nix" }
 nxo_default = { source = "macOS/nix-darwin/overlays/default.nix", target=".nixpkgs/overlays/default.nix" }
 # Emacs 28 with Native Completion
-nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".nixoverlays/emacs-native.nix" }
+nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".nixpkgs/overlays/emacs-native.nix" }
 
 
 ###########
