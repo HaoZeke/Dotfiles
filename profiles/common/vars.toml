@@ -5,6 +5,7 @@ git_email = "rog32@hi.is"
 # SSH
 github_id = "github_hz"
 gitlab_id = "gitlab_hz"
+ui_id = "rog32"
  
 # Defaults
 terminal = "termite"

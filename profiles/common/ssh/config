@@ -5,3 +5,23 @@ Host github.com
 Host gitlab.com
   IdentitiesOnly yes
   IdentityFile ~/.ssh/__[gitlab_id]__
+
+Host krafla
+  Hostname krafla.rhi.hi.is
+  User __[ui_id]__
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_rsa
+
+Host garpur
+  Hostname garpur.ihpc.hi.is
+  User __[ui_id]__
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/garpur
+  ProxyJump krafla
+
+Host elja
+  Hostname elja.hi.is
+  User __[ui_id]__
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/elja
+  ProxyJump krafla
