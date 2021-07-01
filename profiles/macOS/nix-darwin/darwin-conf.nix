@@ -10,6 +10,23 @@ let
       url = "https://github.com/koekeishiya/yabai/releases/download/v${version}/yabai-v${version}.tar.gz";
       sha256 = "0xyx5b4jqafqd71f5413v215rn68f2xqdwxcdfsxn4s1nw36xmvd";
     };});
+  myGit = (pkgs.git.overrideAttrs (o: rec {
+    version = "2.32.0";
+    doInstallCheck = false;
+    src = pkgs.fetchurl {
+      url = "https://www.kernel.org/pub/software/scm/git/git-${version}.tar.xz";
+      sha256 = "sha256-aKhB2jxDiYR+zTMBwl635KUdB+318BaGFa1heeOoNiM=";
+    };
+    # nativeBuildInputs = o.nativeBuildInputs ++ [pkgs.stdenv];
+  })).override {
+          guiSupport = false;
+          pythonSupport = true;
+          perlSupport = true;
+          withManual = false; # time consuming
+          withLibsecret = false;
+          osxkeychainSupport = true; # set by is.darwin anyway
+          svnSupport = true;
+        };
 in {
   # From https://dnr.im/tech/nix-overlays/
   # nixPath setting:
@@ -71,7 +88,7 @@ in {
     ]))
     imagemagick
     # Version control
-    git
+    myGit
     git-lfs
     subversion
     gh
