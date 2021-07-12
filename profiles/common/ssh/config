@@ -1,3 +1,9 @@
+Host *
+  ForwardAgent yes
+  ForwardX11 yes
+  ForwardX11Trusted yes
+  XAuthLocation __[xauth_loc]__
+
 Host github.com
   IdentitiesOnly yes
   IdentityFile ~/.ssh/__[github_id]__
