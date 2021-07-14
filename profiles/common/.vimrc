@@ -178,10 +178,13 @@ call plug#begin()
 
     " Pretty
     Plug 'ryanoasis/vim-devicons'
+
+    " Orgmode
+    Plug 'axvr/org.vim'
 call plug#end()
 call plug#helptags()
 if !has('g:syntax_on')|syntax enable|endif
-"filetype plugin indent on
+filetype plugin indent on
 "filetype indent on
 " Behold paste indenting!
 set pastetoggle=<F2>
