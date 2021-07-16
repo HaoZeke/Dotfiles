@@ -26,6 +26,7 @@ posix_paths = { source = "common/shell/posix/05_paths.sh", target = ".config/she
 posix_prog_conf = { source = "common/shell/posix/06_prog_conf.sh", target = ".config/shellrc/shell.d/06_prog_conf.sh" }
 # Base Shell
 shellrc = { source = "common/shell/shellrc.sh", target = ".shellrc" }
+bash_activate_bin = { source = "common/shell/bash/99_activate_bin.sh", target = ".config/shellrc/bash.d/99_activate_bin.sh" }
 # Zsh
 zshrc = { source = "common/shell/zshrc.zsh", target = ".zshrc" }
 zshenv = { source = "common/shell/zsh/zshenv.zsh", target = ".zshenv" }
