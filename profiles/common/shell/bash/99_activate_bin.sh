@@ -10,6 +10,7 @@
 # TODO: Update to test that these exist
 eval "$(zoxide init bash)"
 eval "$(starship init bash)"
+eval "$(mcfly init bash)"
 
 # Python
 ########
