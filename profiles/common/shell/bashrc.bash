@@ -3,6 +3,10 @@ if [[ $- != *i* ]]; then
 	return
 fi
 
+if [[ $TERM = dumb ]]; then
+	return # fixes TRAMP
+fi
+
 export shellHome=$HOME/.config/shellrc
 
 # Load all files from the shell.d directory
