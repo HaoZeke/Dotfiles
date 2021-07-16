@@ -2,6 +2,9 @@
 # Activation Scripts #
 ######################
 
+# Misc.
+eval "$(direnv hook bash)"
+
 # Rust
 #######
 
