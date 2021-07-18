@@ -1,6 +1,6 @@
 export USE_MAMBA="__[use_mamba]__"
 
-if [ "$USE_MAMBA" == "yes" ]; then
+if [ "$USE_MAMBA" == "yes" || "$USE_MAMBA" == "true" ]; then
     # mamba initialize >>>
     # !! Contents within this block are managed by 'mamba init' !!
     export MAMBA_EXE="$HOME/.local/bin/micromamba";
