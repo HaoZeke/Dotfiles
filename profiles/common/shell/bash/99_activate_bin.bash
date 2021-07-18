@@ -14,10 +14,3 @@ eval "$(direnv hook bash)"
 eval "$(zoxide init bash)"
 eval "$(starship init bash)"
 eval "$(mcfly init bash)"
-
-# Python
-########
-
-# Almost never use this, but still
-
-eval "$(micromamba shell hook -s bash)"
