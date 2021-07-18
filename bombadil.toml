@@ -26,7 +26,6 @@ posix_paths = { source = "common/shell/posix/05_paths.sh", target = ".config/she
 posix_prog_conf = { source = "common/shell/posix/06_prog_conf.sh", target = ".config/shellrc/shell.d/06_prog_conf.sh" }
 # Base Shell
 shellrc = { source = "common/shell/shellrc.sh", target = ".shellrc" }
-bash_activate_bin = { source = "common/shell/bash/99_activate_bin.bash", target = ".config/shellrc/bash.d/99_activate_bin.bash" }
 # Zsh
 zshrc = { source = "common/shell/zshrc.zsh", target = ".zshrc" }
 zshenv = { source = "common/shell/zsh/zshenv.zsh", target = ".zshenv" }
@@ -37,6 +36,8 @@ zsh_sources = { source = "common/shell/zsh/04_sources.zsh", target = ".config/sh
 zsh_theme = { source = "common/shell/zsh/04a_theme.zsh", target = ".config/shellrc/zsh.d/04a_theme.zsh" }
 # Bash
 bashrc =  { source = "common/shell/bashrc.bash", target = ".bashrc" }
+bash_activate_bin = { source = "common/shell/bash/99_activate_bin.bash", target = ".config/shellrc/bash.d/99_activate_bin.bash" }
+bash_mamba = { source = "common/shell/bash/01_mamba.bash", target = ".config/shellrc/bash.d/01_mamba.bash" }
 # Git #
 git_config = { source = "common/git/config", target = ".gitconfig" }
 # Alacritty #
