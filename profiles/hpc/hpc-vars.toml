@@ -1,6 +1,9 @@
 # Machine type
 machine_type = "x86_64-linux"
 
+# Vars
+is_remote = "true"
+
 # Paths
 gpg_path = "/bin/gpg"
 xauth_loc = "/bin/xauth"
