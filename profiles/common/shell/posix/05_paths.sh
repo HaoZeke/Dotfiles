@@ -70,5 +70,5 @@ export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop
 
 # Sets language server locations on remote machines
 if [ "$IS_REMOTE" == "yes" || "$IS_REMOTE" == "true" ]; then
-    export PATH=$HOME/.local/bin/lsp/
+    export PATH=$HOME/.local/bin/lsp/:$PATH
 fi
