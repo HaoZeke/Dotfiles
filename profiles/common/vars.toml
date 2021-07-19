@@ -32,3 +32,4 @@ tex_year = "2021"
 
 is_remote = "false"
 use_mamba = "false"
+use_nvm = "false"
