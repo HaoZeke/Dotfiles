@@ -17,13 +17,14 @@ hooks = ["bash -c \"chmod 600 ~/.ssh/config\""]
  
 # Shells #
 # POSIX
-posix_warn = { source = "common/shell/posix/00_warnings.sh", target = ".config/shellrc/shell.d/00_warnings.sh" }
+posix_bombadil = { source = "common/shell/posix/00_bombadil_vars.sh", target = ".config/shellrc/shell.d/00_bombadil_vars.sh" }
 posix_alias = { source = "common/shell/posix/01_alias_def.sh", target = ".config/shellrc/shell.d/01_alias_def.sh" }
 posix_func = { source = "common/shell/posix/02_func_def.sh", target = ".config/shellrc/shell.d/02_func_def.sh" }
 posix_exports = { source = "common/shell/posix/03_exports.sh", target = ".config/shellrc/shell.d/03_exports.sh" }
 posix_sources = { source = "common/shell/posix/04_sources.sh", target = ".config/shellrc/shell.d/04_sources.sh" }
 posix_paths = { source = "common/shell/posix/05_paths.sh", target = ".config/shellrc/shell.d/05_paths.sh" }
 posix_prog_conf = { source = "common/shell/posix/06_prog_conf.sh", target = ".config/shellrc/shell.d/06_prog_conf.sh" }
+posix_warn = { source = "common/shell/posix/99_warnings.sh", target = ".config/shellrc/shell.d/99_warnings.sh" }
 # Base Shell
 shellrc = { source = "common/shell/shellrc.sh", target = ".shellrc" }
 # Zsh
