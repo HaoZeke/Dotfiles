@@ -1,5 +1,3 @@
-export USE_MAMBA="__[use_mamba]__"
-
 if [ "$USE_MAMBA" == "yes" || "$USE_MAMBA" == "true" ]; then
     # mamba initialize >>>
     # !! Contents within this block are managed by 'mamba init' !!

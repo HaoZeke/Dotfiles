@@ -25,3 +25,10 @@ blue = "#1BA6FA"
 
 # TeX Vars
 tex_year = "2021"
+
+################
+# Conditionals #
+################
+
+is_remote = "false"
+use_mamba = "false"
