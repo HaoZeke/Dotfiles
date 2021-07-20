@@ -7,3 +7,11 @@ machine_type = "universal-darwin"
 # Program paths
 gpg_path = "/run/current-system/sw/bin/gpg" # nix
 xauth_loc = "/opt/X11/bin/xauth" # XQuartz
+
+################
+# Conditionals #
+################
+
+is_remote = "true"
+use_mamba = "true"
+use_nvm = "true"
