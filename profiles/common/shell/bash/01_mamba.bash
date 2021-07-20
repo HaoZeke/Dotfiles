@@ -17,7 +17,7 @@ if [ "$USE_MAMBA" == "yes" || "$USE_MAMBA" == "true" ]; then
     # <<< mamba initialize <<<
 fi
 
-# For remote systems, get language servers
-if [ "$IS_REMOTE" == "yes" || "$IS_REMOTE" == "true" ]; then
-    micromamba activate lsp
-fi
+# # For remote systems, get language servers
+# if [ "$IS_REMOTE" == "yes" || "$IS_REMOTE" == "true" ]; then
+#     micromamba activate lsp
+# fi
