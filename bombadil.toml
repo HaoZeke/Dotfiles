@@ -88,6 +88,12 @@ nxo_default = { source = "macOS/nix-darwin/overlays/default.nix", target=".nixpk
 # Emacs 28 with Native Completion
 nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".nixpkgs/overlays/emacs-native.nix" }
 
+# Laptop
+[profiles.rgmacbook]
+vars = [ "macOS/mac-vars.toml", "macOS/rgmacbook/laptop.toml" ]
+[profiles.rgmacbook.dots]
+rgmacbook_nixconf = { source = "macOS/rgmacbook/nix/mac_laptop.nix", target = ".config/nixpkgs/config.nix" }
+
 
 ###########
 # Colemak #
