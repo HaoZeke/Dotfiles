@@ -1,4 +1,6 @@
-if [ "$USE_MAMBA" == "yes" || "$USE_MAMBA" == "true" ]; then
+#!/usr/bin/env bash
+
+if [[ "$USE_MAMBA" == "yes" || "$USE_MAMBA" == "true" ]]; then
     # mamba initialize >>>
     # !! Contents within this block are managed by 'mamba init' !!
     export MAMBA_EXE="$HOME/.local/bin/micromamba";
