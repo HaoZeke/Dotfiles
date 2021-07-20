@@ -137,6 +137,10 @@ spack_interactive = { source = "hpc/spack/envs/interactive.yml", target = "spack
 
 # Submodules #
 [profiles.elja]
-vars = ["hpc/machines/ihpc.toml", "hpc/machines/elja.toml"]
+vars = ["hpc/machines/ihpc.toml", "hpc/machines/elja/elja.toml"]
+[profiles.elja.dots]
+elja_nix = { source = "hpc/machines/elja/nix/elja_conf.nix", target = ".config/nixpkgs/config.nix" }
+
+# Vars only
 [profiles.garpur]
 vars = ["hpc/machines/ihpc.toml", "hpc/machines/garpur.toml"]
