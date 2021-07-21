@@ -6,3 +6,4 @@
 export USE_MAMBA="__[use_mamba]__"
 export USE_NVM="__[use_nvm]__"
 export IS_REMOTE="__[is_remote]__"
+export HAS_NIX="__[has_nix]__"
