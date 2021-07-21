@@ -8,3 +8,4 @@ hpc_name = "linux-centos8-cascadelake"
 
 # Vars
 use_mamba = "true"
+has_nix = "true"
