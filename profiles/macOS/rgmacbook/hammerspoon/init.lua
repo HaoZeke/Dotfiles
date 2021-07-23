@@ -21,17 +21,15 @@ hyper = hs.hotkey.modal.new({}, 'F18')
 function enterHyperMode()
   hyper.triggered = false
   hyper:enter()
-  hs.alert.show('Hyper on')
 end
 
 -- Leave Hyper Mode when F19 (Hyper/Capslock) is pressed,
 -- send ESCAPE if no other keys are pressed.
 function exitHyperMode()
   hyper:exit()
-  -- if not hyper.triggered then
-  --   hs.eventtap.keyStroke({}, 'ESCAPE')
-  -- end
-  hs.alert.show('Hyper off')
+  if not hyper.triggered then
+    hs.eventtap.keyStroke({}, 'ESCAPE')
+  end
 end
 
 -- Bind the Hyper key
