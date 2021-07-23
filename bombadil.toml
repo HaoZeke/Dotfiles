@@ -94,6 +94,8 @@ nxo_emacs = { source = "macOS/nix-darwin/overlays/emacs-native.nix", target=".ni
 vars = [ "macOS/mac-vars.toml", "macOS/rgmacbook/laptop.toml" ]
 [profiles.rgmacbook.dots]
 rgmacbook_nixconf = { source = "macOS/rgmacbook/nix/mac_laptop.nix", target = ".config/nixpkgs/config.nix" }
+rgmacbook_karabiner = { source = "macOS/rgmacbook/keyboard/karabiner.json", target = ".config/karabiner/karabiner/karabiner.json" }
+rgmacbook_hs_init = { source = "macOS/rgmacbook/hammerspoon/init.lua", target = ".hammerspoon/init.lua" }
 
 
 ###########
