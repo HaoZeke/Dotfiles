@@ -1,8 +1,0 @@
-{
-    "from": {
-        "key_code": "caps_lock"
-    },
-    "to": {
-        "key_code": "f19"
-    }
-}

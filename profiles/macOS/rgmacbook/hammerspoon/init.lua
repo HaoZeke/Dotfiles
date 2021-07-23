@@ -36,6 +36,7 @@ end
 
 -- Bind the Hyper key
 f19 = hs.hotkey.bind({}, 'F19', enterHyperMode, exitHyperMode)
+f19cmd = hs.hotkey.bind({'cmd'}, 'F19', enterHyperMode, exitHyperMode)
 
 -- Vim Colemak bindings (hzColemak)
 
