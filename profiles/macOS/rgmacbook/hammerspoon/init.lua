@@ -28,7 +28,12 @@ end
 function exitHyperMode()
   hyper:exit()
   if not hyper.triggered then
-    hs.eventtap.keyStroke({}, 'ESCAPE')
+    local app = hs.application.frontmostApplication()
+    if app:name() == "Emacs" then
+        -- Do nothing
+    else
+      hs.eventtap.keyStroke({}, 'ESCAPE')
+    end
   end
 end
 
