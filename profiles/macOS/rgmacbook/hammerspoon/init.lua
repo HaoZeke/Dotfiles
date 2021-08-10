@@ -28,12 +28,12 @@ end
 function exitHyperMode()
   hyper:exit()
   if not hyper.triggered then
-    local app = hs.application.frontmostApplication()
-    if app:name() == "Emacs" then
+    -- local app = hs.application.frontmostApplication()
+    -- if app:name() == "Emacs" then
         -- Do nothing
-    else
-      hs.eventtap.keyStroke({}, 'ESCAPE')
-    end
+    -- else
+    --   hs.eventtap.keyStroke({}, 'ESCAPE')
+    -- end
   end
 end
 
@@ -46,32 +46,32 @@ f19cmd = hs.hotkey.bind({'cmd'}, 'F19', enterHyperMode, exitHyperMode)
 -- Basic Movements {{{2
 
 -- h - move left {{{3
-function left() hs.eventtap.keyStroke({}, "Left") end
+function left() hs.eventtap.keyStroke({}, "Left", 0) end
 hyper:bind({}, 'h', left, nil, left)
 -- }}}3
 
 -- n - move down {{{3
-function down() hs.eventtap.keyStroke({}, "Down") end
+function down() hs.eventtap.keyStroke({}, "Down", 0) end
 hyper:bind({}, 'n', down, nil, down)
 -- }}}3
 
 -- e - move up {{{3
-function up() hs.eventtap.keyStroke({}, "Up") end
+function up() hs.eventtap.keyStroke({}, "Up", 0) end
 hyper:bind({}, 'e', up, nil, up)
 -- }}}3
 
 -- i - move right {{{3
-function right() hs.eventtap.keyStroke({}, "Right") end
+function right() hs.eventtap.keyStroke({}, "Right", 0) end
 hyper:bind({}, 'i', right, nil, right)
 -- }}}3
 
 -- ) - right programming brace {{{3
-function rbroundL() hs.eventtap.keyStroke({}, "(") end
+function rbroundL() hs.eventtap.keyStroke({}, "(", 0) end
 hyper:bind({}, 'k', up, nil, up)
 -- }}}3
 
 -- ) - left programming brace {{{3
-function rbroundR() hs.eventtap.keyStroke({}, ")") end
+function rbroundR() hs.eventtap.keyStroke({}, ")", 0) end
 hyper:bind({}, 'c', up, nil, up)
 -- }}}3
 
@@ -79,9 +79,9 @@ hyper:bind({}, 'c', up, nil, up)
 hyper:bind({}, 'o', nil, function()
     local app = hs.application.frontmostApplication()
     if app:name() == "Finder" then
-        hs.eventtap.keyStroke({"cmd"}, "o")
+        hs.eventtap.keyStroke({"cmd"}, "o", 0)
     else
-        hs.eventtap.keyStroke({}, "Return")
+        hs.eventtap.keyStroke({}, "Return", 0)
     end
 end)
 -- }}}3
@@ -91,48 +91,48 @@ end)
 
 -- cmd+h - delete character before the cursor {{{3
 local function delete()
-    hs.eventtap.keyStroke({}, "delete")
+    hs.eventtap.keyStroke({}, "delete", 0)
 end
 hyper:bind({"cmd"}, 'h', delete, nil, delete)
 -- }}}3
 
 -- cmd+i - delete character after the cursor {{{3
 local function fndelete()
-    hs.eventtap.keyStroke({}, "Right")
-    hs.eventtap.keyStroke({}, "delete")
+    hs.eventtap.keyStroke({}, "Right", 0)
+    hs.eventtap.keyStroke({}, "delete", 0)
 end
 hyper:bind({"cmd"}, 'i', fndelete, nil, fndelete)
 -- }}}3
 
 -- ) - right programming brace {{{3
-function rbcurlyL() hs.eventtap.keyStroke({}, "{") end
+function rbcurlyL() hs.eventtap.keyStroke({}, "{", 0) end
 hyper:bind({"cmd"}, 'k', up, nil, up)
 -- }}}3
 
 -- ) - left programming brace {{{3
-function rbcurlyR() hs.eventtap.keyStroke({}, "}") end
+function rbcurlyR() hs.eventtap.keyStroke({}, "}", 0) end
 hyper:bind({"cmd"}, 'c', up, nil, up)
 -- }}}3
 
 -- Extend+Shift
 
 -- ) - right programming brace {{{3
-function rbsqrL() hs.eventtap.keyStroke({}, "[") end
+function rbsqrL() hs.eventtap.keyStroke({}, "[", 0) end
 hyper:bind({"shift"}, 'k', up, nil, up)
 -- }}}3
 
 -- ) - left programming brace {{{3
-function rbsqrR() hs.eventtap.keyStroke({}, "]") end
+function rbsqrR() hs.eventtap.keyStroke({}, "]", 0) end
 hyper:bind({"shift"}, 'c', up, nil, up)
 -- }}}3
 
 -- Special Movements
 -- w - move to next word {{{3
-function word() hs.eventtap.keyStroke({"alt"}, "Right") end
+function word() hs.eventtap.keyStroke({"alt"}, "Right", 0) end
 hyper:bind({}, 'w', word, nil, word)
 -- }}}3
 
 -- b - move to previous word {{{3
-function back() hs.eventtap.keyStroke({"alt"}, "Left") end
+function back() hs.eventtap.keyStroke({"alt"}, "Left", 0) end
 hyper:bind({}, 'b', back, nil, back)
 -- }}}3
