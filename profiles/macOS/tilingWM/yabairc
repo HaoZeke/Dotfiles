@@ -2,7 +2,10 @@
 
 # Rules
 yabai -m rule --add app="^Emacs$" manage=on
+yabai -m rule --add app="emacs" manage=on
 yabai -m rule --add app="^Emacs$" title="posframe" manage=off
+# Wine helpes
+yabai -m rule --add app="wine32on64-preloader" manage=on
 # Mail Helper
 yabai -m rule --add app="^MailMate$" manage=on
 # Should float
@@ -21,6 +24,8 @@ yabai -m rule --add app="^Color Picker$" sticky=on
 
 # Finder
 yabai -m rule --add app="^Finder$" manage=on
+# VLC
+yabai -m rule --add app='VLC' manage=on border=off
 # yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
 # Spacebar helper
 # $(spacebar -m config height)
