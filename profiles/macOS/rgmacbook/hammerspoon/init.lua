@@ -67,12 +67,12 @@ hyper:bind({}, 'i', right, nil, right)
 
 -- ) - right programming brace {{{3
 function rbroundL() hs.eventtap.keyStroke({}, "(", 0) end
-hyper:bind({}, 'k', up, nil, up)
+hyper:bind({}, 'k', rbroundL, nil, rbroundL)
 -- }}}3
 
 -- ) - left programming brace {{{3
 function rbroundR() hs.eventtap.keyStroke({}, ")", 0) end
-hyper:bind({}, 'c', up, nil, up)
+hyper:bind({}, 'c', rbroundR, nil, rbroundR)
 -- }}}3
 
 -- o - open new line below cursor {{{3
@@ -106,24 +106,24 @@ hyper:bind({"cmd"}, 'i', fndelete, nil, fndelete)
 
 -- ) - right programming brace {{{3
 function rbcurlyL() hs.eventtap.keyStroke({}, "{", 0) end
-hyper:bind({"cmd"}, 'k', up, nil, up)
+hyper:bind({"cmd"}, 'k', rbcurlyL, nil, rbcurlyL)
 -- }}}3
 
 -- ) - left programming brace {{{3
 function rbcurlyR() hs.eventtap.keyStroke({}, "}", 0) end
-hyper:bind({"cmd"}, 'c', up, nil, up)
+hyper:bind({"cmd"}, 'c', rbcurlyR, nil, rbcurlyR)
 -- }}}3
 
 -- Extend+Shift
 
 -- ) - right programming brace {{{3
 function rbsqrL() hs.eventtap.keyStroke({}, "[", 0) end
-hyper:bind({"shift"}, 'k', up, nil, up)
+hyper:bind({"shift"}, 'k', rbsqrL, nil, rbsqrL)
 -- }}}3
 
 -- ) - left programming brace {{{3
 function rbsqrR() hs.eventtap.keyStroke({}, "]", 0) end
-hyper:bind({"shift"}, 'c', up, nil, up)
+hyper:bind({"shift"}, 'c', rbsqrR, nil, rbsqrR)
 -- }}}3
 
 -- Special Movements
