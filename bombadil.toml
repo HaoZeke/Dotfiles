@@ -35,6 +35,7 @@ zsh_func = { source = "common/shell/zsh/02_func_def.zsh", target = ".config/shel
 zsh_plugins = { source = "common/shell/zsh/03_plugins.zsh", target = ".config/shellrc/zsh.d/03_plugins.zsh" }
 zsh_sources = { source = "common/shell/zsh/04_sources.zsh", target = ".config/shellrc/zsh.d/04_sources.zsh" }
 zsh_theme = { source = "common/shell/zsh/04a_theme.zsh", target = ".config/shellrc/zsh.d/04a_theme.zsh" }
+zsh_activate_bin = { source = "common/shell/zsh/99_activate_bin.zsh", target = ".config/shellrc/zsh.d/99_activate_bin.zsh" }
 # Bash
 bashrc =  { source = "common/shell/bashrc.bash", target = ".bashrc" }
 bash_activate_bin = { source = "common/shell/bash/99_activate_bin.bash", target = ".config/shellrc/bash.d/99_activate_bin.bash" }
