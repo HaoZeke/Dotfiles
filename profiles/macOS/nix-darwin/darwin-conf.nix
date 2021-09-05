@@ -4,6 +4,10 @@
 let
   home = builtins.getEnv "HOME";
   localOverlays = home + "/.nixpkgs/overlays" ;
+  emacsOSX = import (builtins.fetchTarball {
+  url = "https://github.com/sagittaros/emacs-osx/archive/refs/tags/built.tar.gz";
+  sha256 = "01phndxq2z667qlbplq2fkcg5dpl507r915a2r4wvs3imr18fpqc";
+  });
   yabai = pkgs.yabai.overrideAttrs (o: rec {
     version = "3.3.10";
     src = builtins.fetchTarball {
@@ -53,15 +57,17 @@ in {
     # Terminal files
     ranger
     pistol
+    ag
     # GUI
     #emacs # refreshes a lot
     # emacsMacport
-    emacsGccDarwin
+    # emacsGccDarwin
     alacritty
+    emacsOSX.emacsOsxNative
     # zathura # Use brew which is patched https://github.com/zegervdv/homebrew-zathura
     # Base Tools
     starship
-    gnupg
+    rnix-lsp
     ripgrep
     fd
     fzf
@@ -118,7 +124,9 @@ in {
     yabai
     skhd
     spacebar
-    pinentry_mac gnupg
+    # pinentry_mac gnupg
+    # pinentry-curses
+    # pinentry
     # pngpaste # An image clipboard helper, use homebrew for now
     # xquartz # A mac requirement for x11 and cairo
   ];
@@ -151,8 +159,8 @@ in {
   ############
   # gpg #
   programs.gnupg.agent = {
-        enable = true;
-        enableSSHSupport = true;
+    enable = true;
+    enableSSHSupport = true;
       };
 
   # Strongly kanged from https://github.com/xanderle/config/blob/main/darwin-configuration.nix
