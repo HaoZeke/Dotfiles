@@ -1,6 +1,7 @@
 ######################
 # Activation Scripts #
 ######################
+if [ "$EVAL_BASH" == "yes" || "$EVAL_BASH" == "true" ]; then
 
 # Misc.
 eval "$(direnv hook bash)"
@@ -14,3 +15,5 @@ eval "$(direnv hook bash)"
 eval "$(zoxide init bash)"
 eval "$(starship init bash)"
 eval "$(mcfly init bash)"
+
+fi

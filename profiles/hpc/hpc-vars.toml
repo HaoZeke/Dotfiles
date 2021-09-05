@@ -12,3 +12,7 @@ xauth_loc = "/bin/xauth"
 is_remote = "true"
 use_mamba = "true"
 use_nvm = "true"
+
+# Only one of the following
+eval_zsh = "false"
+eval_bash = "true"

@@ -33,3 +33,7 @@ tex_year = "2021"
 is_remote = "false"
 use_mamba = "false"
 use_nvm = "false"
+
+# Only one of the following
+# eval_zsh = "false"
+# eval_bash = "false"
