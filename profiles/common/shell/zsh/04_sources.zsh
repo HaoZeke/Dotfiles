@@ -12,7 +12,8 @@ zinit snippet OMZ::plugins/sudo
 zinit snippet OMZ::plugins/systemd
 zinit snippet OMZ::plugins/rsync
 zinit snippet OMZ::plugins/common-aliases/common-aliases.plugin.zsh
-
+zinit ice silent wait"0"
+zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
 # Handlers
 # zinit snippet OMZ::plugins/pyenv
 # zinit snippet OMZ::plugins/rbenv
