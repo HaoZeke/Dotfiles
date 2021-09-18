@@ -40,7 +40,6 @@ zsh_activate_bin = { source = "common/shell/zsh/99_activate_bin.zsh", target = "
 bashrc =  { source = "common/shell/bashrc.bash", target = ".bashrc" }
 bash_activate_bin = { source = "common/shell/bash/99_activate_bin.bash", target = ".config/shellrc/bash.d/99_activate_bin.bash" }
 bash_mamba = { source = "common/shell/bash/01_mamba.bash", target = ".config/shellrc/bash.d/01_mamba.bash" }
-bash_nvm = { source = "common/shell/bash/02_nvm.bash", target = ".config/shellrc/bash.d/02_nvm.bash" }
 bash_nix = { source = "common/shell/bash/03_locale_nix.bash", target = ".config/shellrc/bash.d/03_locale_nix.bash" }
 # Git #
 git_config = { source = "common/git/config", target = ".gitconfig" }

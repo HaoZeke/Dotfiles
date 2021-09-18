@@ -30,7 +30,7 @@ POWERLEVEL9K_VCS_MODIFIED_BACKGROUND='black'
 POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline nvm pyenv rbenv virtualenv vcs nix_shell)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline asdf direnv nvm pyenv rbenv virtualenv vcs nix_shell)
 
 # Bullet Train #
 

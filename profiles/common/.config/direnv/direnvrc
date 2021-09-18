@@ -1,91 +1,32 @@
-##########
-# Python #
-##########
+########
+# ASDF #
+########
 
-# Usage: layout virtualenv
+# Usage (lines other than the first are optional):
+## use asdf
 #
-# Use python virtualenv functions. Basic function composes well with the rest
+# This loads asdf and uses a cached setup which circumvents one reshim
 #
-# https://virtualenv.pypa.io/en/stable/
-#
-
-layout_virtualenv() {
-  local venv_path="$1"
-  source ${venv_path}/bin/activate
-}
-
-# Usage: layout virtualenvwrapper
-#
-# Use virtualenvwrapper. This is sort of depreciated.
-#
-# https://virtualenvwrapper.readthedocs.io/en/latest/
+# https://github.com/asdf-community/asdf-direnv
 #
 
-layout_virtualenvwrapper() {
-  local venv_path="${WORKON_HOME}/$1"
-  layout_virtualenv $venv_path
-}
-
-# Usage: layout pipenv
-#
-# Recommended python setup. Loads the relevant pipenv virtualwrapper.
-#
-# https://docs.pipenv.org/
-#
-
-layout_pipenv() {
-    layout_virtualenv $(pipenv --venv)
-}
-
-layout_poetry() {
-  if [[ ! -f pyproject.toml ]]; then
-    log_error 'No pyproject.toml found.  Use `poetry new` or `poetry init` to create one first.'
-    exit 2
-  fi
-
-  local VENV=$(dirname $(poetry run which python))
-  export VIRTUAL_ENV=$(echo "$VENV" | rev | cut -d'/' -f2- | rev)
-  export POETRY_ACTIVE=1
-  PATH_add "$VENV"
-}
+source "$(asdf direnv hook asdf)"
 
 ########
 # Ruby #
 ########
 
 # Usage (lines other than the first are optional):
-## layout rvm
-## rvm use $VERSION_NUMBER
 ## layout ruby
+## use asdf
 ## PATH_add .direnv/bundler-bin
 #
-# This loads rvm only when needed. The remaining steps basically involve the appropriate ruby setup.
+# This watches some files. Uses asdf for managing versions.
 #
-# https://rvm.io/
 # https://github.com/direnv/direnv/wiki/Ruby
 #
 
-layout_rvm() {
-    # RVM setup
-    export rvm_ignore_dotfiles=yes
-
-    if [[ ! -d "${HOME}/.rvm" ]]; then
-        echo "You seem to be missing rvm, running getRVM now"
-        getRVM
-    fi
-      # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-      export PATH="$PATH:$HOME/.rvm/bin"
-
-      # RVM Fixes (per https://github.com/rvm/rvm/issues/3212)
-      # Squelch the warning by appending ' > /dev/null 2>&1' here
-      [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" > /dev/null 2>&1
-
-      # RVM fixes whatever it considers the problem to be, on its own, in `rvm use`.
-      # It also prints some junk we don't care about, so we squelch its output in the same way.
-      rvm use default > /dev/null 2>&1
-
-      # RVM bash completion
-      [[ -r "$HOME/.rvm/scripts/completion" ]] && source "$HOME/.rvm/scripts/completion"
+layout_ruby() {
       # Direnv specials
       watch_file Gemfile
       watch_file .ruby_version
@@ -111,25 +52,6 @@ layout_golang() {
   PATH_add "$PWD/vendor/bin"
   PATH_add bin
 }
-
-########
-# Node #
-########
-
-# From https://github.com/direnv/direnv/wiki/Node
-
-# Usage: use nvm version-string
-
-use_nvm() {
-  local node_version=$1
-
-  nvm_sh=~/.nvm/nvm.sh
-  if [[ -e $nvm_sh ]]; then
-    source $nvm_sh
-    nvm use $node_version
-  fi
-}
-
 
 #######
 # Nix #
@@ -284,10 +206,6 @@ if ! validateVersion; then
 	echo "This .envrc requires direnv version 2.18.2 or above."
 	exit 1
 fi
-
-# ASDF Integration -->
-# https://github.com/asdf-community/asdf-direnv
-source "$(asdf direnv hook asdf)"
 
 # Local Variables:
 # mode: sh

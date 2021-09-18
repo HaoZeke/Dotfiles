@@ -30,19 +30,6 @@ export PATH="$PATH:$HOME/.local/bin/installHelpers"
 export PATH="$PATH:$HOME/.local/bin/shellHelpers"
 export PATH="$PATH:$HOME/.local/bin/webHelpers"
 
-# NVM is now handled by zsh-nvm
-
-# Fixes python venvs
-# curl https://pyenv.run | bash
-export WORKON_HOME=~/.venvs
-export PATH="$HOME/.pyenv/bin:$PATH"
-if which pyenv >/dev/null 2>&1; then
-    eval "$(pyenv init -)"
-    eval "$(pyenv virtualenv-init -)"
-else
-	echo "You seem to be missing pyenv"
-fi
-
 # Go Paths
 ###########
 
