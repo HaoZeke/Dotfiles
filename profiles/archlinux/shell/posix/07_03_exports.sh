@@ -1,9 +1,6 @@
 # Exports
 ###########
 
-# NPM Stuff (not needed with nvm)
-# export npm_config_prefix=~/.node_modules
-
 # Horrible hack for themes to work
 # export XDG_CURRENT_DESKTOP=KDE
 

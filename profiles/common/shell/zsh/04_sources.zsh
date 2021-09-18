@@ -15,8 +15,6 @@ zinit snippet OMZ::plugins/common-aliases/common-aliases.plugin.zsh
 zinit ice silent wait"0"
 zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
 # Handlers
-# zinit snippet OMZ::plugins/pyenv
-# zinit snippet OMZ::plugins/rbenv
 zinit snippet OMZ::plugins/asdf
 
 # Colors and Highlighting
@@ -35,10 +33,6 @@ zinit ice proto'git' pick'ssh-agent.zsh'
 zinit light "bobsoppe/zsh-ssh-agent"
 zinit light "zdharma/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
-
-# Manage NVM better (needs settings before being loaded)
-export NVM_LAZY_LOAD=true
-zinit light "lukechilds/zsh-nvm"
 
 # Completions
 zinit ice blockf
