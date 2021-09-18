@@ -103,6 +103,7 @@ in {
     rustup
     # rbenv # better off with brew
     # Languages
+    nasm # assembly
     # nim # broken
     # R # broken for now
     # V8 # Javascript
