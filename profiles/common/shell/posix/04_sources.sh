@@ -26,3 +26,13 @@ fi
 
 # For ssh-add
 eval $(ssh-agent) >/dev/null 2>&1
+
+# Language Management
+######################
+if [[ ! -d ~/.asdf ]]; then
+    mkdir ~/.asdf
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf
+fi
+
+export ASDF_DATA_DIR="~/.config/asdf/data"
+export ASDF_CONFIG_FILE="~/.config/asdf/asdfrc"

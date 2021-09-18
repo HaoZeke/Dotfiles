@@ -17,6 +17,7 @@ zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
 # Handlers
 # zinit snippet OMZ::plugins/pyenv
 # zinit snippet OMZ::plugins/rbenv
+zinit snippet OMZ::plugins/asdf
 
 # Colors and Highlighting
 zinit light "zdharma/fast-syntax-highlighting"
