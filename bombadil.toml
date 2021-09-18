@@ -59,6 +59,9 @@ rangerrc =  { source = "common/.config/ranger/myranger.cfg", target = ".config/r
 riflerrc =  { source = "common/.config/ranger/rifle.cfg", target = ".config/ranger/rifle.cfg" }
 pistolrrc =  { source = "common/.config/pistol/pistol.conf", target = ".config/pistol/pistol.conf" }
 
+# Direnv
+direnvrc =  { source = "common/.config/direnv/direnvrc", target = ".config/direnv/direnvrc" }
+
 # LaTeX
 latexmkrrc =  { source = "common/.latexmkrc", target = ".latexmkrc" }
 
