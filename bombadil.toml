@@ -58,7 +58,8 @@ rangerrc =  { source = "common/.config/ranger/myranger.cfg", target = ".config/r
 riflerrc =  { source = "common/.config/ranger/rifle.cfg", target = ".config/ranger/rifle.cfg" }
 pistolrrc =  { source = "common/.config/pistol/pistol.conf", target = ".config/pistol/pistol.conf" }
 
-# Direnv
+# ASDF + Direnv
+asdfrc =  { source = "common/.config/asdf/asdfrc", target = ".config/asdf/asdfrc" }
 direnvrc =  { source = "common/.config/direnv/direnvrc", target = ".config/direnv/direnvrc" }
 
 # LaTeX
