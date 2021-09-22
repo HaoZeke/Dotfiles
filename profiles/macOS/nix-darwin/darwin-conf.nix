@@ -159,10 +159,10 @@ in {
   # Services #
   ############
   # gpg #
-  programs.gnupg.agent = {
-    enable = true;
-    enableSSHSupport = true;
-      };
+  # programs.gnupg.agent = {
+  #   enable = true;
+  #   enableSSHSupport = true;
+  #     };
 
   # Strongly kanged from https://github.com/xanderle/config/blob/main/darwin-configuration.nix
   # SKHD #
