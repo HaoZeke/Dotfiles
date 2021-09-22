@@ -2,7 +2,7 @@
 # Activation Scripts #
 ######################
 # Misc.
-eval "$(asdf exec direnv hook zsh)"
+eval "$(asdf exec direnv hook bash)"
 direnv() { asdf exec direnv "$@"; }
 
 # Rust
