@@ -102,6 +102,7 @@ rgmacbook_karabiner_hc = { source = "macOS/rgmacbook/keyboard/karabiner/hyper_ca
 rgmacbook_hs_init = { source = "macOS/rgmacbook/hammerspoon/init.lua", target = ".hammerspoon/init.lua" }
 rgmacbook_spotifyd_init = { source = "macOS/rgmacbook/spotifyd/spotifyd.conf", target = ".config/spotifyd/spotifyd.conf" }
 rgmacbook_script_alerter = { source = "macOS/rgmacbook/scripts/spotinotify.sh", target = ".local/bin/spotinotify.sh" }
+rgmacbook_gnupg_gpga = { source = "macOS/rgmacbook/gnupg/gpg-agent.conf", target = ".gnupg/gpg-agent.conf" }
 
 
 ###########

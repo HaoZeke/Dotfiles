@@ -5,7 +5,7 @@ terminal = "alacritty"
 machine_type = "universal-darwin"
 
 # Program paths
-gpg_path = "/usr/local/bin/gpg" # brew
+gpg_path = "/run/current-system/sw/bin/gpg" # nix-shell
 xauth_loc = "/opt/X11/bin/xauth" # XQuartz
 
 ################
