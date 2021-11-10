@@ -136,6 +136,10 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
     # Note: workspaces can have any name you want, not just numbers.
     # We just use 1-10 as the default.
 
+# Move workspace to other monitor (left right is essentially the same with two
+# monitors)
+bindsym $mod+Shift+m move workspace to output right
+
 #
 # Layout stuff:
 #
