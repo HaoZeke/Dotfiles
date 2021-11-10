@@ -18,7 +18,7 @@ zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
 zinit snippet OMZ::plugins/asdf
 
 # Colors and Highlighting
-zinit light "zdharma/fast-syntax-highlighting"
+zinit light "zdharma-continuum/fast-syntax-highlighting"
 zinit light "zlsun/solarized-man"
 
 # Nix shell
@@ -31,7 +31,7 @@ zinit light "changyuheng/zsh-interactive-cd"
 zinit light "mollifier/cd-gitroot"
 zinit ice proto'git' pick'ssh-agent.zsh'
 zinit light "bobsoppe/zsh-ssh-agent"
-zinit light "zdharma/history-search-multi-word"
+zinit light "zdharma-continuum/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
 
 # Completions
