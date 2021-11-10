@@ -221,3 +221,58 @@ bindsym $mod+r mode "resize"
 # }
 
 include /etc/sway/config.d/*
+# output eDPI-1 scale 1
+# xwayland scale 3
+# Wiki
+input * {
+        xkb_layout "us"
+	xkb_variant "colemak"
+#   xkb_layout "colemak"
+	}
+
+input "1739:0:Synaptics_TM3289-021" {
+        natural_scroll enabled
+	tap enabled
+}
+
+# here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
+xwayland force scale 2
+exec xsettingsd
+# Here: https://www.reddit.com/r/swaywm/comments/p9ah2v/completely_hide_mouse_pointer_wayland/
+seat seat0 hide_cursor 1000
+bar {
+    status_command    eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_top.toml
+    position          top
+    workspace_buttons yes
+    tray_output       eDP-1
+    font pango:DejaVu Sans Mono, FontAwesome 12
+
+    colors {
+        separator #666666
+        background #222222
+        statusline #dddddd
+        focused_workspace #0088CC #0088CC #ffffff
+        active_workspace #333333 #333333 #ffffff
+        inactive_workspace #333333 #333333 #888888
+        urgent_workspace #2f343a #900000 #ffffff
+    }
+}
+
+
+bar {
+    status_command   eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_bottom.toml
+    position          bottom
+    workspace_buttons no
+    tray_output none
+    font pango:DejaVu Sans Mono, FontAwesome 12
+
+    colors {
+        separator #666666
+        background #222222
+        statusline #dddddd
+        focused_workspace #0088CC #0088CC #ffffff
+        active_workspace #333333 #333333 #ffffff
+        inactive_workspace #333333 #333333 #888888
+        urgent_workspace #2f343a #900000 #ffffff
+    }
+}
