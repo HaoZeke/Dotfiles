@@ -74,6 +74,10 @@ zathuratheme = { source = "common/.config/zathura/zathuraThemerc", target = ".co
 tridactylrc = { source = "common/browsers/firefox/tridactyl/tridactylrc", target = ".config/tridactyl/tridactylrc" }
 tridactylodark = { source = "common/browsers/firefox/tridactyl/base16-onedark.css", target = ".config/tridactyl/themes/base16-onedark.css" }
 
+# Shouldn't be done this way
+# Sway #
+swayrc = { source = "wayland/sway/config", target = ".config/sway/config" }
+
 #########
 # MacOS #
 #########
