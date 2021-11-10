@@ -10,9 +10,9 @@
 set $mod Mod4
 # Home row direction keys, like vim
 set $left h
-set $down j
-set $up k
-set $right l
+set $down n
+set $up e
+set $right i
 # Your preferred terminal emulator
 set $term foot
 # Your preferred application launcher
