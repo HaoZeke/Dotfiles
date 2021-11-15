@@ -170,6 +170,7 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
     # If there are multiple scratchpad windows, this command cycles through them.
     # This is now $mod+*
     bindsym $mod+minus scratchpad show
+
 #
 # Resizing containers:
 #
@@ -202,6 +203,11 @@ bindsym $mod+r mode "resize"
 
 # Notification daemon
 exec_always mako
+
+# Moves the external screen to the right
+# swaymsg output eDP-1 pos 1600 0 res 1920x1080
+# The scaling is because of the DPI stuff
+# Swap 1600 and 0 to get the screen on the relative left
 
 include /etc/sway/config.d/*
 include $XDG_CONFIG_HOME/sway/conf.d/*
