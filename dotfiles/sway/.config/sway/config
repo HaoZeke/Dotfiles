@@ -204,11 +204,19 @@ bindsym $mod+r mode "resize"
 # Notification daemon
 exec_always mako
 
+# Faster thunar
+exec thunar --daemon
+# Sync stuff
+exec insync start
+
+# Window rules
+for_window [instance="^telegram-desktop$"] border none
+
 # Moves the external screen to the right
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080
 # The scaling is because of the DPI stuff
 # Swap 1600 and 0 to get the screen on the relative left
 
 include /etc/sway/config.d/*
-include $XDG_CONFIG_HOME/sway/conf.d/*
-include $XDG_CONFIG_HOME/sway/conf.d/**/*
+include $HOME/.config/sway/conf.d/*
+include $HOME/.config/sway/conf.d/**/*
