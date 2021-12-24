@@ -52,9 +52,9 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
  bindsym XF86MonBrightnessUp exec brightnessctl set +5%
  
 # Gaps
-# smart_gaps on
-# gaps outer 0
-# gaps inner 5
+smart_gaps on
+gaps outer 0
+gaps inner 5
 
 ### Key bindings
 #
