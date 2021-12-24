@@ -17,7 +17,7 @@ fi
 
 if [[ "$filepath" == "clipboard" ]]; then
     echo "Copying image to the primary clipboard"
-    slurp | grim -g - - | xclip -selection clipboard -t image/png -i
+    slurp | grim -g - | wl-copy
     exit 0
 fi
 

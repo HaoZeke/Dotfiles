@@ -20,6 +20,7 @@ set $term foot
 # on the original workspace that the command was run on.
 #set $menu dmenu_path | dmenu | xargs swaymsg exec --
 set $menu rofi -show combi -show-icons -combi-modi "drun,run" -modi combi # | xargs swaymsg exec --
+set $screenshotTask slurp | grim -g - - | wl-copy
 
 ### Output configuration
 #
@@ -139,6 +140,9 @@ output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 # Move workspace to other monitor (left right is essentially the same with two
 # monitors)
 bindsym $mod+Shift+m move workspace to output right
+
+# Screenshot
+bindsym $mod+o exec $screenshotTask
 
 #
 # Layout stuff:
