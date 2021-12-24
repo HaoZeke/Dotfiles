@@ -243,7 +243,7 @@ input "1739:0:Synaptics_TM3289-021" {
 
 # here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
 output eDPI-1 scale 2
-xwayland force scale 2
+# xwayland force scale 2
 exec xsettingsd
 # Here: https://www.reddit.com/r/swaywm/comments/p9ah2v/completely_hide_mouse_pointer_wayland/
 seat seat0 hide_cursor 1000
