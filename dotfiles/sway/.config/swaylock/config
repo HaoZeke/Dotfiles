@@ -1,3 +1,13 @@
+# This needs swaylock-effects
+# https://github.com/mortie/swaylock-effects
+clock
+show-failed-attempts
+daemonize
+ignore-empty-password
+indicator-caps-lock
+grace-no-mouse
+grace-no-touch
+effect-blur=2x3
 image=~/Pictures/Walls/lockscreen.png
 scaling=stretch
-daemonize
+font=SourceCodePro
