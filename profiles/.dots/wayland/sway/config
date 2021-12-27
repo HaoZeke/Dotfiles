@@ -19,8 +19,9 @@ set $term foot
 # Note: pass the final command to swaymsg so that the resulting window can be opened
 # on the original workspace that the command was run on.
 #set $menu dmenu_path | dmenu | xargs swaymsg exec --
-set $menu rofi -show combi -show-icons -combi-modi "drun,run" -modi combi # | xargs swaymsg exec --
+set $menu rofi -show # combi -show-icons -combi-modi "drun,run" -modi combi # | xargs swaymsg exec --
 set $screenshotTask slurp | grim -g - - | wl-copy
+set $lockManager "xss-lock -- ~/.local/bin/i3LockHelper"
 
 ### Output configuration
 #
@@ -146,6 +147,10 @@ bindsym $mod+Shift+m move workspace to output right
 
 # Screenshot
 bindsym $mod+o exec $screenshotTask
+
+# Notification management (dunst)
+bindsym ctrl+space exec dunstctl close
+bindsym ctrl+Shift+space exec dunstctl close-all
 
 #
 # Layout stuff:
@@ -289,8 +294,15 @@ bar {
 
 # Faster thunar
 exec thunar --daemon
+
+# Notifications
+exec_always dunst
+
 # Sync stuff
 exec insync start
+
+# Listen to lock events
+exec --no-startup-id $lockManager
 
 include $HOME/.config/sway/conf.d/*
 include $HOME/.config/sway/conf.d/**/*
