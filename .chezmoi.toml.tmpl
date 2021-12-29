@@ -1,0 +1,18 @@
+# Email
+{{- $email := "" -}}
+{{- if (hasKey . "email") -}}
+{{-   $email = .email -}}
+{{- else -}}
+{{-   $email = promptString "email" -}}
+{{- end -}}
+# Display manager
+{{- $display_manager := "" -}}
+{{- if (hasKey . "display_manager") -}}
+{{-   $display_manager = .display_manager -}}
+{{- else -}}
+{{-   $display_manager = promptString "display_manager" -}}
+{{- end -}}
+
+[data]
+    email = {{ $email | quote }}
+    display_manager = {{ $display_manager | quote }}
