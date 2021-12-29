@@ -1,0 +1,6 @@
+* About
+For historical purposes, the older versions of my Dotfiles are
+retained as branches. However, the ~chezmoi~ approach is current.
+
+A key understanding of the workflow here is that Dotfiles should be
+per machine, and not generically per configuration.

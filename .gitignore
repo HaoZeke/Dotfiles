@@ -1,0 +1,15 @@
+vim/plugged
+vim/.netrwhist
+*.cache
+Sublime Text 3/Settings/Package Control.cache
+Thunar/accels.scm
+Thunar/renamerrc
+Sublime Text 3/Settings/Package Control.last-run
+Sublime Text 3/Settings/Package Control.ca-list
+Sublime Text 3/Settings/Package Control.ca-bundle
+Sublime Text 3/Settings/Package Control.system-ca-bundle
+Sublime Text 3/Settings/Package Control.cache
+Sublime Text 3/Settings/Package Control.ca-certs
+dmz
+*#*
+*:
