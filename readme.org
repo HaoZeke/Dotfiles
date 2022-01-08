@@ -4,3 +4,9 @@ retained as branches. However, the ~chezmoi~ approach is current.
 
 A key understanding of the workflow here is that Dotfiles should be
 per machine, and not generically per configuration.
+
+** Usage
+Note that the ~chezmoi init~ command needs to be run twice, to grab some sensitive information which needs the encryption settings, as [[https://github.com/twpayne/chezmoi/pull/1521#issuecomment-940840570][discussed here]].
+
+* License
+MIT.
