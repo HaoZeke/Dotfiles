@@ -1,5 +1,7 @@
 {{ if ne .chezmoi.os "darwin" }}
 encrypted_chezmoi_darwin.toml.asc
+*hammerspoon
+*karabiner
 {{ end }}
 {{ if ne .chezmoi.os "linux" }}
 encrypted_chezmoi_toml_linux
