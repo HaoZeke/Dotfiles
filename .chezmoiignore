@@ -1,0 +1,10 @@
+{{ if ne .chezmoi.os "darwin" }}
+encrypted_chezmoi_darwin.toml.asc
+{{ end }}
+{{ if ne .chezmoi.os "linux" }}
+encrypted_chezmoi_toml_linux
+**/sway/*
+{{ end }}
+readme.org
+todo.org
+LICENSE
