@@ -1,10 +1,11 @@
 [user]
     name = Rohit Goswami
-    email = rog32@hi.is
+    email = rog32@hi.is # If encrypted: {{ if eq .encrypted "yes" }}
 	signingkey = 9CCCE36402CB49A6
 
 [commit]
     gpgsign = true
+# End encrypted {{ end }}
 
 [init]
 	defaultBranch = main
@@ -17,10 +18,12 @@
 
 [alias]
     mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
-{{ if eq .chezmoi.os "darwin" }}
+
+# MacOS only {{ if eq .chezmoi.os "darwin" }}
 [gpg]
 	program = /usr/local/MacGPG2/bin/gpg2
-{{ end }}
+# End MacOS {{ end }}
+
 [core]
 	# false ignores permissions changes
 	filemode = false
