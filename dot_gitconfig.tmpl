@@ -21,6 +21,10 @@
 [gpg]
 	program = /usr/local/MacGPG2/bin/gpg2
 {{ end }}
+[core]
+	# false ignores permissions changes
+	filemode = false
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: gitconfig
