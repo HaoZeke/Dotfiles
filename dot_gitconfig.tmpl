@@ -28,6 +28,27 @@
 	# false ignores permissions changes
 	filemode = false
 
+# Pretty outputs
+# https://github.com/dandavison/delta
+[pager]
+        diff = delta
+        log = delta
+        reflog = delta
+        show = delta
+
+[interactive]
+        diffFilter = delta --color-only --features=interactive
+
+[delta]
+        features = side-by-side line-numbers decorations dark
+        plus-style = syntax "#003800"
+        minus-style = syntax "#3f0001"
+        syntax-theme = Monokai Extended
+        navigate = true
+
+[delta "interactive"]
+    keep-plus-minus-markers = false
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: gitconfig
