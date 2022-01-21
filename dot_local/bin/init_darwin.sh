@@ -1,3 +1,5 @@
+#!/usr/bin/env sh
+
 # Helpers
 chck() { command -v $1 > /dev/null && echo $? }
 
@@ -28,13 +30,6 @@ for item in "$@"; do
     fi;
 done
 
-# Git Additions
-# git-delta : https://dandavison.github.io/delta/installation.html
-# TODO: Rust tools should be managed via rustup and cargo
-command -v delta > /dev/null || { \
-    brew install git-delta \
-}
-
 # Silver searcher
 command -v ag > /dev/null || { \
     brew install the_silver_searcher \
@@ -48,3 +43,13 @@ command -v zathura > /dev/null || { \
     mkdir -p $(brew --prefix zathura)/lib/zathura  && \
     ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib \
 }
+
+# Common includes
+# Rust has a unified installer, for MacOS and Linux
+# TODO: Handle Windows
+{{ include ".local/bin/init_rust.sh" }}
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
