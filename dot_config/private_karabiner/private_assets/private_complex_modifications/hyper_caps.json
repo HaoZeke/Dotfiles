@@ -1,0 +1,68 @@
+{
+  "title": "CAPS to fake hyper (f19) and Shift CAPS",
+  "rules": [
+    {
+      "description": "CAPS_LOCK : (HYPER)",
+      "manipulators": [
+        {
+          "from": {
+            "key_code": "caps_lock",
+            "modifiers": {
+              "optional": ["any"]
+            }
+          },
+          "to":
+            {
+              "key_code": "f19"
+            },
+          "type": "basic"
+        }
+      ]
+    },
+    {
+      "description": "Toggle CAPS_LOCK with LEFT_SHIFT + RIGHT_SHIFT",
+      "manipulators": [
+        {
+          "from": {
+            "key_code": "left_shift",
+            "modifiers": {
+              "mandatory": ["right_shift"],
+              "optional": ["caps_lock"]
+            }
+          },
+          "to": [
+            {
+              "key_code": "caps_lock"
+            }
+          ],
+          "to_if_alone": [
+            {
+              "key_code": "left_shift"
+            }
+          ],
+          "type": "basic"
+        },
+        {
+          "from": {
+            "key_code": "right_shift",
+            "modifiers": {
+              "mandatory": ["left_shift"],
+              "optional": ["caps_lock"]
+            }
+          },
+          "to": [
+            {
+              "key_code": "caps_lock"
+            }
+          ],
+          "to_if_alone": [
+            {
+              "key_code": "right_shift"
+            }
+          ],
+          "type": "basic"
+        }
+      ]
+    }
+  ]
+}
