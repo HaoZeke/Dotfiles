@@ -26,15 +26,15 @@
 {{-   $encrypted = promptString "encrypted" -}}
 {{- end -}}
 [data]
-{{ if eq $encrypted "yes" }}encryption = "age"
+    email = {{ $email | quote }}
+    name = {{ $name | quote }}
+    display_manager = {{ $display_manager | quote }}
+{{ if eq $encrypted "yes" }}    encrypted = "yes"{{ end }}
+{{ if eq $encrypted "yes" }}    encryption = "age"
 [age]
     identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
     recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
 {{ end }}
-    email = {{ $email | quote }}
-    name = {{ $name | quote }}
-{{ if eq $encrypted "yes" }}    encrypted = "yes"{{ end }}
-    display_manager = {{ $display_manager | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 
