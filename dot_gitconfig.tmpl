@@ -1,0 +1,64 @@
+[user]
+    name = Rohit Goswami
+    email = rog32@hi.is # If encrypted: {{ if eq .encrypted "yes" }}
+	signingkey = 9CCCE36402CB49A6
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgsign = true
+# End encrypted {{ end }}
+
+# Merge commits by default
+[pull]
+	rebase = false
+
+# Politically correct
+[init]
+	defaultBranch = main
+
+# MacOS only {{ if eq .chezmoi.os "darwin" }}
+[gpg]
+	program = /usr/local/MacGPG2/bin/gpg2
+# End MacOS {{ end }}
+
+[core]
+	# false ignores permissions changes
+	filemode = false
+
+# Pretty outputs
+# https://github.com/dandavison/delta
+[pager]
+        diff = delta
+        log = delta
+        reflog = delta
+        show = delta
+
+[interactive]
+        diffFilter = delta --color-only --features=interactive
+
+[delta]
+        features = side-by-side line-numbers decorations dark
+        plus-style = syntax "#003800"
+        minus-style = syntax "#3f0001"
+        syntax-theme = Monokai Extended
+        navigate = true
+
+[delta "interactive"]
+    keep-plus-minus-markers = false
+
+# Keys over passwords
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+
+[url "git@gitlab.com:"]
+	insteadOf = https://gitlab.com/
+
+[alias]
+    mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: gitconfig
+# End:
