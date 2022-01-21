@@ -1,4 +1,5 @@
 {{ if ne .chezmoi.os "darwin" }}
+dot_local/bin/init_darwin.sh
 encrypted_chezmoi_darwin.toml.asc
 *hammerspoon
 *karabiner
