@@ -46,5 +46,5 @@ command -v zathura > /dev/null || { \
     brew tap zegervdv/zathura && \
     brew install zathura-pdf-mupdf && \
     mkdir -p $(brew --prefix zathura)/lib/zathura  && \
-    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib  && \
+    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib \
 }
