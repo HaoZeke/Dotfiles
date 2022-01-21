@@ -14,7 +14,7 @@ command -v brew > /dev/null || { \
 brew install git gh \
     termux openssh openssl \
     mosh ssh-copy-id \
-    aria2c wget tree \
+    aria2c wget tree fzf \
     wakatime-cli neofetch \
     gfortran gcc borg yq
 

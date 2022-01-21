@@ -15,7 +15,8 @@ command -v rustc > /dev/null || { \
 # No OpenSSL + Requires OpenSSL/OpenSSH
 set -- "bottom" "ripgrep" "hyperfine" "skim" "mcfly" \
     "bat" "exa" "fd-find" "tealdeer" "starship" "sd" \
-    "procs" "zoxide" "bliss" "git-delta"
+    "procs" "zoxide" "bliss" "git-delta" "watchexec-cli" \
+    "du-dust"
 for item in "$@"; do
     cargo install $item;
 done
