@@ -12,9 +12,9 @@ command -v brew > /dev/null || { \
 # Basics
 # Always grab these, just in case
 brew install git gh \
-    termux openssh openssl \
+    termius openssh openssl \
     mosh ssh-copy-id \
-    aria2c wget tree fzf \
+    aria2 wget tree fzf \
     wakatime-cli neofetch \
     gfortran gcc borg yq
 
@@ -30,6 +30,11 @@ for item in "$@"; do
     fi;
 done
 
+# Casks
+brew bundle --no-lock --file=/dev/stdin <<EOF
+cask "tabby"
+EOF
+
 # Silver searcher
 command -v ag > /dev/null || { \
     brew install the_silver_searcher ; \
@@ -41,8 +46,8 @@ command -v zathura > /dev/null || { \
     brew tap zegervdv/zathura && \
     brew install zathura-pdf-mupdf && \
     mkdir -p $(brew --prefix zathura)/lib/zathura  && \
-    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib \
-;}
+    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib ;\
+}
 
 # Common includes
 # Rust has a unified installer, for MacOS and Linux
