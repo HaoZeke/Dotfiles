@@ -16,7 +16,7 @@ brew install git gh \
     mosh ssh-copy-id \
     aria2 wget tree fzf \
     wakatime-cli neofetch \
-    gfortran gcc borg yq
+    gfortran gcc borgbackup yq
 
 # Encryption + TeX
 set -- "brew" "age" "gpg-tui" \
@@ -30,7 +30,7 @@ for item in "$@"; do
     fi;
 done
 
-# Casks
+# Bundle, mostly casks
 brew bundle --no-lock --file=/dev/stdin <<EOF
 cask "tabby"
 EOF
