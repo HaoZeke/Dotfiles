@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 
 # Helpers
-chck() { command -v $1 > /dev/null && echo $? }
+chck() { command -v $1 > /dev/null && echo $? ; }
 
 # Brew
 command -v brew > /dev/null || { \
     echo "Homebrew not found, installing"  &&  \
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
-}
+;}
 
 # Basics
 # Always grab these, just in case
@@ -32,7 +32,7 @@ done
 
 # Silver searcher
 command -v ag > /dev/null || { \
-    brew install the_silver_searcher \
+    brew install the_silver_searcher ; \
 }
 
 # Zathura
@@ -42,7 +42,7 @@ command -v zathura > /dev/null || { \
     brew install zathura-pdf-mupdf && \
     mkdir -p $(brew --prefix zathura)/lib/zathura  && \
     ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib \
-}
+;}
 
 # Common includes
 # Rust has a unified installer, for MacOS and Linux

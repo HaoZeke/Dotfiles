@@ -3,12 +3,12 @@
 # Installer
 command -v rustup > /dev/null || { \
     echo "Installing rustup" && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh ; \
 }
 
 # Grab the nightly
 command -v rustc > /dev/null || { \
-    rustup install nightly \
+    rustup install nightly; \
 }
 
 # Install things
