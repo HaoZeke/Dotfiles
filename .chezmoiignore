@@ -1,10 +1,12 @@
 {{ if ne .chezmoi.os "darwin" }}
+# These are only to be placed on darwin
 dot_local/bin/init_darwin.sh
 encrypted_chezmoi_darwin.toml.asc
 *hammerspoon
 *karabiner
 {{ end }}
 {{ if ne .chezmoi.os "linux" }}
+# Only on linux
 encrypted_chezmoi_toml_linux
 **/sway/*
 {{ end }}
@@ -12,6 +14,7 @@ encrypted_chezmoi_toml_linux
 readme.org
 todo.org
 LICENSE
+# These are essentially templates
 
 # Local Variables:
 # mode: gitignore
