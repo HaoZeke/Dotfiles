@@ -31,7 +31,7 @@ for item in "$@"; do
 done
 
 # Bundle, mostly casks
-brew bundle --no-lock --file=/dev/stdin <<EOF
+brew bundle --force --file=/dev/stdin <<EOF
 # Taps
 tap "homebrew/core"
 tap "homebrew/bundle"
