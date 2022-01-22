@@ -57,7 +57,13 @@
 
 [alias]
     mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
-
+	# Kanged: https://github.com/alrra/dotfiles/blob/main/src/git/gitconfig
+	# https://help.github.com/en/articles/creating-a-commit-with-multiple-authors
+    credit-co-author = "!f() { \
+        if [ -n \"$1\" ] && [ -n \"$2\" ]; then \
+            GIT_EDITOR=\"git interpret-trailers --in-place --trailer='Co-authored-by: 1<2>'\" git commit --amend; \
+        fi \
+    }; f"
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: gitconfig
