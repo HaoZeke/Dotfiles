@@ -52,7 +52,7 @@ command -v zathura > /dev/null || { \
 # Common includes
 # Rust has a unified installer, for MacOS and Linux
 # TODO: Handle Windows
-{{ include ".local/bin/init_rust.sh" }}
+{{- include "dot_local/bin/executable_init_rust.sh" -}}
 
 # Emacs Stuff (cross platform)
 # Local Variables:
