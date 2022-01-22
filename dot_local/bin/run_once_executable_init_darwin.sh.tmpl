@@ -12,7 +12,7 @@ command -v brew > /dev/null || { \
 # Basics
 # Always grab these, just in case
 brew install git gh \
-    termius openssh openssl \
+    openssh openssl \
     mosh ssh-copy-id \
     aria2 wget tree fzf \
     wakatime-cli neofetch \
@@ -32,7 +32,107 @@ done
 
 # Bundle, mostly casks
 brew bundle --no-lock --file=/dev/stdin <<EOF
+# Taps
+tap "homebrew/core"
+tap "homebrew/bundle"
+tap "homebrew/cask" # GUI applications
+tap "homebrew/cask-versions" # Alternates
+tap "homebrew/services" # Integrates with launctl
+tap "homebrew/cask-fonts" # Fonts
+tap "buo/cask-upgrade" # Provides brew cu
+
+# Encryption
+cask "enpass"
+cask "cryptomator"
+cask "keybase"
+cask "authy"
+
+# Tools
+cask "keka" # Archiver
+cask "hammerspoon" # System Control
+cask "karabiner-elements" # Keyboard
+cask "qview" # Image viewer
+cask "alfred" # Launcher
+brew "tailscale" # Local network
+cask "windscribe" # VPN
+cask "oversight" # Monitor cam/mic
+cask "tomighty" # Pomodoro
+brew "mas" # Mac App Store CLI
+
+# Editors / Notes
+cask "obsidian"
+cask "journey"
+cask "visual-studio-code"
+brew "neovim"
+
+# Development
+mas 'Xcode', id: 497799835
+cask "docker" # Dev environments
+
+# Personal Comm
+cask "telegram-desktop"
+cask "whatsapp"
+cask "zoomus"
+cask "mailmate"
+
+# Work Comm
+mas 'Slack', id: 803453959
+cask "zulip"
+cask "microsoft-teams"
+cask "element"
+cask "discord"
+
+# Terminals
 cask "tabby"
+cask "alacritty"
+brew "termius"
+
+# Research
+cask "zotero"
+
+# Readers
+cask "remarkable"
+cask "calibre"
+
+# Trackers
+cask "rescuetime"
+cask "toggl-track"
+
+# Browsers
+cask "firefox-developer-edition"
+cask "google-chrome"
+
+# Backup
+cask "resilio-sync"
+cask "insync"
+
+# Media
+cask "spotify"
+cask "plex-media-player"
+cask "smplayer"
+
+# Media Editing
+cask "obs"
+cask "losslesscut"
+cask "keycastr"
+
+# Fonts
+brew "fontconfig"
+cask "font-fontawesome"
+cask "font-devicons"
+cask "font-eb-garamond"
+
+# Cascadia Code
+cask "font-cascadia-code"
+cask "font-cascadia-code-pl"
+cask "font-cascadia-mono"
+cask "font-cascadia-mono-pl"
+
+# NerdFonts
+cask "font-caskaydia-cove-nerd-font"
+cask "font-hack-nerd-font"
+cask "font-fira-mono-nerd-font"
+
 EOF
 
 # Silver searcher
