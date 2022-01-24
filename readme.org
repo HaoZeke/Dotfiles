@@ -5,6 +5,11 @@ retained as branches. However, the ~chezmoi~ approach is current.
 A key understanding of the workflow here is that Dotfiles should be
 per machine, and not generically per configuration.
 
+By leveraging template substitution, conditionals can be eliminated from the
+actual shell scripts, which allows for a faster shell. This does come at the
+cost of portability, without the backing ~chezmoi~ machinery, the scripts are no
+longer very portable.
+
 ** Usage
 To get started, we need:
 #+begin_src bash
