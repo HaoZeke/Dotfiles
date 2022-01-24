@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# macOS {{ if eq .chezmoi.os "darwin" }}
+
+if command -v aria2c >/dev/null 2>&1; then
+  nix-env -iA cachix -f https://cachix.org/api/v1/install
+  cachix use gccemacs-darwin
+  nix-env -iA emacsGccDarwin -f https://github.com/twlz0ne/nix-gccemacs-darwin/archive/master.zip
+else
+  echo "nix wasn't found, re-run later"
+fi
+
+# End {{ end }}
+
+# References
+# [1] https://github.com/twlz0ne/nix-gccemacs-darwin
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
