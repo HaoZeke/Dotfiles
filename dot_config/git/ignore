@@ -1,5 +1,42 @@
+# https://git-scm.com/docs/gitignore
+# Typically these are no subsititue for a project .gitignore These are meant to
+# be kept short since the behavior becomes increasingly less reproducible
+# A real scenario where these are useful is when dealing with projects where
+# full control to freely update the .gitignore file is not present
+
+# Project stuff
+yarn.lock
+package-lock.json
 .yarn/
 .tmp*/
 .*.*
 .yarnrc.yml
 .pnp.cjs
+
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log
+*.swp
+*~
+
+# OS or Editor folders
+.DS_Store
+.cache
+
+# Folders to ignore
+.hg
+.svn
+
+# Node.js package manager
+/bower_components
+/node_modules
+/npm-debug.log
+
+# Other stuff
+*.pyc
+/tmp
+
+# References
+# [1] https://github.com/paulmillr/dotfiles/blob/master/home/.gitignore
