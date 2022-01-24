@@ -36,25 +36,25 @@
     email = {{ $email | quote }}
     name = {{ $name | quote }}
     display_manager = {{ $display_manager | quote }}
-{{ if eq $encrypted "yes" }}    encrypted = "yes"{{ end }}
-{{ if eq $encrypted "yes" }}    encryption = "age"
+    machine_name = {{ $machine_name | quote }}
+{{ if eq .chezmoi.os "darwin" }}
+   {{- $mmanager := "" -}}
+   {{- if (hasKey . "mmanager") -}}
+   {{-   $mmanager = .mmanager -}}
+   {{- else -}}
+   {{-   $mmanager = promptString "mmanager (brew, nix)" -}}
+   {{- end -}}
+# [data]
+    mmanager = {{ $mmanager | quote }}
+{{ end }}
+# Back to [data]
+{{ if eq $encrypted "yes" }}    encrypted = "yes"
+    encryption = "age"
 [age]
     identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
     recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
 {{ end }}
 
-{{ if eq .chezmoi.os "darwin" }}
-
-
-{{- $mmanager := "" -}}
-{{- if (hasKey . "mmanager") -}}
-{{-   $mmanager = .mmanager -}}
-{{- else -}}
-{{-   $mmanager = promptString "mmanager (brew, nix)" -}}
-{{- end -}}
-# [data]
-    mmanager = {{ $mmanager | quote }}
-{{ end }}
 [merge]
     command = "nvim"
     args = "-d"
