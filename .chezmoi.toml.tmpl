@@ -19,6 +19,13 @@
 {{-   $name = promptString "name" -}}
 {{- end -}}
 
+{{- $machine_name := "" -}}
+{{- if (hasKey . "machine_name") -}}
+{{-   $machine_name = .machine_name -}}
+{{- else -}}
+{{-   $machine_name = promptString "machine_name" -}}
+{{- end -}}
+
 {{- $encrypted := "" -}}
 {{- if (hasKey . "encrypted") -}}
 {{-   $encrypted = .encrypted -}}
