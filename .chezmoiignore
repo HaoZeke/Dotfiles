@@ -1,5 +1,6 @@
 {{ if ne .chezmoi.os "darwin" }}
 # These are only to be placed on darwin
+.config/shellrc/zsh.d/05_darwin.zsh
 dot_local/bin/init_darwin.sh
 encrypted_chezmoi_darwin.toml.asc
 *hammerspoon

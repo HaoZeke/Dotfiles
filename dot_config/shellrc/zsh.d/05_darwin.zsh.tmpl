@@ -1,0 +1,33 @@
+# This file will only be included on macOS machines, it is managed by a
+# conditional chezmoi symlink template
+# The main sections are:
+# - System configuration
+# - Aliases
+# - Exports
+
+# System Configuration
+########################
+MACHINE_ALIAS=""
+
+# Aliases
+##########
+
+# Remove all items safely, to Trash (`brew install trash`).
+[[ -z "$commands[trash]" ]] || alias rm='trash' 2>&1 > /dev/null
+
+# Exports
+###########
+
+export HOMEBREW_CACHE="$HOME/.cache/Homebrew"
+
+# Use bat instead of cat if possible
+[[ -z "$commands[bat]" ]] || export HOMEBREW_BAT=true
+
+# References
+# [1] https://github.com/paulmillr/dotfiles/blob/master/home/.zshrc.sh
+# [2] https://github.com/webpro/dotfiles/blob/master/macos/defaults.sh
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
