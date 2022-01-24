@@ -1,0 +1,36 @@
+# Readline bindings
+# Note that zsh uses ZLE and ignores this
+# For places where this is sourced from see References at the bottom
+
+# Case insensitive completion
+set completion-ignore-case on
+
+# Hyphens and underscores are the same
+set completion-map-case on
+
+# Display matches for ambiguous patterns at first tab press
+set show-all-if-ambiguous on
+
+# Immediately add a trailing slash when autocompleting symlinks to directories
+set mark-symlinked-directories on
+
+# Do not autocomplete hidden files unless the pattern explicitly begins with a dot
+set match-hidden-files off
+
+# Show extra file information when completing, like `ls -F` does
+set visible-stats on
+
+# Be more intelligent when autocompleting by also looking at the text after
+# the cursor. For example, when the current line is "cd ~/src/mozil", and
+# the cursor is on the "z", pressing Tab will not autocomplete it to "cd
+# ~/src/mozillail", but to "cd ~/src/mozilla". (This is supported by the
+# Readline used by Bash 4.)
+set skip-completed-text on
+
+# Allow UTF-8 input and output, instead of showing stuff like $'\0123\0456'
+set input-meta on
+set output-meta on
+set convert-meta off
+
+# References
+# [1] https://github.com/paulirish/dotfiles/blob/master/.inputrc
