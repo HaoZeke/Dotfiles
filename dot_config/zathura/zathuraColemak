@@ -1,0 +1,58 @@
+##########
+# Normal #
+##########
+# Normal mode is the default
+
+# hjkl →  hnei
+map h scroll left
+map n scroll down
+map e scroll up
+map i scroll right
+
+map N scroll half-down
+map E scroll half-up
+
+map k search forward
+map K search backward
+
+map <PageUp> navigate previous
+map <PageDown> navigate next
+
+# Harmonize with Emacs
+unmap o
+map o toggle_index
+
+# Quit with intent
+unmap q
+map Q quit
+
+#########
+# Index #
+#########
+# For TOC navigation
+map [index] o toggle_index
+
+# hjkl →  hnei
+map [index] n navigate_index down
+map [index] e navigate_index up
+map [index] h navigate_index collapse
+map [index] i navigate_index expand
+
+map [index] H navigate_index collapse-all
+map [index] I navigate_index expand-all
+
+unmap [index] q
+map [index] Q quit
+
+##############
+# References #
+##############
+# https://github.com/pwmt/zathura/blob/develop/doc/man/zathurarc.5.rst
+# https://github.com/igwan/dotfiles/blob/66d9eee0ffe4e4f67dedbbc5a28167559cbfa056/zathura/.config/zathura/zathurarc
+# https://github.com/deterenkelt/dotfiles/blob/9674e4c974f0c2cb52302c36bcae7f3cfa4aa3d5/.config/zathura/zathurarc
+# https://wiki.archlinux.org/index.php/Zathura
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: conf-space
+# End:
