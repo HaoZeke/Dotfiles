@@ -163,12 +163,16 @@ command -v ag > /dev/null || { \
 
 # Zathura
 # https://github.com/zegervdv/homebrew-zathura
+# https://gist.github.com/agzam/76d761804330cc8c4600fccda952ed1c
 command -v zathura > /dev/null || { \
     brew tap zegervdv/zathura && \
-    brew install zathura-pdf-mupdf && \
+    brew install zathura-pdf-mupdf zathura-djvu zathura-cb zathura-ps && \
     mkdir -p $(brew --prefix zathura)/lib/zathura  && \
-    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib ;\
-}
+    ln -s $(brew --prefix zathura-pdf-mupdf)/libpdf-mupdf.dylib $(brew --prefix zathura)/lib/zathura/libpdf-mupdf.dylib && \
+    ln -s $(brew --prefix zathura-ps)/libps.dylib $(brew --prefix zathura)/lib/zathura/libps.dylib && \
+    ln -s $(brew --prefix zathura-djvu)/libdjvu.dylib $(brew --prefix zathura)/lib/zathura/libdjvu.dylib && \
+    ln -s $(brew --prefix zathura-cb)/libcb.dylib $(brew --prefix zathura)/lib/zathura/libcb.dylib \
+;}
 
 # Common includes
 # Rust has a unified installer, for MacOS and Linux
