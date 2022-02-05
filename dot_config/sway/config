@@ -325,7 +325,6 @@ exec --no-startup-id $lockManager
 # Window rules
 for_window [app_id="Telegram"] border none
 for_window [class="tabby"] border none
-for_window [class='Termius Beta'] border none
 
 # Moves the external screen to the right
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080
