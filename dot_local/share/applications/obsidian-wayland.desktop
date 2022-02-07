@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Obsidian Wayland
+Exec=obsidian --enable-features=UseOzonePlatform --ozone-platform=wayland
+Icon=obsidian
