@@ -26,6 +26,13 @@
 {{-   $machine_name = promptString "machine_name" -}}
 {{- end -}}
 
+{{- $key_layout := "" -}}
+{{- if (hasKey . "key_layout") -}}
+{{-   $key_layout = .key_layout -}}
+{{- else -}}
+{{-   $key_layout = promptString "key_layout" -}}
+{{- end -}}
+
 {{- $encrypted := "" -}}
 {{- if (hasKey . "encrypted") -}}
 {{-   $encrypted = .encrypted -}}
@@ -37,6 +44,7 @@
     name = {{ $name | quote }}
     display_manager = {{ $display_manager | quote }}
     machine_name = {{ $machine_name | quote }}
+    key_layout = {{ $key_layout | quote }} # colemak / qwerty
 {{ if eq .chezmoi.os "darwin" }}
    {{- $mmanager := "" -}}
    {{- if (hasKey . "mmanager") -}}
