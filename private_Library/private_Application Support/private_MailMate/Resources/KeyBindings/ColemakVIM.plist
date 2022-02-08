@@ -18,4 +18,5 @@
 	"R"	= "replyAll:";
 	"f"	= "forwardMessage:";
 	"^s"	= "saveDocument:";
+	"u" = "toggleReadState:";
 }
