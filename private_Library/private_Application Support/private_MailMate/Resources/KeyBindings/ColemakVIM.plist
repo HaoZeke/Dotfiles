@@ -1,0 +1,22 @@
+{
+	"c"	= "newMessage:";
+	"/"	= "searchAllMessages:";
+	"n"	= "nextMessage:";
+	"e"	= "previousMessage:";
+	"h" = "collapseThread:";
+	"i" = "expandThread:";
+	"H" = "rootOfThread:";
+	"I" = "lastOfThread:";
+	"N" = "nextThread:";
+	"E" = "previousThread:";
+	"o"	= "openMessages:";
+	"x" = ( "deleteMessage:", "nextMessage:" ); // Defaults to going to the previous message
+	"a"	= "archive:";
+	"s"	= "toggleFlag:";
+	"!"	= "moveToJunk:";
+	"r"	= "reply:";
+	"R"	= "replyAll:";
+	"f"	= "forwardMessage:";
+	"^s"	= "saveDocument:";
+	"u" = "toggleReadState:";
+}
