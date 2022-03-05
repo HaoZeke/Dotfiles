@@ -1,0 +1,2 @@
+# Eigen pretty printers
+command script import $USER/.config/lldb/eigenlldb.py
