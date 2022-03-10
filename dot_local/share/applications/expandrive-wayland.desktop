@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ExpanDrive Wayland
+Exec=env DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 /opt/ExpanDrive/expandrive %U
+Terminal=false
+Type=Application
+Icon=expandrive
+StartupWMClass=ExpanDrive
+Comment=ExpanDrive
+Categories=Utility;
