@@ -1,0 +1,6 @@
+# Eigen pretty printers
+command script import {{ joinPath .chezmoi.homeDir ".config/lldb/eigenlldb.py" }}
+# Allows executing project specific .lldbinit files
+settings set target.load-cwd-lldbinit true
+# Builds a clang module for the STL
+settings set target.import-std-module true
