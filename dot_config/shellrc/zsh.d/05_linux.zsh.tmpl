@@ -1,0 +1,16 @@
+# This file will only be included on macOS machines, it is managed by a
+# conditional chezmoi symlink template
+# The main sections are:
+# - Aliases
+# - Exports
+
+# Aliases
+##########
+
+# Remove all items safely, to Trash (`pacman -S trash-cli`).
+[[ -z "$commands[trash]" ]] || alias rm='trash' 2>&1 > /dev/null
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
