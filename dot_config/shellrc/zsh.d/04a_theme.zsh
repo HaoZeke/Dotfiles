@@ -1,4 +1,3 @@
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -27,10 +26,10 @@ zplugin ice depth=1; zplugin light romkatv/powerlevel10k
 # POWERLEVEL9K_RBENV_PROMPT_ALWAYS_SHOW='true'
 
 # Right
-POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
+# POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status ssh root_indicator background_jobs time)
 
 # Left
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline asdf direnv nvm pyenv rbenv virtualenv vcs nix_shell)
+# POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(dir newline asdf direnv nvm pyenv rbenv virtualenv vcs nix_shell)
 
 # Bullet Train #
 
