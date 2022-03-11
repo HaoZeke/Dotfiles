@@ -1,0 +1,7 @@
+# TODO: Maybe add nix?
+# pinentry-program {{ .chezmoi.homeDir }}/.nix-profile/bin/pinentry
+{{ if eq .chezmoi.os "darwin" }}
+pinentry-program /usr/local/bin/pinentry-mac
+{{ else if eq .chezmoi.os "linux" }}
+pinentry-program /usr/bin/pinentry
+{{ end }}
