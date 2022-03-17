@@ -12,8 +12,8 @@ pathdup() {
 		while [ -n "$old_PATH" ]; do
 			x=${old_PATH%%:*} # the first remaining entry
 			case $PATH: in
-			*:"$x":*) ;;        # already there
-			*) PATH=$PATH:$x ;; # not there yet
+				*:"$x":*) ;;        # already there
+				*) PATH=$PATH:$x ;; # not there yet
 			esac
 			old_PATH=${old_PATH#*:}
 		done
@@ -132,38 +132,29 @@ getCloud() {
 	fi
 }
 
-# Fuzzy cd from https://github.com/NicolaiRuckel/dotfiles/blob/master/zshrc
-fcd() {
-    while true; do
-        local lsd=$(echo ".." && ls -p | grep '/$' | sed 's;/$;;')
-        local dir="$(printf '%s\n' "${lsd[@]}" |
-            fzf --reverse --preview '
-                __cd_nxt="$(echo {})";
-                __cd_path="$(echo $(pwd)/${__cd_nxt} | sed "s;//;/;")";
-                echo $__cd_path;
-                echo;
-                ls -p --color=always "${__cd_path}";
-        ')"
-        [[ ${#dir} != 0 ]] || return 0
-        builtin cd "$dir" &> /dev/null
-    done
-}
-
 # Fuzzy string search from https://github.com/NicolaiRuckel/dotfiles/blob/master/zshrc
 fif() {
-  if [ ! "$#" -gt 0 ]; then echo "Need a string to search for!"; return 1; fi
-  rg --files-with-matches --no-messages "$1" | fzf --preview "highlight -O ansi -l {} 2> /dev/null | rg --colors 'match:bg:yellow' --ignore-case --pretty --context 10 '$1' || rg --ignore-case --pretty --context 10 '$1' {}"
+	if [ ! "$#" -gt 0 ]; then
+		echo "Need a string to search for!"
+		return 1
+	fi
+	rg --files-with-matches --no-messages "$1" | fzf --preview "highlight -O ansi -l {} 2> /dev/null | rg --colors 'match:bg:yellow' --ignore-case --pretty --context 10 '$1' || rg --ignore-case --pretty --context 10 '$1' {}"
 }
 
 # Modified fast-p (https://github.com/bellecp/fast-p)
 pf() {
-    open=zathura
-    ag -U -g ".pdf$" \
-    | fast-p \
-    | fzf --read0 --reverse -e -d $'\t'  \
-        --preview-window down:80% --preview '
+	open=zathura
+	ag -U -g ".pdf$" |
+		fast-p |
+		fzf --read0 --reverse -e -d $'\t' \
+			--preview-window down:80% --preview '
             v=$(echo {q} | tr " " "|");
             echo -e {1}"\n"{2} | grep -E "^|$v" -i --color=always;
-        ' \
-    | cut -z -f 1 -d $'\t' | tr -d '\n' | xargs -r --null $open > /dev/null 2> /dev/null
+        ' |
+		cut -z -f 1 -d $'\t' | tr -d '\n' | xargs -r --null $open >/dev/null 2>/dev/null
+}
+
+# Cleanup old mosh sessions
+killmosh() {
+	who | grep -v 'via mosh' | grep -oP '(?<=mosh \[)(\d+)(?=\])' | xargs kill
 }
