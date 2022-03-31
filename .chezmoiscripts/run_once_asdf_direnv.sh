@@ -5,6 +5,7 @@
 if [[ ! -d ~/.asdf ]]; then
     mkdir ~/.asdf
     git clone https://github.com/asdf-vm/asdf.git ~/.asdf
+    export PATH=$PATH:$HOME/.asdf/bin
 fi
 
 export ASDF_CONFIG_FILE="~/.config/asdf/asdfrc"
