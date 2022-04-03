@@ -1,0 +1,6 @@
+* About
+These are scripts and other pretty-printers for making GDB more
+tractable.
+
+** Eigen
+The `printers.py` is sourced from the [[https://gitlab.com/libeigen/eigen/-/blob/master/debug/gdb/printers.py][Eigen GitLab]] repository.

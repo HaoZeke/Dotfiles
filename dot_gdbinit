@@ -1,0 +1,9 @@
+python
+import sys
+import os
+# For eigen
+eigprint = f"{os.environ['HOME']}/.config/gdb/eigen"
+sys.path.insert(0, eigprint)
+from printers import register_eigen_printers
+register_eigen_printers(None)
+end
