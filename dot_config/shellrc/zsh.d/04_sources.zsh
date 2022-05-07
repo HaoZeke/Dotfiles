@@ -6,7 +6,6 @@ zinit snippet OMZ::plugins/git/git.plugin.zsh
 zinit snippet OMZ::plugins/history/history.plugin.zsh
 zinit snippet OMZ::plugins/github/github.plugin.zsh
 zinit ice svn
-zinit snippet OMZ::plugins/history-substring-search
 zinit snippet OMZ::plugins/systemadmin
 zinit snippet OMZ::plugins/sudo
 zinit snippet OMZ::plugins/systemd
@@ -14,6 +13,10 @@ zinit snippet OMZ::plugins/rsync
 zinit snippet OMZ::plugins/common-aliases/common-aliases.plugin.zsh
 zinit ice silent wait"0"
 zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
+
+# History substring search
+zinit light "zsh-users/zsh-history-substring-search"
+
 # Handlers
 zinit snippet OMZ::plugins/asdf
 
@@ -26,11 +29,11 @@ zinit light "chisui/zsh-nix-shell"
 
 # Misc
 zinit ice proto'git' pick'init.sh'
-zinit light "b4b4r07/enhancd"
 zinit light "changyuheng/zsh-interactive-cd"
 zinit light "mollifier/cd-gitroot"
 zinit ice proto'git' pick'ssh-agent.zsh'
-zinit light "bobsoppe/zsh-ssh-agent"
+zinit light b4b4r07/enhancd
+zinit light bobsoppe/zsh-ssh-agent
 zinit light "zdharma-continuum/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
 
