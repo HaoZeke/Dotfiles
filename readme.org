@@ -13,7 +13,7 @@ longer very portable.
 ** Usage
 To get started, we need:
 #+begin_src bash
-sh -c "$(curl -fsLS chezmoi.io/get)" -- init --apply HaoZeke
+sh -c "$(curl -fsLS chezmoi.io/get)" -- init --apply HaoZeke --branch chezmoi
 chezmoi init
 #+end_src
 Note that the ~chezmoi init~ command is being run twice, to grab some sensitive
