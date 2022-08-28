@@ -62,3 +62,6 @@ format = "%a %d/%m %I:%M %p"
 
 [[block]]
 block = "sound"
+[[block.click]]
+button = "left"
+cmd = "pavucontrol"
