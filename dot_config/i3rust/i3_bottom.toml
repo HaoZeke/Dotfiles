@@ -1,0 +1,111 @@
+# TOML Ref: https://github.com/toml-lang/toml
+# Example https://raw.githubusercontent.com/greshake/i3status-rust/master/examples/config.toml
+[theme]
+theme = "solarized-dark"
+[icons]
+icons = "awesome"
+
+# [[block]]
+# block = "time"
+# format = "Kanpur: %I:%M %p"
+# timezone = "Asia/Kolkata"
+# interval = 60
+
+# [[block]]
+# block = "weather"
+
+# # service = { name="openweathermap", city_id="1267995", units="metric" }
+# # [service] # Table format instead of the inline table {} format
+# [block.service]
+# name = "openweathermap"
+# city_id = "1267995" # Kanpur
+# # city_id = "3413829" # Reykjavík
+# units = "metric"
+
+[[block]]
+block = "time"
+format = "Reykjavík: %I:%M %p"
+timezone = "Iceland"
+interval = 60
+
+[[block]]
+block = "time"
+format = "Kanpur: %I:%M %p"
+timezone = "Asia/Kolkata"
+interval = 60
+
+[[block]]
+block = "battery"
+interval = 10
+format = "{percentage} {time}"
+
+
+# [[block]]
+# block = "weather"
+
+# # service = { name="openweathermap", city_id="1267995", units="metric" }
+# # [service] # Table format instead of the inline table {} format
+# [block.service]
+# name = "openweathermap"
+# # city_id = "1267995" # Kanpur
+# city_id = "3413829" # Reykjavík
+# units = "metric"
+
+[[block]]
+block = "music"
+buttons = ["prev","play", "next"]
+marquee = false
+on_collapsed_click = "kdocker /usr/bin/spotify"
+
+# [[block]]
+# block = "xrandr"
+# icons = true
+# resolution = true
+# interval = 2
+
+# [[block]]
+# block = "disk_space"
+# path = "/"
+# alias = "/"
+# info_type = "available"
+# unit = "GB"
+# interval = 20
+# warning = 20.0
+# alert = 10.0
+
+# [[block]]
+# block = "memory"
+# display_type = "memory"
+# format_mem = "{Mup}%"
+# format_swap = "{SUp}%"
+
+# [[block]]
+# block = "cpu"
+# interval = 1
+
+# [[block]]
+# block = "load"
+# interval = 1
+# format = "{1m}"
+
+# [[block]]
+# block = "net"
+# device = "wlan0"
+# ssid = true
+# # ip = true
+# speed_up = false
+# # graph_up = true
+# interval = 1
+
+# [[block]]
+# block = "battery"
+# interval = 10
+# format = "{percentage}% {time}"
+
+# [[block]]
+# block = "time"
+# interval = 60
+# format = "%a %d/%m %I:%M %p"
+
+# [[block]]
+# block = "sound"
