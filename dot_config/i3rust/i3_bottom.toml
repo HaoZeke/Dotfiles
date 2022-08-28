@@ -1,26 +1,23 @@
 # TOML Ref: https://github.com/toml-lang/toml
-# Example https://raw.githubusercontent.com/greshake/i3status-rust/master/examples/config.toml
+# Example: https://raw.githubusercontent.com/greshake/i3status-rust/master/examples/config.toml
+# Block Doc: https://greshake.github.io/i3status-rust/i3status_rs/blocks/index.html
+# Repo: https://github.com/greshake/i3status-rust
+
 [theme]
 theme = "solarized-dark"
 [icons]
-icons = "awesome"
+icons = "awesome5"
 
-# [[block]]
-# block = "time"
-# format = "Kanpur: %I:%M %p"
-# timezone = "Asia/Kolkata"
-# interval = 60
-
-# [[block]]
-# block = "weather"
-
-# # service = { name="openweathermap", city_id="1267995", units="metric" }
-# # [service] # Table format instead of the inline table {} format
-# [block.service]
-# name = "openweathermap"
-# city_id = "1267995" # Kanpur
-# # city_id = "3413829" # Reykjavík
-# units = "metric"
+[[block]]
+block = "weather"
+format = "IISERM $weather $temp"
+[block.service]
+name = "metno" # No API key, bit off +- 1 degree
+lang = "en"
+coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M
+# coordinates = ["64.140461", "-21.961226"] # Reykjavik
+# coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
+units = "metric"
 
 [[block]]
 block = "time"
@@ -37,75 +34,18 @@ interval = 60
 [[block]]
 block = "battery"
 interval = 10
-format = "{percentage} {time}"
-
-
-# [[block]]
-# block = "weather"
-
-# # service = { name="openweathermap", city_id="1267995", units="metric" }
-# # [service] # Table format instead of the inline table {} format
-# [block.service]
-# name = "openweathermap"
-# # city_id = "1267995" # Kanpur
-# city_id = "3413829" # Reykjavík
-# units = "metric"
+format = "$percentage $time $power|N/A"
 
 [[block]]
 block = "music"
-buttons = ["prev","play", "next"]
-marquee = false
-on_collapsed_click = "kdocker /usr/bin/spotify"
+format = "$combo.str(0,20) $prev $play $next|"
 
 # [[block]]
-# block = "xrandr"
-# icons = true
-# resolution = true
-# interval = 2
-
-# [[block]]
-# block = "disk_space"
-# path = "/"
-# alias = "/"
-# info_type = "available"
-# unit = "GB"
-# interval = 20
-# warning = 20.0
-# alert = 10.0
-
-# [[block]]
-# block = "memory"
-# display_type = "memory"
-# format_mem = "{Mup}%"
-# format_swap = "{SUp}%"
-
-# [[block]]
-# block = "cpu"
-# interval = 1
-
-# [[block]]
-# block = "load"
-# interval = 1
-# format = "{1m}"
-
-# [[block]]
-# block = "net"
-# device = "wlan0"
-# ssid = true
-# # ip = true
-# speed_up = false
-# # graph_up = true
-# interval = 1
-
-# [[block]]
-# block = "battery"
-# interval = 10
-# format = "{percentage}% {time}"
-
-# [[block]]
-# block = "time"
-# interval = 60
-# format = "%a %d/%m %I:%M %p"
-
-# [[block]]
-# block = "sound"
+# block = "weather"
+# format = "$weather ($location) $temp, $wind m/s $direction"
+# [block.service]
+# name = "openweathermap"
+# api_key = "XXX"  # Needs an API key, can be an env variable
+# # # city_id = "1267995" # Kanpur
+# # # city_id = "3413829" # Reykjavík
+# units = "metric"
