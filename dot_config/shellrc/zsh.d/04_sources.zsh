@@ -2,23 +2,23 @@
 ######################
 
 # OMZ Plugins
-zinit snippet OMZ::plugins/git/git.plugin.zsh
-zinit snippet OMZ::plugins/history/history.plugin.zsh
-zinit snippet OMZ::plugins/github/github.plugin.zsh
+zinit snippet OMZP::git/git.plugin.zsh
+zinit snippet OMZP::history/history.plugin.zsh
+zinit snippet OMZP::github/github.plugin.zsh
 zinit ice svn
-zinit snippet OMZ::plugins/systemadmin
-zinit snippet OMZ::plugins/sudo
-zinit snippet OMZ::plugins/systemd
-zinit snippet OMZ::plugins/rsync
-zinit snippet OMZ::plugins/common-aliases/common-aliases.plugin.zsh
+zinit snippet OMZP::systemadmin
+zinit snippet OMZP::sudo
+zinit snippet OMZP::systemd
+zinit snippet OMZP::rsync
+zinit snippet OMZP::common-aliases/common-aliases.plugin.zsh
 zinit ice silent wait"0"
-zinit snippet OMZ::plugins/per-directory-history/per-directory-history.zsh
+zinit snippet OMZP::per-directory-history/per-directory-history.zsh
 
 # History substring search
 zinit light "zsh-users/zsh-history-substring-search"
 
 # Handlers
-zinit snippet OMZ::plugins/asdf
+zinit snippet OMZP::asdf
 
 # Colors and Highlighting
 zinit light "zdharma-continuum/fast-syntax-highlighting"
