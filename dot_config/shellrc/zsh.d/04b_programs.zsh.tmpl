@@ -1,0 +1,44 @@
+############
+# Programs #
+############
+# junegunn/fzf-bin
+zinit ice from="gh-r" as="command" bpick="*{{ .chezmoi.os }}*"
+zinit light junegunn/fzf
+
+# monochromegane/the_platinum_searcher
+zinit ice as"program" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"*/pt"
+zinit load monochromegane/the_platinum_searcher
+
+# sharkdp/fd
+zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"fd* -> fd" pick"fd/fd"
+zinit light sharkdp/fd
+
+# sharkdp/bat
+zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"bat* -> bat" pick"bat/bat"
+zinit light sharkdp/bat
+
+# ogham/exa, replacement for ls
+zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"*/exa* -> exa"
+zinit light ogham/exa
+
+# mvdan/sh
+zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"shfmt* -> shfmt"
+zinit light mvdan/sh
+
+# Archive helper
+# zinit ice as"command" from"gh-r" bpick="*{{ .chezmoi.os }}*" mv"archiver* -> archiver" pick"archiver/archiver"
+# zinit light mholt/archiver
+
+# Makefile alternative
+zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"task* -> task" pick"task/task"
+zinit light "go-task/task"
+
+# Better git
+zinit ice as"program" make pick"bin/git-fzf.zsh"
+zinit light 'b4b4r07/git-fzf'
+
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
