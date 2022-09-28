@@ -1,0 +1,2 @@
+CFLAGS=-O3 -Wall -pedantic -march=native -mtune=native -pipe
+CXXFLAGS=-O3 -Wall -pedantic -march=native -mtune=native -pipe
