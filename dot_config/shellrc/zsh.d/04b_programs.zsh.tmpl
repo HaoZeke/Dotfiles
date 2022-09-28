@@ -18,7 +18,12 @@ zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"bat* -> bat" pick
 zinit light sharkdp/bat
 
 # ogham/exa, replacement for ls
-zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"*/exa* -> exa"
+{{ if eq .chezmoi.os "darwin" }}
+# Sadly this is released as macos
+zinit ice from"gh-r" as"program" bpick"*macos*" mv"*/exa* -> exa"
+{{ else if eq .chezmoi.os "linux" }}
+zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/exa* -> exa"
+{{ end }}
 zinit light ogham/exa
 
 # mvdan/sh
