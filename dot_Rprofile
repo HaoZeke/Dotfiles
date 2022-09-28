@@ -1,3 +1,10 @@
+## From the ArchWiki
+# The .First function is called after everything else in .Rprofile is executed
+.First <- function() {
+  # Print a welcome message
+  message("Welcome back ", Sys.getenv("USER"),"!\n","working directory is:", getwd())
+}
+
 ## Set CRAN Mirror:
 local({
   r <- getOption("repos")
@@ -19,3 +26,12 @@ local({
 
 ## Attach hidden environment
 attach(.env, warn.conflicts = FALSE)
+
+## Options
+options(digits = 12)                                          # Number of digits to print. Default is 7, max is 15
+options(scipen = 2)                                           # Penalty applied to inhibit the use of scientific notation
+local({
+  n <- max(parallel::detectCores() - 2L, 1L)                  # Detect the number of cores available for use in parallelisation
+  options(Ncpus = n)                                          # Parallel package installation in install.packages()
+  options(mc.cores =  n)                                      # Parallel apply-type functions via 'parallel' package
+})
