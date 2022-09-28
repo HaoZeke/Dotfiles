@@ -28,9 +28,9 @@ zinit light "chisui/zsh-nix-shell"
 zinit light "mollifier/cd-gitroot"
 zinit light "zdharma-continuum/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
+zinit light "changyuheng/zsh-interactive-cd"
 zinit ice proto'git' pick'init.sh'; zinit light b4b4r07/enhancd
 zinit ice pick'ssh-agent.zsh'; zinit light bobsoppe/zsh-ssh-agent
-zinit ice proto'git' pick'init.sh'; zinit light "changyuheng/zsh-interactive-cd"
 
 # Completions
 zinit ice blockf
