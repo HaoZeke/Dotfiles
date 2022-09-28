@@ -41,7 +41,7 @@ zinit light "ascii-soup/zsh-url-highlighter"
 zinit light "molovo/tipz"
 zinit light "srijanshetty/zsh-pip-completion"
 zinit ice as"completion"
-zinit snippet https://github.com/simonwhitaker/gibo/blob/master/shell-completions/gibo-completion.zsh
+zinit snippet https://github.com/simonwhitaker/gibo/blob/main/shell-completions/gibo-completion.zsh
 
 # Suggestions
 zinit ice wait lucid atload'_zsh_autosuggest_start'
