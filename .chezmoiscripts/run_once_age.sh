@@ -15,6 +15,7 @@ else
     if command -v go >/dev/null 2>&1; then
         git clone https://filippo.io/age && cd age
         go build -o . filippo.io/age/cmd/...
+        mkdir -p ~/.local/bin
         mv age age-keygen ~/.local/bin
         export PATH=$PATH:$HOME/.local/bin
     fi
