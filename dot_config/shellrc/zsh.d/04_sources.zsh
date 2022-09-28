@@ -25,14 +25,12 @@ zinit light "zlsun/solarized-man"
 zinit light "chisui/zsh-nix-shell"
 
 # Misc
-zinit ice proto'git' pick'init.sh'
-zinit light "changyuheng/zsh-interactive-cd"
 zinit light "mollifier/cd-gitroot"
-zinit ice proto'git' pick'ssh-agent.zsh'
-zinit light b4b4r07/enhancd
-zinit light bobsoppe/zsh-ssh-agent
 zinit light "zdharma-continuum/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
+zinit ice proto'git' pick'init.sh'; zinit light b4b4r07/enhancd
+zinit ice pick'ssh-agent.zsh'; zinit light bobsoppe/zsh-ssh-agent
+zinit ice proto'git' pick'init.sh'; zinit light "changyuheng/zsh-interactive-cd"
 
 # Completions
 zinit ice blockf
