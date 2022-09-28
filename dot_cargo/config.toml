@@ -1,0 +1,4 @@
+[net]
+retry = 2                   # network retries
+git-fetch-with-cli = true   # use the `git` executable for git operations
+offline = false             # do not access the network
