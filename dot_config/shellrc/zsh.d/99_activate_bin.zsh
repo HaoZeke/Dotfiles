@@ -3,10 +3,6 @@
 ######################
 # if [[ "$EVAL_ZSH" == "yes" || "$EVAL_ZSH" == "true" ]]; then
 
-# Misc.
-eval "$(asdf exec direnv hook zsh)"
-direnv() { asdf exec direnv "$@"; }
-
 # Rust
 #######
 
