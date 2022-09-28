@@ -1,0 +1,5 @@
+# https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+[net]
+retry = 2                   # network retries
+git-fetch-with-cli = true   # use the `git` executable for git operations
+offline = false             # do not access the network
