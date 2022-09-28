@@ -17,9 +17,6 @@ zinit snippet OMZP::per-directory-history/per-directory-history.zsh
 # History substring search
 zinit light "zsh-users/zsh-history-substring-search"
 
-# Handlers
-zinit snippet OMZP::asdf
-
 # Colors and Highlighting
 zinit light "zdharma-continuum/fast-syntax-highlighting"
 zinit light "zlsun/solarized-man"
