@@ -47,6 +47,19 @@ zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/exa* -> exa"
 zinit light ogham/exa
 
 
+# Evaluated
+# Starship
+zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(starship init zsh)"'
+zinit light starship/starship
+
+# mcfly
+zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(mcfly init zsh)"'
+zinit light cantino/mcfly
+
+# zoxide
+zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh)"'
+zinit light ajeetdsouza/zoxide
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
