@@ -64,6 +64,10 @@ zinit light cantino/mcfly
 zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh)"'
 zinit light ajeetdsouza/zoxide
 
+# ** ellie/atuin ** 🐢 Magical shell history
+zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" pick"atuin*/atuin" atload'eval "$(atuin init zsh)"'
+zinit light ellie/atuin
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
