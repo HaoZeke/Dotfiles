@@ -9,6 +9,10 @@ zinit light junegunn/fzf
 zinit ice as"program" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"*/pt"
 zinit load monochromegane/the_platinum_searcher
 
+# wakatime/wakatime-cli
+zinit ice as"program" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"wakatime-cli* -> wakatime-cli" pick"*/wakatime-cli"
+zinit load wakatime/wakatime-cli
+
 # sharkdp/fd
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"fd* -> fd" pick"fd/fd"
 zinit light sharkdp/fd
