@@ -44,6 +44,9 @@ zinit snippet https://github.com/simonwhitaker/gibo/blob/main/shell-completions/
 zinit ice wait lucid atload'_zsh_autosuggest_start'
 zinit light zsh-users/zsh-autosuggestions
 
+# wakatime
+zinit ice wait lucid; zinit light sobolevn/wakatime-zsh-plugin
+
 # Settings for plugins #
 
 # history-substring-search
