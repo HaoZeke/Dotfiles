@@ -38,7 +38,7 @@ zinit ice as"program" make pick"bin/git-fzf.zsh"
 zinit light 'b4b4r07/git-fzf'
 
 # age
-zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"age* -> age" pick"FiloSottile/age"
+zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"age/(age|age-keygen)"
 zinit light "FiloSottile/age"
 
 # ogham/exa, replacement for ls
