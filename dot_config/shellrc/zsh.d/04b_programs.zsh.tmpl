@@ -65,8 +65,10 @@ zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxid
 zinit light ajeetdsouza/zoxide
 
 # ** ellie/atuin ** 🐢 Magical shell history
+export ATUIN_NOBIND="true"
 zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" pick"atuin*/atuin" atload'eval "$(atuin init zsh)"'
 zinit light ellie/atuin
+bindkey '^r' _atuin_search_widget
 
 # Emacs Stuff (cross platform)
 # Local Variables:
