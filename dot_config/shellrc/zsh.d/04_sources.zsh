@@ -45,7 +45,7 @@ zinit ice wait lucid atload'_zsh_autosuggest_start'
 zinit light zsh-users/zsh-autosuggestions
 
 # wakatime
-zinit ice wait lucid; zinit light sobolevn/wakatime-zsh-plugin
+zinit ice wait lucid depth=1 atload'export ZSH_WAKATIME_BIN="$(pyenv which wakatime-cli)"'; zinit light sobolevn/wakatime-zsh-plugin
 
 # Settings for plugins #
 
