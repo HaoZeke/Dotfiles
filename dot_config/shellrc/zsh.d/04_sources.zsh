@@ -29,7 +29,6 @@ zinit light "mollifier/cd-gitroot"
 zinit light "zdharma-continuum/history-search-multi-word"
 zinit light "urbainvaes/fzf-marks"
 zinit light "changyuheng/zsh-interactive-cd"
-zinit ice proto'git' pick'init.sh'; zinit light b4b4r07/enhancd
 zinit ice pick'ssh-agent.zsh'; zinit light bobsoppe/zsh-ssh-agent
 
 # Completions
@@ -67,9 +66,12 @@ bindkey -M vicmd 'k' history-substring-search-up
 bindkey -M vicmd 'j' history-substring-search-down
 
 
-# enhancd settings
+# enhancd
+zinit ice wait'1' lucid pick'init.sh'
+zinit light "b4b4r07/enhancd"
 # export ENHANCD_FILTER="fzf --height 50% --reverse --ansi --preview 'ls -l {}' --preview-window down"
-export ENHANCD_FILTER="fzf --height 50% --reverse --ansi"
+export ENHANCD_COMPLETION_BEHAVIOR=list
+export ENHANCD_FILTER="fzf --height 50% --reverse --ansi  --info=inline --margin=1 --padding=1"
 # export ENHANCD_DOT_SHOW_FULLPATH=1
 TIPZ_TEXT='Alias:'
 
