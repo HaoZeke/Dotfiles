@@ -60,12 +60,8 @@ zinit light ogham/exa
 zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(starship init zsh)"'
 zinit light starship/starship
 
-# mcfly
-zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(mcfly init zsh)"'
-zinit light cantino/mcfly
-
 # zoxide
-zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh)"'
+zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh --cmd Z)"'
 zinit light ajeetdsouza/zoxide
 
 # ** ellie/atuin ** 🐢 Magical shell history
