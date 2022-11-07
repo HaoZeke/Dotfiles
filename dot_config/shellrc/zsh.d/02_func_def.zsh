@@ -2,7 +2,7 @@
 ############
 
 # Reload complete functions
-r() {
+reloadzsh() {
     source ~/.zshrc
     if [ -d ~/.zsh/comp ]; then
         local f
