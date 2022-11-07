@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
 Name=Kuro Wayland
-Exec=env DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 kuro
+Exec=kuro --enable-features=UseOzonePlatform --ozone-platform=wayland
 Icon=kuro
