@@ -1,11 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 if [[ ! -d ~/.zi ]]; then
-    typeset -Ag ZI
-    typeset -gx ZI[HOME_DIR]="${HOME}/.zi" ZI[BIN_DIR]="${ZI[HOME_DIR]}/bin"
-    command mkdir -p "$ZI[BIN_DIR]"
-
-    compaudit | xargs chown -R "$(whoami)" "$ZI[HOME_DIR]"
-    compaudit | xargs chmod -R go-w "$ZI[HOME_DIR]"
-    command git clone https://github.com/z-shell/zi.git "$ZI[BIN_DIR]"
+    source <(curl -sL git.io/zi-loader); zzinit
 fi
+
+autoload -Uz _zi
+(( ${+_comps} )) && _comps[zi]=_zi
+
+exec zsh
