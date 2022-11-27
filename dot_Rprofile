@@ -37,3 +37,8 @@ local({
   options(Ncpus = n)                                          # Parallel package installation in install.packages()
   options(mc.cores =  n)                                      # Parallel apply-type functions via 'parallel' package
 })
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: r
+# End:
