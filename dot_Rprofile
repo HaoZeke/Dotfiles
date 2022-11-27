@@ -2,7 +2,9 @@
 # The .First function is called after everything else in .Rprofile is executed
 .First <- function() {
   # Print a welcome message
-  message("Welcome back ", Sys.getenv("USER"),"!\n","working directory is:", getwd())
+  if (interactive()){
+    message("Welcome back ", Sys.getenv("USER"),"!\n","working directory is:", getwd())
+  }
 }
 
 ## Set CRAN Mirror:
