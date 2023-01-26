@@ -4,12 +4,17 @@
   # Print a welcome message
   if (interactive()){
     message("Welcome back ", Sys.getenv("USER"),"!\n","working directory is:", getwd())
+    suppressMessages(library("devtools"))
+    suppressMessages(library("usethis"))
+    suppressMessages(library("testthat"))
+    suppressMessages(library("reprex"))
   }
 }
 
 ## Set CRAN Mirror:
 local({
   r <- getOption("repos")
+  ## redirects to "best" among worldwide servers, sponsored by RStudio
   r["CRAN"] <- "https://cloud.r-project.org/"
   options(repos = r)
 })
@@ -32,6 +37,7 @@ attach(.env, warn.conflicts = FALSE)
 ## Options
 options(digits = 12)                                          # Number of digits to print. Default is 7, max is 15
 options(scipen = 2)                                           # Penalty applied to inhibit the use of scientific notation
+options(styler.cache_root = "styler")                         # Speedup
 local({
   n <- max(parallel::detectCores() - 2L, 1L)                  # Detect the number of cores available for use in parallelisation
   options(Ncpus = n)                                          # Parallel package installation in install.packages()
