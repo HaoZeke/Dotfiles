@@ -38,6 +38,26 @@ local({
   options(mc.cores =  n)                                      # Parallel apply-type functions via 'parallel' package
 })
 
+## Some more options, partially kanged from https://gist.github.com/ijlyttle/dee4a89c8528cd4a0a319bb7b8cdd51a
+  options(
+    # if you submit a package to CRAN using devtools,
+    # it will send an email on your behalf
+    # - this the name it uses to sign the email
+    devtools.name = "Rohit Goswami",
+    # when you create a package using usethis::create_package(), this
+    # is used to populate the Author field in the DESCRIPTION file
+    # - an ORCID can be useful, but it is not mandatory: https://orcid.org/
+    usethis.description = list(
+      `Authors@R` = 'person("Rohit", "Goswami",
+                            email = "rgoswami@ieee.org",
+                            role = c("aut", "cre"),
+                            comment = c(ORCID = "0000-0002-2393-8056"))'
+    ),
+    # depends on your situation to choose ssh or https:
+    # - https a useful default
+    # - if you also use GitHub Enterprise, ssh can be useful
+    usethis.protocol = "https"
+  )
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: r
