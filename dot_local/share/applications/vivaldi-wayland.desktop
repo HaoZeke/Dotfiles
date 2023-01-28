@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Vivaldi Wayland
+Categories=Network;WebBrowser;
+Terminal=false
+Exec=vivaldi-stable --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
+Icon=vivaldi
