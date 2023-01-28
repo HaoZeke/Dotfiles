@@ -57,6 +57,9 @@
 [url "git@gitlab.com:"]
 	insteadOf = https://gitlab.com/
 
+[credential]
+	helper = cache
+
 [alias]
     mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
 	# Kanged: https://github.com/alrra/dotfiles/blob/main/src/git/gitconfig
