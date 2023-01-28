@@ -261,9 +261,19 @@ input * {
       xkb_layout "colemak"
 }
 
-input "1739:0:Synaptics_TM3289-021" {
-        natural_scroll enabled
+# swaymsg -t get_inputs
+input type:touchpad {
+    natural_scroll enabled
 	tap enabled
+}
+
+input type:mouse {
+    natural_scroll enabled
+}
+
+# Somehow not taken up automatically
+input "5215:474:2.4G_RX_Mouse" {
+    natural_scroll enabled
 }
 
 # here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
