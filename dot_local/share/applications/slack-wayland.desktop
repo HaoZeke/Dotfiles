@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
 Name=Slack Wayland
-Exec=env DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 slack
+Exec=slack --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
 Icon=slack
