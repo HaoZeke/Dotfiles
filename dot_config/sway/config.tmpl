@@ -26,7 +26,19 @@ set $lockManager "xss-lock -- ~/.local/bin/i3LockHelper"
 ### Output configuration
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
-output * bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
+output "*" {
+       bg /usr/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
+       subpixel rgb
+       adaptive_sync on
+       max_render_time off
+}
+
+# Main screen
+# here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
+output "eDPI-1" {
+       scale 2
+}
+
 #
 # Example configuration:
 #
@@ -281,8 +293,6 @@ input "5215:474:2.4G_RX_Mouse" {
     natural_scroll enabled
 }
 
-# here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
-output eDPI-1 scale 2
 # xwayland force scale 2
 exec xsettingsd
 # Here: https://www.reddit.com/r/swaywm/comments/p9ah2v/completely_hide_mouse_pointer_wayland/
@@ -342,6 +352,9 @@ exec --no-startup-id $lockManager
 # Window rules
 for_window [app_id="Telegram"] border none
 for_window [class="tabby"] border none
+
+# Profiles for displays
+exec kanshi
 
 # Moves the external screen to the right
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080
