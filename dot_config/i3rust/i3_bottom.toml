@@ -21,13 +21,13 @@ units = "metric"
 
 [[block]]
 block = "time"
-format = "Reykjavík: %I:%M %p"
+format = "Reykjavík: $timestamp.datetime(f:'%I:%M %p')"
 timezone = "Iceland"
 interval = 60
 
 [[block]]
 block = "time"
-format = "Kanpur: %I:%M %p"
+format = "Kanpur: $timestamp.datetime(f:'%I:%M %p')"
 timezone = "Asia/Kolkata"
 interval = 60
 
@@ -38,7 +38,8 @@ format = "$percentage $time $power|N/A"
 
 [[block]]
 block = "music"
-format = "$combo.str(0,20) $prev $play $next|"
+format = " $icon {$combo.str(max_w:20,rot_interval:0.5) $play $next |}"
+interface_name_exclude = [".*kdeconnect.*", "mpd"]
 
 # [[block]]
 # block = "weather"
