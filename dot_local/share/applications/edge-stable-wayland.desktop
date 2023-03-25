@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Microsoft Edge Stable Wayland
+Categories=Network;WebBrowser;
+Terminal=false
+Exec=microsoft-edge-stable --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
+Icon=microsoft-edge
