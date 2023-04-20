@@ -32,23 +32,21 @@
 # Pretty outputs
 # https://github.com/dandavison/delta
 [pager]
-        diff = delta
-        log = delta
-        reflog = delta
-        show = delta
+	diff = delta
+	log = delta
+	reflog = delta
+	show = delta
 
 [interactive]
-        diffFilter = delta --color-only --features=interactive
+	diffFilter = delta --color-only --features=interactive
 
 [delta]
-        features = side-by-side line-numbers decorations dark
-        plus-style = syntax "#003800"
-        minus-style = syntax "#3f0001"
-        syntax-theme = Monokai Extended
-        navigate = true
+	features = side-by-side line-numbers decorations dark
+	syntax-theme = Monokai Extended # Solarized (light)
+	navigate = true
 
 [delta "interactive"]
-    keep-plus-minus-markers = false
+	keep-plus-minus-markers = false
 
 # Keys over passwords
 [url "git@github.com:"]
