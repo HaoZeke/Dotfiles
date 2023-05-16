@@ -177,9 +177,9 @@ bindsym $mod+Shift+m move workspace to output right
 # Screenshot
 bindsym $mod+o exec $screenshotTask
 
-# Notification management (dunst)
-bindsym ctrl+space exec dunstctl close
-bindsym ctrl+Shift+space exec dunstctl close-all
+# Notification management (mako)
+bindsym ctrl+space exec makoctl dismiss
+bindsym ctrl+Shift+space exec makoctl dismiss-all
 
 #
 # Layout stuff:
@@ -341,7 +341,7 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 exec thunar --daemon
 
 # Notifications
-exec_always dunst
+exec_always mako
 
 # Sync stuff
 exec insync start
