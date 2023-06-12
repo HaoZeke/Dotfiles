@@ -98,7 +98,8 @@ font:
     #   - (macOS) Menlo
     #   - (Linux/BSD) monospace
     #   - (Windows) Consolas
-    family: CaskaydiaCove Nerd Font
+    # family: CaskaydiaCove Nerd Font
+    family: Intel One Mono
 
     # The `style` can be specified to pick a specific face.
     #style: Regular

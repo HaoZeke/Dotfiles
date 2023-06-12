@@ -67,6 +67,10 @@
             GIT_EDITOR=\"git interpret-trailers --in-place --trailer='Co-authored-by: 1<2>'\" git commit --amend; \
         fi \
     }; f"
+
+[http "https://gitea.mpi-muelheim.mpg.de:3000"]
+proxy=socks5h://127.0.0.1:9998
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: gitconfig
