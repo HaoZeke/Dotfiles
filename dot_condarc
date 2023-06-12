@@ -3,3 +3,5 @@ channels:
   - defaults
 channel_priority: disabled
 auto_activate_base: false
+envs_dirs:
+  - ~/.micromamba/envs
