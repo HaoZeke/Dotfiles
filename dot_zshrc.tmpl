@@ -19,6 +19,11 @@ if [ -d $shellHome/zsh.d ]; then
 	done
 fi
 
+# Mamba / Micromamba setup
+{{ if eq .setup_mamba "yes" }}
+eval "$(micromamba shell hook --shell=zsh)"
+{{ end }}
+
 # Common Zsh #
 if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc

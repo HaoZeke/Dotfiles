@@ -22,3 +22,13 @@ if [ -d $shellHome/bash.d ]; then
 		source $file
 	done
 fi
+
+# Mamba / Micromamba setup
+{{ if eq .setup_mamba "yes" }}
+eval "$(micromamba shell hook --shell=bash)"
+{{ end }}
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
