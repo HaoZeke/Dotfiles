@@ -19,6 +19,13 @@
 {{-   $name = promptString "name" -}}
 {{- end -}}
 
+{{- $setup_mamba := "" -}}
+{{- if (hasKey . "setup_mamba") -}}
+{{-   $setup_mamba = .setup_mamba -}}
+{{- else -}}
+{{-   $setup_mamba = promptString "setup_mamba (yes / no)" -}}
+{{- end -}}
+
 {{- $machine_name := "" -}}
 {{- if (hasKey . "machine_name") -}}
 {{-   $machine_name = .machine_name -}}
@@ -56,6 +63,7 @@
     mmanager = {{ $mmanager | quote }}
 {{ end }}
 # Back to [data]
+{{ if eq $setup_mamba "yes" }}  setup_mamba = "yes"
 {{ if eq $encrypted "yes" }}    encrypted = "yes"
     encryption = "age"
 [age]
