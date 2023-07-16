@@ -61,11 +61,9 @@
 {{- else}}
 {{$mmanager = promptString "mmanager (brew, nix)"}}
 {{- end }}
-# [data]
     mmanager = {{ $mmanager | quote }}
 {{ end }}
 
-# Back to [data]
 {{ if eq $setup_mamba "yes" }}
 setup_mamba = "yes"
 {{ if eq $encrypted "yes" }}
