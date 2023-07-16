@@ -1,74 +1,80 @@
-{{- $email := "" -}}
-{{- if (hasKey . "email") -}}
-{{-   $email = .email -}}
-{{- else -}}
-{{-   $email = promptString "email" -}}
-{{- end -}}
+{{$email := ""}}
+{{- if (hasKey . "email")}}
+{{$email = .email}}
+{{- else}}
+{{$email = promptString "email"}}
+{{- end}}
 
-{{- $display_manager := "" -}}
-{{- if (hasKey . "display_manager") -}}
-{{-   $display_manager = .display_manager -}}
-{{- else -}}
-{{-   $display_manager = promptString "display_manager" -}}
-{{- end -}}
+{{$display_manager := ""}}
+{{- if (hasKey . "display_manager")}}
+{{$display_manager = .display_manager}}
+{{- else}}
+{{$display_manager = promptString "display_manager"}}
+{{- end}}
 
-{{- $name := "" -}}
-{{- if (hasKey . "name") -}}
-{{-   $name = .name -}}
-{{- else -}}
-{{-   $name = promptString "name" -}}
-{{- end -}}
+{{$name := ""}}
+{{- if (hasKey . "name")}}
+{{$name = .name}}
+{{- else}}
+{{$name = promptString "name"}}
+{{- end}}
 
-{{- $setup_mamba := "" -}}
-{{- if (hasKey . "setup_mamba") -}}
-{{-   $setup_mamba = .setup_mamba -}}
-{{- else -}}
-{{-   $setup_mamba = promptString "setup_mamba (yes / no)" -}}
-{{- end -}}
+{{$setup_mamba := ""}}
+{{- if (hasKey . "setup_mamba")}}
+{{$setup_mamba = .setup_mamba}}
+{{- else}}
+{{$setup_mamba = promptString "setup_mamba (yes / no)"}}
+{{- end}}
 
-{{- $machine_name := "" -}}
-{{- if (hasKey . "machine_name") -}}
-{{-   $machine_name = .machine_name -}}
-{{- else -}}
-{{-   $machine_name = promptString "machine_name" -}}
-{{- end -}}
+{{$machine_name := ""}}
+{{- if (hasKey . "machine_name")}}
+{{$machine_name = .machine_name}}
+{{- else}}
+{{$machine_name = promptString "machine_name"}}
+{{- end}}
 
-{{- $key_layout := "" -}}
-{{- if (hasKey . "key_layout") -}}
-{{-   $key_layout = .key_layout -}}
-{{- else -}}
-{{-   $key_layout = promptString "key_layout" -}}
-{{- end -}}
+{{$key_layout := ""}}
+{{- if (hasKey . "key_layout")}}
+{{$key_layout = .key_layout}}
+{{- else}}
+{{$key_layout = promptString "key_layout"}}
+{{- end}}
 
-{{- $encrypted := "" -}}
-{{- if (hasKey . "encrypted") -}}
-{{-   $encrypted = .encrypted -}}
-{{- else -}}
-{{-   $encrypted = promptString "encrypted" -}}
-{{- end -}}
+{{$encrypted := ""}}
+{{- if (hasKey . "encrypted")}}
+{{$encrypted = .encrypted}}
+{{- else}}
+{{$encrypted = promptString "encrypted"}}
+{{- end}}
+
 [data]
     email = {{ $email | quote }}
     name = {{ $name | quote }}
     display_manager = {{ $display_manager | quote }}
     machine_name = {{ $machine_name | quote }}
     key_layout = {{ $key_layout | quote }} # colemak / qwerty
+
 {{ if eq .chezmoi.os "darwin" }}
-   {{- $mmanager := "" -}}
-   {{- if (hasKey . "mmanager") -}}
-   {{-   $mmanager = .mmanager -}}
-   {{- else -}}
-   {{-   $mmanager = promptString "mmanager (brew, nix)" -}}
-   {{- end -}}
+{{$mmanager := ""}}
+{{- if (hasKey . "mmanager")}}
+{{$mmanager = .mmanager}}
+{{- else}}
+{{$mmanager = promptString "mmanager (brew, nix)"}}
+{{- end }}
 # [data]
     mmanager = {{ $mmanager | quote }}
 {{ end }}
+
 # Back to [data]
-{{ if eq $setup_mamba "yes" }}  setup_mamba = "yes"
-{{ if eq $encrypted "yes" }}    encrypted = "yes"
+{{ if eq $setup_mamba "yes" }}
+setup_mamba = "yes"
+{{ if eq $encrypted "yes" }}
+    encrypted = "yes"
     encryption = "age"
-[age]
-    identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
-    recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
+    [age]
+        identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
+        recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
+    {{ end }}
 {{ end }}
 
 [merge]
@@ -77,6 +83,7 @@
 
 [edit]
     command = "emacsclient"
+
 # Local Variables:
 # mode: conf-toml
 # End:
