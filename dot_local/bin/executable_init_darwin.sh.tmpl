@@ -40,6 +40,8 @@ tap "homebrew/cask-versions" # Alternates
 tap "homebrew/services" # Integrates with launctl
 tap "homebrew/cask-fonts" # Fonts
 tap "buo/cask-upgrade" # Provides brew cu
+tap "d12frosted/emacs-plus" # emacs with macos utilities for doom
+tap "apple/homebrew-apple" # Primarily for games
 brew "mas" # Mac App Store CLI
 
 # Encryption
@@ -47,26 +49,33 @@ cask "enpass"
 cask "cryptomator"
 cask "keybase"
 cask "authy"
+cask "gpg-suite"
 
 # Tools
 brew "direnv"
 brew "svn"
-brew "trash" # safer delete
-brew "ngrep" # network sniffer
-brew "coreutils" # has shuf
+brew "ngrep" # Network sniffer
+brew "coreutils" # Has shuf
 cask "keka" # Archiver
+cask "stats" # Menubar stats
+cask "xrg" # Menubar stats
 cask "hammerspoon" # System Control
 cask "karabiner-elements" # Keyboard
+cask "latest" # Release tracker
+cask "couleurs" # Color picker utility
+cask "cerebro" # Launcher (free)
 cask "qview" # Image viewer
-cask "alfred" # Launcher
 brew "rsync" # Updated
 cask "windscribe" # VPN
 cask "oversight" # Monitor cam/mic
 cask "tomighty" # Pomodoro
 cask "macfuse" # Fuse mount
+cask "flameshot" # Screenshots
+cask "appcleaner" # Cleanup
+cask "sloth" # View open files / sockets
+cask "lunar" # External monitor brightness
 mas "Amphetamine", id: 937984704
 mas "Tailscale", id: 1475387142
-# brew "tailscale" # Local network
 
 # Editors / Notes
 cask "obsidian"
@@ -74,6 +83,12 @@ cask "visual-studio-code"
 brew "neovim"
 mas "Microsoft To Do", id: 1274495053
 mas "Journey", id: 1300202543
+
+# SSH / File management
+brew "trash" # Safer delete
+cask "marta" # File manager (2-pane)
+cask "cyberduck" # SSH manager
+cask "the-unarchiver" # Unzip stuff
 
 # Development
 mas "Xcode", id: 497799835
@@ -84,6 +99,8 @@ mas "Telegram", id: 747648890
 cask "whatsapp"
 cask "zoom"
 cask "mailmate"
+cask "mailspring"
+cask "morgen"
 
 # Work Comm
 mas 'Slack', id: 803453959
@@ -96,8 +113,13 @@ mas "Trillian", id: 412056820
 
 # Terminals
 cask "tabby"
+cask "kitty"
 cask "alacritty"
 cask "termius"
+
+# Sound
+cask "eqmac" # Equalizer
+cask "sound-control" # Per-app sound
 
 # Research
 cask "zotero"
@@ -105,6 +127,9 @@ cask "zotero"
 # Readers
 cask "remarkable"
 cask "calibre"
+cask "skim"
+cask "netnewswire"
+# ? UPDF?
 
 # Trackers
 cask "rescuetime"
@@ -112,8 +137,9 @@ cask "toggl-track"
 mas Harvest, id: 506189836
 
 # Browsers
-cask "firefox-developer-edition"
+# cask "firefox-developer-edition"
 cask "google-chrome"
+cask "vivaldi"
 
 # Backup
 cask "resilio-sync"
@@ -129,6 +155,7 @@ mas "Microsoft PowerPoint", id: 462062816
 cask "spotify"
 cask "plex-media-player"
 cask "smplayer"
+cask "iina"
 mas "Prime Video", id: 545519333
 
 # Media Editing
@@ -156,6 +183,12 @@ cask "font-intel-one-mono"
 cask "font-caskaydia-cove-nerd-font"
 cask "font-hack-nerd-font"
 cask "font-fira-mono-nerd-font"
+
+# Games
+cask "whisky"
+brew "apple/apple/game-porting-toolkit"
+cask "--no-quarantine gcenx/wine/wine-crossover"
+
 
 EOF
 
