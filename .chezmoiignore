@@ -5,6 +5,8 @@ dot_local/bin/init_darwin.sh
 encrypted_chezmoi_darwin.toml.asc
 *hammerspoon
 *karabiner
+*yabai
+*skhd
 {{ end }}
 {{ if ne .chezmoi.os "linux" }}
 # Only on linux
