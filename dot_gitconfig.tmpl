@@ -29,6 +29,15 @@
 	# The default is $XDG_CONFIG_HOME/git/ignore
 	excludesFile = ~/.config/git/ignore
 
+[diff]
+	# Git diff will use (i)ndex, (w)ork tree, (c)ommit and (o)bject
+	# instead of a/b/c/d as prefixes for patches
+	mnemonicprefix = true
+	# The patience algorithm seems pretty reasonable
+	# See: https://github.com/peter-evans/patience
+	algorithm = patience
+	compactionHeuristic = true
+	colorMoved = default
 # Pretty outputs
 # https://github.com/dandavison/delta
 [pager]
