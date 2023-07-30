@@ -65,11 +65,11 @@ gaps inner 5
 #
 # Example configuration:
 #
-exec swayidle -w \
-         timeout 300 'swaylock -f -c 000000' \
-         timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
+exec_always swayidle -w \
+         timeout 300 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png' \
+         timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
          before-sleep 'playerctl pause' \
-         before-sleep 'swaylock -f -c 000000'
+         before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png'
 #
 # This will lock your screen after 300 seconds of inactivity, then turn off
 # your displays after another 300 seconds, and turn your screens back on when
