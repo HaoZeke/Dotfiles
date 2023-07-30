@@ -21,7 +21,6 @@ set $term foot
 #set $menu dmenu_path | dmenu | xargs swaymsg exec --
 set $menu rofi -show # combi -show-icons -combi-modi "drun,run" -modi combi # | xargs swaymsg exec --
 set $screenshotTask slurp | grim -g - - | wl-copy
-set $lockManager "xss-lock -- ~/.local/bin/i3LockHelper"
 
 ### Output configuration
 #
@@ -345,9 +344,6 @@ exec_always mako
 
 # Sync stuff
 exec insync start
-
-# Listen to lock events
-exec --no-startup-id $lockManager
 
 # Window rules
 for_window [app_id="Telegram"] border none
