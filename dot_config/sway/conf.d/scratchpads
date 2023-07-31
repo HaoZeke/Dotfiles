@@ -1,7 +1,12 @@
 # The main scratchpad in the upper left
-exec foot --app-id="mS" -e tmux new -s mS
-for_window [app_id="mS"] border 1pixel, floating enable, resize set 50 ppt 35 ppt, move position 0 0, move to scratchpad
-bindsym F1 [app_id="mS"] scratchpad show
+for_window [app_id="mS"] {
+    move scratchpad
+    move position 0 0
+    resize set 50 ppt 35 ppt
+    floating enable
+    border 1pixel
+}
+bindsym F1 exec swaymsg [app_id="mS"] scratchpad show || exec foot --app-id="mS" -e tmux new -s mS
 
 # Emacs Stuff (cross platform)
 # Local Variables:
