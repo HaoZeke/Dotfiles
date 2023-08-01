@@ -4,9 +4,10 @@ for_window [app_id="mS"] {
     move position 0 0
     resize set 50 ppt 35 ppt
     floating enable
-    border 1pixel
+    border pixel 1
 }
-bindsym F1 exec swaymsg [app_id="mS"] scratchpad show || exec foot --app-id="mS" -e tmux new -s mS
+bindsym F1 [app_id="mS"] scratchpad show; move position 0 0, resize set 50 ppt 35 ppt
+exec_always foot --app-id="mS" -e tmux new -s mS
 
 # Emacs Stuff (cross platform)
 # Local Variables:
