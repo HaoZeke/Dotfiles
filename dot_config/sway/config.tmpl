@@ -13,8 +13,9 @@ set $left h
 set $down n
 set $up e
 set $right i
-# Your preferred terminal emulator
-set $term foot
+# Your preferred terminal emulator (client)
+set $term_server foot -s
+set $term footclient
 # Your preferred application launcher
 # Note: pass the final command to swaymsg so that the resulting window can be opened
 # on the original workspace that the command was run on.
@@ -335,6 +336,9 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 
 # Faster thunar
 exec thunar --daemon
+
+# Faster terminals
+exec_always $term_server
 
 # Notifications
 exec_always mako
