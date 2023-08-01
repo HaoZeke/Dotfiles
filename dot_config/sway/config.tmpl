@@ -63,11 +63,14 @@ gaps inner 5
 #
 # Example configuration:
 #
+# Lock after 300 seconds, turn off after 150 seconds, then after 7 minutes of
+# inactivity use /etc/systemd/logind.conf to execute
 exec_always swayidle -w \
          timeout 300 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png' \
          timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
          before-sleep 'playerctl pause' \
-         before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png'
+         before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png' \
+         idlehint 780
 #
 # This will lock your screen after 300 seconds of inactivity, then turn off
 # your displays after another 300 seconds, and turn your screens back on when
