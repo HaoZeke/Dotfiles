@@ -29,6 +29,10 @@ zinit light mvdan/sh
 zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"direnv* -> direnv"
 zinit light direnv/direnv
 
+# simonwhitaker/gibo
+zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*"
+zinit light simonwhitaker/gibo
+
 # Archive helper
 # zinit ice as"command" from"gh-r" bpick="*{{ .chezmoi.os }}*" mv"archiver* -> archiver" pick"archiver/archiver"
 # zinit light mholt/archiver
