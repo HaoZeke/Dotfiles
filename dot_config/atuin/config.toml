@@ -32,7 +32,7 @@ search_mode = "fuzzy"
 
 ## which filter mode to use
 ## possible values: global, host, session, directory
-# filter_mode = "global"
+filter_mode = "host"
 
 ## which filter mode to use when atuin is invoked from a shell up-key binding
 ## the accepted values are identical to those of "filter_mode"
@@ -45,15 +45,20 @@ filter_mode_shell_up_key_binding = "directory"
 
 ## the maximum number of lines the interface should take up
 ## set it to 0 to always go full screen
-# inline_height = 0
+inline_height = 10
 
 ## enable or disable showing a preview of the selected command
 ## useful when the command is longer than the terminal width and is cut off
-# show_preview = false
+show_preview = true
 
 ## what to do when the escape key is pressed when searching
 ## possible values: return-original, return-query
-# exit_mode = "return-original"
+exit_mode = "return-query"
+
+# Configure whether or not to show the help row, which includes the current
+# Atuin version (and whether an update is available), a keymap hint, and the
+# total amount of commands in your history.
+show_help = false
 
 ## possible values: emacs, subl
 # word_jump_mode = "emacs"
