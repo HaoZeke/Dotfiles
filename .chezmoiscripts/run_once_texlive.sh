@@ -62,6 +62,12 @@ main() {
   local texlive_year
   texlive_year=$(tlmgr --version | grep 'TeX Live' | awk '{print $5}')
   echo "TeX Live Year: $texlive_year"
+
+  echo ""
+  echo "Add $TEXLIVE_DIR/texmf-dist/doc/man to MANPATH."
+  echo "Add $TEXLIVE_DIR/texmf-dist/doc/info to INFOPATH."
+  echo "Most importantly, add $TEXLIVE_BIN to your PATH for current and future sessions."
+  echo "Logfile: $TEXLIVE_DIR/install-tl.log"
 }
 
 main "$@"
