@@ -8,17 +8,19 @@ OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
 readonly OS_TYPE
 
 readonly TEXLIVE_URL="http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
-readonly TEXLIVE_DIR="$HOME/.local/share/texlive"
-mkdir -p "$TEXLIVE_DIR"
-readonly TEXLIVE_PROFILE="$TEXLIVE_DIR/texlive.profile"
-readonly TEXLIVE_BIN="$TEXLIVE_DIR/bin/$MACHINE_TYPE-$OS_TYPE"
 
 install_texlive() {
-  local profile_path=$1
   wget "$TEXLIVE_URL"
   tar -xzf install-tl-unx.tar.gz
-  cd install-tl-20*
-  ./install-tl --profile="$profile_path"
+  local install_dir=$(ls -d install-tl-20*)
+  local install_date=${install_dir##*-}
+  readonly TEXLIVE_DIR="$HOME/.local/share/texlive-$install_date"
+  mkdir -p "$TEXLIVE_DIR"
+  readonly TEXLIVE_PROFILE="$TEXLIVE_DIR/texlive.profile"
+  readonly TEXLIVE_BIN="$TEXLIVE_DIR/bin/$MACHINE_TYPE-$OS_TYPE"
+  create_profile
+  cd "$install_dir"
+  ./install-tl --profile="$TEXLIVE_PROFILE"
   cd ..
 }
 
@@ -39,8 +41,7 @@ EOF
 
 main() {
   if ! command -v texlua > /dev/null; then
-    create_profile
-    install_texlive "$TEXLIVE_PROFILE"
+    install_texlive
     rm "$TEXLIVE_PROFILE"
   fi
 
