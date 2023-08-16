@@ -9,15 +9,20 @@ readonly OS_TYPE
 
 readonly TEXLIVE_URL="http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
 
+# declarations
+TEXLIVE_DIR=""
+TEXLIVE_BIN=""
+TEXLIVE_PROFILE=""
+
 install_texlive() {
   wget "$TEXLIVE_URL"
   tar -xzf install-tl-unx.tar.gz
   local install_dir=$(ls -d install-tl-20*)
   local install_date=${install_dir##*-}
-  readonly TEXLIVE_DIR="$HOME/.local/share/texlive-$install_date"
+  TEXLIVE_DIR="$HOME/.local/share/texlive-$install_date"
   mkdir -p "$TEXLIVE_DIR"
-  readonly TEXLIVE_PROFILE="$TEXLIVE_DIR/texlive.profile"
-  readonly TEXLIVE_BIN="$TEXLIVE_DIR/bin/$MACHINE_TYPE-$OS_TYPE"
+  TEXLIVE_PROFILE="$TEXLIVE_DIR/texlive.profile"
+  TEXLIVE_BIN="$TEXLIVE_DIR/bin/$MACHINE_TYPE-$OS_TYPE"
   create_profile
   cd "$install_dir"
   ./install-tl --profile="$TEXLIVE_PROFILE"
