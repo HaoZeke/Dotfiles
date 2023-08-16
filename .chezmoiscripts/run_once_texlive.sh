@@ -29,6 +29,7 @@ install_texlive() {
   cd ..
   # cleanup
   rm -rf "$install_dir"
+  rm -rf install-tl-unx.tar.gz
 }
 
 create_profile() {
@@ -54,18 +55,18 @@ main() {
 
   export PATH="$TEXLIVE_BIN:$PATH"
 
-  tlmgr install luatex scheme-small \
+  tlmgr option -- autobackup 0
+  tlmgr update --self --all --no-auto-install
+
+  tlmgr install luatex \
     biber         \
     beamer        \
     xetex         \
-    pdflatex      \
     latexmk       \
     etoolbox      \
     minted        \
     texliveonfly
 
-  tlmgr option -- autobackup 0
-  tlmgr update --self --all --no-auto-install
   local texlive_year
   texlive_year=$(tlmgr --version | grep 'TeX Live' | awk '{print $5}')
   echo "TeX Live Year: $texlive_year"
