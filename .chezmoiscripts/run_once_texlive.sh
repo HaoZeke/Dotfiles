@@ -27,6 +27,8 @@ install_texlive() {
   cd "$install_dir"
   ./install-tl --profile="$TEXLIVE_PROFILE"
   cd ..
+  # cleanup
+  rm -rf "$install_dir"
 }
 
 create_profile() {
