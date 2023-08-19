@@ -49,33 +49,36 @@ EOF
 
 main() {
   if ! command -v texlua > /dev/null; then
+
     install_texlive
     rm "$TEXLIVE_PROFILE"
+
+    export PATH="$TEXLIVE_BIN:$PATH"
+
+    tlmgr option -- autobackup 0
+    tlmgr update --self --all --no-auto-install
+
+    tlmgr install luatex \
+      biber         \
+      beamer        \
+      xetex         \
+      latexmk       \
+      etoolbox      \
+      minted        \
+      texliveonfly
+
+    local texlive_year
+    texlive_year=$(tlmgr --version | grep 'TeX Live' | awk '{print $5}')
+    echo "TeX Live Year: $texlive_year"
+
+    echo ""
+    echo "Add $TEXLIVE_DIR/texmf-dist/doc/man to MANPATH."
+    echo "Add $TEXLIVE_DIR/texmf-dist/doc/info to INFOPATH."
+    echo "Most importantly, add $TEXLIVE_BIN to your PATH for current and future sessions."
+    echo "Logfile: $TEXLIVE_DIR/install-tl.log"
+
   fi
 
-  export PATH="$TEXLIVE_BIN:$PATH"
-
-  tlmgr option -- autobackup 0
-  tlmgr update --self --all --no-auto-install
-
-  tlmgr install luatex \
-    biber         \
-    beamer        \
-    xetex         \
-    latexmk       \
-    etoolbox      \
-    minted        \
-    texliveonfly
-
-  local texlive_year
-  texlive_year=$(tlmgr --version | grep 'TeX Live' | awk '{print $5}')
-  echo "TeX Live Year: $texlive_year"
-
-  echo ""
-  echo "Add $TEXLIVE_DIR/texmf-dist/doc/man to MANPATH."
-  echo "Add $TEXLIVE_DIR/texmf-dist/doc/info to INFOPATH."
-  echo "Most importantly, add $TEXLIVE_BIN to your PATH for current and future sessions."
-  echo "Logfile: $TEXLIVE_DIR/install-tl.log"
 }
 
 main "$@"
