@@ -19,6 +19,16 @@ install_texlive() {
   tar -xzf install-tl-unx.tar.gz
   local install_dir=$(ls -d install-tl-20*)
   local install_date=${install_dir##*-}
+    if command -v toml &> /dev/null; then
+      temp_file=$(mktemp)
+      if toml set ~/.config/chezmoi/chezmoi.toml data.tex_date "$install_date" > "$temp_file"; then
+        mv "$temp_file" ~/.config/chezmoi/chezmoi.toml
+      else
+        rm "$temp_file"
+        echo "Failed to update chezmoi.toml"
+        exit 1
+      fi
+    fi
   TEXLIVE_DIR="$HOME/.local/share/texlive-$install_date"
   mkdir -p "$TEXLIVE_DIR"
   TEXLIVE_PROFILE="$TEXLIVE_DIR/texlive.profile"
