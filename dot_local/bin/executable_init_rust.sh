@@ -16,7 +16,7 @@ command -v rustc > /dev/null || { \
 set -- "bottom" "ripgrep" "hyperfine" "skim" "mcfly" \
     "bat" "exa" "fd-find" "tealdeer" "starship" "sd" \
     "procs" "zoxide" "bliss" "git-delta" "watchexec-cli" \
-    "du-dust"
+    "du-dust" "toml-cli"
 for item in "$@"; do
     cargo install $item;
 done
