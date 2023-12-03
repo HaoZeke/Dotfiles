@@ -349,9 +349,8 @@ exec insync start
 # Window rules
 for_window [app_id="Telegram"] border none
 for_window [class="tabby"] border none
-
-# Profiles for displays
-exec kanshi
+for_window [shell="xwayland"] title_format "[XWayland] %title"
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
 
 # For fingerprint and more
 exec_always lxpolkit
