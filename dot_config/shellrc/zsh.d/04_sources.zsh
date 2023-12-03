@@ -17,7 +17,7 @@ zinit light "zdharma-continuum/fast-syntax-highlighting"
 zinit light "zlsun/solarized-man"
 
 # Nix shell
-zinit light "chisui/zsh-nix-shell"
+# zinit light "chisui/zsh-nix-shell"
 
 # Misc
 zinit light "mollifier/cd-gitroot"
