@@ -13,6 +13,3 @@ if [[ $- = *i* ]]; then
 		echo "You don't have nix installed"
 	fi
 fi
-
-# For ssh-add
-eval $(ssh-agent) >/dev/null 2>&1
