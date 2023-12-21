@@ -331,9 +331,6 @@ bar {
     }
 }
 
-# Service update
-exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XDG_SESSION_TYPE=wayland
-
 # Faster thunar
 exec thunar --daemon
 
@@ -344,16 +341,20 @@ exec_always $term_server
 exec_always mako
 
 # Sync stuff
-exec insync start
+# Disabled by default, reduce network calls for offline situations
+# exec insync start
 
 # Window rules
 for_window [app_id="Telegram"] border none
 for_window [class="tabby"] border none
-for_window [shell="xwayland"] title_format "[XWayland] %title"
-exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
+for_window [title="Windscribe"] floating enable, border none
 
 # For fingerprint and more
 exec_always lxpolkit
+
+# Wayland settings
+for_window [shell="xwayland"] title_format "[XWayland] %title"
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XDG_SESSION_TYPE=wayland
 
 # Moves the external screen to the right
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080
