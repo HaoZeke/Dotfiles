@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
 Name=Obsidian Wayland
-Exec=env DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 obsidian --enable-features=UseOzonePlatform
+Exec=env DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 obsidian --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=UseOzonePlatform --enable-features=WaylandWindowDecorations
 Icon=obsidian
