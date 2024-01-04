@@ -1,0 +1,16 @@
+# Mostly from here:
+# https://wiki.archlinux.org/title/PulseAudio/Troubleshooting
+# Get the defaults
+.include /etc/pulse/default.pa
+# Try to prevent pops and scratches
+.nofail
+unload-module module-suspend-on-idle
+.fail
+# For fixing the sound after  sleep
+unload-module module-switch-on-port-available
+# Don't interrupt
+unload-module module-role-cork
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: conf-space
+# End:
