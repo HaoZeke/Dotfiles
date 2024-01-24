@@ -19,6 +19,8 @@ set $term footclient
 # Your preferred application launcher
 # Note: pass the final command to swaymsg so that the resulting window can be opened
 # on the original workspace that the command was run on.
+# Always use https://github.com/lbonn/rofi
+# for wayland support
 set $menu rofi -show combi -show-icons -combi-modi "drun,run" -modi combi # | xargs swaymsg exec --
 set $screenshotTask grim -g "$(slurp -d)" - | wl-copy -t image/png
 
