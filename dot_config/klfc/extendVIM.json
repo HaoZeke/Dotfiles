@@ -1,0 +1,18 @@
+{
+  "filter": "no klc,keylayout",
+  "singletonKeys": [
+    [ "CapsLock", "Extend" ],
+    [ "Alt_L", "AltGr" ]
+  ],
+  "shiftlevels": [ "Extend", "Shift+Extend", "AltGr+Extend" ],
+  "keys": [
+    { "pos": "H", "letters": [ "Left", "", "Backspace" ] },
+    { "pos": "J", "letters": [ "Down" ] },
+    { "pos": "K", "letters": [ "Up" ] },
+    { "pos": "L", "letters": [ "Right", "", "Delete" ] },
+    { "pos": ";", "letters": [ "Enter" ] },
+    { "pos": "N", "letters": [ "(", "[", "{" ] },
+    { "pos": "V", "letters": [ ")", "]" , "}"] }
+  ]
+}
+
