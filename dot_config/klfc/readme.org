@@ -1,0 +1,2 @@
+* About
+This is meant for use with ~klfc~ as [[https://rgoswami.me/posts/remap-keys-xkb-klfc/][detailed here]].
