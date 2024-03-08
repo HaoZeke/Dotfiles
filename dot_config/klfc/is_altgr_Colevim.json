@@ -1,0 +1,19 @@
+// Colemak Icelandic VIM layout
+// Note that these are still relative to the base QWERTY
+{
+  "filter": "no tmk",
+  "singletonKeys": [
+    [ "Alt_L", "AltGr" ]
+  ],
+  "shiftlevels": [ "AltGr", "Shift+AltGr" ],
+  "keys": [
+    { "pos": "A", "letters": [ "á", "Á" ] },
+    { "pos": "F", "letters": [ "þ", "Þ" ] },
+    { "pos": "G", "letters": [ "ð", "Ð" ] },
+    { "pos": "K", "letters": [ "é", "É" ] },
+    { "pos": "L", "letters": [ "í", "Í" ] },
+    { "pos": ";", "letters": [ "ó", "Ó" ] },
+    { "pos": "I", "letters": [ "ú", "Ú" ] },
+    { "pos": "O", "letters": [ "ý", "Ý" ] }
+  ]
+}
