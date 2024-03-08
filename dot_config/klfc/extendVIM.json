@@ -1,3 +1,6 @@
+// Colemak VIM layout
+// Details here: https://rgoswami.me/posts/remap-keys-xkb-klfc/
+// Relative to the base QWERTY
 {
   "filter": "no klc,keylayout",
   "singletonKeys": [
