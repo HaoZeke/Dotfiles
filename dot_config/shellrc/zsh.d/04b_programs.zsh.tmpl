@@ -34,8 +34,9 @@ zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*"
 zinit light simonwhitaker/gibo
 
 # Archive helper
-# zinit ice as"command" from"gh-r" bpick="*{{ .chezmoi.os }}*" mv"archiver* -> archiver" pick"archiver/archiver"
-# zinit light mholt/archiver
+# No binary assets for later releases weirdly
+zinit ice as"command" from"gh-r" mv"arc* -> archiver" pick"archiver" ver"v3.4.0"
+zinit light mholt/archiver
 
 # Makefile alternative
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"task* -> task" pick"task/task"
