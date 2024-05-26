@@ -1,0 +1,13 @@
+# include "%L"
+
+<Multi_key> <g> <a> : "α"
+<Multi_key> <g> <b> : "β"
+<Multi_key> <g> <g> : "γ"
+
+# Icelandic
+<Multi_key> <a> <e> : "æ"
+<Multi_key> <o> <i> : "ö"
+
+# Local Variables:
+# mode: conf
+# End:
