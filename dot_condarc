@@ -1,6 +1,6 @@
 channels:
   - conda-forge
-  - defaults
+  - nodefaults
 channel_priority: disabled
 auto_activate_base: false
 envs_dirs:
