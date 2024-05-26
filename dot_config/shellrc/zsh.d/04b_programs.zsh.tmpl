@@ -26,7 +26,7 @@ zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"shfmt* -> shfmt"
 zinit light 'mvdan/sh'
 
 # direnv/direnv
-zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"direnv* -> direnv"
+zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"direnv* -> direnv" atload'eval "$(direnv hook zsh)"'
 zinit light 'direnv/direnv'
 
 # simonwhitaker/gibo
