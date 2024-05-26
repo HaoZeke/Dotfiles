@@ -1,22 +1,22 @@
 if [[ ! -o interactive ]]; then
-	# non-interactive, return
-	return
+  # non-interactive, return
+  return
 fi
 
 export shellHome=$HOME/.config/shellrc
 
 # Load all files from the posix.d directory
 if [ -d $shellHome/posix.d ]; then
-	for file in $shellHome/posix.d/*.sh; do
-		source $file
-	done
+  for file in $shellHome/posix.d/*.sh; do
+    source $file
+  done
 fi
 
 # Load all files from the zsh.d directory
 if [ -d $shellHome/zsh.d ]; then
-	for file in $shellHome/zsh.d/*.zsh; do
-		source $file
-	done
+  for file in $shellHome/zsh.d/*.zsh; do
+    source $file
+  done
 fi
 
 # Mamba / Micromamba setup
@@ -26,7 +26,7 @@ eval "$(micromamba shell hook --shell=zsh)"
 
 # Common Zsh #
 if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
-    zcompile ~/.zshrc
+  zcompile ~/.zshrc
 fi
 
 # Platform
