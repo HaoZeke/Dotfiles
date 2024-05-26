@@ -62,7 +62,9 @@ zinit light ogham/exa
 
 # Evaluated
 # Starship
-zinit ice from"gh-r" as"program" pick"starship" atload'eval "$(starship init zsh)"' extract
+zinit ice from"gh-r" as"program" pick"starship" atload'eval "$(starship init zsh)"' extract \
+        atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
+        atpull"%atclone" src"init.zsh"
 zinit light 'starship/starship'
 
 # zoxide
