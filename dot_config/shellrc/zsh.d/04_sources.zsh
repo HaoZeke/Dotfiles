@@ -4,7 +4,6 @@
 # OMZ Plugins
 zinit snippet OMZP::git/git.plugin.zsh
 zinit snippet OMZP::github/github.plugin.zsh
-zinit ice svn
 zinit snippet OMZP::systemadmin
 zinit snippet OMZP::sudo
 zinit snippet OMZP::systemd
