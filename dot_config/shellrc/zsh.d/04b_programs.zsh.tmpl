@@ -71,9 +71,9 @@ zinit light 'starship/starship'
 zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh --cmd Z)"'
 zinit light 'ajeetdsouza/zoxide'
 
-# ** ellie/atuin ** 🐢 Magical shell history
-zinit ice from"gh" atclone"install.sh"  atload'eval "$(atuin init zsh)"'
-zinit light 'ellie/atuin'
+# ** atuinsh/atuin ** 🐢 Magical shell history
+zinit ice from"gh-r" as"program" pick"atuin" extract mv"*/atuin* -> atuin" atload'eval "$(atuin init zsh)"'
+zinit light 'atuinsh/atuin'
 
 # Emacs Stuff (cross platform)
 # Local Variables:
