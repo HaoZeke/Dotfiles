@@ -3,40 +3,40 @@
 ############
 # junegunn/fzf-bin
 zinit ice from="gh-r" as="command" bpick="*{{ .chezmoi.os }}*"
-zinit light junegunn/fzf
+zinit light 'junegunn/fzf'
 
 # monochromegane/the_platinum_searcher
 zinit ice as"program" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"*/pt"
-zinit load monochromegane/the_platinum_searcher
+zinit load 'monochromegane/the_platinum_searcher'
 
 # wakatime/wakatime-cli
 zinit ice as"program" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"wakatime-cli* -> wakatime-cli" pick"*/wakatime-cli"
-zinit load wakatime/wakatime-cli
+zinit load 'wakatime/wakatime-cli'
 
 # sharkdp/fd
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"fd* -> fd" pick"fd/fd"
-zinit light sharkdp/fd
+zinit light 'sharkdp/fd'
 
 # sharkdp/bat
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"bat* -> bat" pick"bat/bat"
-zinit light sharkdp/bat
+zinit light 'sharkdp/bat'
 
 # mvdan/sh
 zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"shfmt* -> shfmt"
-zinit light mvdan/sh
+zinit light 'mvdan/sh'
 
 # direnv/direnv
 zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*" mv"direnv* -> direnv"
-zinit light direnv/direnv
+zinit light 'direnv/direnv'
 
 # simonwhitaker/gibo
 zinit ice from"gh-r" as"program" bpick"*{{ .chezmoi.os }}*"
-zinit light simonwhitaker/gibo
+zinit light 'simonwhitaker/gibo'
 
 # Archive helper
 # No binary assets for later releases weirdly
 zinit ice as"command" from"gh-r" mv"arc* -> archiver" pick"archiver" ver"v3.4.0"
-zinit light mholt/archiver
+zinit light 'mholt/archiver'
 
 # Makefile alternative
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"task* -> task" pick"task/task"
@@ -62,16 +62,16 @@ zinit light ogham/exa
 
 # Evaluated
 # Starship
-zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(starship init zsh)"'
-zinit light starship/starship
+zinit ice from"gh-r" as"program" pick"starship" atload'eval "$(starship init zsh)"' extract
+zinit light 'starship/starship'
 
 # zoxide
 zinit ice from"gh-r" bpick"*{{ .chezmoi.os }}*" as"program" atload'eval "$(zoxide init zsh --cmd Z)"'
-zinit light ajeetdsouza/zoxide
+zinit light 'ajeetdsouza/zoxide'
 
 # ** ellie/atuin ** 🐢 Magical shell history
 zinit ice from"gh" atclone"install.sh"  atload'eval "$(atuin init zsh)"'
-zinit light ellie/atuin
+zinit light 'ellie/atuin'
 
 # Emacs Stuff (cross platform)
 # Local Variables:
