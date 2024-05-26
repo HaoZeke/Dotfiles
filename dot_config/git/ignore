@@ -38,5 +38,12 @@ package-lock.json
 *.pyc
 /tmp
 
+# RStudio additions
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.quarto
+
 # References
 # [1] https://github.com/paulmillr/dotfiles/blob/master/home/.gitignore
