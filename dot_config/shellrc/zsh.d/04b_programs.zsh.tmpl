@@ -51,17 +51,21 @@ zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"age/(age|age-ke
 zinit light "FiloSottile/age"
 
 # ogham/exa, replacement for ls
-{{ if eq .chezmoi.os "darwin" }}
+{{ if eq .chezmoi.os "darwin" -}}
 # Sadly this is released as macos
 zinit ice from"gh-r" as"program" bpick"*macos*" mv"*/exa* -> exa"
-{{ else if eq .chezmoi.os "linux" }}
+{{ else if eq .chezmoi.os "linux" -}}
 zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/exa* -> exa"
-{{ end }}
+{{ end -}}
 zinit light ogham/exa
 
 # nnn
 zinit wait lucid id-as'nnn' from'github' as'program' for \
+{{ if eq .key_layout "colemak" -}}
   make'O_NERD=1 O_QSORT=1 O_PCRE=1 O_COLEMAK=1' \
+{{ else -}}
+  make'O_NERD=1 O_QSORT=1 O_PCRE=1' \
+{{ end -}}
   pick"nnn" \
   src'misc/quitcd/quitcd.bash_sh_zsh' \
   jarun/nnn
