@@ -61,7 +61,9 @@ zinit light ogham/exa
 
 # nnn
 zinit wait lucid id-as'nnn' from'github' as'program' for \
-  make='O_NERD=1' src'misc/quitcd/quitcd.bash_sh_zsh' \
+  make'O_NERD=1 O_QSORT=1 O_PCRE=1 O_COLEMAK=1' \
+  pick"nnn" \
+  src'misc/quitcd/quitcd.bash_sh_zsh' \
   jarun/nnn
 zinit wait lucid light-mode blockf for \
     as"completion" "https://github.com/jarun/nnn/blob/master/misc/auto-completion/zsh/_nnn"
