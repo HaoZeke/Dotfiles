@@ -2,7 +2,7 @@
 Description=Foot terminal server
 
 [Service]
-ExecStart=/usr/bin/foot --server
+ExecStart=/usr/bin/foot --server=/run/user/%U/foot-server.sock
 Restart=on-failure
 
 [Install]

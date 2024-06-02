@@ -1,10 +1,10 @@
 [Unit]
 Description=Foot client for tmux session mS
-After=foot-server.socket
-Requires=foot-server.socket
+After=foot-server.service
+Requires=foot-server.service
 
 [Service]
-ExecStart=/usr/bin/footclient --app-id="mS" -e tmux new -A -s mS
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e tmux new -A -s mS
 Restart=on-failure
 
 [Install]
