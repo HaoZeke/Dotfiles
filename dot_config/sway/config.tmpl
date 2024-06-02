@@ -15,7 +15,8 @@ set $up e
 set $right i
 # Your preferred terminal emulator (client)
 set $term_server foot -s
-set $term footclient
+# XDG_RUNTIME_DIR should be /run/user/$(id -u $USER)/
+set $term footclient --server-socket=$XDG_RUNTIME_DIR/foot-server.sock
 # Your preferred application launcher
 # Note: pass the final command to swaymsg so that the resulting window can be opened
 # on the original workspace that the command was run on.
@@ -338,7 +339,8 @@ bar {
 exec thunar --daemon
 
 # Faster terminals
-exec_always $term_server
+# Now managed by .conf/systemd/user/foot-server.{service,sock}
+# exec_always $term_server
 
 # Notifications
 exec_always mako
