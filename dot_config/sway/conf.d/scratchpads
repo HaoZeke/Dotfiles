@@ -1,22 +1,25 @@
+# Settings
+set {
+ $ms_pos border none, move position 0 0, resize set 50 ppt 35 ppt
+ $sf_pos border pixel 1, move position center
+ $start_ms systemctl --user start foot-ms.service
+ $start_sf systemctl --user start foot-subfloat.service
+}
 # The main scratchpad in the upper left
 for_window [app_id="mS"] {
-    move scratchpad
-    move position 0 0
-    resize set 50 ppt 35 ppt
+    move to scratchpad
     floating enable
-    border pixel 1
+    $ms_pos
 }
-bindsym F1 [app_id="mS"] scratchpad show; move position 0 0, resize set 50 ppt 35 ppt
-exec_always foot --app-id="mS" -e tmux new -s mS
+bindsym F1 exec swaymsg [app_id="mS"] scratchpad show || $start_ms, $ms_pos
 
 # The secondary scratchpad in the center
 for_window [app_id="subFloat"] {
-    move scratchpad
-    move position center
+    move to scratchpad
     floating enable
     border pixel 1
 }
-bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || exec foot --app-id="subFloat" -e tmux new -s subFloat
+bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || $start_sf, $sf_pos
 
 # Emacs Stuff (cross platform)
 # Local Variables:
