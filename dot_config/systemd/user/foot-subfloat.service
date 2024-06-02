@@ -1,11 +1,11 @@
 # -*- systemd -*-
 [Unit]
 Description=Foot client for tmux session subFloat
-After=foot-server.service
-Requires=foot-server.service
+After=foot-server.service tmux-session-subfloat.service
+Requires=foot-server.service tmux-session-subfloat.service
 
 [Service]
-ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="subFloat" -e tmux new -A -s subFloat
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="subFloat" -e tmux attach-session -t subFloat
 Restart=on-failure
 
 [Install]
