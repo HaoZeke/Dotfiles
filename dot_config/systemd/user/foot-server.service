@@ -1,3 +1,4 @@
+# -*- systemd -*-
 [Unit]
 Description=Foot terminal server
 
@@ -7,8 +8,3 @@ Restart=on-failure
 
 [Install]
 WantedBy=default.target
-
-# Emacs Stuff (cross platform)
-# Local Variables:
-# mode: systemd-mode
-# End:
