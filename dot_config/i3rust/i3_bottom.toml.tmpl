@@ -10,15 +10,26 @@ icons = "awesome5"
 
 [[block]]
 block = "weather"
+format = "$weather ($location) $temp, $wind m/s $direction"
+[block.service]
+name = "openweathermap"
+lang = "en"
+api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
+city_id = "3413829" # Reykjavík
+# city_id = "1267995" # Kanpur
+units = "metric"
+
+[[block]]
+block = "weather"
 format = "IISERM $weather $temp"
 [block.service]
 name = "openweathermap"
 lang = "en"
 api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
+units = "metric"
 coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M
 # coordinates = ["64.140461", "-21.961226"] # Reykjavik
 # coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
-units = "metric"
 
 [[block]]
 block = "time"
@@ -42,12 +53,7 @@ block = "music"
 format = " $icon {$combo.str(max_w:20,rot_interval:0.5) $play $next |}"
 interface_name_exclude = [".*kdeconnect.*", "mpd"]
 
-# [[block]]
-# block = "weather"
-# format = "$weather ($location) $temp, $wind m/s $direction"
-# [block.service]
-# name = "openweathermap"
-# api_key = "XXX"  # Needs an API key, can be an env variable
-# # # city_id = "1267995" # Kanpur
-# # # city_id = "3413829" # Reykjavík
-# units = "metric"
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: conf-toml-mode
+# End:
