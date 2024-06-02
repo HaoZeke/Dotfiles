@@ -1,8 +1,10 @@
 [Unit]
 Description=Foot client for tmux session subFloat
+After=foot-server.socket
+Requires=foot-server.socket
 
 [Service]
-ExecStart=/usr/bin/foot --app-id="subFloat" -e tmux new -A -s subFloat
+ExecStart=/usr/bin/footclient --app-id="subFloat" -e tmux new -A -s subFloat
 Restart=on-failure
 
 [Install]

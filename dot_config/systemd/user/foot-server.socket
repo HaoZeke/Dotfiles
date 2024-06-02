@@ -1,8 +1,8 @@
 [Unit]
-Description=Socket for foot-ms service
+Description=Socket for foot-server service
 
 [Socket]
-ListenStream=/run/user/%U/foot-ms.sock
+ListenStream=/run/user/%U/foot.sock
 
 [Install]
 WantedBy=default.target
