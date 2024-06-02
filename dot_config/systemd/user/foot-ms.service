@@ -1,11 +1,11 @@
 # -*- systemd -*-
 [Unit]
 Description=Foot client for tmux session mS
-After=foot-server.service
-Requires=foot-server.service
+After=foot-server.service tmux-session-ms.service
+Requires=foot-server.service tmux-session-ms.service
 
 [Service]
-ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e tmux new -A -s mS
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e tmux attach-session -t mS
 Restart=on-failure
 
 [Install]

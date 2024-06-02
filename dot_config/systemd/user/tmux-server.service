@@ -1,0 +1,13 @@
+# -*- systemd -*-
+[Unit]
+Description=Tmux server
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/tmux start-server
+ExecStop=/usr/bin/tmux kill-server
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

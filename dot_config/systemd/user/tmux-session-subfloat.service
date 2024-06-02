@@ -1,0 +1,14 @@
+# -*- systemd -*-
+[Unit]
+Description=Tmux session subFloat
+After=tmux-server.service
+Requires=tmux-server.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/tmux new-session -s subFloat -d
+ExecStop=/usr/bin/tmux kill-session -t subFloat
+
+[Install]
+WantedBy=default.target
