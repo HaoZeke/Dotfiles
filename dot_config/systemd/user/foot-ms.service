@@ -1,0 +1,14 @@
+[Unit]
+Description=Foot client for tmux session mS
+
+[Service]
+ExecStart=/usr/bin/foot --app-id="mS" -e tmux new -A -s mS
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: systemd-mode
+# End:
