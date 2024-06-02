@@ -1,8 +1,9 @@
 [Unit]
-Description=Socket for foot-ms service
+Description=Foot terminal server
 
-[Socket]
-ListenStream=/run/user/%U/foot-ms.sock
+[Service]
+ExecStart=/usr/bin/foot --server
+Restart=on-failure
 
 [Install]
 WantedBy=default.target
