@@ -1,0 +1,14 @@
+[Unit]
+Description=Foot client for tmux session subFloat
+
+[Service]
+ExecStart=/usr/bin/foot --app-id="subFloat" -e tmux new -A -s subFloat
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: systemd-mode
+# End:
