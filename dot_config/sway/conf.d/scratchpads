@@ -1,6 +1,7 @@
+# -*- conf -*-
 # Settings
 set {
- $ms_pos border none, move position 0 0, resize set 50 ppt 35 ppt
+ $ms_pos border pixel 1, move position 1px 1px, resize set 50 ppt 35 ppt
  $sf_pos border pixel 1, move position center
  $start_ms systemctl --user start foot-ms.service
  $start_sf systemctl --user start foot-subfloat.service
@@ -20,8 +21,3 @@ for_window [app_id="subFloat"] {
     border pixel 1
 }
 bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || $start_sf, $sf_pos
-
-# Emacs Stuff (cross platform)
-# Local Variables:
-# mode: conf-space
-# End:
