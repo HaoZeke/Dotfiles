@@ -12,8 +12,9 @@ icons = "awesome5"
 block = "weather"
 format = "IISERM $weather $temp"
 [block.service]
-name = "metno" # No API key, bit off +- 1 degree
+name = "openweathermap"
 lang = "en"
+api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
 coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M
 # coordinates = ["64.140461", "-21.961226"] # Reykjavik
 # coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
