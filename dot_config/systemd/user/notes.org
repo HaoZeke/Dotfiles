@@ -1,0 +1,4 @@
+- One socket (for the server) will suffice, and ~foot~ will just need to be aware of it correctly
+  + In any case the service is going to be running constantly, so the scratchpads don't need to have a socket
+- Use the default ~foot.sock~ file so it is more easily compatible with ~sway~
+  and standard invocations of ~foot~
