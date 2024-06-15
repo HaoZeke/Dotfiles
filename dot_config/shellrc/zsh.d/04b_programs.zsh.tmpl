@@ -59,6 +59,12 @@ zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/exa* -> exa"
 {{ end -}}
 zinit light ogham/exa
 
+# reStream on Linux
+{{ if ne .chezmoi.os "windows" -}}
+zinit ice from"gh-r" as"program" bpick"*.sh" mv"restream.sh -> reStream"
+zinit light rien/reStream
+{{ end -}}
+
 # nnn
 zinit wait lucid id-as'nnn' from'github' as'program' for \
 {{ if eq .key_layout "colemak" -}}
