@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Element Wayland
+Comment=Official client for Matrix, with Wayland flags
+Exec=element-desktop %u --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
+Terminal=false
+Icon=io.element.Element
+StartupWMClass=ElementWayland
+Categories=Network;InstantMessaging;Chat;IRCClient
+MimeType=x-scheme-handler/element;
