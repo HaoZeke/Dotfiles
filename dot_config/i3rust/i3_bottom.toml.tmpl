@@ -1,3 +1,4 @@
+#-*- mode: conf-toml -*-
 # TOML Ref: https://github.com/toml-lang/toml
 # Example: https://raw.githubusercontent.com/greshake/i3status-rust/master/examples/config.toml
 # Block Doc: https://greshake.github.io/i3status-rust/i3status_rs/blocks/index.html
@@ -21,15 +22,15 @@ units = "metric"
 
 [[block]]
 block = "weather"
-format = "IISERM $weather $temp"
+format = "IITK $weather $temp"
 [block.service]
 name = "openweathermap"
 lang = "en"
 api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
 units = "metric"
-coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M
+# coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M
 # coordinates = ["64.140461", "-21.961226"] # Reykjavik
-# coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
+coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
 
 [[block]]
 block = "time"
@@ -52,8 +53,3 @@ format = "$percentage $time $power|N/A"
 block = "music"
 format = " $icon {$combo.str(max_w:20,rot_interval:0.5) $play $next |}"
 interface_name_exclude = [".*kdeconnect.*", "mpd"]
-
-# Emacs Stuff (cross platform)
-# Local Variables:
-# mode: conf-toml-mode
-# End:
