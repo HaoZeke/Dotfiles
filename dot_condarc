@@ -1,7 +1,7 @@
 channels:
   - conda-forge
   - nodefaults
-channel_priority: disabled
+channel_priority: strict
 auto_activate_base: false
 envs_dirs:
   - ~/.micromamba/envs
