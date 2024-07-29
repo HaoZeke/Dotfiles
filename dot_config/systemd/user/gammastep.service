@@ -1,0 +1,10 @@
+# -*- systemd -*-
+[Unit]
+Description=Gammastep for bluelight adjustment
+
+[Service]
+ExecStart=/usr/bin/gammastep -c %h/.config/gammastep/config.ini
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
