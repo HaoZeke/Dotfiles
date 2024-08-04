@@ -50,6 +50,17 @@ zinit light 'b4b4r07/git-fzf'
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" pick"age/(age|age-keygen)"
 zinit light "FiloSottile/age"
 
+# rusage.com :: https://justine.lol/rusage/
+# TODO(rg) : This works on Windows, atleast the executable, but curl isn't there..
+{{ if ne .chezmoi.os "windows" -}}
+zinit ice as"command" pick"rusage.com" id-as'rusage' run-atpull \
+    atclone"curl -o rusage.com https://justine.lol/rusage/rusage.com; chmod +x rusage.com"
+{{ else -}}
+zinit ice as"command" pick"rusage.com" id-as'rusage' run-atpull \
+    atclone"powershell -Command \"Invoke-WebRequest -Uri https://justine.lol/rusage/rusage.com -OutFile rusage.com; chmod +x rusage.com\""
+{{ end -}}
+zinit light zdharma-continuum/null
+
 # ogham/exa, replacement for ls
 {{ if eq .chezmoi.os "darwin" -}}
 # Sadly this is released as macos
