@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Equibop Wayland
+Exec=equibop %U --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto
+Terminal=false
+Type=Application
+Icon=equibop
+StartupWMClass=Equibop
+GenericName=Internet Messenger
+Categories=Network;
+Keywords=discord;equibop;vesktop;vencord;equicord;electron;chat;
+Comment=A fork of Vesktop pre-packaged with Equicord
