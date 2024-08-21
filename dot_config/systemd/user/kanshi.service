@@ -1,0 +1,12 @@
+# -*- systemd -*-
+[Unit]
+Description=Kanshi for automatically applying display profiles
+After=graphical.target
+
+[Service]
+ExecStart=/usr/bin/kanshi -c %h/.config/kanshi/config
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
