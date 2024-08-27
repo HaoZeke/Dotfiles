@@ -13,17 +13,17 @@ if [ "$#" -ne 2 ]; then
 fi
 
 # Adjust brightness using brightnessctl and capture any errors
-if ! brightnessctl set "$BRIGHTNESS_CHANGE"; then
-  echo "Error: Failed to adjust brightness using brightnessctl"
+BRIGHTNESS_LEVEL=$(brightnessctl set "$BRIGHTNESS_CHANGE" | sed -En 's/.*\(([0-9]+)%\).*/\1/p')
+
+# Check if the brightness level was successfully retrieved
+if [ -z "$BRIGHTNESS_LEVEL" ]; then
+  echo "Error: Failed to retrieve the brightness level"
   exit 1
 fi
 
-# Extract the new brightness value
-BRIGHTNESS_LEVEL=$(brightnessctl -m | awk -F, '{print $4}' | tr -d '%')
-
 # Set the brightness for external monitors using ddcutil
 # Get the bus via ddcutil detect
-ddcutil --bus 1 setvcp 10 "$BRIGHTNESS_LEVEL"
+ddcutil --dsa --bus 1 setvcp 10 "$BRIGHTNESS_LEVEL"
 
 # Optionally, output the brightness level to WOBSOCK if wob is being used
 if [ -n "$WOBSOCK" ]; then
