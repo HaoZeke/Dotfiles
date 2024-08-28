@@ -1,4 +1,15 @@
 profile {
   output eDP-1 enable mode 1920x1200 position 0,0
+  # Home screen, to the right
   output HDMI-A-1 enable mode 1920x1080 position 1920,0
+}
+
+profile {
+  output eDP-1 enable mode 1920x1200 position 0,0
+  # HI Lab screen, to the left
+  output "BNQ BenQ PD2705Q V3N03357019" {
+   enable
+   mode 2560x1440
+   position -2560,0
+  }
 }
