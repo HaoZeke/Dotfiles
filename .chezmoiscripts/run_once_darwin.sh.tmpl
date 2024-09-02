@@ -1,5 +1,5 @@
+{{ if eq .chezmoi.os "darwin" }}
 #!/usr/bin/env bash
-# macOS {{ if eq .chezmoi.os "darwin" }}
 
 # System Configuration
 ########################
@@ -276,8 +276,6 @@ for app in "Address Book" "Contacts" "Dock" "Finder" "Safari" "SystemUIServer"; 
   killall "${app}" &> /dev/null
 done
 
-# End {{ end }}
-
 # References
 # [1] https://github.com/webpro/dotfiles/blob/master/macos/defaults.sh
 # [2] https://github.com/kevinSuttle/macOS-Defaults/blob/master/.macos
@@ -286,3 +284,5 @@ done
 # Local Variables:
 # mode: shell-script
 # End:
+
+{{ end }}
