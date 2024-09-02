@@ -1,1 +1,3 @@
+{{ if ne .chezmoi.os "windows" }}
 {{ .chezmoi.homeDir }}/.config/shellrc/zsh.d/05_{{ .chezmoi.os }}.zsh
+{{ end }}

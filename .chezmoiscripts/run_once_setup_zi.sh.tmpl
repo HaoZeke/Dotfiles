@@ -1,3 +1,4 @@
+{{ if ne .chezmoi.os "windows" }}
 #!/usr/bin/env zsh
 
 if [[ ! -d ~/.zi ]]; then
@@ -8,3 +9,5 @@ autoload -Uz _zi
 (( ${+_comps} )) && _comps[zi]=_zi
 
 exec zsh
+
+{{ end }}
