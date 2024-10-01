@@ -5,11 +5,15 @@ profile {
 }
 
 profile {
-  output eDP-1 enable mode 1920x1200 position 0,0
+  # Negative offsets are a no-go, so shift relative to the actual size
+  # See:
+  # [1] https://github.com/swaywm/wlroots/issues/958
+  # [2] https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/395#note_555613
+  output eDP-1 enable mode 1920x1200 position 2560,0
   # HI Lab screen, to the left
   output "BNQ BenQ PD2705Q V3N03357019" {
    enable
    mode 2560x1440
-   position -2560,0
+   position 0,0
   }
 }
