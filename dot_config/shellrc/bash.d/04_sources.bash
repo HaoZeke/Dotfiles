@@ -10,6 +10,8 @@ if [[ $- = *i* ]]; then
             source "$HOME/.nix-profile/etc/profile.d/nix.sh"
         fi
     else
-        echo "You don't have nix installed"
+        if [[ -v DEBUG_RGDOTS ]]; then
+            echo "You don't have nix installed"
+        fi
     fi
 fi
