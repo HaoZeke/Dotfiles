@@ -158,3 +158,8 @@ pf() {
 killmosh() {
 	who | grep -v 'via mosh' | grep -oP '(?<=mosh \[)(\d+)(?=\])' | xargs kill
 }
+
+
+# Find and replace, e.g. agr "np.float" "float"
+# Kanged from: https://gist.github.com/hlissner/db74d23fc00bed81ff62?permalink_comment_id=4492301#gistcomment-4492301
+agr() { ag -0 -l "$1" | AGR_FROM="$1" AGR_TO="$2" xargs -r0 perl -pi -e 'BEGIN{undef $/;} s/$ENV{AGR_FROM}/$ENV{AGR_TO}/g'; }
