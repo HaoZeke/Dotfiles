@@ -1,0 +1,65 @@
+# -*- mode:conf; -*-
+
+#################################################################
+## Window layout rules
+#################################################################
+# to find window app_id, class, title, role use: swaymsg -t get_tree
+
+for_window {
+  # prevent screen lock if window is in fullscreen mode
+  [class=".*"] {
+      inhibit_idle fullscreen
+  }
+
+  [app_id=".*"] {
+      inhibit_idle fullscreen
+  }
+
+  # Firefox
+  [app_id="firefox" title="Firefox — Sharing Indicator"] {
+      border none, floating enable, nofocus
+  }
+
+  [window_role="pop-up"] {
+      floating enable
+  }
+
+  [title="^Picture-in-Picture$"] {
+      focus
+      floating enable
+      border none
+      sticky toggle
+      resize set height 280px
+      resize set width 500px
+      move position 100ppt 0
+      move left 500px
+  }
+
+
+  [app_id="Zotero" title="Progress"] {
+      floating enable
+  }
+
+  [app_id="Zotero" title="^Quick Format Citation$"] {
+      floating enable
+  }
+
+  [title="^Windscribe$"] {
+      floating enable, border none
+  }
+
+  [class="tabby"] {
+    border none
+  }
+
+  [app_id="Telegram"] {
+    bordner none
+  }
+
+}
+
+################
+## References ##
+################
+# [1]: https://github.com/psto/.dotfiles/blob/main/sway/.config/sway/for_window
+# [2]: https://github.com/Jguer/dotfiles/blob/df20e72c3c998bc977c1af711c81d51fd1c70279/sway/config#L150-L159
