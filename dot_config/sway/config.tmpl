@@ -355,6 +355,15 @@ for_window [class="tabby"] border none
 for_window [title="^Windscribe$"] floating enable, border none
 for_window [app_id="Zotero" title="Progress"] floating enable
 
+# Kanged from here: https://github.com/Jguer/dotfiles/blob/df20e72c3c998bc977c1af711c81d51fd1c70279/sway/config#L150-L159
+for_window [app_id="firefox" title="Firefox — Sharing Indicator"] border none, floating enable, nofocus
+for_window [app_id="firefoxdeveloperedition" title="Firefox Developer Edition — Sharing Indicator"] border none, floating enable, nofocus
+for_window [window_role="pop-up"] floating enable
+for_window [title="^Picture in picture$"] \
+    floating enable, move position 877 450, sticky enable, border none
+for_window [app_id="firefox" title="^Picture-in-Picture$"] \
+    floating enable, move position 877 450, sticky enable, border none
+
 # For fingerprint and more
 exec_always lxpolkit
 
