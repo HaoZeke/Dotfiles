@@ -47,7 +47,9 @@ for_window {
   [window_role="pop-up"] {
       floating enable
   }
+  # Firefox :: end
 
+  # Firefox + Chrome :: start
   [title="^Picture-in-Picture$"] {
       focus
       floating enable
@@ -58,7 +60,18 @@ for_window {
       move position 100ppt 0
       move left 500px
   }
-  # Firefox :: end
+
+  [title="^Picture in picture$"] {
+      focus
+      floating enable
+      border pixel 3
+      sticky toggle
+      resize set height 280px
+      resize set width 500px
+      move position 100ppt 0
+      move left 500px
+  }
+  # Firefox + Chrome :: end
 
   # Thunar :: begin
   [app_id=app_id="Thunar" title="^Copying.*"] {
