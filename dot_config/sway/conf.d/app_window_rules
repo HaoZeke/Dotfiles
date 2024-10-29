@@ -5,6 +5,11 @@
 #################################################################
 # to find window app_id, class, title, role use: swaymsg -t get_tree
 
+## Notes
+# pixel 0 is for those which have other active indicators
+# pixel 3 provides a think blue active / inactive outline
+# pixel 1 is a bit too light for this..
+
 for_window {
   # prevent screen lock if window is in fullscreen mode
   [class=".*"] {
@@ -15,9 +20,28 @@ for_window {
       inhibit_idle fullscreen
   }
 
-  # Firefox
-  [app_id="firefox" title="Firefox — Sharing Indicator"] {
-      border none, floating enable, nofocus
+  # Float tooltips and more
+  [window_role = "bubble"] {
+      floating enable
+  }
+
+  [window_role = "dialog"] {
+      floating enable
+  }
+
+  [window_role = "task_dialog"] {
+      floating enable
+  }
+
+  [window_type = "menu"] {
+      floating enable
+  }
+
+  # Firefox :: begin
+  [title="Firefox — Sharing Indicator"] {
+      border pixel 3
+      floating enable
+      nofocus
   }
 
   [window_role="pop-up"] {
@@ -27,33 +51,56 @@ for_window {
   [title="^Picture-in-Picture$"] {
       focus
       floating enable
-      border none
+      border pixel 3
       sticky toggle
       resize set height 280px
       resize set width 500px
       move position 100ppt 0
       move left 500px
   }
+  # Firefox :: end
 
+  # Thunar :: begin
+  [app_id=app_id="Thunar" title="^Copying.*"] {
+      floating enable
+  }
+
+  [title="^File Operation Progress$"] {
+      floating enable
+  }
+  # Thunar :: end
+
+  # Zotero :: begin
+  [app_id="Zotero"] {
+      border pixel 0
+  }
 
   [app_id="Zotero" title="Progress"] {
       floating enable
+      border pixel 0
   }
 
   [app_id="Zotero" title="^Quick Format Citation$"] {
       floating enable
+      border pixel 0
   }
+  # Zotero :: end
 
   [title="^Windscribe$"] {
-      floating enable, border none
+      floating enable
+      border pixel 0
   }
 
   [class="tabby"] {
-    border none
+      border pixel 0
   }
 
-  [app_id="Telegram"] {
-    bordner none
+  [app_id="org.telegram.desktop"] {
+      border pixel 3
+  }
+
+  [app_id="footclient"] {
+      border pixel 3
   }
 
 }
