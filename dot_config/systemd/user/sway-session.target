@@ -1,0 +1,10 @@
+# -*- systemd -*-
+# Kanged from https://github.com/kuhy/.dotfiles/blob/master/system/systemd.org
+# exec "systemctl --user import-environment; systemctl --user start sway-session.target"
+
+[Unit]
+Description=Sway compositor session
+Documentation=man:systemd.special
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target

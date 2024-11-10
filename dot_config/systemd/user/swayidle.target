@@ -1,0 +1,23 @@
+# -*- systemd -*-
+# Kanged from https://github.com/kuhy/.dotfiles/blob/master/system/systemd.org
+# scu-enable-now swayidle.target
+[Unit]
+Description=Idle manager for Wayland
+Documentation=man:swayidle(1)
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+# This will lock your screen after 300 seconds of inactivity, then turn off
+# your displays after another 300 seconds, and turn your screens back on when
+# resumed. Also pauses media before locking.
+# It will also lock your screen before your computer goes to sleep.
+ExecStart=/usr/bin/swayidle -w \
+         timeout 300 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
+         before-sleep 'playerctl pause' \
+         before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         idlehint 780
+
+[Install]
+WantedBy=sway-session.target
