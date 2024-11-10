@@ -104,7 +104,7 @@ gaps inner 5
     bindsym $mod+Shift+c reload
 
     # Lock screen
-    bindsym $mod+Escape exec swaylock
+    bindsym $mod+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize'
 
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
