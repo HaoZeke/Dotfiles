@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Cozy
+GenericName=Audio Book Player
+Comment=Play and organize your audio book collection
+Icon=com.github.geigi.cozy
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=com.github.geigi.cozy --file-forwarding com.github.geigi.cozy @@u %U @@
+Terminal=false
+Type=Application
+Categories=GNOME;GTK;AudioVideo;Player;Audio;
+StartupNotify=true
+MimeType=x-content/audio-player;
+X-Purism-FormFactor=Workstation;Mobile;
+X-Flatpak=com.github.geigi.cozy
