@@ -10,6 +10,7 @@ set {
 for_window [app_id="mS"] {
     move to scratchpad
     floating enable
+    sticky disable
     $ms_pos
 }
 bindsym F1 exec swaymsg [app_id="mS"] scratchpad show || $start_ms, $ms_pos
@@ -18,6 +19,7 @@ bindsym F1 exec swaymsg [app_id="mS"] scratchpad show || $start_ms, $ms_pos
 for_window [app_id="subFloat"] {
     move to scratchpad
     floating enable
-    border pixel 1
+    sticky disable
+    $sf_pos
 }
 bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || $start_sf, $sf_pos
