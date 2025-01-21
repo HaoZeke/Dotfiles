@@ -1,4 +1,4 @@
-profile {
+profile homeLabIS {
   # eDP-1, inbuilt on the left
   output "Chimei Innolux Corporation 0x1417 Unknown" {
    enable
@@ -13,7 +13,7 @@ profile {
   }
 }
 
-profile {
+profile TheochemUI {
   # Negative offsets are a no-go, so shift relative to the actual size
   # See:
   # [1] https://github.com/swaywm/wlroots/issues/958
