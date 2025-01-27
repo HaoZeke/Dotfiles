@@ -25,6 +25,7 @@ profile TheochemUI {
    position 2560,0
   }
   # HI Lab screen, to the left
+  # Dell P2416D, 23.8 inches, 123.41 PPI (see https://www.sven.de/dpi/)
   output "BNQ BenQ PD2705Q V3N03357019" {
    enable
    mode 2560x1440
