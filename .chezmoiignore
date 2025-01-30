@@ -16,6 +16,9 @@ encrypted_chezmoi_toml_linux
 **/swaylock/*
 **/share/applications/*
 {{ end }}
+{{ if eq .encrypted "no" }}
+**/*.age
+{{ end }}
 # Always ignore
 readme.org
 todo.org
