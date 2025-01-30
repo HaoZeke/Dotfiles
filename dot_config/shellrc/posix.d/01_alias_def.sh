@@ -13,9 +13,6 @@ alias copy='xclip -sel clip'
 # Termbin (use to pipe output, eg. ls | tb)
 alias tb="nc termbin.com 9999"
 
-# Ripgrep
-alias rg='rg --ignore-file $HOME/.config/ripgrep/ignore'
-
 # Make directory
 alias md='mkdir -p'
 

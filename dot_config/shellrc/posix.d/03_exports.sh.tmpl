@@ -21,16 +21,10 @@ else
 	export EDITOR=vim
 fi
 
-{{ if and (lookPath "fzf") (lookPath "rg") -}}
-if ! which fzf >/dev/null 2>&1 && [[ $- = *i* ]]; then
-	if ! which rg >/dev/null 2>&1 && [[ $- = *i* ]]; then
-		echo "Please get ripgrep working"
-	else
-		export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
-		export FZF_DEFAULT_OPTS="--extended --ansi --multi"
-	fi
-	echo "Please get fzf working"
-fi
+{{ if or (.use_rust "yes") (lookPath "rg") -}}
+export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
+export FZF_DEFAULT_OPTS="--extended --ansi --multi"
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ignore"
 {{ end -}}
 
 # LANGUAGE must be set by en_US
