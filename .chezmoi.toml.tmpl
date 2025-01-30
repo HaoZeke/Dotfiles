@@ -19,13 +19,6 @@
 {{$name = promptString "name"}}
 {{- end}}
 
-{{$setup_mamba := ""}}
-{{- if (hasKey . "setup_mamba")}}
-{{$setup_mamba = .setup_mamba}}
-{{- else}}
-{{$setup_mamba = promptString "setup_mamba (yes / no)"}}
-{{- end}}
-
 {{$machine_name := ""}}
 {{- if (hasKey . "machine_name")}}
 {{$machine_name = .machine_name}}
@@ -51,7 +44,14 @@
 {{- if (hasKey . "setup_mamba")}}
 {{$setup_mamba = .setup_mamba}}
 {{- else}}
-{{$setup_mamba = promptString "setup_mamba"}}
+{{$setup_mamba = promptString "setup_mamba (yes / no)"}}
+{{- end}}
+
+{{$setup_pixi := ""}}
+{{- if (hasKey . "setup_pixi")}}
+{{$setup_pixi = .setup_pixi}}
+{{- else}}
+{{$setup_pixi = promptString "setup_pixi (yes / no)"}}
 {{- end}}
 
 [data]
@@ -60,6 +60,9 @@
     display_manager = {{ $display_manager | quote }}
     machine_name = {{ $machine_name | quote }}
     key_layout = {{ $key_layout | quote }} # colemak / qwerty
+    encrypted = {{ $encrypted | quote }}
+    setup_mamba = {{ $setup_mamba | quote }}
+    setup_pixi = {{ $setup_pixi | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}
@@ -71,14 +74,8 @@
     mmanager = {{ $mmanager | quote }}
 {{ end }}
 
-{{ if eq $setup_mamba "yes" }}
-setup_mamba = "yes"
-{{ else }}
-setup_mamba = "no"
-{{ end }}
 
 {{ if eq $encrypted "yes" }}
-    encrypted = "yes"
     encryption = "age"
     [age]
         identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
