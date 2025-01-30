@@ -1,9 +1,11 @@
+{{ if ne .chezmoi.os "windows" }}
 #!/usr/bin/env bash
 # This is problematic, and necessary
 # Will try, in order:
 # - brew
 # - source build (with go)
 # - prebuilt binaries
+
 
 if command -v age >/dev/null 2>&1; then
     echo "got age, good to go"
@@ -20,3 +22,5 @@ else
         export PATH=$PATH:$HOME/.local/bin
     fi
 fi
+
+{{ end }}
