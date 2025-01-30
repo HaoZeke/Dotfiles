@@ -22,7 +22,9 @@ fi
 # Source individual files from bash.d (using absolute paths)
 if [ -d "$shellHome/bash.d" ]; then
     source "$shellHome/bash.d/02_functions.bash"
-    source "$shellHome/bash.d/03_local_nix.bash.tmpl"
+{{ if eq .setup_nix "yes" }}
+    source "$shellHome/bash.d/03_local_nix.bash"
+{{ end }}
     source "$shellHome/bash.d/99_activate_bin.bash"
 fi
 
