@@ -1,5 +1,5 @@
+{{ if eq .chezmoi.os "darwin" }}
 #!/usr/bin/env bash
-# macOS {{ if eq .chezmoi.os "darwin" }}
 
 if command -v nix >/dev/null 2>&1; then
   nix-env -iA cachix -f https://cachix.org/api/v1/install
@@ -9,8 +9,6 @@ else
   echo "nix wasn't found, re-run later"
 fi
 
-# End {{ end }}
-
 # References
 # [1] https://github.com/twlz0ne/nix-gccemacs-darwin
 
@@ -18,3 +16,5 @@ fi
 # Local Variables:
 # mode: shell-script
 # End:
+
+{{ end }}

@@ -12,6 +12,9 @@ encrypted_chezmoi_darwin.toml.asc
 # Only on linux
 encrypted_chezmoi_toml_linux
 **/sway/*
+**/i3rust/*
+**/swaylock/*
+**/share/applications/*
 {{ end }}
 # Always ignore
 readme.org
