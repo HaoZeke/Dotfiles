@@ -9,18 +9,20 @@ fi
 
 export shellHome=$HOME/.config/shellrc
 
-# Load all files from the posix.d directory
-if [ -d $shellHome/posix.d ]; then
-	for file in $shellHome/posix.d/*.sh; do
-		source $file
-	done
+# Load all .sh files from the posix.d directory using find
+if [ -d "$shellHome/posix.d" ]; then
+    find "$shellHome/posix.d" -maxdepth 1 -name "*.sh" -print0 |
+        while IFS= read -r -d $'\0' file; do
+            source "$file"
+        done
 fi
 
-# Load all files from the bashrc.d directory
-if [ -d $shellHome/bash.d ]; then
-	for file in $shellHome/bash.d/*.bash; do
-		source $file
-	done
+# Load all .bash files from the bash.d directory using find
+if [ -d "$shellHome/bash.d" ]; then
+    find "$shellHome/bash.d" -maxdepth 1 -name "*.bash" -print0 |
+        while IFS= read -r -d $'\0' file; do
+            source "$file"
+        done
 fi
 
 # Mamba / Micromamba setup
