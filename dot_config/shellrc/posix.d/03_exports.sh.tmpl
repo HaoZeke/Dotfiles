@@ -21,6 +21,7 @@ else
 	export EDITOR=vim
 fi
 
+{{ if and (lookPath "fzf") (lookPath "rg") -}}
 if ! which fzf >/dev/null 2>&1 && [[ $- = *i* ]]; then
 	if ! which rg >/dev/null 2>&1 && [[ $- = *i* ]]; then
 		echo "Please get ripgrep working"
@@ -30,6 +31,7 @@ if ! which fzf >/dev/null 2>&1 && [[ $- = *i* ]]; then
 	fi
 	echo "Please get fzf working"
 fi
+{{ end -}}
 
 # LANGUAGE must be set by en_US
 export LANGUAGE="en_US.UTF-8"
