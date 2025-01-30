@@ -1,15 +1,54 @@
 {{ if ne .chezmoi.os "windows" -}}
-#!/usr/bin/env bash
+#!/bin/bash
 
-mkdir $HOME/.local/greWords
-cd $HOME/.local/greWords
-git clone https://github.com/mcaceresb/gre-cli-words
-cd gre-cli-words
-if command -v julia >/dev/null 2>&1; then
-    julia -e "using Pkg; Pkg.add(\"DataFrames\")"
+# Make the creation of the GRE words directory and setup optional
+if [ "$SETUP_GRE_WORDS" = "true" ]; then
+  echo "Setting up GRE word list..."
+
+  # Create the directory if it doesn't exist
+  mkdir -p "$HOME/.local/greWords"
+
+  # Check if already cloned
+  if [ ! -d "$HOME/.local/greWords/gre-cli-words" ]; then
+    echo "Cloning gre-cli-words repository..."
+    git clone https://github.com/mcaceresb/gre-cli-words "$HOME/.local/greWords/gre-cli-words"
+  else
+    echo "gre-cli-words repository already cloned. Skipping."
+  fi
+
+  cd "$HOME/.local/greWords/gre-cli-words"
+
+  # Install Julia dependencies only if Julia is available and DataFrames is not installed.
+  if command -v julia >/dev/null 2>&1; then
+    if ! julia -e "using Pkg; println(isinstalled(\"DataFrames\"))" | grep -q "true"; then
+      echo "Installing Julia DataFrames package..."
+      julia -e "using Pkg; Pkg.add(\"DataFrames\")"
+    else
+      echo "Julia DataFrames package already installed. Skipping."
+    fi
+
+    # Make the script executable
     chmod +x ./generate_gre_words.jl
-    ./generate_gre_words.jl
-fi
-./random_gre.sh $HOME/.local/greWords/gre-cli-words/custom_gre_word_list
 
+    # Generate the word list only if it doesn't exist
+    if [ ! -f "custom_gre_word_list" ]; then
+      echo "Generating GRE word list..."
+      ./generate_gre_words.jl
+    else
+      echo "GRE word list already generated. Skipping."
+    fi
+  else
+    echo "Julia not found. Skipping Julia-related steps."
+  fi
+else
+  echo "Skipping GRE word list setup. SETUP_GRE_WORDS is not 'true'."
+fi
+
+# Check if the custom word list exists before trying to use it
+if [ -f "$HOME/.local/greWords/gre-cli-words/custom_gre_word_list" ]; then
+  echo "Displaying a random GRE word:"
+  "$HOME/.local/greWords/gre-cli-words/random_gre.sh" "$HOME/.local/greWords/gre-cli-words/custom_gre_word_list"
+else
+  echo "Custom GRE word list not found. Please set SETUP_GRE_WORDS to 'true' and re-run to generate it."
+fi
 {{ end }}
