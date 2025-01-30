@@ -75,6 +75,15 @@
 {{$use_rust = promptString "use_rust (yes / no)"}}
 {{- end}}
 
+{{- $tex_date := "" }}
+{{- if ne .chezmoi.os "windows" }}
+  {{- /* Get tex_date from script's stdout, only if texlive dir exists */}}
+  {{- $texlive_dir := printf "%s/.local/share/texlive-*" .chezmoi.homeDir }}
+  {{- if (glob $texlive_dir) }}
+    {{- $tex_date = output "bash" "-c" (printf "ls -dtr %s/.local/share/texlive-* | tail -n 1 | sed 's/.*texlive-//'" .chezmoi.homeDir) | trim }}
+  {{- end }}
+{{- end }}
+
 encrypted = {{ $encrypted | quote }}
 {{ if eq $encrypted "yes" }}
     encryption = "age"
@@ -94,6 +103,7 @@ encrypted = {{ $encrypted | quote }}
     setup_spack = {{ $setup_spack | quote }}
     setup_nix = {{ $setup_nix | quote }}
     use_rust = {{ $use_rust | quote }}
+    tex_date = {{ $tex_date | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}
