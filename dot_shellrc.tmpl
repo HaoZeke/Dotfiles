@@ -42,6 +42,10 @@ fi
 source ~/spack/share/spack/setup-env.sh
 {{ end }}
 
+{{ if eq .setup_pixi "yes" }}
+export PATH="$PATH:$HOME/.pixi/bin"
+{{ end }}
+
 # SDKMan
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
