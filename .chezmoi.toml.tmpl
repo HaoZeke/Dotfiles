@@ -47,6 +47,13 @@
 {{$encrypted = promptString "encrypted"}}
 {{- end}}
 
+{{$setup_mamba := ""}}
+{{- if (hasKey . "setup_mamba")}}
+{{$setup_mamba = .setup_mamba}}
+{{- else}}
+{{$setup_mamba = promptString "setup_mamba"}}
+{{- end}}
+
 [data]
     email = {{ $email | quote }}
     name = {{ $name | quote }}
