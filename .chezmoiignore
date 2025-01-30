@@ -11,7 +11,7 @@ encrypted_chezmoi_darwin.toml.asc
 {{ if ne .chezmoi.os "linux" }}
 # Only on linux
 encrypted_chezmoi_toml_linux
-{{ if ne .display_manager "none" }}
+{{ if eq .display_manager "none" }}
 **/sway/*
 **/i3rust/*
 **/swaylock/*
