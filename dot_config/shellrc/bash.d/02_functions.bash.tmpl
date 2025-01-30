@@ -16,3 +16,15 @@ fcd() {
         builtin cd "$dir" &>/dev/null
     done
 }
+
+
+{{ if eq .machine_name "elja-slogin" -}}
+zsh() {
+    # This is only necessary on elja because of
+    # https://stackoverflow.com/a/71866174
+    unset FPATH
+    # elja doesn't zsh for some reason..
+    spack load zsh
+    exec zsh "$@"
+}
+{{ end }}
