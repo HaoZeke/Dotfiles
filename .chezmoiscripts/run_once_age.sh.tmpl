@@ -1,3 +1,4 @@
+{{ if eq .encrypted "age" }}
 {{ if ne .chezmoi.os "windows" }}
 #!/usr/bin/env bash
 # This is problematic, and necessary
@@ -23,4 +24,5 @@ else
     fi
 fi
 
+{{ end }}
 {{ end }}
