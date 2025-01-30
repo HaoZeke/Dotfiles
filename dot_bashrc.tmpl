@@ -9,23 +9,19 @@ fi
 
 export shellHome=$HOME/.config/shellrc
 
-# Source individual files from posix.d (using absolute paths)
-if [ -d "$shellHome/posix.d" ]; then
-    source "$shellHome/posix.d/00_show_gre.sh"
-    source "$shellHome/posix.d/01_alias_def.sh"
-    source "$shellHome/posix.d/02_func_def.sh"
-    source "$shellHome/posix.d/03_exports.sh"
-    source "$shellHome/posix.d/05_paths.sh"
-    source "$shellHome/posix.d/06_prog_conf.sh"
+# Load all files from the posix.d directory
+source "$shellHome/posix.d"
+if [ -d $shellHome/posix.d ]; then
+	for file in $shellHome/posix.d/*.sh; do
+		source $file
+	done
 fi
 
-# Source individual files from bash.d (using absolute paths)
-if [ -d "$shellHome/bash.d" ]; then
-    source "$shellHome/bash.d/02_functions.bash"
-{{ if eq .setup_nix "yes" }}
-    source "$shellHome/bash.d/03_local_nix.bash"
-{{ end }}
-    source "$shellHome/bash.d/99_activate_bin.bash"
+# Load all files from the bashrc.d directory
+if [ -d $shellHome/bash.d ]; then
+	for file in $shellHome/bash.d/*.bash; do
+		source $file
+	done
 fi
 
 # Mamba / Micromamba setup
