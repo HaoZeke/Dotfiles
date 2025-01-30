@@ -18,7 +18,7 @@ TEXLIVE_PROFILE=""
 install_texlive() {
   wget "$TEXLIVE_URL"
   tar -xzf install-tl-unx.tar.gz
-  local install_dir=$(ls -d install-tl-20*)
+  local install_dir=$(ls -dtr install-tl-20* | tail -n 1)
   local install_date=${install_dir##*-}
     if command -v toml &> /dev/null; then
       temp_file=$(mktemp)
