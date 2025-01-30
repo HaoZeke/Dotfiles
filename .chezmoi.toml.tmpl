@@ -54,6 +54,13 @@
 {{$setup_pixi = promptString "setup_pixi (yes / no)"}}
 {{- end}}
 
+{{$setup_spack := ""}}
+{{- if (hasKey . "setup_spack")}}
+{{$setup_spack = .setup_spack}}
+{{- else}}
+{{$setup_spack = promptString "setup_spack (yes / no)"}}
+{{- end}}
+
 [data]
     email = {{ $email | quote }}
     name = {{ $name | quote }}
@@ -63,6 +70,7 @@
     encrypted = {{ $encrypted | quote }}
     setup_mamba = {{ $setup_mamba | quote }}
     setup_pixi = {{ $setup_pixi | quote }}
+    setup_spack = {{ $setup_spack | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}

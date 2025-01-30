@@ -19,7 +19,7 @@ if [ -d $shellHome/zsh.d ]; then
   done
 fi
 
-# Mamba / Micromamba setup
+# Environment helpers
 {{ if eq .setup_mamba "yes" }}
 eval "$(micromamba shell hook --shell=zsh)"
 {{ end }}{{ if eq .setup_pixi "yes" }}
