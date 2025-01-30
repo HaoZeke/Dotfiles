@@ -21,10 +21,10 @@ else
 	export EDITOR=vim
 fi
 
-{{ if or (.use_rust "yes") (lookPath "rg") -}}
+{{ if or (eq .use_rust "yes") (lookPath "rg") -}}
 export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
 export FZF_DEFAULT_OPTS="--extended --ansi --multi"
-export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/ignore"
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/.ripgreprc"
 {{ end -}}
 
 # LANGUAGE must be set by en_US
