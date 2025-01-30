@@ -10,7 +10,6 @@ fi
 export shellHome=$HOME/.config/shellrc
 
 # Load all files from the posix.d directory
-source "$shellHome/posix.d"
 if [ -d $shellHome/posix.d ]; then
 	for file in $shellHome/posix.d/*.sh; do
 		source $file
