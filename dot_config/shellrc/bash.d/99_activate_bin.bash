@@ -18,3 +18,8 @@ fi
 if command -v mcfly &> /dev/null; then
     eval "$(mcfly init bash)"
 fi
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
