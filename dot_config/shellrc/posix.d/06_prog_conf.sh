@@ -1,5 +1,9 @@
 # For ssh-add
-eval $(ssh-agent) >/dev/null 2>&1
+if ! pgrep -x "ssh-agent" >/dev/null; then
+  # Start ssh-agent only if it's not already running
+  eval "$(ssh-agent -s)"
+  echo "Started ssh-agent with PID: $SSH_AGENT_PID"
+fi
 
 # Rclone Config
 RCLONE_STATS=5s
