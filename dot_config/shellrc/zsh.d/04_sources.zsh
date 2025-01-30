@@ -29,14 +29,10 @@ zinit ice blockf
 zinit light "zsh-users/zsh-completions"
 zinit light "ascii-soup/zsh-url-highlighter"
 zinit light "molovo/tipz"
-zinit light "srijanshetty/zsh-pip-completion"
 
 # Suggestions
 zinit ice wait lucid atload'_zsh_autosuggest_start'
 zinit light zsh-users/zsh-autosuggestions
-
-# wakatime
-zinit ice wait lucid depth=1 atload'export ZSH_WAKATIME_BIN="$(pyenv which wakatime-cli)"'; zinit light sobolevn/wakatime-zsh-plugin
 
 # Settings for plugins #
 

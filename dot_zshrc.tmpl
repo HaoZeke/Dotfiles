@@ -24,6 +24,12 @@ fi
 eval "$(micromamba shell hook --shell=zsh)"
 {{ end }}
 
+
+{{ if eq .use_rust "yes" -}}
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh --cmd Z)"
+{{ end }}
+
 # Common Zsh #
 if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
   zcompile ~/.zshrc

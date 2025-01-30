@@ -68,6 +68,13 @@
 {{$setup_nix = promptString "setup_nix (yes / no)"}}
 {{- end}}
 
+{{$use_rust := ""}}
+{{- if (hasKey . "use_rust")}}
+{{$use_rust = .use_rust}}
+{{- else}}
+{{$use_rust = promptString "use_rust (yes / no)"}}
+{{- end}}
+
 encrypted = {{ $encrypted | quote }}
 {{ if eq $encrypted "yes" }}
     encryption = "age"
@@ -86,6 +93,7 @@ encrypted = {{ $encrypted | quote }}
     setup_pixi = {{ $setup_pixi | quote }}
     setup_spack = {{ $setup_spack | quote }}
     setup_nix = {{ $setup_nix | quote }}
+    use_rust = {{ $use_rust | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}
