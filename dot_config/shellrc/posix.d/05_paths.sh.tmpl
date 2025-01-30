@@ -53,3 +53,19 @@ PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"; export PERL_MM_OPT;
 
 # Snap and Flatpak for rofi
 export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop:/var/lib/flatpak/exports/share/applications
+
+
+# Conditional paths
+####################
+{{ if eq .setup_spack "yes" }}
+source ~/spack/share/spack/setup-env.sh
+{{ end }}
+
+{{ if eq .setup_pixi "yes" }}
+export PATH="$PATH:$HOME/.pixi/bin"
+{{ end }}
+
+# Mamba / Micromamba setup
+{{ if eq .setup_mamba "yes" }}
+eval "$(micromamba shell hook --shell=bash)"
+{{ end }}
