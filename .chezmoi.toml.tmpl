@@ -61,6 +61,13 @@
 {{$setup_spack = promptString "setup_spack (yes / no)"}}
 {{- end}}
 
+{{$setup_nix := ""}}
+{{- if (hasKey . "setup_nix")}}
+{{$setup_nix = .setup_nix}}
+{{- else}}
+{{$setup_nix = promptString "setup_nix (yes / no)"}}
+{{- end}}
+
 [data]
     email = {{ $email | quote }}
     name = {{ $name | quote }}
@@ -71,6 +78,7 @@
     setup_mamba = {{ $setup_mamba | quote }}
     setup_pixi = {{ $setup_pixi | quote }}
     setup_spack = {{ $setup_spack | quote }}
+    setup_nix = {{ $setup_nix | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}
