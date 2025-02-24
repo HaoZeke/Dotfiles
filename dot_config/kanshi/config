@@ -7,7 +7,7 @@ profile homeLabIS {
    enable
    mode 1920x1200
    position 0,0
-   scale 2
+   scale 1
   }
   # Home screen, to the right
   output "Lenovo Group Limited LEN L27i-28 0x54573152" {
@@ -27,7 +27,7 @@ profile TheochemUI {
    enable
    mode 1920x1200
    position 2560,0
-   scale 2
+   scale 1
   }
   # HI Lab screen, to the left
   # Dell P2416D, 23.8 inches, 123.41 PPI (see https://www.sven.de/dpi/)
