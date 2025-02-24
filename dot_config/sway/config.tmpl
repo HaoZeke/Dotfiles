@@ -82,6 +82,9 @@ gaps inner 5
     # Start your launcher
     bindsym $mod+Space exec $menu
 
+    # Lookup copied items
+    bindsym $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi -show clipboard'
+
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
     # Despite the name, also works for non-floating windows.
