@@ -83,7 +83,7 @@ gaps inner 5
     bindsym $mod+Space exec $menu
 
     # Lookup copied items
-    bindsym $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard -show-icons'
+    bindsym $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard  -show-icons -theme-str "#window {height: 80%; }" -theme-str "#element-icon {size: 10ch; }"'
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
