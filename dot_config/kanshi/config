@@ -1,9 +1,13 @@
+# You can get the names of your outputs by running: swaymsg -t get_outputs
+# See also
+# here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
 profile homeLabIS {
   # eDP-1, inbuilt on the left
   output "Chimei Innolux Corporation 0x1417 Unknown" {
    enable
    mode 1920x1200
    position 0,0
+   scale 2
   }
   # Home screen, to the right
   output "Lenovo Group Limited LEN L27i-28 0x54573152" {
@@ -23,6 +27,7 @@ profile TheochemUI {
    enable
    mode 1920x1200
    position 2560,0
+   scale 2
   }
   # HI Lab screen, to the left
   # Dell P2416D, 23.8 inches, 123.41 PPI (see https://www.sven.de/dpi/)
