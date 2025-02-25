@@ -1,14 +1,14 @@
 #!/usr/bin/env sh
 
 # Installer
-command -v rustup > /dev/null || { \
-    echo "Installing rustup" && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh ; \
+command -v rustup >/dev/null || {
+    echo "Installing rustup" &&
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 }
 
 # Grab the nightly
-command -v rustc > /dev/null || { \
-    rustup install nightly; \
+command -v rustc >/dev/null || {
+    rustup install nightly
 }
 
 # Install things
@@ -19,7 +19,7 @@ set -- "bottom" "ripgrep --features pcre2" "hyperfine" "skim" "mcfly" \
     "du-dust" "toml-cli" "amber" "hexyl" "tokei" "typos-cli" \
     "silicon"
 for item in "$@"; do
-    cargo install $item;
+    cargo install $item
 done
 
 # Emacs Stuff (cross platform)
