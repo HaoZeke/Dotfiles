@@ -13,7 +13,7 @@ command -v rustc > /dev/null || { \
 
 # Install things
 # No OpenSSL + Requires OpenSSL/OpenSSH
-set -- "bottom" "ripgrep" "hyperfine" "skim" "mcfly" \
+set -- "bottom" "ripgrep --features pcre2" "hyperfine" "skim" "mcfly" \
     "bat" "exa" "fd-find" "tealdeer" "starship" "sd" \
     "procs" "zoxide" "bliss" "git-delta" "watchexec-cli" \
     "du-dust" "toml-cli" "amber" "hexyl" "tokei" "typos-cli" \
