@@ -38,6 +38,12 @@ coordinates = ["26.512530794602895", "80.2330716579492"] # IITK
 
 [[block]]
 block = "time"
+format = "Kingston: $timestamp.datetime(f:'%I:%M %p')"
+timezone = "Canada/Eastern"
+interval = 60
+
+[[block]]
+block = "time"
 format = "Reykjavík: $timestamp.datetime(f:'%I:%M %p')"
 timezone = "Iceland"
 interval = 60
