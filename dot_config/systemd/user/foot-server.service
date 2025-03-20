@@ -1,10 +1,15 @@
 # -*- systemd -*-
 [Unit]
 Description=Foot terminal server
+After=graphical.target
+BindsTo=sway-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 ExecStart=/usr/bin/foot --server=/run/user/%U/foot-server.sock
+UnsetEnvironment=LISTEN_PID LISTEN_FDS LISTEN_FDNAMES
+NonBlocking=true
 Restart=on-failure
 
 [Install]
-WantedBy=default.target
+WantedBy=sway-session.target
