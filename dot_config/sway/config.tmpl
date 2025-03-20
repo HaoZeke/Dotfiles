@@ -53,7 +53,7 @@ gaps outer 0
 gaps inner 5
 
 # Daemons
- exec "systemctl --user import-environment; systemctl --user start sway-session.target"
+ exec_always "systemctl --user import-environment; systemctl --user start sway-session.target"
 
 ### Input configuration
 #
