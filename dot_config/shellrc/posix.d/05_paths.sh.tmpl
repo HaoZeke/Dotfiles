@@ -52,7 +52,10 @@ PERL_MB_OPT="--install_base \"$HOME/perl5\""; export PERL_MB_OPT;
 PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"; export PERL_MM_OPT;
 
 # Snap and Flatpak for rofi
-export XDG_DATA_DIRS=/usr/share/:/usr/local/share/:/var/lib/snapd/desktop:/var/lib/flatpak/exports/share/applications
+# /usr/share/:/usr/local/share/:
+export XDG_DATA_DIRS="$XDG_DATA_DIRS:/var/lib/snapd/desktop:/var/lib/flatpak/exports/share/applications"
+# Should be part of the default..
+export XDG_DATA_DIRS="$XDG_DATA_DIRS:$HOME/.local/share"
 
 
 # Conditional paths

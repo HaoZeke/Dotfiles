@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=OVITO
+Type=Application
+Exec=/usr/bin/tmux new-session -d -s ovito "bash --init-file <(echo '$HOME/.local/bin/ovito && tmux kill-session -t ovito')"
+Icon=ovito
+Terminal=false
+StartupNotify=false
+Categories=Education;Science;Mathematics;
+Comment=Open Visualization Tool
