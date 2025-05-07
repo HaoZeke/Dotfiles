@@ -38,6 +38,22 @@ profile TheochemUI {
   }
 }
 
+profile travelWork {
+  # eDP-1, inbuilt on the left
+  output "Chimei Innolux Corporation 0x1417 Unknown" {
+   enable
+   mode 1920x1200
+   position 0,0
+   scale 1
+  }
+  # Travel screen, to the right
+  # Dell P2416D, 22 inches, 100.13 PPI (see https://www.sven.de/dpi/)
+  output "Lenovo Group Limited M14 V904H2WF" {
+   enable
+   mode 1920x1080
+   position 1920,0
+  }
+}
 
 # Helper commands
 # [1] https://gist.github.com/dshoreman/278091a17c08e30c46c7e7988b7c2f7d
