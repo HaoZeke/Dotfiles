@@ -16,5 +16,19 @@
 #
 # You can remove these comments if you want or leave
 # them for future reference.
-mkdir ($nu.data-dir | path join "vendor/autoload")
-starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+
+$env.config = {
+  show_banner: false,
+}
+
+# Setup Starship Prompt
+source ~/.cache/starship/init.nu
+# Setup Atuin History Search
+source ~/.local/share/atuin/init.nu
+# Setup zoxide
+source ~/.config/nushell/zoxide.nu
+
+##############
+# References #
+##############
+# [1]: https://github.com/mgattozzi/dotfiles/blob/main/nushell/config.nu
