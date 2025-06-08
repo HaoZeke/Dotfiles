@@ -4,7 +4,6 @@
 {{- else}}
 {{$email = promptString "email"}}
 {{- end}}
-
 {{$display_manager := ""}}
 {{- if (hasKey . "display_manager")}}
 {{$display_manager = .display_manager}}
@@ -77,34 +76,34 @@
 
 {{- $tex_date := "" }}
 {{- if ne .chezmoi.os "windows" }}
-  {{- /* Get tex_date from script's stdout, only if texlive dir exists */}}
-  {{- $texlive_dir := printf "%s/.local/share/texlive-*" .chezmoi.homeDir }}
-  {{- $tex_date_full_path := output "bash" "-c" (printf "[ -d \"$(ls -dtr %s 2>/dev/null | tail -n 1)\" ] && ls -dtr %s | tail -n 1 || exit 0" $texlive_dir $texlive_dir) | trim }}
-  {{- if $tex_date_full_path }}
-    {{- $tex_date = output "bash" "-c" (printf "echo %s | sed 's/.*texlive-//'" $tex_date_full_path) | trim }}
-  {{- end }}
+{{- /* Get tex_date from script's stdout, only if texlive dir exists */}}
+{{- $texlive_dir := printf "%s/.local/share/texlive-*" .chezmoi.homeDir }}
+{{- $tex_date_full_path := output "bash" "-c" (printf "[ -d \"$(ls -dtr %s 2>/dev/null | tail -n 1)\" ] && ls -dtr %s | tail -n 1 || exit 0" $texlive_dir $texlive_dir) | trim }}
+{{- if $tex_date_full_path }}
+{{- $tex_date = output "bash" "-c" (printf "echo %s | sed 's/.*texlive-//'" $tex_date_full_path) | trim }}
+{{- end }}
 {{- end }}
 
 encrypted = {{ $encrypted | quote }}
 {{ if eq $encrypted "yes" }}
-    encryption = "age"
-    [age]
-        identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
-        recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
+encryption = "age"
+[age]
+identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
+recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
 {{ end }}
 [data]
-    email = {{ $email | quote }}
-    name = {{ $name | quote }}
-    display_manager = {{ $display_manager | quote }}
-    machine_name = {{ $machine_name | quote }}
-    key_layout = {{ $key_layout | quote }} # colemak / qwerty
-    encrypted = {{ $encrypted | quote }}
-    setup_mamba = {{ $setup_mamba | quote }}
-    setup_pixi = {{ $setup_pixi | quote }}
-    setup_spack = {{ $setup_spack | quote }}
-    setup_nix = {{ $setup_nix | quote }}
-    use_rust = {{ $use_rust | quote }}
-    tex_date = {{ $tex_date | quote }}
+email = {{ $email | quote }}
+name = {{ $name | quote }}
+display_manager = {{ $display_manager | quote }}
+machine_name = {{ $machine_name | quote }}
+key_layout = {{ $key_layout | quote }} # colemak / qwerty
+encrypted = {{ $encrypted | quote }}
+setup_mamba = {{ $setup_mamba | quote }}
+setup_pixi = {{ $setup_pixi | quote }}
+setup_spack = {{ $setup_spack | quote }}
+setup_nix = {{ $setup_nix | quote }}
+use_rust = {{ $use_rust | quote }}
+tex_date = {{ $tex_date | quote }}
 
 {{ if eq .chezmoi.os "darwin" }}
 {{$mmanager := ""}}
@@ -117,11 +116,11 @@ encrypted = {{ $encrypted | quote }}
 {{ end }}
 
 [merge]
-    command = "nvim"
-    args = "-d"
+command = "nvim"
+args = "-d"
 
 [edit]
-    command = "emacsclient"
+command = "emacsclient"
 
 # Local Variables:
 # mode: conf-toml
