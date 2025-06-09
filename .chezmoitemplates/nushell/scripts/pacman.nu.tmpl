@@ -48,27 +48,39 @@ export def pacmansignkeys [...keys: string] {
     }
 }
 
-# Conditionally define `pacweb` if `xdg-open` exists
-if (which xdg-open | is-not-empty) {
-    # Open the archlinux.org page for a given package
-    export def pacweb [
-        package: string # The package to look up.
-    ] {
-        let infos = (pacman -Si $package | lines | str trim)
-        if ($infos | is-empty) {
-            error make { msg: $"Package '($package)' not found." }
-            return
-        }
+# Open the archlinux.org page for a given package
+export def pacweb [
+    package: string # The package to look up.
+] {
+    let infos = (pacman -Si $package | lines | str trim)
+    if ($infos | is-empty) {
+        error make { msg: $"Package '($package)' not found." }
+        return
+    }
 
-        let repo = ($infos | where $it starts-with "Repo" | first | split column ":" | get column2 | str trim)
-        let arch = ($infos | where $it starts-with "Architecture" | first | split column ":" | get column2 | str trim)
+    let repo = (
+        $infos | where $it starts-with "Repo"
+        | first
+        | split column ":"
+        | get column2
+        | str trim
+        | first
+    )
+    let arch = (
+        $infos | where $it starts-with "Architecture"
+        | first
+        | split column ":"
+        | get column2
+        | str trim
+        | first
+    )
 
-        if not ($repo | is-empty) and not ($arch | is-empty) {
-            let url = $"https://archlinux.org/packages/($repo)/($arch)/($package)/"
-            ^xdg-open $url | ignore # Use ^ to run external command and ignore output
-        } else {
-            error make { msg: "Could not determine repository or architecture."}
-        }
+    if not ($repo | is-empty) and not ($arch | is-empty) {
+        let url = $"https://archlinux.org/packages/($repo)/($arch)/($package)/"
+        print $"Opening: ($url)"
+        ^xdg-open $url | ignore # Use ^ to run external command and ignore output
+    } else {
+        error make { msg: "Could not determine repository or architecture."}
     }
 }
 
