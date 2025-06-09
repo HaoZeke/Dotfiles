@@ -33,7 +33,9 @@ const NU_LIB_DIRS = [
       ($nu.default-config-dir | path join "scripts")
 ]
 source gitAlias.nu
+{{ if eq .chezmoi.os "linux" -}}
 source systemctlAlias.nu
+{{ end -}}
 
 ##############
 # References #
