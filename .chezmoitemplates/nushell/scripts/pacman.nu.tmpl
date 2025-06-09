@@ -1,0 +1,197 @@
+# References
+# [1]: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/archlinux/archlinux.plugin.zsh
+
+# Nushell version of Pacman and AUR helper scripts
+
+#######################################
+#         Pacman                      #
+#######################################
+
+# Pacman - https://wiki.archlinux.org/index.php/Pacman_Tips
+alias pacupg = sudo pacman -Syu
+alias pacin = sudo pacman -S
+alias paclean = sudo pacman -Sc
+alias pacins = sudo pacman -U
+alias paclr = sudo pacman -Scc
+alias pacre = sudo pacman -R
+alias pacrem = sudo pacman -Rns
+alias pacrep = pacman -Si
+alias pacreps = pacman -Ss
+alias pacloc = pacman -Qi
+alias paclocs = pacman -Qs
+alias pacinsd = sudo pacman -S --asdeps
+alias pacmir = sudo pacman -Syy
+alias paclsorphans = sudo pacman -Qdt
+alias pacfileupg = sudo pacman -Fy
+alias pacfiles = pacman -F
+alias pacls = pacman -Ql
+alias pacown = pacman -Qo
+alias pacupd = sudo pacman -Sy
+alias pacmanallkeys = sudo pacman-key --refresh-keys
+
+# Remove orphaned packages. `pacman -Qtdq` provides the list of packages.
+alias pacrmorphans = sudo pacman -Rs (pacman -Qtdq | lines)
+
+# List details for all explicitly installed packages.
+export def paclist [] {
+    pacman -Qqe | lines | each { |pkg_name|
+        ^pacman -Qs --color=auto $"^($pkg_name)$"
+    }
+}
+
+# Receive and sign PGP keys for pacman.
+export def pacmansignkeys [...keys: string] {
+    for key in $keys {
+        sudo pacman-key --recv-keys $key
+        sudo pacman-key --lsign-key $key
+        "trust\n3\n" | sudo gpg --homedir /etc/pacman.d/gnupg --no-permission-warning --command-fd 0 --edit-key $key
+    }
+}
+
+# Conditionally define `pacweb` if `xdg-open` exists
+if (which xdg-open | is-not-empty) {
+    # Open the archlinux.org page for a given package
+    export def pacweb [
+        package: string # The package to look up.
+    ] {
+        let infos = (pacman -Si $package | lines | str trim)
+        if ($infos | is-empty) {
+            error make { msg: $"Package '($package)' not found." }
+            return
+        }
+
+        let repo = ($infos | where $it starts-with "Repo" | first | split column ":" | get column2 | str trim)
+        let arch = ($infos | where $it starts-with "Architecture" | first | split column ":" | get column2 | str trim)
+
+        if not ($repo | is-empty) and not ($arch | is-empty) {
+            let url = $"https://archlinux.org/packages/($repo)/($arch)/($package)/"
+            ^xdg-open $url | ignore # Use ^ to run external command and ignore output
+        } else {
+            error make { msg: "Could not determine repository or architecture."}
+        }
+    }
+}
+
+#######################################
+#         AUR helpers                 #
+#######################################
+
+if (which aura | is-not-empty) {
+    alias auin = sudo aura -S
+    alias aurin = sudo aura -A
+    alias auclean = sudo aura -Sc
+    alias auclr = sudo aura -Scc
+    alias auins = sudo aura -U
+    alias auinsd = sudo aura -S --asdeps
+    alias aurinsd = sudo aura -A --asdeps
+    alias auloc = aura -Qi
+    alias aulocs = aura -Qs
+    alias aulst = aura -Qe
+    alias aumir = sudo aura -Syy
+    alias aurph = sudo aura -Oj
+    alias aure = sudo aura -R
+    alias aurem = sudo aura -Rns
+    alias aurep = aura -Si
+    alias aurrep = aura -Ai
+    alias aureps = aura -As --both
+    alias auras = aura -As --both
+    alias auupd = sudo aura -Sy
+    alias auupg = sudo sh -c "aura -Syu && aura -Au"
+    alias ausu = sudo sh -c "aura -Syu --no-confirm && aura -Au --no-confirm"
+    alias auown = aura -Qqo
+    alias auls = aura -Qql
+    export def auownloc [...rest: string] { aura -Qi (aura -Qqo ...$rest) }
+    export def auownls [...rest: string] { aura -Qql (aura -Qqo ...$rest) }
+}
+
+if (which pacaur | is-not-empty) {
+    alias pacclean = pacaur -Sc
+    alias pacclr = pacaur -Scc
+    alias paupg = pacaur -Syu
+    alias pasu = pacaur -Syu --noconfirm
+    alias pain = pacaur -S
+    alias pains = pacaur -U
+    alias pare = pacaur -R
+    alias parem = pacaur -Rns
+    alias parep = pacaur -Si
+    alias pareps = pacaur -Ss
+    alias paloc = pacaur -Qi
+    alias palocs = pacaur -Qs
+    alias palst = pacaur -Qe
+    alias paorph = pacaur -Qtd
+    alias painsd = pacaur -S --asdeps
+    alias pamir = pacaur -Syy
+    alias paupd = pacaur -Sy
+}
+
+if (which trizen | is-not-empty) {
+    alias trconf = trizen -C
+    alias trupg = trizen -Syua
+    alias trsu = trizen -Syua --noconfirm
+    alias trin = trizen -S
+    alias trclean = trizen -Sc
+    alias trclr = trizen -Scc
+    alias trins = trizen -U
+    alias trre = trizen -R
+    alias trrem = trizen -Rns
+    alias trrep = trizen -Si
+    alias trreps = trizen -Ss
+    alias trloc = trizen -Qi
+    alias trlocs = trizen -Qs
+    alias trlst = trizen -Qe
+    alias trorph = trizen -Qtd
+    alias trinsd = trizen -S --asdeps
+    alias trmir = trizen -Syy
+    alias trupd = trizen -Sy
+}
+
+if (which yay | is-not-empty) {
+    alias yaconf = yay -Pg
+    alias yaclean = yay -Sc
+    alias yaclr = yay -Scc
+    alias yaupg = yay -Syu
+    alias yasu = yay -Syu --noconfirm
+    alias yain = yay -S
+    alias yains = yay -U
+    alias yare = yay -R
+    alias yarem = yay -Rns
+    alias yarep = yay -Si
+    alias yareps = yay -Ss
+    alias yaloc = yay -Qi
+    alias yalocs = yay -Qs
+    alias yalst = yay -Qe
+    alias yaorph = yay -Qtd
+    alias yainsd = yay -S --asdeps
+    alias yamir = yay -Syy
+    alias yaupd = yay -Sy
+}
+
+# Check Arch Linux PGP Keyring before System Upgrade to prevent failure.
+export def upgrade [] {
+    sudo pacman -Sy
+
+    print ":: Checking Arch Linux PGP Keyring..."
+    let installed_ver = (sudo pacman -Qi archlinux-keyring | lines | where $it starts-with "Version" | first | split column ":" | get column2 | str trim)
+    let current_ver = (sudo pacman -Si archlinux-keyring | lines | where $it starts-with "Version" | first | split column ":" | get column2 | str trim)
+
+    if $installed_ver != $current_ver {
+        print " Arch Linux PGP Keyring is out of date."
+        print " Updating before full system upgrade."
+        sudo pacman -S --needed --noconfirm archlinux-keyring
+    } else {
+        print " Arch Linux PGP Keyring is up to date."
+    }
+
+    print ":: Proceeding with full system upgrade."
+    if (which yay | is-not-empty) {
+        yay -Su
+    } else if (which trizen | is-not-empty) {
+        trizen -Su
+    } else if (which pacaur | is-not-empty) {
+        pacaur -Su
+    } else if (which aura | is-not-empty) {
+        sudo aura -Su
+    } else {
+        sudo pacman -Su
+    }
+}
