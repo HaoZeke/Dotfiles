@@ -30,15 +30,18 @@ LICENSE
 {{ if ne .chezmoi.os "darwin" }}
 Library/Application Support/nushell/config.nu
 Library/Application Support/nushell/env.nu
+Library/Application Support/nushell/scripts/gitAlias.nu
 {{ end }}
 {{ if ne .chezmoi.os "linux" }}
 .config/nushell/config.nu
 .config/nushell/env.nu
+.config/nushell/scripts/gitAlias.nu
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" -}}
 AppData/Roaming/nushell/config.nu
 AppData/Roaming/nushell/env.nu
+AppData/Roaming/nushell/scripts/gitAlias.nu
 {{ end }}
 # Local Variables:
 # mode: gitignore

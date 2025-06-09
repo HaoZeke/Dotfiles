@@ -17,16 +17,22 @@
 # You can remove these comments if you want or leave
 # them for future reference.
 
-$env.config = {
-  show_banner: false,
-}
+$env.config.show_banner = false
+$env.config.buffer_editor = ["nvim"]
+# $env.config.buffer_editor = ["emacsclient", "-s", "light", "-t"]
 
-# Setup Starship Prompt
+# # Setup Starship Prompt
 source ~/.cache/starship/init.nu
-# Setup Atuin History Search
+# # Setup Atuin History Search
 source ~/.local/share/atuin/init.nu
 # Setup zoxide
 source ~/.config/nushell/zoxide.nu
+
+# Delegate
+const NU_LIB_DIRS = [
+      ($nu.default-config-dir | path join "scripts")
+]
+source gitAlias.nu
 
 ##############
 # References #
