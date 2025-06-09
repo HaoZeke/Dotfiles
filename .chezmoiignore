@@ -36,6 +36,7 @@ Library/Application Support/nushell/scripts/gitAlias.nu
 .config/nushell/config.nu
 .config/nushell/env.nu
 .config/nushell/scripts/gitAlias.nu
+.config/nushell/scripts/systemctlAlias.nu
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" -}}
