@@ -39,6 +39,33 @@ export def paclist [] {
     }
 }
 
+# Find files not owned by any package.
+export def pacdisowned [] {
+    # Step 1: Get a unique list of all files owned by packages.
+    print --stderr "Reading package database..."
+    let db_files = (^pacman -Qlq | decode utf-8 | lines | uniq)
+
+    # Step 2: Get a list of all files and directories under /etc and /usr.
+    print --stderr "Scanning filesystem (this may take a moment)..."
+    let fs_files = (
+        ls /etc /usr
+        | where name != 'lost+found'
+        # This block adds a trailing slash to directories to match the `pacman` output format.
+        | each { |item|
+            if $item.type == 'dir' {
+                $"($item.name)/"
+            } else {
+                $item.name
+            }
+        }
+    )
+
+    # Step 3: Filter the list of filesystem files to find the ones NOT in the package database list.
+    print --stderr "Comparing file lists..."
+    $fs_files | where not ($it in $db_files)
+}
+
+
 # Receive and sign PGP keys for pacman.
 export def pacmansignkeys [...keys: string] {
     for key in $keys {
