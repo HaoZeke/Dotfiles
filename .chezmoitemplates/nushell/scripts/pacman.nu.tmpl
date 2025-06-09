@@ -45,19 +45,15 @@ export def pacdisowned [] {
     print --stderr "Reading package database..."
     let db_files = (^pacman -Qlq | decode utf-8 | lines | uniq)
 
-    # Step 2: Get a list of all files and directories under /etc and /usr.
-    print --stderr "Scanning filesystem (this may take a moment)..."
+    # Step 2: Get a recursive list of files using the external `find` command.
+    # The native `ls **` fails on permission errors, but external `find` will
+    # print errors to stderr for directories it can't access and then continue.
+    # This is the desired behavior and matches the original script.
+    print --stderr "Scanning filesystem with 'find' (permission errors are expected and can be ignored)..."
     let fs_files = (
-        ls /etc /usr
-        | where name != 'lost+found'
-        # This block adds a trailing slash to directories to match the `pacman` output format.
-        | each { |item|
-            if $item.type == 'dir' {
-                $"($item.name)/"
-            } else {
-                $item.name
-            }
-        }
+        ^find /etc /usr -not -name 'lost+found' -printf '%p/\n' -o -print
+        | decode utf-8
+        | lines
     )
 
     # Step 3: Filter the list of filesystem files to find the ones NOT in the package database list.
