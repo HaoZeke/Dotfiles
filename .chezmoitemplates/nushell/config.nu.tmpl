@@ -35,6 +35,7 @@ const NU_LIB_DIRS = [
 source gitAlias.nu
 {{ if eq .chezmoi.os "linux" -}}
 source systemctlAlias.nu
+source pacman.nu
 {{ end -}}
 
 ##############
