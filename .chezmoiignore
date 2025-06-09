@@ -29,9 +29,16 @@ LICENSE
 # These are essentially templates
 {{ if ne .chezmoi.os "darwin" }}
 Library/Application Support/nushell/config.nu
+Library/Application Support/nushell/env.nu
 {{ end }}
 {{ if ne .chezmoi.os "linux" }}
 .config/nushell/config.nu
+.config/nushell/env.nu
+{{ end }}
+
+{{ if ne .chezmoi.os "windows" -}}
+AppData/Roaming/nushell/config.nu
+AppData/Roaming/nushell/env.nu
 {{ end }}
 # Local Variables:
 # mode: gitignore
