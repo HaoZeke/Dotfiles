@@ -30,9 +30,13 @@ source ~/.config/nushell/zoxide.nu
 
 # Delegate
 const NU_LIB_DIRS = [
-      ($nu.default-config-dir | path join "scripts")
+      ($nu.default-config-dir | path join "scripts"),
+        $"($nu.data-dir)/vendor/autoload"
 ]
 source gitAlias.nu
+# Setup pixi completions
+source pixi-completions.nu
+source completions/git-completions.nu
 {{ if eq .chezmoi.os "linux" -}}
 source systemctlAlias.nu
 source pacman.nu
