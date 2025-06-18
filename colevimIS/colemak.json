@@ -1,0 +1,96 @@
+{
+  "fullName": "Colemak",
+  "name": "colemak",
+  "copyright": "Public Domain",
+  "company": "2006-01-01 Shai Coleman",
+  "localeId": "00000409",
+  "version": "1.0",
+  "singletonKeys": [
+    [ "CapsLock", "Extend" ],
+    [ "Alt_L", "AltGr" ]
+  ],
+  "keysWithShiftlevels": [
+    {
+      "shiftlevels": [ "None", "Shift", "AltGr", "Shift+AltGr" ],
+      "keys": [
+        { "pos": "~", "letters": [ "`", "~" ] },
+        { "pos": "1", "letters": [ "1", "!" ] },
+        { "pos": "2", "letters": [ "2", "@" ] },
+        { "pos": "3", "letters": [ "3", "#" ] },
+        { "pos": "4", "letters": [ "4", "$" ] },
+        { "pos": "5", "letters": [ "5", "%" ] },
+        { "pos": "6", "letters": [ "6", "^" ] },
+        { "pos": "7", "letters": [ "7", "&" ] },
+        { "pos": "8", "letters": [ "8", "*" ] },
+        { "pos": "9", "letters": [ "9", "(" ] },
+        { "pos": "0", "letters": [ "0", ")" ] },
+        { "pos": "-", "letters": [ "-", "_" ] },
+        { "pos": "+", "letters": [ "=", "+" ] },
+        { "pos": "Q", "letters": [ "q", "Q" ] },
+        { "pos": "W", "letters": [ "w", "W" ] },
+        { "pos": "E", "letters": [ "f", "F" ] },
+        { "pos": "R", "letters": [ "p", "P" ] },
+        { "pos": "T", "letters": [ "g", "G" ] },
+        { "pos": "Y", "letters": [ "j", "J" ] },
+        { "pos": "U", "letters": [ "l", "L" ] },
+        { "pos": "I", "letters": [ "u", "U", "ú", "Ú" ] },
+        { "pos": "O", "letters": [ "y", "Y", "ý", "Ý" ] },
+        { "pos": "P", "letters": [ ";", ":" ] },
+        { "pos": "[", "letters": [ "[", "{" ] },
+        { "pos": "]", "letters": [ "]", "}" ] },
+        { "pos": "\\", "letters": [ "\\", "|" ] },
+        { "pos": "A", "letters": [ "a", "A", "á", "Á" ] },
+        { "pos": "S", "letters": [ "r", "R" ] },
+        { "pos": "D", "letters": [ "s", "S" ] },
+        { "pos": "F", "letters": [ "t", "T", "þ", "Þ" ] },
+        { "pos": "G", "letters": [ "d", "D", "ð", "Ð" ] }
+      ]
+    },
+    {
+      "shiftlevels": [ "None", "Shift", "Extend", "Shift+Extend", "AltGr+Extend", "AltGr", "Shift+AltGr" ],
+      "keys": [
+        { "pos": "H", "letters": [ "h", "H", "Left", "", "Backspace" ] },
+        { "pos": "J", "letters": [ "n", "N", "Down" ] },
+        { "pos": "K", "shiftlevels": [ "None", "Shift", "Extend", "AltGr", "Shift+AltGr" ], "letters": [ "e", "E", "Up", "é", "É" ] },
+        { "pos": "L", "letters": [ "i", "I", "Right", "", "Delete", "í", "Í" ] }
+      ]
+    },
+    {
+      "shiftlevels": [ "None", "Shift", "Extend", "AltGr", "Shift+AltGr" ],
+      "keys": [
+        { "pos": ";", "letters": [ "o", "O", "Enter", "ó", "Ó" ] },
+        { "pos": "'", "letters": [ "'", "\"" ] },
+        { "pos": "Z", "letters": [ "z", "Z" ] },
+        { "pos": "X", "letters": [ "x", "X" ] },
+        { "pos": "C", "letters": [ "c", "C" ] }
+      ]
+    },
+    {
+      "shiftlevels": [ "None", "Shift", "Extend", "Shift+Extend", "AltGr+Extend" ],
+      "keys": [
+        { "pos": "V", "letters": [ "v", "V", ")", "]", "}" ] },
+        { "pos": "B", "letters": [ "b", "B" ] },
+        { "pos": "N", "letters": [ "k", "K", "(", "[", "{" ] },
+        { "pos": "M", "letters": [ "m", "M" ] },
+        { "pos": ",", "letters": [ ",", "<" ] },
+        { "pos": ".", "letters": [ ".", ">" ] },
+        { "pos": "/", "letters": [ "/", "?" ] }
+      ]
+    }
+  ],
+  "variants": [
+    {
+      "name": "mod-dh",
+      "shiftlevels": [ "None", "Shift" ],
+      "keys": [
+        { "pos": "V", "letters": [ "d", "D" ] },
+        { "pos": "B", "letters": [ "v", "V" ] },
+        { "pos": "G", "letters": [ "g", "G" ] },
+        { "pos": "T", "letters": [ "b", "B" ] },
+        { "pos": "H", "letters": [ "k", "K" ] },
+        { "pos": "N", "letters": [ "m", "M" ] },
+        { "pos": "M", "letters": [ "h", "H" ] }
+      ]
+    }
+  ]
+}
