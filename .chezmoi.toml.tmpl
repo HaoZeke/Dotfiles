@@ -84,6 +84,15 @@
 {{- end }}
 {{- end }}
 
+
+{{$have_cuda := ""}}
+{{- if (hasKey . "have_cuda")}}
+{{$have_cuda = .have_cuda}}
+{{- else}}
+{{$have_cuda = promptString "have_cuda"}}
+{{- end}}
+
+
 encrypted = {{ $encrypted | quote }}
 {{ if eq $encrypted "yes" }}
 encryption = "age"

@@ -42,6 +42,10 @@ source systemctlAlias.nu
 source pacman.nu
 {{ end -}}
 
+{{ if eq .have_cuda false -}}
+$env.PIP_EXTRA_INDEX_URL = "https://download.pytorch.org/whl/cpu"
+{{ end }}
+
 
 ## TODO(rg): Make these conditional and templated!
 # Micromamba stuff
