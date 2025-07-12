@@ -1,105 +1,92 @@
-{{$email := ""}}
+{{- $email := "" -}}
 {{- if (hasKey . "email")}}
-{{$email = .email}}
+{{- $email = .email -}}
 {{- else}}
-{{$email = promptString "email"}}
-{{- end}}
-{{$display_manager := ""}}
+{{- $email = promptString "email" -}}
+{{- end -}}
+{{- $display_manager := "" -}}
 {{- if (hasKey . "display_manager")}}
-{{$display_manager = .display_manager}}
+{{- $display_manager = .display_manager -}}
 {{- else}}
-{{$display_manager = promptString "display_manager"}}
-{{- end}}
-
-{{$name := ""}}
+{{- $display_manager = promptString "display_manager" -}}
+{{- end -}}
+{{- $name := "" -}}
 {{- if (hasKey . "name")}}
-{{$name = .name}}
+{{- $name = .name -}}
 {{- else}}
-{{$name = promptString "name"}}
-{{- end}}
-
-{{$machine_name := ""}}
+{{- $name = promptString "name" -}}
+{{- end -}}
+{{- $machine_name := "" -}}
 {{- if (hasKey . "machine_name")}}
-{{$machine_name = .machine_name}}
+{{- $machine_name = .machine_name -}}
 {{- else}}
-{{$machine_name = promptString "machine_name"}}
-{{- end}}
-
-{{$key_layout := ""}}
+{{- $machine_name = promptString "machine_name" -}}
+{{- end -}}
+{{- $key_layout := "" -}}
 {{- if (hasKey . "key_layout")}}
-{{$key_layout = .key_layout}}
+{{- $key_layout = .key_layout -}}
 {{- else}}
-{{$key_layout = promptString "key_layout"}}
-{{- end}}
-
-{{$encrypted := ""}}
+{{- $key_layout = promptString "key_layout" -}}
+{{- end -}}
+{{- $encrypted := "" -}}
 {{- if (hasKey . "encrypted")}}
-{{$encrypted = .encrypted}}
+{{- $encrypted = .encrypted -}}
 {{- else}}
-{{$encrypted = promptString "encrypted"}}
-{{- end}}
-
-{{$setup_mamba := ""}}
+{{- $encrypted = promptString "encrypted" -}}
+{{- end -}}
+{{- $setup_mamba := "" -}}
 {{- if (hasKey . "setup_mamba")}}
-{{$setup_mamba = .setup_mamba}}
+{{- $setup_mamba = .setup_mamba -}}
 {{- else}}
-{{$setup_mamba = promptString "setup_mamba (yes / no)"}}
-{{- end}}
-
-{{$setup_pixi := ""}}
+{{- $setup_mamba = promptString "setup_mamba (yes / no)" -}}
+{{- end -}}
+{{- $setup_pixi := "" -}}
 {{- if (hasKey . "setup_pixi")}}
-{{$setup_pixi = .setup_pixi}}
+{{- $setup_pixi = .setup_pixi -}}
 {{- else}}
-{{$setup_pixi = promptString "setup_pixi (yes / no)"}}
-{{- end}}
-
-{{$setup_spack := ""}}
+{{- $setup_pixi = promptString "setup_pixi (yes / no)" -}}
+{{- end -}}
+{{- $setup_spack := "" -}}
 {{- if (hasKey . "setup_spack")}}
-{{$setup_spack = .setup_spack}}
+{{- $setup_spack = .setup_spack -}}
 {{- else}}
-{{$setup_spack = promptString "setup_spack (yes / no)"}}
-{{- end}}
-
-{{$setup_nix := ""}}
+{{- $setup_spack = promptString "setup_spack (yes / no)" -}}
+{{- end -}}
+{{- $setup_nix := "" -}}
 {{- if (hasKey . "setup_nix")}}
-{{$setup_nix = .setup_nix}}
+{{- $setup_nix = .setup_nix -}}
 {{- else}}
-{{$setup_nix = promptString "setup_nix (yes / no)"}}
-{{- end}}
-
-{{$use_rust := ""}}
+{{- $setup_nix = promptString "setup_nix (yes / no)" -}}
+{{- end -}}
+{{- $use_rust := "" -}}
 {{- if (hasKey . "use_rust")}}
-{{$use_rust = .use_rust}}
+{{- $use_rust = .use_rust -}}
 {{- else}}
-{{$use_rust = promptString "use_rust (yes / no)"}}
-{{- end}}
-
-{{- $tex_date := "" }}
-{{- if ne .chezmoi.os "windows" }}
-{{- /* Get tex_date from script's stdout, only if texlive dir exists */}}
-{{- $texlive_dir := printf "%s/.local/share/texlive-*" .chezmoi.homeDir }}
-{{- $tex_date_full_path := output "bash" "-c" (printf "[ -d \"$(ls -dtr %s 2>/dev/null | tail -n 1)\" ] && ls -dtr %s | tail -n 1 || exit 0" $texlive_dir $texlive_dir) | trim }}
-{{- if $tex_date_full_path }}
-{{- $tex_date = output "bash" "-c" (printf "echo %s | sed 's/.*texlive-//'" $tex_date_full_path) | trim }}
-{{- end }}
-{{- end }}
-
-
-{{$have_cuda := ""}}
+{{- $use_rust = promptString "use_rust (yes / no)" -}}
+{{- end -}}
+{{- $tex_date := "" -}}
+{{- if ne .chezmoi.os "windows" -}}
+{{- /* Get tex_date from script's stdout, only if texlive dir exists */ -}}
+{{- $texlive_dir := printf "%s/.local/share/texlive-*" .chezmoi.homeDir -}}
+{{- $tex_date_full_path := output "bash" "-c" (printf `[ -d "$(ls -dtr %s 2>/dev/null | tail -n 1)" ] && ls -dtr %s | tail -n 1 || exit 0` $texlive_dir $texlive_dir) | trim -}}
+{{- if $tex_date_full_path -}}
+{{- $tex_date = output "bash" "-c" (printf "echo %s | sed 's/.*texlive-//'" $tex_date_full_path) | trim -}}
+{{- end -}}
+{{- end -}}
+{{- $have_cuda := "" -}}
 {{- if (hasKey . "have_cuda")}}
-{{$have_cuda = .have_cuda}}
+{{- $have_cuda = .have_cuda -}}
 {{- else}}
-{{$have_cuda = promptString "have_cuda"}}
-{{- end}}
-
-
+{{- $have_cuda = promptString "have_cuda" -}}
+{{- end -}}
 encrypted = {{ $encrypted | quote }}
-{{ if eq $encrypted "yes" }}
+{{- if eq $encrypted "yes" }}
 encryption = "age"
 [age]
 identity = {{ joinPath .chezmoi.homeDir "key.txt" | quote }}
 recipient = "age1m7vsksv6cktqfzlqshwxs0856mlshz8540c678dl9rklrr2jjunql48lw7"
-{{ end }}
+{{- end }}
+
 [data]
 email = {{ $email | quote }}
 name = {{ $name | quote }}
@@ -113,16 +100,17 @@ setup_spack = {{ $setup_spack | quote }}
 setup_nix = {{ $setup_nix | quote }}
 use_rust = {{ $use_rust | quote }}
 tex_date = {{ $tex_date | quote }}
+have_cuda = {{ $have_cuda | quote }}
 
-{{ if eq .chezmoi.os "darwin" }}
-{{$mmanager := ""}}
+{{- if eq .chezmoi.os "darwin" }}
+{{- $mmanager := ""}}
 {{- if (hasKey . "mmanager")}}
-{{$mmanager = .mmanager}}
+{{- $mmanager = .mmanager}}
 {{- else}}
-{{$mmanager = promptString "mmanager (brew, nix)"}}
+{{- $mmanager = promptString "mmanager (brew, nix)"}}
 {{- end }}
-    mmanager = {{ $mmanager | quote }}
-{{ end }}
+mmanager = {{ $mmanager | quote }}
+{{- end }}
 
 [merge]
 command = "nvim"
