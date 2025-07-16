@@ -17,7 +17,7 @@ profile homeLabIS {
   }
 }
 
-profile TheochemUI {
+profile TheochemUI_myGrant {
   # Negative offsets are a no-go, so shift relative to the actual size
   # See:
   # [1] https://github.com/swaywm/wlroots/issues/958
@@ -52,6 +52,26 @@ profile travelWork {
    enable
    mode 1920x1080
    position 1920,0
+  }
+}
+
+profile TheochemUI_eigill {
+  # Negative offsets are a no-go, so shift relative to the actual size
+  # See:
+  # [1] https://github.com/swaywm/wlroots/issues/958
+  # [2] https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/395#note_555613
+  # eDP-1, inbuilt on the right
+  output "Chimei Innolux Corporation 0x1417 Unknown" {
+   enable
+   mode 1920x1200
+   position 2560,0
+   scale 1
+  }
+  # HI Lab screen, to the left
+  output "Acer Technologies Acer B277 0x02918A2B" {
+   enable
+   mode 1920x1080
+   position 0,0
   }
 }
 
