@@ -1,0 +1,48 @@
+# References
+# [1]: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/systemd/systemd.plugin.zsh
+
+# Define which subcommands require sudo.
+let sudo_commands = [
+  "add-requires", "add-wants", "cancel", "daemon-reexec", "daemon-reload",
+  "default", "disable", "edit", "emergency", "enable", "halt", "hibernate",
+  "hybrid-sleep", "import-environment", "isolate", "kexec", "kill", "link",
+  "list-machines", "load", "mask", "poweroff", "preset", "preset-all", "reboot",
+  "reenable", "reload", "reload-or-restart", "reset-failed", "rescue", "restart",
+  "revert", "set-default", "set-environment", "set-property", "start", "stop",
+  "suspend", "switch-root", "try-reload-or-restart", "try-restart", "unmask",
+  "unset-environment"
+]
+
+# A dispatcher command for system-wide systemctl.
+# It automatically uses 'sudo' for commands that need root privileges.
+# It uses `run-external` to correctly pass all flags and arguments.
+export def sc [...rest: string] {
+    let subcommand = ($rest | first)
+
+    if ($subcommand in $sudo_commands) {
+        run-external "sudo" "systemctl" ...$rest
+    } else {
+        run-external "systemctl" ...$rest
+    }
+}
+
+# A dispatcher command for user-specific systemctl.
+export def scu [...rest: string] {
+    run-external "systemctl" "--user" ...$rest
+}
+
+
+# --- Explicit Command Definitions for Aliases ---
+# --now commands
+export def "sc-enable-now" [...rest: string] { sudo systemctl enable --now ...$rest }
+export def "sc-disable-now" [...rest: string] { sudo systemctl disable --now ...$rest }
+export def "sc-mask-now" [...rest: string] { sudo systemctl mask --now ...$rest }
+
+export def "scu-enable-now" [...rest: string] { systemctl --user enable --now ...$rest }
+export def "scu-disable-now" [...rest: string] { systemctl --user disable --now ...$rest }
+export def "scu-mask-now" [...rest: string] { systemctl --user mask --now ...$rest }
+
+
+# --failed commands
+export def "sc-failed" [...rest: string] { systemctl --failed ...$rest }
+export def "scu-failed" [...rest: string] { systemctl --user --failed ...$rest }
