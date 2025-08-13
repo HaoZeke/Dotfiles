@@ -28,11 +28,11 @@ auto_sync = true
 
 ## which search mode to use
 ## possible values: prefix, fulltext, fuzzy, skim
-search_mode = "fuzzy"
+search_mode = "skim"
 
 ## which filter mode to use
-## possible values: global, host, session, directory
-filter_mode = "host"
+## possible values: global, host, session, directory, workspace
+filter_mode = "directory"
 
 ## which filter mode to use when atuin is invoked from a shell up-key binding
 ## the accepted values are identical to those of "filter_mode"
@@ -87,3 +87,6 @@ show_help = false
 # cwd_filter = [
 #   "^/very/secret/area"
 # ]
+
+[sync]
+records = true
