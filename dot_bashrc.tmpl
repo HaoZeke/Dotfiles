@@ -1,6 +1,12 @@
 if [[ $- != *i* ]]; then
 	# shell is non-interactive. Do nothing and return
 	return
+else
+	BLE_SH_PATH="$HOME/.local/share/blesh/ble.sh"
+	if [ -f "$BLE_SH_PATH" ]; then
+		source "$BLE_SH_PATH" --attach=none
+	fi
+
 fi
 
 if [[ $TERM = dumb ]]; then
@@ -28,6 +34,8 @@ if [ -d $shellHome/bash.d ]; then
 	source "$shellHome/bash.d/02_functions.bash"
 	source "$shellHome/bash.d/99_activate_bin.bash"
 fi
+
+[[ ! ${BLE_VERSION-} ]] || ble-attach
 
 # Emacs Stuff (cross platform)
 # Local Variables:
