@@ -67,15 +67,14 @@ spack_load() {
   unset -f spack_load
 }
 {{- end }}
-
-{{- if eq .setup_pixi "yes" }}
-export PATH="$PATH:$HOME/.pixi/bin"
-eval "$(pixi completion --shell bash)"
-{{- end }}
-
+# Now use x pixi instead of pixi
 {{- if eq .setup_mamba "yes" }}
 # Mamba / Micromamba setup
-eval "$(micromamba shell hook --shell=bash)"
+micromamba_load() {
+  echo "Sourcing Micromamba environment..."
+  eval "$(micromamba shell hook --shell=bash)"
+  unset -f micromamba_load
+}
 {{- end }}
 
 # Emacs Stuff (cross platform)
