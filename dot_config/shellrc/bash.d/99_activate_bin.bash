@@ -7,17 +7,17 @@
 
 # Almost all of these are with cargo install blah blah
 
-if command -v zoxide &> /dev/null; then
-    eval "$(zoxide init bash)"
-fi
+programs=(zoxide starship mcfly)
 
-if command -v starship &> /dev/null; then
-    eval "$(starship init bash)"
-fi
+for prog in "${programs[@]}"; do
+    if command -v "$prog" &>/dev/null; then
+        eval "$("$prog" init bash)"
+    fi
+done
 
-if command -v mcfly &> /dev/null; then
-    eval "$(mcfly init bash)"
-fi
+# https://www.x-cmd.com/
+
+[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
 
 # Emacs Stuff (cross platform)
 # Local Variables:
