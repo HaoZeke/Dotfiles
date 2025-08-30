@@ -1,0 +1,40 @@
+{{ if and (ne .chezmoi.os "windows") (lookPath "bash") -}}
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Check for dependencies first
+for cmd in git make; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Error: Required command '$cmd' is not installed for ble.sh. Aborting." >&2
+        exit 1
+    fi
+done
+
+# Only run for interactive shells that are not "dumb"
+if [[ $- != *i* || $TERM == "dumb" ]]; then
+    exit 0
+fi
+
+# If ble.sh is not installed, download and build it in a temporary directory
+if [[ ! -d $HOME/.local/share/blesh/ ]]; then
+    echo "Installing ble.sh for a more powerful prompt..."
+
+    TMP_DIR=$(mktemp -d)
+    (
+        cd "$TMP_DIR"
+        git clone --recursive --depth 1 \
+            --shallow-submodules \
+            https://github.com/akinomyoga/ble.sh.git
+        make -C ble.sh install PREFIX="$HOME/.local"
+    )
+    rm -rf "$TMP_DIR"
+    echo "ble.sh installation complete."
+fi
+
+{{ end }}
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:

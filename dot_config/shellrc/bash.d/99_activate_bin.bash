@@ -16,8 +16,13 @@ for prog in "${programs[@]}"; do
 done
 
 # https://www.x-cmd.com/
-
 [ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
+
+# ble.sh isn't part of x-cmd
+BLE_SH_PATH="$HOME/.local/share/blesh/ble.sh"
+if [ -f "$BLE_SH_PATH" ]; then
+  source "$BLE_SH_PATH"
+fi
 
 # Emacs Stuff (cross platform)
 # Local Variables:
