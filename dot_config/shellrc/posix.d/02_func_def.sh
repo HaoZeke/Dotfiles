@@ -69,52 +69,6 @@ smartresize() {
 	mogrify -path $3 -filter Triangle -define filter:support=2 -thumbnail $2 -unsharp 0.25x0.08+8.3+0.045 -dither None -posterize 136 -quality 82 -define jpeg:fancy-upsampling=off -define png:compression-filter=5 -define png:compression-level=9 -define png:compression-strategy=1 -define png:exclude-chunk=all -interlace none -colorspace sRGB $1
 }
 
-# Libgen Downloader
-libgen() {
-	local args=$1
-	local genio='http://libgen.io/book/index.php?md5='
-	local genrus='http://gen.lib.rus.ec/book/index.php?md5='
-
-	if [ -z "${args##*$genio*}" ]; then
-		local cHashgenio=${@#$genio}
-		echo "[DEBUG] ARGS=${args}"
-		echo "[INFO] The hash will be extracted."
-		local MD5=${cHashgenio}
-	elif [ -z "${args##*$genrus*}" ]; then
-		local cHashgenrus=${@#$genrus}
-		echo "[DEBUG] ARGS=${args}"
-		echo "[INFO] The hash will be extracted."
-		local MD5=${cHashgenrus}
-	else
-		echo "[DEBUG] ARGS=${args}"
-		local MD5=${args}
-	fi
-	echo "[INFO] MD5=${MD5}"
-
-	# The whole Key thing stops working
-	# local URL='http://libgen.io/get.php?md5='
-	# local KEY=$(curl -sL "${URL}${MD5}" | grep -oE "key=[^']*" | cut -d'=' -f2)
-	# echo "[INFO] KEY=${KEY}"
-
-	# local FURL="${URL}${MD5}&key=${KEY}"
-
-	# Non-Key
-	local altURL='http://libgen.io/ads.php?md5='
-	local FURL="${altURL}${MD5}"
-
-	if which aria2c >/dev/null 2>&1; then
-		aria2c -j2 "$FURL"
-	elif which wget >/dev/null 2>&1; then
-		wget -v -c "${FURL}" -O "${MD5}.libgen"
-		wget --trust-server-names -v -c "${FURL}"
-	else
-		curl -L -J -O "${FURL}" --progress-bar
-	fi
-
-	# Check Hash
-	# md5sum $file???? == $MD5
-}
-
 getCloud() {
 	fileName=$(curl -sI "${1}" | grep -o -E 'filename=.*$' | sed -e 's/filename=//')
 	echo $fileName
