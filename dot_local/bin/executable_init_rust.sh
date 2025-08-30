@@ -19,7 +19,7 @@ set -- "bottom" "ripgrep --features pcre2" "hyperfine" "skim" "mcfly" \
     "du-dust" "toml-cli" "amber" "hexyl" "tokei" "typos-cli" \
     "silicon"
 for item in "$@"; do
-    cargo install $item
+    cargo binstall "$item"
 done
 
 # Emacs Stuff (cross platform)
