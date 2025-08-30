@@ -60,18 +60,22 @@ export XDG_DATA_DIRS="$XDG_DATA_DIRS:$HOME/.local/share"
 
 # Conditional paths
 ####################
-{{ if eq .setup_spack "yes" }}
-source ~/spack/share/spack/setup-env.sh
-{{ end }}
+{{- if eq .setup_spack "yes" }}
+spack_load() {
+  echo "Sourcing Spack environment..."
+  source "$HOME/spack/share/spack/setup-env.sh"
+  unset -f spack_load
+}
+{{- end }}
 
-{{ if eq .setup_pixi "yes" }}
-export PATH="$PATH:$HOME/.pixi/bin"
-{{ end }}
+{{- if eq .setup_pixi "yes" }}
+eval "$(pixi completion --shell bash)"
+{{- end }}
 
+{{- if eq .setup_mamba "yes" }}
 # Mamba / Micromamba setup
-{{ if eq .setup_mamba "yes" }}
 eval "$(micromamba shell hook --shell=bash)"
-{{ end }}
+{{- end }}
 
 # Emacs Stuff (cross platform)
 # Local Variables:

@@ -11,16 +11,22 @@ export shellHome=$HOME/.config/shellrc
 
 # Load all files from the posix.d directory
 if [ -d $shellHome/posix.d ]; then
-	for file in $shellHome/posix.d/*.sh; do
-		source $file
-	done
+	source "$shellHome/posix.d/00_show_gre.sh"
+	source "$shellHome/posix.d/01_alias_def.sh"
+	source "$shellHome/posix.d/02_func_def.sh"
+	source "$shellHome/posix.d/03_exports.sh"
+	# XXX(rg): Is slow.
+	source "$shellHome/posix.d/05_paths.sh"
+	source "$shellHome/posix.d/06_prog_conf.sh"
 fi
 
 # Load all files from the bashrc.d directory
 if [ -d $shellHome/bash.d ]; then
-	for file in $shellHome/bash.d/*.bash; do
-		source $file
-	done
+	# for file in $shellHome/bash.d/*.bash; do
+	# 	source $file
+	# done
+	source "$shellHome/bash.d/02_functions.bash"
+	source "$shellHome/bash.d/99_activate_bin.bash"
 fi
 
 # Emacs Stuff (cross platform)
