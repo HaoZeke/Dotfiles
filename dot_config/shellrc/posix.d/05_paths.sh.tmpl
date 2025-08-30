@@ -69,6 +69,7 @@ spack_load() {
 {{- end }}
 
 {{- if eq .setup_pixi "yes" }}
+export PATH="$PATH:$HOME/.pixi/bin"
 eval "$(pixi completion --shell bash)"
 {{- end }}
 
