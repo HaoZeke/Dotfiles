@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# TODO(rg): Technically x-cmd can be run on windows too, and can also handle zsh
+# and friends
+{{ if and (ne .chezmoi.os "windows") (lookPath "bash") -}}
+set -euo pipefail
+
+if [[ ! -d "$HOME/.x-cmd.root/" ]]; then
+    echo "x-cmd not found. Installing..."
+    if command -v curl >/dev/null 2>&1; then
+        eval "$(curl -fsSL https://get.x-cmd.com)"
+    # Use wget as a fallback.
+    elif command -v wget >/dev/null 2>&1; then
+        eval "$(wget -qO- https://get.x-cmd.com)"
+    else
+        echo "Error: Neither curl nor wget is available. Cannot install x-cmd." >&2
+        exit 1
+    fi
+    echo "x-cmd installation complete."
+fi
+
+[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
+
+tools=(
+    "atuin"
+    "bat"
+    "btm"
+    "delta" # git-delta
+    "difft" # TODO(rg): setup
+    "dust" # du-dust
+    "exa"
+    "fd"
+    "grex"
+    "hyperfine"
+    "hexyl"
+    "navi"
+    "ouch"
+    "pueue" # TODO(rg): test
+    "starship"
+    "tokei"
+    "watchexec"
+    "zoxide"
+)
+# Non Rust tools work too
+tools+=(
+    "bun"
+    "chezmoi"
+    "czg" # TODO(rg): setup
+    "fzf"
+    "gopass" # TODO(rg): setup
+    "hadolint"
+    "mermaid-cli"
+    "miller"
+    "pandoc"
+    "shfmt"
+    "upx" # TODO(rg): test
+    "uv"
+    "vale"
+    # NOTE(rg): khal?
+)
+
+for item in "${tools[@]}"; do
+    x env use "$item"
+done
+
+# installables=(
+#     "amber"
+#     "pixi"
+#     "silicon"
+#     "tealdeer"
+# )
+
+# for item in "${installables[@]}"; do
+#     x install "$item"
+# done
+
+# For whatever reason this is only run once
+x starship use bracketed-segments
+
+{{ end }}
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:

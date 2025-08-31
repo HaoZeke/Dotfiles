@@ -9,7 +9,7 @@
 [ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
 
 # Almost all of these are with cargo install blah blah
-programs=(zoxide starship mcfly)
+programs=(zoxide atuin)
 
 for prog in "${programs[@]}"; do
     if command -v "$prog" &>/dev/null; then
