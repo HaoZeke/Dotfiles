@@ -99,6 +99,9 @@ gaps inner 5
     # After scu-enable-now swayidle.target
     bindsym $mod+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize'
 
+    # Hibernate
+    bindsym $mod+Shift+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png && systemctl suspend'
+
     # Exit sway (logs you out of your Wayland session)
     bindsym $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 #
