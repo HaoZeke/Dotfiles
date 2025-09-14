@@ -163,9 +163,9 @@ bindsym $mod+Shift+m move workspace to output right
 # Screenshot
 bindsym $mod+o exec $screenshotTask
 
-# Notification management (mako)
-bindsym ctrl+space exec makoctl dismiss
-bindsym ctrl+Shift+space exec makoctl dismiss-all
+# Notification management (mako uses dismiss instead of close)
+bindsym ctrl+space exec dunstctl close
+bindsym ctrl+Shift+space exec dunstctl close-all
 
 #
 # Layout stuff:
@@ -323,8 +323,8 @@ exec thunar --daemon
 # Now managed by .conf/systemd/user/foot-server.{service,sock}
 # exec_always $term_server
 
-# Notifications
-exec_always mako
+# Notifications (now with dunst)
+# exec_always mako
 
 # Clipboard history
 exec_always wl-paste --watch cliphist store
