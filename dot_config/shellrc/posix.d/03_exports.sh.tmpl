@@ -43,8 +43,11 @@ export GPG_TTY=$(tty)
 # Tmux update
 export TERM=xterm-256color
 
+{{- if eq .machine_name "rgx1gen11" -}}
 # For grabbing CPU-PyTorch
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+export UV_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+{{- end }}
 
 # Emacs Stuff (cross platform)
 # Local Variables:
