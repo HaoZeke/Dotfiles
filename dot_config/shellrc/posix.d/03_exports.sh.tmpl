@@ -48,6 +48,9 @@ export TERM=xterm-256color
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 export UV_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 {{- end }}
+# Since PyTorch and uv don't play nice
+# xref: https://github.com/metatensor/metatensor/pull/997#discussion_r2473540252
+export UV_INDEX_STRATEGY="unsafe-best-match"
 
 # Emacs Stuff (cross platform)
 # Local Variables:
