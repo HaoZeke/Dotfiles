@@ -17,6 +17,21 @@ profile homeLabIS {
   }
 }
 
+profile homeLabTripleIS {
+    # Left: Lenovo M14 (External)
+    # Starts at 0
+    output "Lenovo Group Limited M14 V904H2WF" position 0,0
+
+    # Center: Laptop Screen (Internal)
+    # Starts after the M14 (1920 pixels)
+    # We use the Model identifier here as the serial is "Unknown"
+    output "Chimei Innolux Corporation 0x1417 Unknown" position 1920,0
+
+    # Right: Lenovo L27i (External)
+    # Starts after the Laptop (1920 + 1920 = 3840 pixels)
+    output "Lenovo Group Limited LEN L27i-28 0x54573152" position 3840,0
+}
+
 profile TheochemUI_myGrant {
   # Negative offsets are a no-go, so shift relative to the actual size
   # See:
