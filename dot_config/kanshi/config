@@ -30,6 +30,12 @@ profile homeLabTripleIS {
     # Right: Lenovo L27i (External)
     # Starts after the Laptop (1920 + 1920 = 3840 pixels)
     output "Lenovo Group Limited LEN L27i-28 0x54573152" position 3840,0
+
+    # --- M14 (Display 2) Settings ---
+    # Set to sRGB mode (01) to fix washed out colors
+    exec ddcutil setvcp 14 01 --display 2
+    # Boost brightness back to max (100)
+    exec ddcutil setvcp 10 100 --display 2
 }
 
 profile TheochemUI_myGrant {
