@@ -7,41 +7,38 @@ BRIGHTNESS_CHANGE=$1
 WOBSOCK=$2
 CACHE_FILE="/tmp/ddc_monitors_cache"
 
-# 1. Kill previous instances to prevent I2C bus pile-ups
+# 1. Clean up concurrency
+# Kill previous instances to prevent I2C bus pile-ups.
 pgrep -f "brightness_sync.sh" | grep -v $$ | xargs -r kill
 
-# 2. Monitor Discovery (Cached & Fixed)
-# We regenerate the cache if it doesn't exist or is empty.
-if [ ! -s "$CACHE_FILE" ]; then
-    # We use awk to:
-    # 1. Detect "Display" blocks (valid) vs "Invalid display" blocks.
-    # 2. Extract the I2C bus path only from valid blocks.
-    # 3. Use sed to strip everything but the number.
-    ddcutil detect --terse |
-        awk '/^Display/ {valid=1} /^Invalid/ {valid=0} valid && /I2C bus:/ {print $NF}' |
-        sed 's/.*i2c-//' >"$CACHE_FILE"
-fi
-
-# 3. Adjust Internal Brightness (brightnessctl)
+# 2. IMMEDIATE ACTION: Internal Screen & UI
+# We do this first so the laptop feels responsive instantly.
 NEW_BRIGHTNESS=$(brightnessctl set "$BRIGHTNESS_CHANGE" -m | cut -d, -f4 | tr -d '%')
 
 if [ -z "$NEW_BRIGHTNESS" ]; then
     exit 1
 fi
 
-# 4. Adjust External Monitors (ddcutil)
-# Loop through the cached bus numbers (e.g., 1, 10)
-while read -r bus_id; do
-    # --bus avoids scanning
-    # --noverify speeds up execution
-    # & runs them in parallel
-    ddcutil setvcp 10 "$NEW_BRIGHTNESS" --bus "$bus_id" --noverify &
-done <"$CACHE_FILE"
-
-# 5. Output to WOBSOCK
+# Update WOBSOCK immediately if it exists
 if [ -n "$WOBSOCK" ]; then
-    echo "$NEW_BRIGHTNESS" >"$WOBSOCK"
+    echo "$NEW_BRIGHTNESS" > "$WOBSOCK"
 fi
+
+# 3. Monitor Discovery (Lazy Loading)
+# Change: We use -f (file exists) instead of -s (file has content).
+# If the file exists but is empty, it means we scanned and found NO screens.
+# We respect that empty state and do not re-scan.
+if [ ! -f "$CACHE_FILE" ]; then
+    ddcutil detect --terse | \
+    awk '/^Display/ {valid=1} /^Invalid/ {valid=0} valid && /I2C bus:/ {print $NF}' | \
+    sed 's/.*i2c-//' > "$CACHE_FILE"
+fi
+
+# 4. Adjust External Monitors (Background)
+# If CACHE_FILE is empty (no screens), this loop simply doesn't run.
+while read -r bus_id; do
+    ddcutil setvcp 10 "$NEW_BRIGHTNESS" --bus "$bus_id" --noverify &
+done < "$CACHE_FILE"
 
 # TODO(rg): write up as a short post / blog
 # Addenum :: udev hotplug
