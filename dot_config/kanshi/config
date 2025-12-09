@@ -37,7 +37,7 @@ profile homeLabTripleIS {
     # Boost brightness back to max (100)
     exec ddcutil setvcp 10 100 --display 2
     # Reset settings for display 1
-    ddcutil setvcp 04 01 --display 1
+    exec ddcutil setvcp 04 01 --display 1
 }
 
 profile TheochemUI_myGrant {
