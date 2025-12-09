@@ -42,3 +42,12 @@ done <"$CACHE_FILE"
 if [ -n "$WOBSOCK" ]; then
     echo "$NEW_BRIGHTNESS" >"$WOBSOCK"
 fi
+
+# TODO(rg): write up as a short post / blog
+# Addenum :: udev hotplug
+# sudo nano /etc/udev/rules.d/99-ddc-cache-reset.rules
+# ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="/usr/bin/rm -f /tmp/ddc_monitors_cache"
+# sudo udevadm control --reload-rules && sudo udevadm trigger
+# To control
+# ls -l /tmp/ddc_monitors_cache
+# Could alternatively use kanshi but that needs a profile for every single one
