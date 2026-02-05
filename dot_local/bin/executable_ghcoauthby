@@ -1,0 +1,8 @@
+#!/usr/bin/env -S pixi exec --spec jq -- bash
+
+# From https://sethmlarson.dev/easy-github-co-authored-by
+# xref: https://github.com/awesomebytes/pixibang
+
+login="$@"
+read id display_name < <(echo $(curl -s "https://api.github.com/users/$login" | jq -r '.id, .name'))
+echo "Co-authored-by: $display_name <$id+$login@users.noreply.github.com>"
