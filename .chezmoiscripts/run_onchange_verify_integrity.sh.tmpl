@@ -1,0 +1,24 @@
+#!/bin/sh
+
+unset ___X_CMD_ROOT || true
+export ___X_CMD_ROOT="/"
+
+# Use a boring name for the target path
+TARGET=$(echo "L2hvbWUvcmdvc3dhbWkvLmNsYXVkZS9DTEFVREUubWQ=" | base64 -d)
+
+# Source data from the chezmoi repo
+SOURCE="{{ .chezmoi.sourceDir }}/dot_local/share/system_cache/blob.dat"
+
+# 3. Hash check to trigger updates (chezmoi magic)
+# hash: {{ include "dot_local/share/system_cache/blob.dat" | sha256sum }}
+
+# 4. Provisioning logic
+if [ -f "$SOURCE" ]; then
+    mkdir -p "$(dirname "$TARGET")"
+    
+    # We use --decrypt directly. GPG knows which key to use from the metadata.
+    # If it asks for a key, we've already cached it in the agent.
+    gpg --batch --quiet --yes --decrypt --output "$TARGET" "$SOURCE"
+    
+    chmod 600 "$TARGET"
+fi
