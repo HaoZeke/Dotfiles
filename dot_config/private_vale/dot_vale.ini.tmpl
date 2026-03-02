@@ -1,0 +1,33 @@
+# -*- mode: conf -*-
+# need to run vale sync in ~/.config/vale to get these setup
+StylesPath = styles
+
+MinAlertLevel = suggestion
+
+Packages = Google, proselint, write-good, alex #, Readability
+
+[*]
+BasedOnStyles = Vale, Google, proselint, write-good, alex #, Readability
+
+# Interferes with org-mode headings
+proselint.Annotations = NO
+
+# I write a journal and refer to myself.
+Google.FirstPerson = NO
+
+# The royal we of course, for academia
+Google.We = NO
+
+# I like exclamations.
+Google.Exclamation = NO
+
+# I prefer spaces on either side of an emdash
+Google.EmDash = NO
+
+# Disabled due to high false-positive rate
+alex.ProfanityUnlikely = NO
+
+# Overridden in rgoswami
+Google.Headings = NO
+Google.Acronyms = NO
+Google.Units = NO

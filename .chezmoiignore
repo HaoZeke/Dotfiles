@@ -22,6 +22,11 @@ encrypted_chezmoi_toml_linux
 {{ if eq .encrypted "no" }}
 **/*.age
 {{ end }}
+{{ if ne .setup_claude "yes" }}
+# Skip vault unseal on machines without Claude
+scripts/vault.nim
+.vault/
+{{ end }}
 # Always ignore
 readme.org
 todo.org

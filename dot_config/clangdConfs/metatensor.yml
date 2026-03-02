@@ -1,0 +1,81 @@
+If:
+  PathMatch: metatensor-core/.*
+
+CompileFlags:
+  CompilationDatabase: target/tmp/cxx-tests
+  Add: 
+      - "-I"
+      - "metatensor-core/include"
+
+Diagnostics:
+  UnusedIncludes: Strict
+  # MissingIncludes: Strict
+
+  Suppress: -Wmissing-noreturn
+
+  ClangTidy:
+    FastCheckFilter: Strict
+    Add:
+      - bugprone-*
+      - modernize-*
+      - performance-*
+      - readability-*
+    Remove:
+      - modernize-use-trailing-return-type
+      - modernize-return-braced-init-list
+      - modernize-use-nodiscard
+      - modernize-avoid-c-arrays
+      - readability-magic-numbers
+      - readability-else-after-return
+      - readability-simplify-boolean-expr
+      - readability-identifier-length
+      - readability-function-cognitive-complexity
+      - readability-named-parameter
+      - readability-use-anyofallof
+      - bugprone-easily-swappable-parameters
+      # add back when https://github.com/llvm/llvm-project/issues/54668 hits a
+      # release
+      - bugprone-exception-escape
+      - performance-avoid-endl
+
+    CheckOptions:
+      performance-unnecessary-value-param.AllowedTypes: metatensor::Labels
+
+---
+If:
+  PathMatch: metatensor-torch/.*
+
+CompileFlags:
+  CompilationDatabase: target/tmp/torch-tests
+
+Diagnostics:
+  UnusedIncludes: Strict
+  # MissingIncludes: Strict
+
+  ClangTidy:
+    FastCheckFilter: Strict
+    Add:
+      - bugprone-*
+      - modernize-*
+      - performance-*
+      - readability-*
+    Remove:
+      - modernize-use-trailing-return-type
+      - modernize-use-nodiscard
+      - modernize-return-braced-init-list
+      - readability-magic-numbers
+      - readability-else-after-return
+      - readability-use-std-min-max
+      - readability-simplify-boolean-expr
+      - readability-identifier-length
+      - readability-convert-member-functions-to-static
+      - readability-function-cognitive-complexity
+      - readability-named-parameter
+      - readability-use-anyofallof
+      - bugprone-easily-swappable-parameters
+      - performance-unnecessary-value-param
+      # - bugprone-unchecked-optional-access # https://github.com/clangd/clangd/issues/1700
+      - bugprone-suspicious-include
+      - bugprone-branch-clone
+      - performance-avoid-endl
+      - bugprone-optional-value-conversion

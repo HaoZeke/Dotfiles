@@ -71,3 +71,6 @@ Temporary Items
 .vault/.manifest.plain
 .vault/.status-tmp-*
 
+CLAUDE.md
+.claude/
+dot_pi/

@@ -1,0 +1,46 @@
+
+#------------------------------------------------------------------------
+# Subject line: type(scope): description
+#------------------------------------------------------------------------
+# Types: Required noun describing commit type.
+#
+#    build - Changes build system or external dependencies.
+#    chore - Changes external user won't see. (configs/internal task)
+#       ci - Changes CI configuration files or scripts.
+#     docs - Changes documentation only.
+#     feat - A new feature.
+#      fix - A bug fix.
+#     perf - Change that improves performance.
+# refactor - Change that neither fixes a bug nor adds a feature.
+#   revert - Change that corrects a commit.
+#    style - Changes don't affect meaning. (white-space, format, etc.)
+#     test - Adds test or corrects existing test.
+#
+#------------------------------------------------------------------------
+# Scope:       Optional noun describing relevant section of codebase.
+#              Must be inside parenthesis if used.
+#------------------------------------------------------------------------
+# Description: Required short summary of the changes.
+#              Must follow a colon after type or scope.
+#              No ending punctuation.
+#------------------------------------------------------------------------
+# Body:        Optional longer description providing additional context.
+#              Must begin one blank line after subject/title.
+#              Free-form, may consist of newlines and paragraphs.
+#------------------------------------------------------------------------
+# Footer:      Optional git trailer.
+#              Must begin one blank line after body paragraph.
+#              Tokens must use '-' in place of white-space.
+#              May contain spaces and newlines.
+#
+# References:  Links information/issues/commits/PRs.
+#              Closed issues should be listed on separate line.
+#
+# BREAKING CHANGE: Must be indicated in title or footer.
+#                  If title: Indicate using ! before colon. (!:)
+#                            Must use body to describe.
+#                  If footer: Must be uppercase text.
+#                             Must have a colon and spaced description.
+#                             Description should be lowercase.
+#------------------------------------------------------------------------
+# Kanged from https://github.com/noncog/.dotfiles/blob/36846a173b1340407019e91c9483c37253cb5cc5/home/.config/git/commit/commit-message
