@@ -1,0 +1,19 @@
+extends: existence
+message: "'%s' is a hedge pile. Use one qualifier or none."
+ignorecase: true
+level: warning
+tokens:
+  - large and largely
+  - largely unexplored
+  - quite possibly
+  - might possibly
+  - could potentially
+  - may potentially
+  - perhaps somewhat
+  - somewhat arguably
+  - relatively quite
+  - fairly significantly
+  - rather substantially
+  - seems to suggest
+  - appears to indicate
+  - tends to suggest

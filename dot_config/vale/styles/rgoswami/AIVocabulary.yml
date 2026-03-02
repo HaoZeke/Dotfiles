@@ -1,0 +1,63 @@
+extends: existence
+message: "'%s' is flagged AI vocabulary (Wikipedia:Signs_of_AI_writing). Rephrase."
+link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
+ignorecase: true
+level: warning
+tokens:
+  - crucial
+  - pivotal
+  - vibrant
+  - intricate
+  - tapestry
+  - testament
+  - enduring
+  - garner
+  - showcase
+  - interplay
+  - delve
+  - profound
+  - renowned
+  - groundbreaking
+  - valuable
+  - fostering
+  - enhance
+  - the landscape of
+  - broader landscape
+  - evolving landscape
+  - competitive landscape
+  - shifting landscape
+  - research landscape
+  - technological landscape
+  - underscores
+  - notably
+  - noteworthy
+  - comprehensive
+  - utilize
+  - leveraging
+  - multifaceted
+  - paradigm
+  - synergy
+  - holistic
+  - streamline
+  - cutting-edge
+  - seamless
+  - seamlessly
+  - robust
+  - transformative
+  - empower
+  - empowering
+  - unlock
+  - unlocking
+  - elevate
+  - elevating
+  - spearhead
+  - spearheading
+  - harness
+  - harnessing
+  - bolster
+  - bolstering
+  - navigate
+  - navigating
+  - underscore
+  - underscoring
+  - realm

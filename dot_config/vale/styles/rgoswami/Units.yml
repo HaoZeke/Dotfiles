@@ -1,0 +1,12 @@
+extends: existence
+message: "Put a nonbreaking space between the number and the unit in '%s'."
+link: "https://developers.google.com/style/units-of-measure"
+nonword: true
+level: error
+tokens:
+  - \b\d+(?:B|kB|MB|GB|TB)
+  - \b\d+(?:ns|ms|s|min|h)
+
+# References
+# [1]: https://github.com/cashpw/dotfiles/blob/main/config/vale/styles/cashpw/Units.yml
+# [2]: https://gitlab.com/gitlab-org/gitlab/-/blob/master/doc/.vale/gitlab_base/Units.yml

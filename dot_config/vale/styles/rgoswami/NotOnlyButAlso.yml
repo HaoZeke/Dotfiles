@@ -1,0 +1,6 @@
+extends: existence
+message: "'%s' -- just state both things without the correlative construction."
+ignorecase: true
+level: warning
+tokens:
+  - not only

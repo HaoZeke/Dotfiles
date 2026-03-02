@@ -1,0 +1,27 @@
+extends: existence
+message: "'%s' -- drop 'key' or use a specific adjective."
+ignorecase: true
+level: suggestion
+tokens:
+  - key idea
+  - key ideas
+  - key advantage
+  - key advantages
+  - key insight
+  - key insights
+  - key difference
+  - key differences
+  - key takeaway
+  - key takeaways
+  - key challenge
+  - key challenges
+  - key feature
+  - key features
+  - key benefit
+  - key benefits
+  - key factor
+  - key factors
+  - key finding
+  - key findings
+  - key concept
+  - key concepts

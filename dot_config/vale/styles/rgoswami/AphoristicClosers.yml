@@ -1,0 +1,15 @@
+extends: existence
+message: "'%s' is an aphoristic closer or tricolon. End with a concrete statement instead."
+ignorecase: true
+level: warning
+tokens:
+  - what matters is not
+  - what truly matters
+  - at the end of the day
+  - the real question is
+  - only time will tell
+  - the future will tell
+  - remains to be seen
+  - is left as an exercise
+  - speaks for itself
+  - goes without saying

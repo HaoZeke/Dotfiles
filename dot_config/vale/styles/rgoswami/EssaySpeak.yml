@@ -1,0 +1,28 @@
+extends: existence
+message: "'%s' is essay-speak. State the point directly."
+ignorecase: true
+level: warning
+tokens:
+  - the strongest evidence for
+  - the key takeaway
+  - the central claim
+  - in summary, we have shown
+  - it is worth emphasizing
+  - it is important to note
+  - we emphasize that
+  - we note that
+  - is worth emphasizing
+  - it bears mentioning
+  - it should be noted
+  - it is worth noting
+  - it is interesting to note
+  - this brings us to
+  - as we have seen
+  - as mentioned earlier
+  - as previously discussed
+  - in conclusion
+  - to sum up
+  - to summarize
+  - all in all
+  - taken together
+  - the bottom line

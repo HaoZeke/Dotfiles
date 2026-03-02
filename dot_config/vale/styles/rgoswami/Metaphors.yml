@@ -1,0 +1,21 @@
+extends: existence
+message: "'%s' is a metaphorical framing. State the relationship directly."
+ignorecase: true
+level: warning
+tokens:
+  - load-bearing
+  - cornerstone of
+  - serves as a bridge
+  - paves the way
+  - opens the door
+  - lays the groundwork
+  - lays the foundation
+  - building block
+  - stepping stone
+  - tip of the iceberg
+  - double-edged sword
+  - silver bullet
+  - game changer
+  - game-changer
+  - low-hanging fruit
+  - needle in a haystack

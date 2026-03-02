@@ -1,0 +1,18 @@
+extends: existence
+message: "'%s' uses a copula substitute. Write 'is' or 'has' directly."
+ignorecase: true
+level: warning
+tokens:
+  - serves as
+  - stands as
+  - acts as a
+  - represents a
+  - constitutes a
+  - functions as
+  - operates as
+  - works as a
+  - features a
+  - boasts a
+  - offers a
+  - provides a key
+  - marks a

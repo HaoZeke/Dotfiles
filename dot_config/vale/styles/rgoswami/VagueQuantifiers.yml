@@ -1,0 +1,24 @@
+extends: existence
+message: "'%s' is vague. Quantify with a number, percentage, or bound."
+ignorecase: true
+level: suggestion
+tokens:
+  - a number of
+  - a lot of
+  - a great deal of
+  - a significant amount
+  - a large number
+  - a substantial number
+  - a considerable number
+  - a tremendous amount
+  - significantly better
+  - significantly worse
+  - significantly faster
+  - significantly slower
+  - dramatically improved
+  - drastically reduced
+  - orders of magnitude
+  - much faster
+  - much slower
+  - much better
+  - much worse
