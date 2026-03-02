@@ -1,0 +1,7 @@
+#!/bin/bash --norc
+{{ if and (eq .setup_claude "yes") (eq .encrypted "yes") -}}
+cd "{{ .chezmoi.sourceDir }}"
+if command -v nimvault &>/dev/null && command -v gpg &>/dev/null; then
+    nimvault unseal 2>/dev/null || true
+fi
+{{ end -}}
