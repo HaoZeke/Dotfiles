@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# Fix Zotero-exported BibTeX files with missing citation keys
+#
+# Usage:
+#   fix-zotero-bib [file.bib]
+#
+# If no file specified, fixes the default Zotero export:
+#   ~/Insync/r95g10@gmail.com/Google Drive/zotLib.bib
+#
+# Creates a .bak backup before modifying.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_SCRIPT="${SCRIPT_DIR}/fix-zotero-bib.py"
+
+if [[ ! -f "$PYTHON_SCRIPT" ]]; then
+    echo "Error: Python script not found at $PYTHON_SCRIPT" >&2
+    exit 1
+fi
+
+if [[ $# -gt 0 ]]; then
+    python3 "$PYTHON_SCRIPT" "$1"
+else
+    python3 "$PYTHON_SCRIPT"
+fi
