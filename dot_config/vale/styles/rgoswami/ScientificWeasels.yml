@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' is a weasel word. Provide evidence or remove."
+ignorecase: true
+level: warning
+tokens:
+  - clearly shows
+  - clearly demonstrates
+  - obviously
+  - trivially
+  - it is well known that
+  - it is well established that
+  - it has been shown that
+  - it is generally accepted that
+  - it is widely believed that
+  - it is commonly assumed that
+  - as is well known
+  - as expected
+  - needless to say
+  - undoubtedly
+  - of course
+  - it goes without saying
+  - intuitively
+  - inherently

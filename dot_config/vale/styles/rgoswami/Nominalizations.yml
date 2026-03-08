@@ -1,0 +1,26 @@
+extends: substitution
+message: "Prefer '%s' over the nominalization '%s'."
+ignorecase: true
+level: suggestion
+swap:
+  utilization: use
+  the implementation of: implementing
+  the determination of: determining
+  the observation of: observing
+  the calculation of: calculating
+  the optimization of: optimizing
+  the identification of: identifying
+  the specification of: specifying
+  the characterization of: characterizing
+  the minimization of: minimizing
+  the maximization of: maximizing
+  the evaluation of: evaluating
+  the derivation of: deriving
+  the estimation of: estimating
+  the computation of: computing
+  the initialization of: initializing
+  the configuration of: configuring
+  the normalization of: normalizing
+  the parameterization of: parameterizing
+  the discretization of: discretizing
+  the diagonalization of: diagonalizing

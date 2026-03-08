@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' is filler. Remove or replace with something specific."
+ignorecase: true
+level: suggestion
+tokens:
+  - very unique
+  - very important
+  - very significant
+  - really important
+  - actually quite
+  - basically just
+  - it is clear that
+  - it can be seen that
+  - it should be mentioned that
+  - it is evident that
+  - it is apparent that
+  - it is obvious that
+  - there is no doubt that
+  - the fact that
+  - in terms of
+  - with respect to the fact that
+  - it is the case that
+  - it turns out that

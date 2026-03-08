@@ -1,0 +1,31 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+ignorecase: true
+level: warning
+swap:
+  in order to: to
+  due to the fact that: because
+  has the ability to: can
+  is able to: can
+  in an attempt to: to
+  for the purpose of: for
+  at this point in time: now
+  at the present time: now
+  in the event that: if
+  with the exception of: except
+  in the case of: for
+  in the context of: in
+  a large number of: many
+  a small number of: few
+  on a regular basis: regularly
+  in close proximity to: near
+  on the order of: about
+  in spite of the fact that: although
+  by means of: by
+  with regard to: about
+  as a consequence of: because of
+  prior to the start of: before
+  subsequent to: after
+  in the vicinity of: near
+  is indicative of: indicates
+  is dependent on: depends on
