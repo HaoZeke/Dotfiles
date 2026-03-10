@@ -26,3 +26,6 @@ fi
 
 # Indian Time
 alias indiaTime="TZ=Asia/Kolkata date +'Asia/Kolkata %a, %b %d, %Y %r'"
+
+# gh CLI with Ruhi's credentials
+alias gh-ruhi='GH_TOKEN=$(pass github/ruhi-pat) gh'
