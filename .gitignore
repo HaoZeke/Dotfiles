@@ -107,3 +107,5 @@ dot_pi/
 ~/.pi/agent/extensions/_helpers.ts
 ~/.pi/agent/extensions/.helpers.ts
 ~/.claude/omp-bridge.md
+~/.claude/cf-ci.md
+~/.config/git/ruhi.gitconfig

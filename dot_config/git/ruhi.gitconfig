@@ -1,0 +1,7 @@
+[user]
+	name = ruhirg
+	email = ruhiresearcher209@gmail.com
+[commit]
+	gpgsign = false
+[tag]
+	gpgsign = false
