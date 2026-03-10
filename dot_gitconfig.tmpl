@@ -10,6 +10,9 @@
     gpgsign = true
 # End encrypted {{ end }}
 
+[includeIf "gitdir:~/Git/Github/Ruhi/"]
+    path = ~/.config/git/ruhi.gitconfig
+
 # Merge commits by default
 [pull]
 	rebase = false
