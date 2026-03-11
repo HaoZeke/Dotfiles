@@ -5,3 +5,8 @@
 	gpgsign = false
 [tag]
 	gpgsign = false
+[url "git@github-ruhi:RuhiRG/"]
+	insteadOf = git@github.com:RuhiRG/
+	insteadOf = https://github.com/RuhiRG/
+	insteadOf = git@github.com:ruhirg/
+	insteadOf = https://github.com/ruhirg/
