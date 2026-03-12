@@ -55,3 +55,47 @@ fi
 # Local Variables:
 # mode: shell-script
 # End:
+
+# Claude with Alibaba Anthropic model selection
+claude-other() {
+    # Define models: "Display Name | Model ID"
+    local models=(
+        "Qwen 3.5 Plus (Vision/Thinking) | qwen3.5-plus"
+        "Qwen 3 Max (Thinking) | qwen3-max-2026-01-23"
+        "Qwen 3 Coder Next | qwen3-coder-next"
+        "Qwen 3 Coder Plus | qwen3-coder-plus"
+        "Zhipu GLM-5 (Thinking) | glm-5"
+        "Zhipu GLM-4.7 (Thinking) | glm-4.7"
+        "Kimi k2.5 (Vision/Thinking) | kimi-k2.5"
+        "MiniMax M2.5 (Thinking) | MiniMax-M2.5"
+    )
+
+    # Use fzf to select a model
+    local choice=$(printf "%s\n" "${models[@]}" | fzf --prompt="Select Model > " --height=15% --reverse)
+
+    # Exit if user cancels (ESC)
+    [[ -z "$choice" ]] && return
+
+    # Extract the Model ID (everything after the |) and trim whitespace
+    local model_id=$(echo "$choice" | sed 's.*|.*' | xargs)
+
+    # Fetch the API token from pass
+    local api_token
+    api_token=$(pass show aliyuncs/anthropic-token 2>/dev/null)
+
+    if [[ -z "$api_token" ]]; then
+        echo "Error: API token not found in pass."
+        echo "Run: pass insert -m aliyuncs/anthropic-token"
+        return 1
+    fi
+
+    # Set the common exports
+    export ANTHROPIC_BASE_URL="https://coding-intl.dashscope.aliyuncs.com/apps/anthropic"
+    export ANTHROPIC_AUTH_TOKEN="$api_token"
+    export ANTHROPIC_MODEL="$model_id"
+
+    echo "Environment set to: $ANTHROPIC_MODEL"
+
+    # Run your claude command
+    claude
+}
