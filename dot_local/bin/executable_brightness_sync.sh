@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # brightness_sync.sh: Sync brightness across internal and external displays
 # Usage: brightness_sync.sh AMT WOBSOCK
 

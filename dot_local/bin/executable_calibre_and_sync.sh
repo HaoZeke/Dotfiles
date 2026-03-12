@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # $HOME/.local/bin/calibre_and_sync.sh
 
 # Start Calibre and wait
