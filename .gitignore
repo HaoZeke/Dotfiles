@@ -77,6 +77,8 @@ Temporary Items
 # Build/staging directory
 src/
 
-# Claude Code config (sealed in nimvault, never commit)
+# Private config (sealed in vault, never commit)
 CLAUDE.md
 .claude/
+dot_claude/
+.chezmoiscripts/*setup*.tmpl

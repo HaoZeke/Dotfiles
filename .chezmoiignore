@@ -22,11 +22,9 @@ encrypted_chezmoi_toml_linux
 {{ if eq .encrypted "no" }}
 **/*.age
 {{ end }}
-{{ if ne .setup_claude "yes" }}
-# Skip vault unseal on machines without Claude
+# Vault unseal (optional feature)
 scripts/vault.nim
 .vault/
-{{ end }}
 # Always ignore
 readme.org
 todo.org
@@ -52,3 +50,28 @@ AppData/Roaming/nushell/scripts/gitAlias.nu
 # Local Variables:
 # mode: gitignore
 # End:
+
+# OMP - Oh My Pi configuration
+dot_omp/agent/*.db*
+dot_omp/logs/
+dot_omp/stats.db*
+dot_omp/gpu_cache.json
+dot_omp/check_github_deny.sh
+dot_omp/agent/.NEVER_COMMENT_ON_GITHUB
+dot_omp/agent/CONTRACT_VIOLATION*
+dot_omp/agent/terminal-sessions/
+dot_omp/agent/sessions/
+# Private assistant config (machine-specific state)
+dot_claude/backups/
+dot_claude/cache/
+dot_claude/debug/
+dot_claude/file-history/
+dot_claude/history.jsonl
+dot_claude/paste-cache/
+dot_claude/plugins/
+dot_claude/projects/
+dot_claude/session-env/
+dot_claude/shell-snapshots/
+dot_claude/tasks/
+dot_claude/telemetry/
+dot_claude/todos/
