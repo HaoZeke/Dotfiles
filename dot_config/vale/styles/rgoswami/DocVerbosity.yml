@@ -1,0 +1,28 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+ignorecase: true
+level: suggestion
+swap:
+  the following example shows: for example
+  the following example demonstrates: for example
+  the following section describes: see
+  the following sections describe: see
+  in the following example: here
+  in the following section: below
+  as described in the following: as described below
+  as shown in the following example: as shown below
+  this section describes how to: to
+  this page describes how to: to
+  this page shows how to: to
+  this document describes: describes
+  provides a way to: lets you
+  provides the ability to: lets you
+  make sure that you: ensure you
+  make sure to: ensure
+  in this case: here
+  it is also possible to: you can also
+  it is possible to: you can
+  it is necessary to: you must
+  keep in mind that: note that
+  be aware that: note that
+  take into account: consider

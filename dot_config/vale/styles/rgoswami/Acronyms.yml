@@ -61,6 +61,26 @@ exceptions:
   - XSS
   - YAML
   - ZIP
+  # Build tools and compilers
+  - ABI
+  - BLAS
+  - BSD
+  - CMake
+  - CPP
+  - CXX
+  - FOSS
+  - GIL
+  - HPC
+  - ICC
+  - LAPACK
+  - LIBS
+  - LLVM
+  - MSVC
+  - PGI
+  - POSIX
+  - UNIX
+  # Fortran keywords (appear in inline code)
+  - FYPP
   # Emacs org-mode TODO states
   - TODO
   - HOLD
