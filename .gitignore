@@ -82,3 +82,10 @@ CLAUDE.md
 .claude/
 dot_claude/
 .chezmoiscripts/*setup*.tmpl
+~/.omp/agent/config.yml
+~/.omp/agent/AGENTS.md
+~/.omp/mcp.json
+~/.omp/extensions/rtk-rewrite.ts
+~/.omp/GITHUB_DENY_LIST.md
+~/.omp/agent/models.yml
+~/.omp/agent/GITHUB_CONTRACT.md
