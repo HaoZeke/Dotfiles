@@ -77,3 +77,17 @@ dot_claude/shell-snapshots/
 dot_claude/tasks/
 dot_claude/telemetry/
 dot_claude/todos/
+dot_claude/plans/
+dot_claude/sessions/
+dot_claude/teams/
+dot_claude/downloads/
+dot_claude/stats-cache.json
+dot_claude/mcp-needs-auth-cache.json
+# Qwen Code (machine-specific state)
+dot_qwen/debug/
+dot_qwen/projects/
+dot_qwen/tmp/
+dot_qwen/todos/
+dot_qwen/skills/
+dot_qwen/installation_id
+dot_qwen/settings.json.orig

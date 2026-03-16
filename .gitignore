@@ -89,3 +89,8 @@ dot_claude/
 ~/.omp/GITHUB_DENY_LIST.md
 ~/.omp/agent/models.yml
 ~/.omp/agent/GITHUB_CONTRACT.md
+~/.qwen/settings.json
+~/.qwen/mcp.json
+~/.qwen/QWEN.md
+~/.qwen/output-language.md
+~/.claude/settings.local.json
