@@ -1,0 +1,68 @@
+;; Colemak + Extend + AltGr (Icelandic) for Sway/Wayland
+;; Replaces klfc-generated XKB layout
+;;
+;; Layers:
+;;   colemak  -- base Colemak with CapsLock as tap-Backspace / hold-Extend
+;;   extend   -- VIM arrows (HJKL on Colemak home row = HNEI positions)
+;;   extshift -- Extend+Shift: brackets on N/V positions
+;;   extaltgr -- Extend+AltGr: Backspace, Delete, braces
+;;   altgr    -- Icelandic characters on AltGr (Left Alt)
+
+(defcfg
+  process-unmapped-keys yes
+  ;; On Colemak, physical 'u' key produces 'l', so tell kanata
+  ;; which keycode sends the 'u' keysym for unicode input (Ctrl+Shift+U)
+  ;; Physical 'i' key = Colemak 'u', so use 'i' keycode
+  linux-unicode-u-code i
+  linux-unicode-termination space
+  log-layer-changes no
+)
+
+(defsrc
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft
+  lctl lmet lalt           spc            ralt rmet rctl
+)
+
+(defvar
+  tap-time 200
+  hold-time 200
+)
+
+(defalias
+  ;; CapsLock: tap for Backspace, hold for Extend layer
+  ext (tap-hold $tap-time $hold-time bspc (layer-toggle extend))
+  ;; Left Alt: hold for AltGr (Icelandic) layer
+  ag  (layer-toggle altgr)
+)
+
+;; Base Colemak
+(deflayer colemak
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    f    p    g    j    l    u    y    ;    [    ]    \
+  @ext a    r    s    t    d    h    n    e    i    o    '    ret
+  lsft z    x    c    v    b    k    m    ,    .    /    rsft
+  lctl lmet @ag            spc            ralt rmet rctl
+)
+
+;; Extend layer (CapsLock held)
+;; HNEI = Left/Down/Up/Right, O = Enter
+;; K = (, V = )
+(deflayer extend
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    left down up   rght ret  _    _
+  _    _    _    _    S-0  _    S-9  _    _    _    _    _
+  _    _    _              _              _    _    _
+)
+
+;; AltGr layer (Left Alt held) -- Icelandic characters
+(deflayer altgr
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    (unicode U+00FA) (unicode U+00FD) _    _    _    _
+  _    (unicode U+00E1) _    _    (unicode U+00FE) (unicode U+00F0) _    _    (unicode U+00E9) (unicode U+00ED) (unicode U+00F3) _    _
+  _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _              _              _    _    _
+)

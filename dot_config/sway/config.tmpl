@@ -250,17 +250,10 @@ bindsym $mod+r mode "resize"
 
 # xwayland scale 3
 # Wiki
-input * {
-# Copy layout to $HOME/.xkb
-# cp /usr/share/X11/xkb/ -r ~/.xkb
-# Then use install-system.sh
-# After changing the location to $HOME/.xkb
-# See also https://github.com/swaywm/sway/issues/3999
-      xkb_layout "colemak"
-      xkb_options "compose:ralt"
-}
-
 input type:keyboard {
+    # When using kanata: leave layout as default (kanata remaps at evdev level)
+    # When NOT using kanata: uncomment xkb_file for klfc-generated Colemak+Extend
+    # xkb_file ~/.config/sway/keymap.xkb
     repeat_delay 200
     repeat_rate 30
 }

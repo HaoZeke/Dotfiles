@@ -1,0 +1,12 @@
+# -*- systemd -*-
+[Unit]
+Description=Kanata keyboard remapper
+Documentation=https://github.com/jtroo/kanata
+
+[Service]
+ExecStart=/usr/bin/kanata -c %h/.config/kanata/config.kbd
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
