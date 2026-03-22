@@ -1,0 +1,26 @@
+extends: existence
+message: "'%s' is a common AI writing pattern. Rephrase in your own voice."
+ignorecase: true
+level: error
+tokens:
+  - it is important to note
+  - it is worth mentioning
+  - this ensures that
+  - this approach ensures
+  - by leveraging
+  - this enables
+  - this allows us to
+  - this provides a
+  - this makes it possible
+  - in this section we
+  - in this post we will
+  - let us explore
+  - let us examine
+  - let's dive into
+  - let's take a look
+  - without further ado
+  - as we can see
+  - as we shall see
+  - the key insight is
+  - the main takeaway
+  - the beauty of

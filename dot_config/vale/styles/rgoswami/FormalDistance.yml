@@ -1,0 +1,24 @@
+extends: existence
+message: "'%s' creates formal distance. Consider first person ('we', 'I') or direct statement."
+ignorecase: true
+level: suggestion
+tokens:
+  - the implementation provides
+  - the system generates
+  - the approach enables
+  - the approach allows
+  - the architecture supports
+  - the framework provides
+  - the tool generates
+  - the wrapper provides
+  - the module provides
+  - the generator produces
+  - it was decided
+  - it was determined
+  - it was observed
+  - it was found
+  - it can be observed
+  - this can be achieved
+  - this can be accomplished
+  - this is achieved by
+  - this is accomplished by
