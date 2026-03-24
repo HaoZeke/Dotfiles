@@ -36,6 +36,9 @@
   ext (tap-hold $tap-time $hold-time bspc (layer-toggle extend))
   ;; Left Alt: hold for AltGr (Icelandic) layer
   ag  (layer-toggle altgr)
+  ;; Within Extend: Shift toggles extshift, AltGr toggles extaltgr
+  ext-sft (layer-toggle extshift)
+  ext-ag  (layer-toggle extaltgr)
 )
 
 ;; Base Colemak
@@ -49,12 +52,31 @@
 
 ;; Extend layer (CapsLock held)
 ;; HNEI = Left/Down/Up/Right, O = Enter
-;; K = (, V = )
+;; N = (, V = )
+;; Shift/AltGr within Extend toggle sub-layers
 (deflayer extend
   _    _    _    _    _    _    _    _    _    _    _    _    _    _
   _    _    _    _    _    _    _    _    _    _    _    _    _    _
   _    _    _    _    _    _    left down up   rght ret  _    _
-  _    _    _    _    S-0  _    S-9  _    _    _    _    _
+  @ext-sft _    _    _    S-0  _    S-9  _    _    _    _    _
+  _    _    @ext-ag        _              _    _    _
+)
+
+;; Extend+Shift: selection arrows, brackets on N/V
+(deflayer extshift
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    S-left S-down S-up S-rght S-ret _ _
+  _    _    _    _    ]    _    [    _    _    _    _    _
+  _    _    _              _              _    _    _
+)
+
+;; Extend+AltGr: Backspace, Delete, braces on N/V
+(deflayer extaltgr
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    bspc _    _    del  _    _    _
+  _    _    _    _    S-]  _    S-[  _    _    _    _    _
   _    _    _              _              _    _    _
 )
 

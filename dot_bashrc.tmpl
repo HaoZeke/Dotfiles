@@ -34,6 +34,18 @@ if [ -d $shellHome/bash.d ]; then
 	source "$shellHome/bash.d/99_activate_bin.bash"
 fi
 
+# Strip /etc/bash.bashrc title-setting printf from PROMPT_COMMAND --
+# conflicts with ble.sh prompt handling; starship sets title anyway.
+if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" =~ "declare -a" ]]; then
+	local_pc=()
+	for cmd in "${PROMPT_COMMAND[@]}"; do
+		[[ "$cmd" == *'printf "\033]0;'* ]] && continue
+		local_pc+=("$cmd")
+	done
+	PROMPT_COMMAND=("${local_pc[@]}")
+	unset local_pc cmd
+fi
+
 [[ ! ${BLE_VERSION-} ]] || ble-attach
 
 # Emacs Stuff (cross platform)
