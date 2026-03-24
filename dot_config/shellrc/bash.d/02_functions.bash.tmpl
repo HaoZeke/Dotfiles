@@ -99,3 +99,15 @@ claude-other() {
     # Run your claude command
     claude
 }
+
+# Redirect rm calls to trash-put
+rm() {
+    # This function passes all arguments directly to trash-put
+    # trash-put natively handles directories and multiple files
+    trash-put "$@"
+}
+
+# Emacs Stuff (cross platform)
+# Local Variables:
+# mode: shell-script
+# End:
