@@ -1,11 +1,23 @@
 if [[ $- != *i* ]]; then
 	# shell is non-interactive. Do nothing and return
 	return
-else
-	BLE_SH_PATH="$HOME/.local/share/blesh/ble.sh"
-	if [ -f "$BLE_SH_PATH" ]; then
-		source "$BLE_SH_PATH" --attach=none
-	fi
+fi
+
+# Strip /etc/bash.bashrc title-setting printf from PROMPT_COMMAND before
+# anything else -- it conflicts with ble.sh and starship handles titles.
+if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" =~ "declare -a" ]]; then
+	_pc=()
+	for _cmd in "${PROMPT_COMMAND[@]}"; do
+		[[ "$_cmd" == *'printf "\033]0;'* || "$_cmd" == *'printf "\033_'* ]] && continue
+		_pc+=("$_cmd")
+	done
+	PROMPT_COMMAND=("${_pc[@]}")
+	unset _pc _cmd
+fi
+
+BLE_SH_PATH="$HOME/.local/share/blesh/ble.sh"
+if [ -f "$BLE_SH_PATH" ]; then
+	source "$BLE_SH_PATH" --attach=none
 fi
 
 if [[ $TERM = dumb ]]; then
@@ -32,18 +44,6 @@ if [ -d $shellHome/bash.d ]; then
 	# done
 	source "$shellHome/bash.d/02_functions.bash"
 	source "$shellHome/bash.d/99_activate_bin.bash"
-fi
-
-# Strip /etc/bash.bashrc title-setting printf from PROMPT_COMMAND --
-# conflicts with ble.sh prompt handling; starship sets title anyway.
-if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" =~ "declare -a" ]]; then
-	local_pc=()
-	for cmd in "${PROMPT_COMMAND[@]}"; do
-		[[ "$cmd" == *'printf "\033]0;'* ]] && continue
-		local_pc+=("$cmd")
-	done
-	PROMPT_COMMAND=("${local_pc[@]}")
-	unset local_pc cmd
 fi
 
 [[ ! ${BLE_VERSION-} ]] || ble-attach
