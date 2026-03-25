@@ -1,0 +1,40 @@
+extends: existence
+message: "'%s' is a vague appeal to authority. Cite a specific source, name the group, or drop the claim."
+level: warning
+ignorecase: true
+tokens:
+  - the research community
+  - the scientific community
+  - the chemistry community
+  - the computational chemistry community
+  - the physics community
+  - researchers agree
+  - researchers often
+  - researchers typically
+  - scientists agree
+  - scientists often
+  - scientists typically
+  - chemists often
+  - chemists typically
+  - physicists often
+  - physicists typically
+  - the community
+  - it is well known
+  - it is widely accepted
+  - it is generally accepted
+  - it is commonly believed
+  - as is well known
+  - as is widely known
+  - experts agree
+  - most researchers
+  - most scientists
+  - many researchers
+  - many scientists
+  - the field has
+  - the field agrees
+  - practitioners often
+  - practitioners typically
+  - in the community
+  - across the community
+  - widely adopted
+  - widely used in the community
