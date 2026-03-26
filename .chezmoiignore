@@ -91,3 +91,7 @@ dot_qwen/todos/
 dot_qwen/skills/
 dot_qwen/installation_id
 dot_qwen/settings.json.orig
+dot_gemini/history/
+dot_gemini/tmp/
+dot_gemini/installation_id
+dot_gemini/state.json
