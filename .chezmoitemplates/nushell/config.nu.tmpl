@@ -51,8 +51,8 @@ $env.PIP_EXTRA_INDEX_URL = "https://download.pytorch.org/whl/cpu"
 # Micromamba stuff
 # >>> mamba initialize >>>
 # !! Contents within this block are managed by 'micromamba shell init' !!
-$env.MAMBA_EXE = "/home/rgoswami/.local/bin/micromamba"
-$env.MAMBA_ROOT_PREFIX = "/home/rgoswami/.local/share/mamba"
+$env.MAMBA_EXE = "{{ .chezmoi.homeDir }}/.local/bin/micromamba"
+$env.MAMBA_ROOT_PREFIX = "{{ .chezmoi.homeDir }}/.local/share/mamba"
 $env.PATH = ($env.PATH | append ([$env.MAMBA_ROOT_PREFIX bin] | path join) | uniq)
 $env.PROMPT_COMMAND_BK = $env.PROMPT_COMMAND
 def --env "micromamba activate"  [name: string] {

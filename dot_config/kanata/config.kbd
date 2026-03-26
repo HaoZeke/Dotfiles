@@ -27,13 +27,13 @@
 )
 
 (defvar
-  tap-time 200
-  hold-time 200
+  tap-time 150
+  hold-time 150
 )
 
 (defalias
   ;; CapsLock: tap for Backspace, hold for Extend layer
-  ext (tap-hold $tap-time $hold-time bspc (layer-toggle extend))
+  ext (tap-hold-press $tap-time $hold-time bspc (layer-toggle extend))
   ;; Left Alt: hold for AltGr (Icelandic) layer
   ag  (layer-toggle altgr)
   ;; Within Extend: Shift toggles extshift, AltGr toggles extaltgr
