@@ -3,8 +3,8 @@ message: "'%s' adds no information. Quantify or cut."
 ignorecase: true
 level: warning
 tokens:
-  - very important
-  - very significant
+  # SentenceFillers already covers: very unique, very important, very significant,
+  # really important, actually quite, basically just
   - extremely important
   - highly significant
   - quite significant
@@ -17,8 +17,10 @@ tokens:
   - relatively straightforward
   - quite straightforward
   - extremely straightforward
-  - really important
   - incredibly important
   - fundamentally important
   - absolutely essential
   - absolutely critical
+  - incredibly useful
+  - incredibly powerful
+  - extremely useful

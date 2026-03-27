@@ -3,13 +3,11 @@ message: "'%s' obscures agency. Name who or what does the action."
 ignorecase: true
 level: suggestion
 tokens:
-  - it was found that
-  - it was observed that
-  - it was determined that
+  # FormalDistance covers: it was decided/determined/observed/found, it can be observed,
+  # this can be achieved/accomplished
+  - it was concluded that
   - it was discovered that
   - it was noted that
-  - it was concluded that
-  - it was decided that
   - it can be argued that
   - it may be argued that
   - it could be argued that
@@ -19,3 +17,6 @@ tokens:
   - care was taken
   - consideration was given
   - attention was paid
+  - attempts were made
+  - measures were taken
+  - provisions were made

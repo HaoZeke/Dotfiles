@@ -1,0 +1,32 @@
+extends: existence
+message: "'%s' uses 'This' without a noun. Specify what 'this' refers to (e.g., 'This method', 'This fix')."
+ignorecase: false
+level: warning
+scope: sentence
+tokens:
+  - '^This is '
+  - '^This was '
+  - '^This has '
+  - '^This does '
+  - '^This will '
+  - '^This can '
+  - '^This could '
+  - '^This would '
+  - '^This should '
+  - '^This allows '
+  - '^This enables '
+  - '^This ensures '
+  - '^This provides '
+  - '^This makes '
+  - '^This means '
+  - '^This works '
+  - '^This results '
+  - '^This leads '
+  - '^This helps '
+  - '^This prevents '
+  - '^This avoids '
+  - '^This requires '
+  - '^This eliminates '
+  - '^This simplifies '
+  - '^This reduces '
+  - '^This also '

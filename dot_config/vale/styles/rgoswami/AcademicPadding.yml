@@ -3,6 +3,7 @@ message: "'%s' pads the sentence. Cut or compress."
 ignorecase: true
 level: warning
 tokens:
+  # SentenceFillers covers: in terms of, with respect to the fact that, the fact that
   - in order to
   - for the purpose of
   - in the event that
@@ -10,7 +11,6 @@ tokens:
   - on account of the fact that
   - it is necessary to
   - has the ability to
-  - is able to
   - a large number of
   - a small number of
   - a significant number of
@@ -18,15 +18,14 @@ tokens:
   - a wide range of
   - a wide variety of
   - in a manner that
-  - with respect to
   - with regard to
   - in regard to
   - pertaining to
   - on the basis of
   - by means of
-  - in terms of
   - at this point in time
   - at the present time
   - in the near future
   - in the case of
   - prior to the start of
+  - is able to

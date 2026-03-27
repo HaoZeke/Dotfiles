@@ -1,0 +1,20 @@
+extends: existence
+message: "'%s' will go stale. Use a version number, date, or commit hash instead."
+ignorecase: true
+level: warning
+tokens:
+  - currently
+  - at present
+  - at the time of writing
+  - as of this writing
+  - as of now
+  - in recent years
+  - in recent months
+  - in the current version
+  - the latest version
+  - the current release
+  - the newest version
+  - modern versions
+  - recent developments
+  - recent advances
+  - the state of the art

@@ -4,22 +4,17 @@ ignorecase: true
 level: warning
 scope: sentence
 tokens:
+  # SentenceFillers covers: it is clear that, it can be seen that, it is evident/apparent/obvious
+  # EssaySpeak covers: as mentioned earlier, as previously discussed
   - '^There is '
   - '^There are '
   - '^There was '
   - '^There were '
   - '^There exists '
-  - '^It is clear that'
-  - '^It is evident that'
-  - '^It is obvious that'
-  - '^It can be seen that'
-  - '^It can be observed that'
   - '^It has been shown that'
   - '^It has been demonstrated'
   - '^It has been established'
   - '^It goes without saying'
-  - '^As mentioned earlier'
-  - '^As noted above'
-  - '^As previously discussed'
-  - '^As stated before'
   - '^Needless to say'
+  - '^As stated before'
+  - '^As noted above'

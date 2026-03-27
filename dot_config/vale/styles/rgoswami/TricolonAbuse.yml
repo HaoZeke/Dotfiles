@@ -1,0 +1,7 @@
+extends: occurrence
+message: "Tricolon detected (%s). AI defaults to lists of three. Vary list length or restructure."
+ignorecase: true
+level: suggestion
+scope: sentence
+token: '\b\w+, \w+, and \w+\b'
+max: 1

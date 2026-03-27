@@ -1,0 +1,24 @@
+extends: existence
+message: "'%s' makes an unquantified claim. Add a number, cite a source, or rephrase."
+ignorecase: true
+level: warning
+tokens:
+  - most users
+  - most developers
+  - most projects
+  - most people
+  - many users
+  - many developers
+  - many projects
+  - many people
+  - significant portion
+  - significant number
+  - vast majority
+  - growing number
+  - increasing number
+  - large percentage
+  - small percentage
+  - the majority of
+  - a handful of
+  - a fraction of
+  - countless

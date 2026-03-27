@@ -1,8 +1,9 @@
 extends: existence
-message: "'%s' is a hedge pile. Use one qualifier or none."
+message: "'%s' hedges. Commit to the claim or drop it."
 ignorecase: true
 level: warning
 tokens:
+  # Compound hedges
   - large and largely
   - largely unexplored
   - quite possibly
@@ -17,3 +18,19 @@ tokens:
   - seems to suggest
   - appears to indicate
   - tends to suggest
+  # Single hedges that AI stacks
+  - would seem to
+  - would appear to
+  - would tend to
+  - may or may not
+  - to some extent
+  - to a certain degree
+  - to a large extent
+  - to some degree
+  - in some cases
+  - in certain cases
+  - in many cases
+  - under certain conditions
+  - under certain circumstances
+  - it remains unclear
+  - it remains to be seen

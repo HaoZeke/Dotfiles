@@ -1,0 +1,27 @@
+extends: existence
+message: "'%s' may vary terminology for the same referent. Pick one term and stick with it within a section."
+ignorecase: true
+level: suggestion
+tokens:
+  # Common AI synonym cycling patterns
+  - this approach
+  - this method
+  - this technique
+  - this strategy
+  - this mechanism
+  - the aforementioned
+  - the above-mentioned
+  - the said
+  - the former
+  - the latter approach
+  - the proposed method
+  - the presented approach
+  - the described technique
+  - the outlined strategy
+  - our approach
+  - our method
+  - our technique
+  - our framework
+  - our tool
+  - our system
+  - our implementation
