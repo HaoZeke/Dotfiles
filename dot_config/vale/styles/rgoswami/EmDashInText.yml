@@ -1,7 +1,7 @@
 extends: existence
-message: "'%s' uses an em dash. Use a period, comma, or parentheses instead."
+message: "'%s' uses a dash as punctuation. Use a period, comma, colon, or parentheses instead."
 ignorecase: false
-level: warning
+level: error
 nonword: true
 tokens:
   - ' -- '

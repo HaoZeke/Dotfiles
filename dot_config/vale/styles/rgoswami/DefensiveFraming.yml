@@ -1,0 +1,16 @@
+extends: existence
+message: "'%s' is defensive framing. State the fact directly without preemptive disclaimer."
+ignorecase: true
+level: warning
+tokens:
+  - does not fail because of deficiency
+  - is not because of any
+  - is not inherently
+  - this is not a criticism
+  - to be fair
+  - to be clear
+  - it should be noted that
+  - it must be emphasized
+  - one might argue
+  - some might say
+  - critics might point out

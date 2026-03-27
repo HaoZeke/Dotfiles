@@ -8,11 +8,15 @@ fi
 if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" =~ "declare -a" ]]; then
 	_pc=()
 	for _cmd in "${PROMPT_COMMAND[@]}"; do
-		[[ "$_cmd" == *'printf "\033]0;'* || "$_cmd" == *'printf "\033_'* ]] && continue
+		[[ "$_cmd" == *'printf "\033]0;'* || "$_cmd" == *'printf "\033_'* || "$_cmd" == *$'\033]'* || "$_cmd" == *$'\033_'* ]] && continue
 		_pc+=("$_cmd")
 	done
 	PROMPT_COMMAND=("${_pc[@]}")
 	unset _pc _cmd
+else
+	if [[ "$PROMPT_COMMAND" == *'printf "\033]0;'* || "$PROMPT_COMMAND" == *'printf "\033_'* || "$PROMPT_COMMAND" == *$'\033]'* || "$PROMPT_COMMAND" == *$'\033_'* ]]; then
+		PROMPT_COMMAND=""
+	fi
 fi
 
 BLE_SH_PATH="$HOME/.local/share/blesh/ble.sh"

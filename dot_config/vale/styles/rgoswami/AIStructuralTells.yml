@@ -1,0 +1,28 @@
+extends: existence
+message: "'%s' is a structural AI tell. Restructure the sentence."
+ignorecase: true
+level: error
+tokens:
+  - the common thread is
+  - the practical advice is
+  - the practical upshot
+  - the key takeaway here
+  - none of these issues are particularly
+  - the short answer is
+  - in summary
+  - to summarize
+  - in conclusion
+  - to conclude
+  - at the end of the day
+  - all in all
+  - the bottom line is
+  - it bears mentioning
+  - it bears noting
+  - this is not particularly
+  - not particularly deep
+  - not particularly surprising
+  - the answer is simple
+  - the fix is straightforward
+  - the solution is straightforward
+  - perhaps unsurprisingly
+  - unsurprisingly

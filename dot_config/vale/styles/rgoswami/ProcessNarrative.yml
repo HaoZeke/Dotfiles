@@ -1,0 +1,11 @@
+extends: existence
+message: "'%s' reads like a process log. Describe the failure and fix, not how many attempts it took."
+ignorecase: true
+level: error
+tokens:
+  - '\d+ iterations'
+  - '\d+ CI iterations'
+  - '\d+ CI cycles'
+  - 'first attempt.*second attempt'
+  - 'took \d+ (tries|attempts|rounds)'
+  - 'after \d+ (tries|attempts|rounds|iterations)'

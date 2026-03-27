@@ -1,0 +1,14 @@
+extends: existence
+message: "'%s' starts a justification list (why-you-should-care pattern). Show, don't sell."
+ignorecase: true
+level: warning
+tokens:
+  - every fix lands as
+  - each fix permanently
+  - the cost is paid once
+  - the return accumulates
+  - the benefits include
+  - this permanently improves
+  - this has several advantages
+  - there are several benefits
+  - the advantages are clear
