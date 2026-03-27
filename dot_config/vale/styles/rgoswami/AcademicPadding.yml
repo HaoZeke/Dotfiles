@@ -1,0 +1,32 @@
+extends: existence
+message: "'%s' pads the sentence. Cut or compress."
+ignorecase: true
+level: warning
+tokens:
+  - in order to
+  - for the purpose of
+  - in the event that
+  - due to the fact that
+  - on account of the fact that
+  - it is necessary to
+  - has the ability to
+  - is able to
+  - a large number of
+  - a small number of
+  - a significant number of
+  - the vast majority of
+  - a wide range of
+  - a wide variety of
+  - in a manner that
+  - with respect to
+  - with regard to
+  - in regard to
+  - pertaining to
+  - on the basis of
+  - by means of
+  - in terms of
+  - at this point in time
+  - at the present time
+  - in the near future
+  - in the case of
+  - prior to the start of

@@ -1,0 +1,25 @@
+extends: existence
+message: "'%s' opens weakly. Lead with the subject or action."
+ignorecase: true
+level: warning
+scope: sentence
+tokens:
+  - '^There is '
+  - '^There are '
+  - '^There was '
+  - '^There were '
+  - '^There exists '
+  - '^It is clear that'
+  - '^It is evident that'
+  - '^It is obvious that'
+  - '^It can be seen that'
+  - '^It can be observed that'
+  - '^It has been shown that'
+  - '^It has been demonstrated'
+  - '^It has been established'
+  - '^It goes without saying'
+  - '^As mentioned earlier'
+  - '^As noted above'
+  - '^As previously discussed'
+  - '^As stated before'
+  - '^Needless to say'

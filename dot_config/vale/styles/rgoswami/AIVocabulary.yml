@@ -4,6 +4,7 @@ link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
 ignorecase: true
 level: warning
 tokens:
+  # Classic GPT-era words
   - crucial
   - pivotal
   - vibrant
@@ -13,6 +14,7 @@ tokens:
   - enduring
   - garner
   - showcase
+  - showcasing
   - interplay
   - delve
   - profound
@@ -21,6 +23,7 @@ tokens:
   - valuable
   - fostering
   - enhance
+  - enhancing
   - the landscape of
   - broader landscape
   - evolving landscape
@@ -33,6 +36,7 @@ tokens:
   - noteworthy
   - comprehensive
   - utilize
+  - utilizing
   - leveraging
   - multifaceted
   - paradigm
@@ -61,5 +65,46 @@ tokens:
   - underscore
   - underscoring
   - realm
-  - publication-quality
-  - publication quality
+  # 2025-era additions (GPT-4o, Claude patterns)
+  - at its core
+  - rich cultural heritage
+  - enduring legacy
+  - serves as a testament
+  - serves as a reminder
+  - serves as a bridge
+  - offers a unique
+  - offers a glimpse
+  - shed light on
+  - sheds light on
+  - it bears mentioning
+  - it bears noting
+  - a nuanced understanding
+  - a deeper understanding
+  - a rich tapestry
+  - a testament to
+  - a cornerstone of
+  - a beacon of
+  - paves the way
+  - on the cusp of
+  - a myriad of
+  - the intricacies of
+  - the complexities of
+  - the nuances of
+  - a significant role
+  - plays a significant role
+  - play a crucial role
+  - underscored the importance
+  - underscored the need
+  - it is important to note
+  - it is worth noting
+  - it is worth mentioning
+  - it should be noted
+  # Connector abuse
+  - furthermore
+  - moreover
+  - additionally
+  - consequently
+  - subsequently
+  - accordingly
+  - in this regard
+  - in this context

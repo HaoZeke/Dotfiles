@@ -1,0 +1,17 @@
+extends: existence
+message: "E-Prime: '%s' uses a 'to be' form. Consider restructuring for directness (soft guideline)."
+ignorecase: true
+level: suggestion
+scope: sentence
+tokens:
+  - ' is '
+  - ' are '
+  - ' was '
+  - ' were '
+  - ' be '
+  - ' been '
+  - ' being '
+  - "it's "
+  - "there's "
+  - "that's "
+  - "here's "

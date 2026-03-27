@@ -1,0 +1,24 @@
+extends: existence
+message: "'%s' adds no information. Quantify or cut."
+ignorecase: true
+level: warning
+tokens:
+  - very important
+  - very significant
+  - extremely important
+  - highly significant
+  - quite significant
+  - particularly important
+  - particularly interesting
+  - particularly notable
+  - rather interesting
+  - rather important
+  - fairly straightforward
+  - relatively straightforward
+  - quite straightforward
+  - extremely straightforward
+  - really important
+  - incredibly important
+  - fundamentally important
+  - absolutely essential
+  - absolutely critical
