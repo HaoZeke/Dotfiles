@@ -1,0 +1,22 @@
+# Managed by chezmoi (dot_config/systemd/user/dunst.service).
+#
+# Dunst notification daemon. Bound to sway-session.target so it starts
+# with the graphical session and stops when the session ends.
+[Unit]
+Description=Dunst notification daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Notifications
+ExecStart=/usr/bin/dunst
+Restart=on-failure
+RestartSec=3
+# Session-critical for UX; don't let oomd eat the notification daemon.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
+
+[Install]
+WantedBy=sway-session.target

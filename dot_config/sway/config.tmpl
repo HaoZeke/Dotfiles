@@ -43,9 +43,18 @@ exec mkfifo $WOBSOCK && tail -f $WOBSOCK | wob
 
 bindsym XF86AudioRaiseVolume exec pamixer -ui 2 && pamixer --get-volume > $WOBSOCK
 bindsym XF86AudioLowerVolume exec pamixer -ud 2 && pamixer --get-volume > $WOBSOCK
-bindsym XF86AudioMute exec pamixer --toggle-mute && ( pamixer --get-mute && echo 0 > $WOBSOCK ) || pamixer --get-volume > $WOBSOCKbindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym XF86AudioMute exec pamixer --toggle-mute && ( pamixer --get-mute && echo 0 > $WOBSOCK ) || pamixer --get-volume > $WOBSOCK
+bindsym --no-repeat XF86AudioMicMute exec pamixer --default-source --toggle-mute
+
 bindsym XF86MonBrightnessDown exec $HOME/.local/bin/brightness_sync.sh 5%- $WOBSOCK
-bindsym XF86MonBrightnessUp exec $HOME/.local/bin/brightness_sync.sh +5% $WOBSOCK
+bindsym XF86MonBrightnessUp   exec $HOME/.local/bin/brightness_sync.sh +5% $WOBSOCK
+
+# Media keys: playerctl is installed (see browser-media-watchdog); use
+# it so the same key works for whichever player is active (mpv,
+# Spotify, browser, etc.).
+bindsym --no-repeat XF86AudioPlay exec playerctl play-pause
+bindsym --no-repeat XF86AudioNext exec playerctl next
+bindsym --no-repeat XF86AudioPrev exec playerctl previous
 
 # Gaps
 smart_gaps on
@@ -162,7 +171,8 @@ gaps inner 5
 bindsym $mod+Shift+m move workspace to output right
 
 # Screenshot
-bindsym $mod+o exec $screenshotTask
+bindsym --no-repeat $mod+o exec $screenshotTask
+bindsym --no-repeat Print    exec $screenshotTask
 
 # Notification management (mako uses dismiss instead of close)
 bindsym ctrl+space exec dunstctl close
