@@ -1,0 +1,10 @@
+# Managed by chezmoi. Edit in ~/.local/share/chezmoi/dot_config/systemd/user/
+#
+# Per-LSP memory ceiling so a runaway rust-analyzer on a large workspace
+# cannot starve the whole user session. Paired with the PATH shim at
+# ~/.local/bin/rust-analyzer (dot_local/bin/executable_rust-analyzer).
+[Slice]
+MemoryHigh=10G
+MemoryMax=14G
+MemorySwapMax=6G
+CPUWeight=50

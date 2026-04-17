@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Install /etc memory/zram tuning under sudo and reload affected units.
+# chezmoi re-runs this whenever the rendered script changes; embedded
+# hashes below guarantee that editing either blob re-triggers deployment.
+#
+# sysctl-hash:   {{ list "99-memory.conf starts" "\nvm.swappiness = 100\nvm.page-cluster = 0\nvm.vfs_cache_pressure = 100\nvm.watermark_scale_factor = 50\n99-memory.conf ends" | join "" | sha256sum }}
+# zram-hash:     {{ list "zram-generator.conf starts" "\n[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\nswap-priority = 100\nfs-type = swap\nzram-generator.conf ends" | join "" | sha256sum }}
+
+set -euo pipefail
+
+write_if_diff() {
+    local dst="$1" content="$2"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -m 0644 -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+#
+# Tuned for a zram-equipped workstation running large Rust workloads.
+# High swappiness is correct here: /dev/zram0 sits at priority 100 with
+# zstd compression, so swapping idle anon pages costs RAM-latency, not
+# disk-latency. Low swappiness on this setup causes page-cache thrash.
+vm.swappiness = 100
+vm.page-cluster = 0
+vm.vfs_cache_pressure = 100
+vm.watermark_scale_factor = 50
+'
+
+ZRAM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+'
+
+# Ensure the generator is installed on Arch hosts.
+if command -v pacman >/dev/null 2>&1 \
+   && ! pacman -Qi zram-generator >/dev/null 2>&1; then
+    echo "chezmoi: installing zram-generator"
+    sudo pacman -S --noconfirm --needed zram-generator
+fi
+
+SYSCTL_CHANGED=0
+ZRAM_CHANGED=0
+write_if_diff /etc/sysctl.d/99-memory.conf   "$SYSCTL_CONTENT" && SYSCTL_CHANGED=1 || true
+write_if_diff /etc/systemd/zram-generator.conf "$ZRAM_CONTENT"  && ZRAM_CHANGED=1  || true
+
+if [ "$SYSCTL_CHANGED" = "1" ]; then
+    sudo sysctl --system >/dev/null
+fi
+
+if [ "$ZRAM_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload
+    sudo systemctl restart systemd-zram-setup@zram0.service || true
+fi
+
+# Reload user manager so rust-analyzer.slice (deployed to
+# ~/.config/systemd/user/) is picked up for the next shim launch.
+systemctl --user daemon-reload 2>/dev/null || true
+{{- end }}
