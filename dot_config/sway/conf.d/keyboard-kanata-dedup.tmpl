@@ -1,0 +1,30 @@
+# Per-host kanata deduplication. Active on rgx1gen11 only; other hosts
+# get the empty header below.
+#
+# Problem: kanata grabs the built-in keyboard via evdev and emits its
+# transformed (Colemak + Extend + AltGr-Icelandic) stream via a uinput
+# virtual device. On rgx1gen11 the exclusive grab does not always hold,
+# and sway sees BOTH devices as active keyboards:
+#
+#   1:1:AT_Translated_Set_2_keyboard    (physical, QWERTY scancodes)
+#   1:1:kanata                          (virtual, Colemak scancodes)
+#
+# Result: every keypress is delivered twice, so $mod+Return opens two
+# terminals, $mod+Shift+q sends two close events, etc.
+#
+# Fix: disable libinput events from the physical device. Kanata still
+# reads it (evdev, a layer below libinput) so the Colemak remap is
+# unaffected; sway only hears kanata's transformed output.
+#
+# If kanata dies or is disabled, *typing stops working on the internal
+# keyboard*. Recovery: any external USB keyboard still works (different
+# device ID), or Alt+SysRq+K emergencies plus the sway bind to start
+# foot, or drop to TTY. Trade-off accepted -- doubled keys are more
+# disruptive day-to-day than a kanata-down scenario that has its own
+# alarms (no Colemak = immediately obvious).
+{{- if eq .chezmoi.hostname "rgx1gen11" }}
+
+input "1:1:AT_Translated_Set_2_keyboard" {
+    events disabled
+}
+{{- end }}
