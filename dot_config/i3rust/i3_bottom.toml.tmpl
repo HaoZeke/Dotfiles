@@ -16,7 +16,7 @@ format = "$weather ($location) $temp, $wind m/s $direction"
 name = "openweathermap"
 lang = "en"
 {{ if ne .encrypted "no" }}
-api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
+api_key = "{{ pass "services/openweather-api-key" }}"
 {{ end }}
 city_id = "3413829" # Reykjavík
 # city_id = "1267995" # Kanpur
@@ -29,7 +29,7 @@ format = "IITK $weather $temp"
 name = "openweathermap"
 lang = "en"
 {{ if ne .encrypted "no" }}
-api_key = "{{ pass "OPENWEATHER_API_KEY" }}"
+api_key = "{{ pass "services/openweather-api-key" }}"
 {{ end }}
 units = "metric"
 # coordinates = ["30.66361594277602","76.72912558319638"] # IISER-M

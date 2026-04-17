@@ -1,4 +1,4 @@
-#!/usr/bin/env bash --norc
+#!/usr/bin/env bash
 {{ if and (eq .setup_claude "yes") (eq .encrypted "yes") -}}
 cd "{{ .chezmoi.sourceDir }}"
 if command -v nimvault &>/dev/null && command -v gpg &>/dev/null; then
