@@ -100,12 +100,17 @@ LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_
 # s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
 # so lid-close goes to suspend-then-hibernate: suspend first for fast
 # resume, fall through to hibernate after the timeout set in sleep.conf.d.
+# Hardware Fn+Suspend/Fn+Hibernate keys are deliberately ignored; the
+# only sanctioned sleep paths are lid close, idle timeout, the sway
+# keybinding, or an explicit systemctl invocation.
 [Login]
 HandleLidSwitch=suspend-then-hibernate
 HandleLidSwitchDocked=ignore
 HandleLidSwitchExternalPower=suspend
 IdleAction=suspend-then-hibernate
 IdleActionSec=45min
+HandleSuspendKey=ignore
+HandleHibernateKey=ignore
 '
 
 SLEEP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -245,6 +250,14 @@ fi
 
 if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
+    # Migrate away from a pre-existing do-not-suspend.conf drop-in
+    # whose HandleLidSwitch=ignore would override 50-lid.conf because
+    # it sorts alphabetically after. Everything worth keeping from
+    # that drop-in (Fn-key ignores) is now in 50-lid.conf.
+    if [ -f /etc/systemd/logind.conf.d/do-not-suspend.conf ]; then
+        echo "chezmoi: removing superseded do-not-suspend.conf drop-in"
+        sudo rm /etc/systemd/logind.conf.d/do-not-suspend.conf
+    fi
     # Restarting logind re-reads config without ending the session.
     sudo systemctl restart systemd-logind || true
 fi
