@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Laptop power management, ThinkPad X1 Gen 11 (rgx1gen11) ONLY. Other
+# Linux hosts (servers, desktops, cosmolab) must not pick up charge
+# thresholds, TLP, or lid-handler changes.
+#
+#   * BFQ on NVMe/SATA for interactive latency under I/O pressure
+#   * suspend-then-hibernate on lid close (firmware only offers s2idle, so
+#     plain suspend drains battery -- hibernate after 20 min preserves it)
+#   * TLP with Intel + ThinkPad charge thresholds (75/80) to extend battery
+#     health on a laptop that already shows 81% design capacity.
+#
+# Separate from the memory-tuning script so a desktop host (no battery,
+# no lid) can disable just this part via chezmoi data.
+
+set -euo pipefail
+
+write_if_diff() {
+    local dst="$1" content="$2"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m 0644 -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+IOSCHED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# BFQ on every rotational and non-rotational block device for better
+# interactive latency under I/O contention. Only ramdisks, loop, and
+# zram use the kernel default.
+ACTION=="add|change", KERNEL=="nvme[0-9]n[0-9]",          ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="sd[a-z]",                  ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="mmcblk[0-9]",              ATTR{queue/scheduler}="bfq"
+'
+
+LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
+# so lid-close goes to suspend-then-hibernate: suspend first for fast
+# resume, fall through to hibernate after the timeout set in sleep.conf.d.
+[Login]
+HandleLidSwitch=suspend-then-hibernate
+HandleLidSwitchDocked=ignore
+HandleLidSwitchExternalPower=suspend
+IdleAction=suspend-then-hibernate
+IdleActionSec=45min
+'
+
+SLEEP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Suspend first, hibernate after 20 minutes of continued sleep.
+[Sleep]
+HibernateDelaySec=20min
+SuspendState=mem
+'
+
+# TLP: Intel P-state host with HWP and ThinkPad charge thresholds.
+# Matches the 21HM ThinkPad (T14 Gen 3) hardware stack.
+TLP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# CPU scaling
+CPU_SCALING_GOVERNOR_ON_AC=performance
+CPU_SCALING_GOVERNOR_ON_BAT=powersave
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance
+CPU_ENERGY_PERF_POLICY_ON_BAT=power
+CPU_BOOST_ON_AC=1
+CPU_BOOST_ON_BAT=0
+CPU_HWP_DYN_BOOST_ON_AC=1
+CPU_HWP_DYN_BOOST_ON_BAT=0
+
+# ThinkPad platform profile
+PLATFORM_PROFILE_ON_AC=balanced
+PLATFORM_PROFILE_ON_BAT=low-power
+
+# Runtime PM for PCIe devices
+RUNTIME_PM_ON_AC=auto
+RUNTIME_PM_ON_BAT=auto
+PCIE_ASPM_ON_AC=default
+PCIE_ASPM_ON_BAT=powersupersave
+
+# Wi-Fi
+WIFI_PWR_ON_AC=off
+WIFI_PWR_ON_BAT=on
+
+# Disk
+DISK_IDLE_SECS_ON_AC=0
+DISK_IDLE_SECS_ON_BAT=2
+SATA_LINKPWR_ON_AC=med_power_with_dipm
+SATA_LINKPWR_ON_BAT=min_power
+
+# USB autosuspend with keyboard/mouse exclusions handled by TLPs defaults.
+USB_AUTOSUSPEND=1
+
+# ThinkPad battery care: charge 75 -> 80 on BAT0 to slow degradation.
+# Design is 3956 mAh but last-full already dropped to 3235 mAh (81%).
+START_CHARGE_THRESH_BAT0=75
+STOP_CHARGE_THRESH_BAT0=80
+RESTORE_THRESHOLDS_ON_BAT=1
+'
+
+# --- package installation -------------------------------------------------
+if command -v pacman >/dev/null 2>&1; then
+    PKGS_NEEDED=()
+    for pkg in tlp tlp-rdw acpi; do
+        pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
+    done
+    if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
+        echo "chezmoi: installing ${PKGS_NEEDED[*]}"
+        sudo pacman -S --noconfirm --needed "${PKGS_NEEDED[@]}"
+    fi
+fi
+
+# --- config deployment ----------------------------------------------------
+UDEV_CHANGED=0
+LOGIND_CHANGED=0
+SLEEP_CHANGED=0
+TLP_CHANGED=0
+
+write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
+write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
+write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
+write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
+
+# --- post-deploy activation ----------------------------------------------
+if [ "$UDEV_CHANGED" = "1" ]; then
+    sudo udevadm control --reload
+    sudo udevadm trigger --subsystem-match=block --attr-match=queue/scheduler
+fi
+
+if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload
+    # Restarting logind re-reads config without ending the session.
+    sudo systemctl restart systemd-logind || true
+fi
+
+if [ "$TLP_CHANGED" = "1" ] \
+   || ! sudo systemctl is-enabled tlp >/dev/null 2>&1; then
+    sudo systemctl enable tlp >/dev/null
+    sudo systemctl restart tlp || sudo systemctl start tlp
+fi
+
+# Conflicting services: disable power-profiles-daemon if it sneaks in.
+if sudo systemctl is-enabled power-profiles-daemon >/dev/null 2>&1; then
+    echo "chezmoi: disabling power-profiles-daemon (conflicts with TLP)"
+    sudo systemctl disable --now power-profiles-daemon
+fi
+{{- end }}
