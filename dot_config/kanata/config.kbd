@@ -10,6 +10,13 @@
 
 (defcfg
   process-unmapped-keys yes
+  ;; Exclusively grab the built-in keyboard so sway never sees the raw
+  ;; QWERTY events alongside kanata's Colemak-remapped uinput output.
+  ;; Kanata opens this path with EVIOCGRAB; the grab releases
+  ;; automatically when kanata exits, so the built-in keyboard becomes
+  ;; live in sway again on crash -- that is the fallback path.
+  linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd
+  linux-continue-if-no-devs-found no
   ;; On Colemak, physical 'u' key produces 'l', so tell kanata
   ;; which keycode sends the 'u' keysym for unicode input (Ctrl+Shift+U)
   ;; Physical 'i' key = Colemak 'u', so use 'i' keycode
