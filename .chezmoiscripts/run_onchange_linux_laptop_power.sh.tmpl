@@ -39,6 +39,15 @@ ACTION=="add|change", KERNEL=="sd[a-z]",                  ATTR{queue/scheduler}=
 ACTION=="add|change", KERNEL=="mmcblk[0-9]",              ATTR{queue/scheduler}="bfq"
 '
 
+XE_MODPROBE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Intel Xe driver power knobs for the X1 Gen 11 integrated GPU (9a49).
+# Panel Self Refresh and Frame Buffer Compression drop display power
+# draw 10-30% on battery. Panel Replay is the newer successor to PSR
+# for eDP 1.5 panels and only engages when the panel advertises
+# support, so keeping both enabled is safe.
+options xe enable_psr=1 enable_fbc=1 enable_panel_replay=1
+'
+
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
 # so lid-close goes to suspend-then-hibernate: suspend first for fast
@@ -119,12 +128,37 @@ LOGIND_CHANGED=0
 SLEEP_CHANGED=0
 TLP_CHANGED=0
 
+XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
+write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTENT" && XE_CHANGED=1 || true
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
 
 # --- post-deploy activation ----------------------------------------------
+if [ "$XE_CHANGED" = "1" ]; then
+    echo "chezmoi: xe.conf updated; module params take effect on next reboot."
+fi
+
+# LUKS workqueue bypass: on encrypted root with heavy I/O (cargo builds,
+# browser cache writes), the dm-crypt per-device workqueues become
+# contended and add 100s of ms of latency to every I/O -- a known cause
+# of "freezes" that read as memory pressure but are actually
+# crypto-path stalls. cryptsetup refresh --persistent writes the flags
+# into the LUKS2 header so every future boot uses them; idempotent when
+# flags already match. Skip silently on LUKS1 hosts (refresh errors).
+if [ -e /dev/mapper/luks ] && command -v cryptsetup >/dev/null 2>&1; then
+    if ! sudo cryptsetup status luks 2>/dev/null \
+         | grep -qE 'no_(read|write)_workqueue'; then
+        echo "chezmoi: enabling dm-crypt no-workqueue flags on luks"
+        sudo cryptsetup refresh \
+            --perf-no_read_workqueue \
+            --perf-no_write_workqueue \
+            --persistent luks 2>&1 \
+         || echo "chezmoi: WARNING cryptsetup refresh failed (LUKS1?)" >&2
+    fi
+fi
+
 if [ "$UDEV_CHANGED" = "1" ]; then
     sudo udevadm control --reload
     # Re-run the block-subsystem rules so the new scheduler takes effect

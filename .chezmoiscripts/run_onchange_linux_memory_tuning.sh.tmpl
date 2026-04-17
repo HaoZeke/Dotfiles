@@ -36,6 +36,16 @@ vm.vfs_cache_pressure = 100
 vm.watermark_scale_factor = 50
 vm.compaction_proactiveness = 0
 vm.min_free_kbytes = 262144
+
+# Dirty-page accounting. Defaults (20/10) let 6 GiB of dirty pages pile
+# up on a 30 GiB box before the kernel starts flushing, producing
+# multi-second I/O write storms every time the ratio trips. Lowering
+# both and shortening the expire window makes writeback small and
+# continuous instead of large and spiky.
+vm.dirty_ratio = 10
+vm.dirty_background_ratio = 5
+vm.dirty_expire_centisecs = 3000
+vm.dirty_writeback_centisecs = 1500
 '
 
 ZRAM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
