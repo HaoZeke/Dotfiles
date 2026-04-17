@@ -18,6 +18,10 @@ ExecStart=/usr/bin/swayidle -w \
          before-sleep 'playerctl pause' \
          before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
          idlehint 780
+# Lock-screen hook fires on before-sleep; losing it mid-suspend leaves
+# the laptop unlocked on wake. Keep this unit out of OOM reach.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
 
 [Install]
 WantedBy=sway-session.target

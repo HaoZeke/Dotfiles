@@ -10,6 +10,10 @@ ExecStart=/usr/bin/foot --server=/run/user/%U/foot-server.sock
 UnsetEnvironment=LISTEN_PID LISTEN_FDS LISTEN_FDNAMES
 NonBlocking=true
 Restart=on-failure
+# Session-critical: losing the terminal server kills every shell.
+# Keep kernel OOM and systemd-oomd away from this unit.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
 
 [Install]
 WantedBy=sway-session.target

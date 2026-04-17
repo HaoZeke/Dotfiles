@@ -8,6 +8,10 @@ Type=forking
 ExecStart=/usr/bin/tmux start-server
 ExecStop=/usr/bin/tmux kill-server
 RemainAfterExit=yes
+# Session-critical: tmux holds every long-running session. If oomd or
+# the kernel OOM kills it, every attached pane dies. Keep away.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
 
 [Install]
 WantedBy=default.target

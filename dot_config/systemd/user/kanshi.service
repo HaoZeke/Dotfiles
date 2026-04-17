@@ -8,6 +8,10 @@ BindsTo=sway-session.target
 ExecStart=/usr/bin/kanshi -c %h/.config/kanshi/config
 Restart=on-failure
 RestartSec=5
+# Display layout manager; losing it mid-freeze leaves the session on a
+# wrong monitor config that has to be fixed by hand after recovery.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
 
 [Install]
 WantedBy=sway-session.target

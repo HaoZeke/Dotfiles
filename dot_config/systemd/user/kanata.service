@@ -7,6 +7,10 @@ Documentation=https://github.com/jtroo/kanata
 ExecStart=/usr/bin/kanata -c %h/.config/kanata/config.kbd
 Restart=on-failure
 RestartSec=3
+# Keyboard remapper; losing it makes the user's layout unusable mid-
+# session and can strand them with no way to type out of the freeze.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
 
 [Install]
 WantedBy=default.target
