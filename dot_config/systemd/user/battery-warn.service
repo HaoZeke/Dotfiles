@@ -1,0 +1,12 @@
+# Managed by chezmoi (dot_config/systemd/user/battery-warn.service).
+[Unit]
+Description=Poll battery and fire a dunst notification on threshold crossings
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/battery-warn
+
+[Install]
+WantedBy=sway-session.target

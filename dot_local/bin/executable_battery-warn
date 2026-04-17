@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_battery-warn).
+#
+# Fires one-shot dunst notifications when battery crosses a threshold
+# on the way DOWN. Keeps a tiny state file so it does not re-alert
+# every minute once below a threshold; clears state when the AC is
+# plugged back in so the next discharge cycle can alert again.
+#
+# Invoked from a user-level systemd timer (battery-warn.timer).
+
+set -u
+
+STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/battery-warn"
+mkdir -p "$STATE_DIR"
+STATE="$STATE_DIR/last-threshold"
+
+BAT=/sys/class/power_supply/BAT0
+[ -d "$BAT" ] || exit 0
+
+capacity=$(cat "$BAT/capacity" 2>/dev/null || echo 100)
+status=$(cat "$BAT/status" 2>/dev/null || echo Unknown)
+
+# Reset the state file when AC is back so the next discharge can
+# fire alerts again.
+if [ "$status" = "Charging" ] || [ "$status" = "Full" ] || [ "$status" = "Not charging" ]; then
+    rm -f "$STATE"
+    exit 0
+fi
+
+# Only alert on the way down (Discharging state).
+[ "$status" = "Discharging" ] || exit 0
+
+prior=$(cat "$STATE" 2>/dev/null || echo 100)
+
+notify() {
+    local urgency="$1" icon="$2" title="$3" body="$4"
+    notify-send --app-name=battery-warn \
+        --urgency="$urgency" \
+        --icon="$icon" \
+        --expire-time="${5:-10000}" \
+        "$title" "$body"
+}
+
+# Thresholds and the messages for each. Compare as integers.
+if   [ "$capacity" -le 5 ]  && [ "$prior" -gt 5 ]; then
+    notify critical battery-caution "Battery 5%" "Plug in NOW. Suspend-then-hibernate imminent." 0
+    echo 5 > "$STATE"
+elif [ "$capacity" -le 10 ] && [ "$prior" -gt 10 ]; then
+    notify critical battery-low "Battery 10%" "Plug in -- hibernation threshold approaching." 15000
+    echo 10 > "$STATE"
+elif [ "$capacity" -le 20 ] && [ "$prior" -gt 20 ]; then
+    notify normal battery-low "Battery 20%" "Consider finding a charger." 8000
+    echo 20 > "$STATE"
+fi

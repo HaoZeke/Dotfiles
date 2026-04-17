@@ -8,12 +8,23 @@
 # into page-cache thrash.
 [build]
 jobs = 4
+# sccache: content-addressed compile cache. Makes `cargo clean;
+# cargo build` a lookup instead of a recompile. Cache lives at
+# $HOME/.cache/sccache, bounded; `sccache --show-stats` for hit rate.
+rustc-wrapper = "sccache"
 
 [profile.dev]
 debug = "line-tables-only"
 
 [profile.test]
 debug = "line-tables-only"
+
+# mold linker for every x86_64 Linux target. Cuts link time roughly
+# 5x on large Rust binaries vs GNU ld. Uses clang as the cc frontend
+# so -fuse-ld=mold is understood.
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
 
 [net]
 retry = 2                   # network retries

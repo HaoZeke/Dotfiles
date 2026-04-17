@@ -280,7 +280,8 @@ RESTORE_THRESHOLDS_ON_BAT=1
 if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
     for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic \
-               nftables smartmontools cpupower rfkill brightnessctl; do
+               nftables smartmontools cpupower rfkill brightnessctl \
+               sccache mold clang; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then

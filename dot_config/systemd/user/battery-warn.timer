@@ -1,0 +1,12 @@
+# Managed by chezmoi (dot_config/systemd/user/battery-warn.timer).
+[Unit]
+Description=Poll battery every minute for threshold-crossing notifications
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+Unit=battery-warn.service
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
