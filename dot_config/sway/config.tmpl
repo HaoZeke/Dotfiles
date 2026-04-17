@@ -83,16 +83,20 @@ gaps inner 5
 # Basics:
 #
     # Start a terminal
-    bindsym $mod+Return exec $term
+    # --no-repeat: under CPU load, sway can receive a delayed first
+    # event plus a buffered key-repeat as a pair; without this flag,
+    # $mod+Return opens two terminals. Applied to every one-shot
+    # action binding below for the same reason.
+    bindsym --no-repeat $mod+Return exec $term
 
     # Kill focused window
-    bindsym $mod+w kill
+    bindsym --no-repeat $mod+w kill
 
     # Start your launcher
-    bindsym $mod+Space exec $menu
+    bindsym --no-repeat $mod+Space exec $menu
 
     # Lookup copied items
-    bindsym $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard -show-icons'
+    bindsym --no-repeat $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard -show-icons'
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
@@ -102,18 +106,18 @@ gaps inner 5
     floating_modifier $mod normal
 
     # Reload the configuration file
-    bindsym $mod+Shift+c reload
+    bindsym --no-repeat $mod+Shift+c reload
 
     # Lock screen
     # After scu-enable-now swayidle.target
-    bindsym $mod+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize'
+    bindsym --no-repeat $mod+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize'
 
     # Lock + suspend-then-hibernate (auto-hibernates after HibernateDelaySec
     # configured in /etc/systemd/sleep.conf.d/50-hibernate.conf).
-    bindsym $mod+Shift+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
+    bindsym --no-repeat $mod+Shift+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
 
     # Exit sway (logs you out of your Wayland session)
-    bindsym $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+    bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 #
 # Moving around:
 #
@@ -265,7 +269,7 @@ input type:keyboard {
     # When using kanata: leave layout as default (kanata remaps at evdev level)
     # When NOT using kanata: uncomment xkb_file for klfc-generated Colemak+Extend
     # xkb_file ~/.config/sway/keymap.xkb
-    repeat_delay 300
+    repeat_delay 500
     repeat_rate 25
 }
 

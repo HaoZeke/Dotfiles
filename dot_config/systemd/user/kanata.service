@@ -11,6 +11,17 @@ RestartSec=3
 # session and can strand them with no way to type out of the freeze.
 OOMScoreAdjust=-500
 ManagedOOMPreference=avoid
+# Under heavy CPU load, the event-processing loop can get
+# descheduled long enough that libinput observes the accumulated
+# burst as key-repeats on a single press -- keys appear doubled.
+# Bump priority so kanata wins CPU against cargo/rustc/browser
+# renderers. Nice=-10 is aggressive but scoped to one tiny process;
+# IOSchedulingClass=realtime makes sure evdev reads never stall on
+# disk contention.
+Nice=-10
+IOSchedulingClass=realtime
+IOSchedulingPriority=4
+CPUWeight=200
 
 [Install]
 WantedBy=default.target
