@@ -48,6 +48,36 @@ XE_MODPROBE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_la
 options xe enable_psr=1 enable_fbc=1 enable_panel_replay=1
 '
 
+SUDO_PAM_CONTENT='#%PAM-1.0
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Fingerprint-or-password for sudo. pam_fprintd runs the Synaptics
+# Prometheus sensor (06cb:00fc); on failure or absent finger, PAM
+# falls through to the normal system-auth chain so typed-password
+# always works as a fallback.
+auth      sufficient pam_fprintd.so
+auth      include    system-auth
+account   include    system-auth
+session   include    system-auth
+'
+
+SWAYLOCK_PAM_CONTENT='#%PAM-1.0
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Swaylock: fingerprint unlocks; falls through to the login PAM chain
+# for typed-password unlock.
+auth      sufficient pam_fprintd.so
+auth      include    login
+'
+
+POLKIT_PAM_CONTENT='#%PAM-1.0
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Graphical auth prompts (polkit agent) accept fingerprint.
+auth      sufficient pam_fprintd.so
+auth      include    system-auth
+account   include    system-auth
+password  include    system-auth
+session   include    system-auth
+'
+
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
 # so lid-close goes to suspend-then-hibernate: suspend first for fast
@@ -113,7 +143,7 @@ RESTORE_THRESHOLDS_ON_BAT=1
 # --- package installation -------------------------------------------------
 if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
-    for pkg in tlp tlp-rdw acpi; do
+    for pkg in tlp tlp-rdw acpi fprintd libfprint; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
@@ -134,39 +164,36 @@ write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTE
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
+write_if_diff /etc/pam.d/sudo                                "$SUDO_PAM_CONTENT"     || true
+write_if_diff /etc/pam.d/swaylock                            "$SWAYLOCK_PAM_CONTENT" || true
+write_if_diff /etc/pam.d/polkit-1                            "$POLKIT_PAM_CONTENT"   || true
 
 # --- post-deploy activation ----------------------------------------------
 if [ "$XE_CHANGED" = "1" ]; then
     echo "chezmoi: xe.conf updated; module params take effect on next reboot."
 fi
 
-# LUKS workqueue bypass: on encrypted root with heavy I/O (cargo builds,
-# browser cache writes), the dm-crypt per-device workqueues serialize
-# on a single kworker and add 100s of ms of latency to every I/O --
-# a known cause of "freezes" that read as memory pressure but are
-# actually crypto-path stalls. Apply the flags live (no password
-# needed), then print the one-line persistent command so the user can
-# run it interactively once. --persistent requires the LUKS passphrase
-# because it rewrites LUKS2 header metadata, which cannot be prompted
-# for from a non-interactive chezmoi script.
+# LUKS workqueue bypass on encrypted root: a known cause of
+# "freezes" that look like memory pressure but are actually dm-crypt
+# workqueue serialization on a single kworker under heavy I/O.
+# cryptsetup refresh (with or without --persistent) prompts for the
+# LUKS passphrase so it cannot run from a non-interactive chezmoi
+# script. Print the exact one-liner for the user to run once.
 if [ -e /dev/mapper/luks ] && command -v cryptsetup >/dev/null 2>&1; then
-    if ! sudo cryptsetup status luks 2>/dev/null \
+    if ! sudo -n cryptsetup status luks 2>/dev/null \
          | grep -qE 'no_(read|write)_workqueue'; then
-        echo "chezmoi: applying dm-crypt no-workqueue flags (live, this session)"
-        sudo cryptsetup refresh \
-            --perf-no_read_workqueue \
-            --perf-no_write_workqueue luks \
-         && cat <<MSG
-chezmoi: live flags applied. To persist across reboots, run once:
+        cat <<MSG
+chezmoi: dm-crypt no-workqueue flags not yet set on luks. Run once,
+interactively, at a shell with a TTY (you will be asked for your
+LUKS passphrase):
 
     sudo cryptsetup refresh \\
         --perf-no_read_workqueue \\
         --perf-no_write_workqueue \\
         --persistent luks
 
-You will be prompted for your LUKS passphrase. The --persistent flag
-writes the performance options into the LUKS2 header so every future
-boot brings up the mapper with them set.
+The --persistent flag writes the performance options into the LUKS2
+header, so every future boot brings up the mapper with them set.
 MSG
     fi
 fi
