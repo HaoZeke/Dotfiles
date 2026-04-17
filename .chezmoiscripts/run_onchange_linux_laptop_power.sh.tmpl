@@ -68,6 +68,66 @@ auth      sufficient pam_fprintd.so
 auth      include    login
 '
 
+NFTABLES_CONTENT='#!/usr/sbin/nft -f
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Host firewall: default-deny inbound, allow established + loopback +
+# ICMP + known-trusted interfaces. Forward disabled. Output unrestricted.
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    ct state established,related accept
+    ct state invalid drop
+
+    iif lo accept
+    ip protocol icmp accept
+    ip6 nexthdr ipv6-icmp accept
+
+    # Trusted interfaces: tailscale mesh, libvirt/docker local bridges.
+    iifname "tailscale0" accept
+    iifname "virbr*"     accept comment "libvirt bridge"
+    iifname "docker0"    accept comment "docker bridge"
+    iifname "podman*"    accept comment "podman bridge"
+
+    counter comment "dropped inbound"
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+}
+'
+
+SMARTD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Monitor every auto-detected SMART-capable device. Short self-test
+# every day at 02:00, long self-test every Saturday at 03:00. Warnings
+# go to the system journal (grep with: journalctl -u smartd -p warning).
+# No mail transport -- rely on journalctl inspection instead.
+DEVICESCAN -a -o on -S on -s (S/../.././02|L/../../6/03) -W 4,45,60
+'
+
+RGPOWER_SUDOERS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Let rgpower (the power-profile CLI) invoke a specific short list of
+# privileged commands without a password prompt. Scoped to exact
+# arg tuples -- no wildcards in the privileged part.
+rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp start
+rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp ac
+rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp bat
+rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp-stat -s
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block all
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill unblock all
+rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
+rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
+rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
+rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
+'
+
 POLKIT_PAM_CONTENT='#%PAM-1.0
 # Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Graphical auth prompts (polkit agent) accept fingerprint.
@@ -166,7 +226,8 @@ RESTORE_THRESHOLDS_ON_BAT=1
 # --- package installation -------------------------------------------------
 if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
-    for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic; do
+    for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic \
+               nftables smartmontools cpupower rfkill brightnessctl; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
@@ -191,7 +252,25 @@ write_if_diff /etc/pam.d/sudo                                "$SUDO_PAM_CONTENT"
 write_if_diff /etc/pam.d/swaylock                            "$SWAYLOCK_PAM_CONTENT" || true
 write_if_diff /etc/pam.d/polkit-1                            "$POLKIT_PAM_CONTENT"   || true
 BTRBK_CHANGED=0
+NFT_CHANGED=0
+SMARTD_CHANGED=0
 write_if_diff /etc/btrbk/btrbk.conf                          "$BTRBK_CONTENT"        && BTRBK_CHANGED=1 || true
+write_if_diff /etc/nftables.conf                             "$NFTABLES_CONTENT"     && NFT_CHANGED=1 || true
+write_if_diff /etc/smartd.conf                               "$SMARTD_CONTENT"       && SMARTD_CHANGED=1 || true
+# sudoers must be 0440; write via a tempfile + visudo validation so a
+# syntax error never leaves a broken sudoers drop-in on disk.
+if ! sudo test -f /etc/sudoers.d/rgpower \
+   || ! printf "%s" "$RGPOWER_SUDOERS_CONTENT" | sudo cmp -s - /etc/sudoers.d/rgpower; then
+    TMP=$(mktemp)
+    printf "%s" "$RGPOWER_SUDOERS_CONTENT" > "$TMP"
+    if sudo visudo -c -f "$TMP" >/dev/null; then
+        sudo install -D -m 0440 -o root -g root "$TMP" /etc/sudoers.d/rgpower
+        echo "chezmoi: updated /etc/sudoers.d/rgpower"
+    else
+        echo "chezmoi: WARN /etc/sudoers.d/rgpower would be invalid; keeping existing" >&2
+    fi
+    rm -f "$TMP"
+fi
 
 if [ "$BTRBK_CHANGED" = "1" ] \
    || ( ! sudo systemctl is-enabled btrbk.timer >/dev/null 2>&1 ); then
@@ -199,6 +278,27 @@ if [ "$BTRBK_CHANGED" = "1" ] \
         sudo systemctl enable --now btrbk.timer >/dev/null 2>&1 || true
         echo "chezmoi: btrbk.timer enabled; run 'sudo btrbk run' once to produce the first snapshot."
     fi
+fi
+
+# Bring nftables online if the config was just written or the service
+# is not yet enabled. Validate the ruleset before attempting to load so
+# a syntax error does not leave the firewall in an undefined state.
+if [ "$NFT_CHANGED" = "1" ] \
+   || ( ! sudo systemctl is-enabled nftables.service >/dev/null 2>&1 ); then
+    if sudo nft -c -f /etc/nftables.conf; then
+        sudo systemctl enable nftables.service >/dev/null 2>&1 || true
+        sudo systemctl restart nftables.service
+        echo "chezmoi: nftables reloaded"
+    else
+        echo "chezmoi: WARN /etc/nftables.conf failed validation; firewall unchanged" >&2
+    fi
+fi
+
+# Enable smartd so SSD/NVMe health degradation shows up in the journal
+# before it turns into a read error.
+if [ "$SMARTD_CHANGED" = "1" ] \
+   || ( ! sudo systemctl is-enabled smartd.service >/dev/null 2>&1 ); then
+    sudo systemctl enable --now smartd.service >/dev/null 2>&1 || true
 fi
 
 # --- post-deploy activation ----------------------------------------------
