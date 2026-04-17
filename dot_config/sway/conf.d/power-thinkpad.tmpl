@@ -1,15 +1,12 @@
 # Per-host sway power bindings. Active on rgx1gen11 (ThinkPad X1 Gen 11);
 # other hosts get only this header (a harmless empty sway include).
+#
+# The everyday lock+sleep shortcut ($mod+Shift+Escape) lives in the main
+# config now that it invokes `systemctl suspend-then-hibernate` directly,
+# so we do not redefine it here (which would produce an "Overwriting
+# binding" warning on every sway start/reload). The only binding added
+# per-host is the explicit hibernate shortcut below.
 {{- if eq .chezmoi.hostname "rgx1gen11" }}
-
-# The X1 Gen 11 firmware exposes only s2idle, so plain `systemctl suspend`
-# drains battery through the night. Rebind the usual lock-and-suspend key
-# (main config: $mod+Shift+Escape -> systemctl suspend) to
-# suspend-then-hibernate: suspend first for fast resume, hibernate after
-# the 20-minute HibernateDelaySec configured in
-# /etc/systemd/sleep.conf.d/50-hibernate.conf. This conf.d file is
-# included after the main config, so the later bindsym wins.
-bindsym $mod+Shift+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
 
 # Explicit hibernate for pre-flight or "close it for the trip" mode --
 # skip the suspend-first phase, write the image immediately, zero drain.
