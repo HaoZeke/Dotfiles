@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_browser-media-watchdog).
+#
+# Raises browser.slice MemoryHigh when any MPRIS player reports
+# Playing -- active video or music should not be throttled. Drops back
+# to the baseline when playback stops or pauses. Polls playerctl every
+# HEARTBEAT seconds; only issues set-property on state transitions.
+
+set -u
+
+: "${HIGH_IDLE:=6G}"        # baseline MemoryHigh
+: "${HIGH_MEDIA:=14G}"      # raised MemoryHigh when media is Playing
+: "${HEARTBEAT:=10}"        # poll interval (seconds)
+
+if ! command -v playerctl >/dev/null 2>&1; then
+    echo "browser-media-watchdog: playerctl not installed, exiting" >&2
+    exit 0
+fi
+
+state=""
+while :; do
+    if playerctl -a status 2>/dev/null | grep -q '^Playing$'; then
+        new=media
+        high="$HIGH_MEDIA"
+    else
+        new=idle
+        high="$HIGH_IDLE"
+    fi
+
+    if [ "$new" != "$state" ]; then
+        systemctl --user set-property browser.slice "MemoryHigh=$high" \
+            >/dev/null 2>&1 || true
+        printf '%(%F %T)T browser-media-watchdog: %s -> MemoryHigh=%s\n' \
+            -1 "$new" "$high"
+        state="$new"
+    fi
+    sleep "$HEARTBEAT"
+done

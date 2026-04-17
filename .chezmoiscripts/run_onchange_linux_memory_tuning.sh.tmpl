@@ -72,11 +72,18 @@ ManagedOOMMemoryPressure=kill
 ManagedOOMMemoryPressureLimit=50%
 '
 
-# Ensure zram-generator on Arch hosts.
-if command -v pacman >/dev/null 2>&1 \
-   && ! pacman -Qi zram-generator >/dev/null 2>&1; then
-    echo "chezmoi: installing zram-generator"
-    sudo pacman -S --noconfirm --needed zram-generator
+# Ensure zram-generator + playerctl on Arch hosts. playerctl is used by
+# browser-media-watchdog.service to detect active MPRIS playback and
+# raise browser.slice MemoryHigh so video/music does not get throttled.
+if command -v pacman >/dev/null 2>&1; then
+    NEEDED=()
+    for pkg in zram-generator playerctl; do
+        pacman -Qi "$pkg" >/dev/null 2>&1 || NEEDED+=("$pkg")
+    done
+    if [ "${#NEEDED[@]}" -gt 0 ]; then
+        echo "chezmoi: installing ${NEEDED[*]}"
+        sudo pacman -S --noconfirm --needed "${NEEDED[@]}"
+    fi
 fi
 
 SYSCTL_CHANGED=0
@@ -107,7 +114,17 @@ elif ! systemctl is-active systemd-oomd >/dev/null 2>&1; then
     sudo systemctl start systemd-oomd
 fi
 
-# Reload user manager so rust-analyzer.slice (deployed to
-# ~/.config/systemd/user/) is picked up for the next shim launch.
+# Reload user manager so rust-analyzer.slice and browser.slice
+# (deployed to ~/.config/systemd/user/) are picked up for the next
+# shim launch, then enable the browser-media-watchdog so MemoryHigh
+# adapts to playback.
 systemctl --user daemon-reload 2>/dev/null || true
+if [ -f "$HOME/.config/systemd/user/browser-media-watchdog.service" ] \
+   && ! systemctl --user is-enabled browser-media-watchdog.service >/dev/null 2>&1; then
+    systemctl --user enable browser-media-watchdog.service >/dev/null 2>&1 || true
+fi
+if [ -f "$HOME/.config/systemd/user/browser-media-watchdog.service" ] \
+   && ! systemctl --user is-active browser-media-watchdog.service >/dev/null 2>&1; then
+    systemctl --user start browser-media-watchdog.service 2>/dev/null || true
+fi
 {{- end }}

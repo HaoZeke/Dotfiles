@@ -1,0 +1,17 @@
+# Managed by chezmoi (dot_config/systemd/user/browser.slice).
+#
+# Soft cap on browsers collectively. No MemoryMax -- we rely on
+# systemd-oomd's session-level PSI watcher to pick browser processes
+# as kill targets under real pressure, rather than cgroup OOM killing
+# the whole slice at once. MemoryHigh throttles the browser when it
+# exceeds the threshold, which shows up as slower page loads and
+# evicted tabs rather than a lost session.
+#
+# The browser-media-watchdog.service raises MemoryHigh to the value in
+# MemoryHighMedia whenever any MPRIS player reports Playing, so active
+# video/music is not throttled. It drops back to the baseline when
+# playback stops.
+[Slice]
+MemoryHigh=6G
+MemorySwapMax=8G
+CPUWeight=50

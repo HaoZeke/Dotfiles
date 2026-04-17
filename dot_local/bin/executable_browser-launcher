@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_browser-launcher).
+#
+# Generic PATH shim for browsers. Invoke via a per-browser symlink --
+# e.g. ~/.local/bin/firefox -> browser-launcher -- and the script
+# resolves the real binary and launches it inside browser.slice.
+#
+# Limits live in ~/.config/systemd/user/browser.slice.
+# Media-aware cap raise comes from browser-media-watchdog.service.
+
+set -u
+
+NAME=$(basename "$(readlink -f "$0")" 2>/dev/null)
+if [ "$NAME" = "browser-launcher" ]; then
+    # Called directly rather than via a symlink: try argv[0].
+    NAME=$(basename "$0")
+fi
+
+# Prefer the well-known absolute paths so we do not re-enter the shim.
+REAL=""
+case "$NAME" in
+    firefox)              REAL=/usr/lib/firefox/firefox ;;
+    chromium)             REAL=/usr/bin/chromium ;;
+    google-chrome|google-chrome-stable|google-chrome-beta)
+                          REAL=/usr/bin/$NAME ;;
+    brave|brave-browser)  REAL=/usr/bin/$NAME ;;
+esac
+
+# Fallback: resolve via PATH but strip ~/.local/bin so the shim does
+# not recurse into itself.
+if [ -z "$REAL" ] || [ ! -x "$REAL" ]; then
+    SELF_DIR=$(dirname "$(readlink -f "$0")")
+    FILTERED_PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vFx "$SELF_DIR" | paste -sd:)
+    REAL=$(PATH="$FILTERED_PATH" command -v "$NAME" 2>/dev/null || true)
+fi
+
+if [ -z "$REAL" ] || [ ! -x "$REAL" ]; then
+    echo "browser-launcher: cannot locate real $NAME binary" >&2
+    exit 127
+fi
+
+# Degraded-session fallback: run unwrapped if the user manager is
+# unreachable (containers, broken sessions).
+if ! systemctl --user is-system-running >/dev/null 2>&1 \
+   && ! systemctl --user is-active default.target >/dev/null 2>&1; then
+    exec "$REAL" "$@"
+fi
+
+exec systemd-run --user --scope --quiet \
+    --slice=browser.slice \
+    --unit="browser-${NAME}-$$" \
+    -- "$REAL" "$@"

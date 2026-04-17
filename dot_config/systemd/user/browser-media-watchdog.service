@@ -1,0 +1,18 @@
+# Managed by chezmoi (dot_config/systemd/user/browser-media-watchdog.service).
+[Unit]
+Description=Raise browser.slice MemoryHigh while media is playing
+After=sway-session.target
+PartOf=sway-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/browser-media-watchdog
+Restart=on-failure
+RestartSec=10
+# Watchdog itself should never be an OOM target -- losing it just
+# means the cap stops adapting to playback.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
+
+[Install]
+WantedBy=sway-session.target
