@@ -52,6 +52,37 @@ fi
 
 [[ ! ${BLE_VERSION-} ]] || ble-attach
 
+[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X" # boot up x-cmd.
+export PATH="$HOME/.pixi/bin:$PATH"
+export PATH="$HOME/.npm-global/bin:$PATH"
+
+{{- /* DEEPSEEK_API_KEY: prefer pass if the entry exists, fall back to
+       the hardcoded value so a fresh chezmoi apply on a box without
+       the pass entry does not strip the working env var. Long term
+       the hardcoded value should be removed once the pass entry is
+       populated on every host that needs it. */ -}}
+{{- $deepseek := output "bash" "-c" "pass show services/deepseek-api-key 2>/dev/null || true" | trim -}}
+{{- if $deepseek }}
+export DEEPSEEK_API_KEY="{{ $deepseek }}"
+{{- else }}
+export DEEPSEEK_API_KEY="REDACTED_ROTATE_ME"
+{{- end }}
+
+# OMP Puppeteer
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+{{- $texlive_dir := output "bash" "-c" `ls -dtr ${HOME}/.local/share/texlive-* 2>/dev/null | tail -n1` | trim }}
+{{- if $texlive_dir }}
+export PATH="$PATH:{{ $texlive_dir }}/bin/x86_64-linux"
+{{- end }}
+
+export GPG_TTY=$(tty)
+
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+export PATH="$HOME/.opencode/bin:$PATH"
+
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script

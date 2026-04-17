@@ -1,4 +1,20 @@
 # https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+# Peak-RSS control for local builds. -j4 matches the CLAUDE.md rule
+# against spawning too many parallel rustc processes on the laptop;
+# line-tables-only cuts rustc heap usage substantially with no loss of
+# backtrace line numbers. Without these, a single `cargo check` of a
+# multi-crate workspace can reach 8-16 GB RSS and drive the session
+# into page-cache thrash.
+[build]
+jobs = 4
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.test]
+debug = "line-tables-only"
+
 [net]
 retry = 2                   # network retries
 git-fetch-with-cli = true   # use the `git` executable for git operations
