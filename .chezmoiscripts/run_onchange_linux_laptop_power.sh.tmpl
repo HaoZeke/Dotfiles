@@ -258,8 +258,18 @@ if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
         echo "chezmoi: removing superseded do-not-suspend.conf drop-in"
         sudo rm /etc/systemd/logind.conf.d/do-not-suspend.conf
     fi
-    # Restarting logind re-reads config without ending the session.
-    sudo systemctl restart systemd-logind || true
+    # DO NOT restart systemd-logind from here. On sway sessions a
+    # logind restart can terminate the session scope (sway dies,
+    # every app with it, hard reboot required to recover). Changes
+    # to /etc/systemd/logind.conf.d/*.conf apply to the next boot
+    # via daemon-reload above, which is safe. For the current
+    # session just confirm the drop-in is in place and tell the
+    # user the lid behavior will be live after the next reboot.
+    echo "chezmoi: logind drop-in updated."
+    echo "  Live until next reboot: the previous HandleLidSwitch value remains in effect."
+    echo "  New HandleLidSwitch=suspend-then-hibernate takes effect on the next boot."
+    echo "  If you need it live immediately, run 'sudo systemctl restart systemd-logind'"
+    echo "  manually and accept the risk that sway sessions can drop."
 fi
 
 # Persistent journal so `journalctl -b -1` survives reboots. Essential
