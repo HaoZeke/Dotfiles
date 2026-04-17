@@ -127,7 +127,19 @@ write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     
 # --- post-deploy activation ----------------------------------------------
 if [ "$UDEV_CHANGED" = "1" ]; then
     sudo udevadm control --reload
-    sudo udevadm trigger --subsystem-match=block --attr-match=queue/scheduler
+    # Re-run the block-subsystem rules so the new scheduler takes effect
+    # without a reboot. udevadm --attr-match does not accept slashed
+    # attribute paths, hence the plain subsystem trigger.
+    sudo udevadm trigger --subsystem-match=block --action=change
+    # Belt-and-suspenders: write bfq live in case the scheduler module
+    # wasn't loaded yet when udev first saw the device.
+    for q in /sys/block/nvme*/queue/scheduler \
+             /sys/block/sd*/queue/scheduler \
+             /sys/block/mmcblk*/queue/scheduler; do
+        [ -e "$q" ] || continue
+        grep -q '\bbfq\b' "$q" || continue  # skip if bfq module not available
+        echo bfq | sudo tee "$q" >/dev/null
+    done
 fi
 
 if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
@@ -136,15 +148,33 @@ if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     sudo systemctl restart systemd-logind || true
 fi
 
-if [ "$TLP_CHANGED" = "1" ] \
-   || ! sudo systemctl is-enabled tlp >/dev/null 2>&1; then
-    sudo systemctl enable tlp >/dev/null
-    sudo systemctl restart tlp || sudo systemctl start tlp
+# Conflicting services first: TLP and power-profiles-daemon cannot both
+# run. Drop PPD before enabling TLP so the enable doesn't trip a
+# same-name conflict.
+if sudo systemctl is-enabled power-profiles-daemon.service >/dev/null 2>&1; then
+    echo "chezmoi: disabling power-profiles-daemon (conflicts with TLP)"
+    sudo systemctl disable --now power-profiles-daemon.service
 fi
 
-# Conflicting services: disable power-profiles-daemon if it sneaks in.
-if sudo systemctl is-enabled power-profiles-daemon >/dev/null 2>&1; then
-    echo "chezmoi: disabling power-profiles-daemon (conflicts with TLP)"
-    sudo systemctl disable --now power-profiles-daemon
+# Enable TLP's own units explicitly. tlp-stat checks for tlp.service by
+# name; a bare `systemctl enable tlp` sometimes resolves to a stale
+# symlink target on Arch and leaves it reporting "not enabled".
+for unit in tlp.service NetworkManager-dispatcher.service; do
+    if ! sudo systemctl is-enabled "$unit" >/dev/null 2>&1; then
+        echo "chezmoi: enabling $unit"
+        sudo systemctl enable "$unit"
+    fi
+done
+
+if [ "$TLP_CHANGED" = "1" ]; then
+    sudo systemctl restart tlp.service
+elif ! sudo systemctl is-active tlp.service >/dev/null 2>&1; then
+    sudo systemctl start tlp.service
+fi
+
+# Confirm the enable actually stuck so a silent failure shows up here
+# instead of waiting for the user to notice `tlp-stat` complain.
+if ! sudo systemctl is-enabled tlp.service >/dev/null 2>&1; then
+    echo "chezmoi: WARNING tlp.service still not enabled" >&2
 fi
 {{- end }}
