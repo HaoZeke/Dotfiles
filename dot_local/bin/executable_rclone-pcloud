@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rclone-pcloud).
+#
+# rclone wrapper that derives pCloud + crypt-layer credentials from
+# pass at runtime and exposes them to rclone via environment variables,
+# so no plaintext creds ever sit on disk or in rclone's own config.
+#
+# Remotes this wrapper exposes:
+#   pcloud:   raw WebDAV remote (EU endpoint; usable but not encrypted)
+#   pcrypt:   crypt-wrapped layer on top of pcloud:backup-rgx1gen11
+#             (zero-knowledge: pCloud sees only opaque blobs)
+#
+# Credentials read from pass:
+#   services/pcloud               first line = pCloud password;
+#                                 email:, webdav_eu:, etc. as metadata
+#   local/borg-pcloud             random passphrase used as the crypt
+#                                 layer password (repurposed; the name
+#                                 is historical, the value is a proper
+#                                 high-entropy passphrase)
+#
+# Invocation:
+#   rclone-pcloud lsd pcloud:
+#   rclone-pcloud lsd pcrypt:
+#   rclone-pcloud --help      (full rclone surface forwarded)
+
+set -u
+
+if ! command -v pass >/dev/null 2>&1; then
+    echo "rclone-pcloud: pass not found in PATH" >&2
+    exit 127
+fi
+if ! command -v rclone >/dev/null 2>&1; then
+    echo "rclone-pcloud: rclone not installed" >&2
+    exit 127
+fi
+
+PCLOUD_ENTRY=$(pass show services/pcloud 2>/dev/null) || {
+    echo "rclone-pcloud: pass entry services/pcloud missing" >&2
+    exit 1
+}
+
+PCLOUD_PASS=$(printf '%s\n' "$PCLOUD_ENTRY" | sed -n '1p')
+PCLOUD_USER=$(printf '%s\n' "$PCLOUD_ENTRY" | awk '/^email:/{print $2; exit}')
+PCLOUD_URL=$(printf '%s\n'  "$PCLOUD_ENTRY" | awk '/^webdav_eu:/{print $2; exit}')
+
+if [ -z "$PCLOUD_USER" ] || [ -z "$PCLOUD_URL" ] || [ -z "$PCLOUD_PASS" ]; then
+    echo "rclone-pcloud: services/pcloud missing password/email/webdav_eu" >&2
+    exit 1
+fi
+
+# Raw WebDAV remote.
+export RCLONE_CONFIG_PCLOUD_TYPE=webdav
+export RCLONE_CONFIG_PCLOUD_VENDOR=other
+export RCLONE_CONFIG_PCLOUD_URL="$PCLOUD_URL"
+export RCLONE_CONFIG_PCLOUD_USER="$PCLOUD_USER"
+# rclone stores passwords obscured; derive via its own obscure command.
+RCLONE_CONFIG_PCLOUD_PASS=$(printf '%s' "$PCLOUD_PASS" | rclone obscure -)
+export RCLONE_CONFIG_PCLOUD_PASS
+
+# Crypt-wrapped remote: zero-knowledge encryption before upload.
+# The crypt passphrase itself is in pass at local/borg-pcloud.
+CRYPT_PASS=$(pass show local/borg-pcloud 2>/dev/null | sed -n '1p') || CRYPT_PASS=""
+if [ -n "$CRYPT_PASS" ]; then
+    export RCLONE_CONFIG_PCRYPT_TYPE=crypt
+    export RCLONE_CONFIG_PCRYPT_REMOTE="pcloud:backup-rgx1gen11"
+    RCLONE_CONFIG_PCRYPT_PASSWORD=$(printf '%s' "$CRYPT_PASS" | rclone obscure -)
+    export RCLONE_CONFIG_PCRYPT_PASSWORD
+    # filename_encryption=standard encrypts names but keeps directory
+    # structure searchable; directory_name_encryption keeps hierarchy
+    # visible which helps rclone reason about incremental uploads.
+    export RCLONE_CONFIG_PCRYPT_FILENAME_ENCRYPTION=standard
+    export RCLONE_CONFIG_PCRYPT_DIRECTORY_NAME_ENCRYPTION=true
+fi
+
+# --config /dev/null forces rclone to ignore any existing encrypted
+# rclone.conf on this host; all remote definitions above come from
+# env vars instead, so the wrapper is self-contained.
+exec rclone --config /dev/null "$@"
