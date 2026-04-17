@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 {{- if eq .chezmoi.os "linux" }}
-# Install /etc memory/zram tuning under sudo and reload affected units.
-# chezmoi re-runs this whenever the rendered script changes; embedded
-# hashes below guarantee that editing either blob re-triggers deployment.
-#
-# sysctl-hash:   {{ list "99-memory.conf starts" "\nvm.swappiness = 100\nvm.page-cluster = 0\nvm.vfs_cache_pressure = 100\nvm.watermark_scale_factor = 50\n99-memory.conf ends" | join "" | sha256sum }}
-# zram-hash:     {{ list "zram-generator.conf starts" "\n[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\nswap-priority = 100\nfs-type = swap\nzram-generator.conf ends" | join "" | sha256sum }}
+# Install /etc memory/zram/oomd tuning under sudo and reload affected units.
+# chezmoi re-runs this when the rendered script changes; per-file `cmp -s`
+# guards mean unchanged content skips the sudo write.
 
 set -euo pipefail
 
@@ -16,7 +13,7 @@ write_if_diff() {
     printf '%s' "$content" >"$tmp"
     if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
         echo "chezmoi: updating $dst"
-        sudo install -m 0644 -o root -g root "$tmp" "$dst"
+        sudo install -D -m 0644 -o root -g root "$tmp" "$dst"
         rm -f "$tmp"
         return 0
     fi
@@ -26,14 +23,19 @@ write_if_diff() {
 
 SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
 #
-# Tuned for a zram-equipped workstation running large Rust workloads.
-# High swappiness is correct here: /dev/zram0 sits at priority 100 with
-# zstd compression, so swapping idle anon pages costs RAM-latency, not
-# disk-latency. Low swappiness on this setup causes page-cache thrash.
+# Tuned for a zram-equipped Rust/Linux workstation. Anchored on:
+#   * /dev/zram0 at prio 100, zstd compression (see zram-generator.conf)
+#   * systemd-oomd managing user-.slice via PSI (see oomd.conf.d + user-.slice.d)
+#
+# High swappiness is correct here: swap runs at RAM-latency through zram,
+# so idle anon memory should page freely while page cache stays resident
+# for target/*.rlib and source trees.
 vm.swappiness = 100
 vm.page-cluster = 0
 vm.vfs_cache_pressure = 100
 vm.watermark_scale_factor = 50
+vm.compaction_proactiveness = 0
+vm.min_free_kbytes = 262144
 '
 
 ZRAM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
@@ -44,7 +46,23 @@ swap-priority = 100
 fs-type = swap
 '
 
-# Ensure the generator is installed on Arch hosts.
+OOMD_CONF_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+# Fire PSI-based kills after 20s of sustained memory pressure instead of
+# the 30s default. Pairs with ManagedOOMMemoryPressureLimit on user-.slice.
+[OOM]
+DefaultMemoryPressureDurationSec=20s
+'
+
+USER_SLICE_OOMD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+# Enable systemd-oomd PSI-based kills on every user-UID.slice. Kills the
+# largest process inside the user session when memory-pressure stall
+# averages exceed 50% for the duration configured in oomd.conf.d.
+[Slice]
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=50%
+'
+
+# Ensure zram-generator on Arch hosts.
 if command -v pacman >/dev/null 2>&1 \
    && ! pacman -Qi zram-generator >/dev/null 2>&1; then
     echo "chezmoi: installing zram-generator"
@@ -53,8 +71,11 @@ fi
 
 SYSCTL_CHANGED=0
 ZRAM_CHANGED=0
-write_if_diff /etc/sysctl.d/99-memory.conf   "$SYSCTL_CONTENT" && SYSCTL_CHANGED=1 || true
-write_if_diff /etc/systemd/zram-generator.conf "$ZRAM_CONTENT"  && ZRAM_CHANGED=1  || true
+OOMD_CHANGED=0
+write_if_diff /etc/sysctl.d/99-memory.conf                     "$SYSCTL_CONTENT"         && SYSCTL_CHANGED=1 || true
+write_if_diff /etc/systemd/zram-generator.conf                 "$ZRAM_CONTENT"           && ZRAM_CHANGED=1   || true
+write_if_diff /etc/systemd/oomd.conf.d/aggressive.conf         "$OOMD_CONF_CONTENT"      && OOMD_CHANGED=1   || true
+write_if_diff /etc/systemd/system/user-.slice.d/50-oomd.conf   "$USER_SLICE_OOMD_CONTENT" && OOMD_CHANGED=1   || true
 
 if [ "$SYSCTL_CHANGED" = "1" ]; then
     sudo sysctl --system >/dev/null
@@ -63,6 +84,17 @@ fi
 if [ "$ZRAM_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
     sudo systemctl restart systemd-zram-setup@zram0.service || true
+fi
+
+# Always make sure systemd-oomd is up; restart if its config moved.
+if ! sudo systemctl is-enabled systemd-oomd >/dev/null 2>&1; then
+    sudo systemctl enable systemd-oomd >/dev/null
+fi
+if [ "$OOMD_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload
+    sudo systemctl restart systemd-oomd
+elif ! systemctl is-active systemd-oomd >/dev/null 2>&1; then
+    sudo systemctl start systemd-oomd
 fi
 
 # Reload user manager so rust-analyzer.slice (deployed to
