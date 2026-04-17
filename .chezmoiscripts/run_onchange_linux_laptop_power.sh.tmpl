@@ -141,21 +141,33 @@ if [ "$XE_CHANGED" = "1" ]; then
 fi
 
 # LUKS workqueue bypass: on encrypted root with heavy I/O (cargo builds,
-# browser cache writes), the dm-crypt per-device workqueues become
-# contended and add 100s of ms of latency to every I/O -- a known cause
-# of "freezes" that read as memory pressure but are actually
-# crypto-path stalls. cryptsetup refresh --persistent writes the flags
-# into the LUKS2 header so every future boot uses them; idempotent when
-# flags already match. Skip silently on LUKS1 hosts (refresh errors).
+# browser cache writes), the dm-crypt per-device workqueues serialize
+# on a single kworker and add 100s of ms of latency to every I/O --
+# a known cause of "freezes" that read as memory pressure but are
+# actually crypto-path stalls. Apply the flags live (no password
+# needed), then print the one-line persistent command so the user can
+# run it interactively once. --persistent requires the LUKS passphrase
+# because it rewrites LUKS2 header metadata, which cannot be prompted
+# for from a non-interactive chezmoi script.
 if [ -e /dev/mapper/luks ] && command -v cryptsetup >/dev/null 2>&1; then
     if ! sudo cryptsetup status luks 2>/dev/null \
          | grep -qE 'no_(read|write)_workqueue'; then
-        echo "chezmoi: enabling dm-crypt no-workqueue flags on luks"
+        echo "chezmoi: applying dm-crypt no-workqueue flags (live, this session)"
         sudo cryptsetup refresh \
             --perf-no_read_workqueue \
-            --perf-no_write_workqueue \
-            --persistent luks 2>&1 \
-         || echo "chezmoi: WARNING cryptsetup refresh failed (LUKS1?)" >&2
+            --perf-no_write_workqueue luks \
+         && cat <<MSG
+chezmoi: live flags applied. To persist across reboots, run once:
+
+    sudo cryptsetup refresh \\
+        --perf-no_read_workqueue \\
+        --perf-no_write_workqueue \\
+        --persistent luks
+
+You will be prompted for your LUKS passphrase. The --persistent flag
+writes the performance options into the LUKS2 header so every future
+boot brings up the mapper with them set.
+MSG
     fi
 fi
 
