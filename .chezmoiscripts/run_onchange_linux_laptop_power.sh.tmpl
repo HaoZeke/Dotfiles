@@ -274,11 +274,18 @@ fi
 
 # Persistent journal so `journalctl -b -1` survives reboots. Essential
 # for debugging hibernate-resume and OOM-kill chains after the fact.
-if [ ! -d /var/log/journal ]; then
+# Guard on emptiness rather than existence: the directory exists as an
+# empty placeholder on stock Arch installs, and systemd-journald only
+# starts persisting once it finds the directory populated with the
+# right ownership and a flush signal.
+if [ -z "$(sudo ls -A /var/log/journal 2>/dev/null)" ]; then
     echo "chezmoi: enabling persistent journal"
     sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal
     sudo systemd-tmpfiles --create --prefix /var/log/journal >/dev/null || true
-    sudo systemctl restart systemd-journald
+    # SIGUSR1 asks journald to flush runtime logs to persistent
+    # storage without a service restart -- safer than `restart
+    # systemd-journald` mid-session.
+    sudo systemctl kill --signal=SIGUSR1 systemd-journald || true
 fi
 
 # Conflicting services first: TLP and power-profiles-daemon cannot both
