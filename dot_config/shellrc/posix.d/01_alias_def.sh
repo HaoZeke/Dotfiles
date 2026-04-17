@@ -16,7 +16,16 @@ alias tb="nc termbin.com 9999"
 # Make directory
 alias md='mkdir -p'
 
-# Emacs for the terminal
+# Emacs: prefer the persistent daemon via emacsclient. First launch of
+# the day starts the daemon (slow -- Doom init + native-comp); every
+# subsequent window is instant.
+#   e       GUI window attached to the daemon
+#   ec      terminal (-nw) attached to the daemon
+#   emacs   plain terminal Emacs (no daemon)
+# -c  new frame, -a ''  auto-start daemon if not running, -n  don't
+# wait for the frame to close before returning.
+alias e='emacsclient -c -n -a ""'
+alias ec='emacsclient -nw -a ""'
 alias emacs='emacs -nw'
 
 # Better ls
