@@ -148,6 +148,15 @@ if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     sudo systemctl restart systemd-logind || true
 fi
 
+# Persistent journal so `journalctl -b -1` survives reboots. Essential
+# for debugging hibernate-resume and OOM-kill chains after the fact.
+if [ ! -d /var/log/journal ]; then
+    echo "chezmoi: enabling persistent journal"
+    sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal
+    sudo systemd-tmpfiles --create --prefix /var/log/journal >/dev/null || true
+    sudo systemctl restart systemd-journald
+fi
+
 # Conflicting services first: TLP and power-profiles-daemon cannot both
 # run. Drop PPD before enabling TLP so the enable doesn't trip a
 # same-name conflict.
