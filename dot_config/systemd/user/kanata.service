@@ -1,0 +1,30 @@
+# -*- systemd -*-
+# Managed by chezmoi (dot_config/systemd/user/kanata.service).
+#
+# User service. Reverted from the system-service attempt because the
+# system-level unit ran before the greeter's xkb layer applied, and
+# the greeter was configured for Colemak -- so the greeter applied
+# Colemak on top of kanata's already-Colemaked scancodes, producing
+# a doubled-Colemak scramble at login. The user service starts only
+# after sway-session.target (post-login), leaving the greeter with
+# raw QWERTY physical input and a single greeter-side Colemak pass.
+[Unit]
+Description=Kanata keyboard remapper
+Documentation=https://github.com/jtroo/kanata
+After=sway-session.target
+PartOf=sway-session.target
+
+[Service]
+ExecStart=/usr/bin/kanata -c %h/.config/kanata/config.kbd
+Restart=on-failure
+RestartSec=3
+# Keyboard remapper; losing it makes the user's layout unusable mid-
+# session and can strand them with no way to type out of the freeze.
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid
+# User-manager cannot set Nice<0 or IOSchedulingClass=realtime without
+# CAP_SYS_NICE. CPUWeight is cgroup-level and always honored.
+CPUWeight=500
+
+[Install]
+WantedBy=sway-session.target

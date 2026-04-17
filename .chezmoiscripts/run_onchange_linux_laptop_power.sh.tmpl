@@ -138,58 +138,14 @@ password  include    system-auth
 session   include    system-auth
 '
 
-KANATA_SYSTEM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Kanata as a system service instead of --user. Reason: systemd user
-# services cannot apply Nice < 0 or IOSchedulingClass=realtime without
-# CAP_SYS_NICE, which user managers do not carry. Under heavy CPU
-# load the kanata event loop then gets descheduled long enough that
-# sway observes a single keypress plus a key-repeat arriving together
-# -- doubled keys. A system service runs as root with full caps so
-# the scheduling directives actually apply.
-#
-# Falls back safely: if kanata dies, the EVIOCGRAB on /dev/input/
-# event3 releases, libinput picks up the physical keyboard, sway
-# starts getting raw (QWERTY) events. The user can still type enough
-# to diagnose, even without Colemak.
-[Unit]
-Description=Kanata keyboard remapper (system)
-Documentation=https://github.com/jtroo/kanata
-After=systemd-udev-settle.service
-Wants=systemd-udev-settle.service
-
-[Service]
-ExecStart=/usr/bin/kanata -c /home/rgoswami/.config/kanata/config.kbd
-Restart=always
-RestartSec=2
-StartLimitIntervalSec=60
-StartLimitBurst=10
-
-# Now that this is a system service with full privileges, the
-# scheduling directives that user services could not set all apply.
-Nice=-10
-IOSchedulingClass=realtime
-IOSchedulingPriority=4
-CPUWeight=500
-
-# Session-critical: kanata loss -> user types raw QWERTY, losing
-# Colemak + Extend + Icelandic AltGr. Pin it out of OOM reach.
-OOMScoreAdjust=-500
-ManagedOOMPreference=avoid
-
-# Minimal hardening. kanata only needs evdev + uinput + the config
-# file in the user home.
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-NoNewPrivileges=true
-# Must keep these because kanata opens /dev/input/ and /dev/uinput:
-DevicePolicy=closed
-DeviceAllow=char-input rw
-DeviceAllow=/dev/uinput rw
-
-[Install]
-WantedBy=multi-user.target
-'
+# KANATA_SYSTEM_CONTENT removed. The earlier attempt to run kanata as
+# a boot-time system service caused a double-Colemak scramble at the
+# greeter: kanata applied Colemak to raw QWERTY, then the greeter's
+# own Colemak xkb applied Colemak again. kanata is back to being a
+# --user service (dot_config/systemd/user/kanata.service) that starts
+# only after sway-session.target, so the greeter keeps its raw QWERTY
+# input path and applies Colemak exactly once.
+KANATA_SYSTEM_CONTENT=''
 
 BTRBK_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Local btrfs snapshot lifecycle for @home and @. Remote push to
@@ -309,7 +265,23 @@ BTRBK_CHANGED=0
 NFT_CHANGED=0
 SMARTD_CHANGED=0
 KANATA_CHANGED=0
-write_if_diff /etc/systemd/system/kanata.service             "$KANATA_SYSTEM_CONTENT" && KANATA_CHANGED=1 || true
+# The system-level kanata.service is deliberately removed; if it
+# still exists from the earlier migration, delete it so the user-
+# level unit (chezmoi-deployed at ~/.config/systemd/user/) owns
+# kanata again.
+if [ -f /etc/systemd/system/kanata.service ]; then
+    echo "chezmoi: removing obsolete /etc/systemd/system/kanata.service (caused double-Colemak at greeter)"
+    sudo systemctl disable --now kanata.service >/dev/null 2>&1 || true
+    sudo rm -f /etc/systemd/system/kanata.service
+    sudo systemctl daemon-reload
+    KANATA_CHANGED=1
+fi
+# Re-enable the user-level unit now that the system one is gone.
+if [ -f "$HOME/.config/systemd/user/kanata.service" ]; then
+    if ! systemctl --user is-enabled kanata.service >/dev/null 2>&1; then
+        systemctl --user enable --now kanata.service 2>&1 | head
+    fi
+fi
 write_if_diff /etc/btrbk/btrbk.conf                          "$BTRBK_CONTENT"        && BTRBK_CHANGED=1 || true
 write_if_diff /etc/nftables.conf                             "$NFTABLES_CONTENT"     && NFT_CHANGED=1 || true
 write_if_diff /etc/smartd.conf                               "$SMARTD_CONTENT"       && SMARTD_CHANGED=1 || true
@@ -357,29 +329,11 @@ if [ "$SMARTD_CHANGED" = "1" ] \
     sudo systemctl enable --now smartd.service >/dev/null 2>&1 || true
 fi
 
-# Migrate kanata from --user to system service. The user unit could
-# not apply Nice/IOSched class without CAP_SYS_NICE; the system unit
-# runs as root with those directives active. Sequencing: stop user
-# unit first so its EVIOCGRAB releases, then start the system unit
-# which re-grabs. Brief window of raw QWERTY in between is expected.
-if [ "$KANATA_CHANGED" = "1" ] \
-   || ( ! sudo systemctl is-enabled kanata.service >/dev/null 2>&1 ); then
-    sudo systemctl daemon-reload
-    if systemctl --user is-enabled kanata.service >/dev/null 2>&1 \
-       || systemctl --user is-active kanata.service >/dev/null 2>&1; then
-        echo "chezmoi: stopping user kanata.service before starting system one"
-        systemctl --user disable --now kanata.service 2>&1 | head
-    fi
-    # Clean up the set-property drop-in the user service left behind.
-    if [ -d "$HOME/.config/systemd/user.control/kanata.service.d" ]; then
-        rm -rf "$HOME/.config/systemd/user.control/kanata.service.d"
-    fi
-    if [ -L "$HOME/.config/systemd/user/default.target.wants/kanata.service" ]; then
-        rm -f "$HOME/.config/systemd/user/default.target.wants/kanata.service"
-    fi
-    sudo systemctl enable --now kanata.service
-    echo "chezmoi: kanata migrated to system service; check with 'systemctl status kanata.service'"
-fi
+# Kanata stays a --user service (see KANATA_SYSTEM_CONTENT comment
+# above). The migration block that installed /etc/systemd/system/
+# kanata.service has been removed; cleanup of any leftover state
+# from that attempt is handled inline above where the system unit
+# file is deleted.
 
 # --- post-deploy activation ----------------------------------------------
 if [ "$XE_CHANGED" = "1" ]; then
