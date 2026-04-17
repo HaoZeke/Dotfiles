@@ -1,0 +1,21 @@
+# Managed by chezmoi (dot_config/systemd/user/turtleback-push.service).
+[Unit]
+Description=Push latest btrbk @home snapshot to pCloud via rclone crypt
+After=network-online.target
+Wants=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/turtleback-push
+# Keep the push out of the foreground work's way.
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=50
+# Push is failure-tolerant: a missed run is recovered on the next one.
+# Do not let the push itself survive a memory emergency.
+OOMScoreAdjust=200
+ManagedOOMPreference=none
+# Cap runtime so a network stall does not leave the push wedged
+# forever.
+TimeoutStartSec=6h

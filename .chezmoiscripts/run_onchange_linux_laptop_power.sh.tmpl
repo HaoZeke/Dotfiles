@@ -78,6 +78,24 @@ password  include    system-auth
 session   include    system-auth
 '
 
+BTRBK_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Local btrfs snapshot lifecycle for @home and @. Remote push to
+# pCloud is a separate step (~/.local/bin/turtleback-push) that reads
+# the latest snapshot produced here.
+
+timestamp_format        long
+snapshot_preserve_min   2d
+snapshot_preserve       24h 14d 8w 12m
+backend                 btrfs-progs
+incremental             yes
+stream_compress         zstd
+
+volume /btrfs
+  snapshot_dir          @.snapshots
+  subvolume @home
+  subvolume @
+'
+
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
 # so lid-close goes to suspend-then-hibernate: suspend first for fast
@@ -143,7 +161,7 @@ RESTORE_THRESHOLDS_ON_BAT=1
 # --- package installation -------------------------------------------------
 if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
-    for pkg in tlp tlp-rdw acpi fprintd libfprint; do
+    for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
@@ -167,6 +185,16 @@ write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     
 write_if_diff /etc/pam.d/sudo                                "$SUDO_PAM_CONTENT"     || true
 write_if_diff /etc/pam.d/swaylock                            "$SWAYLOCK_PAM_CONTENT" || true
 write_if_diff /etc/pam.d/polkit-1                            "$POLKIT_PAM_CONTENT"   || true
+BTRBK_CHANGED=0
+write_if_diff /etc/btrbk/btrbk.conf                          "$BTRBK_CONTENT"        && BTRBK_CHANGED=1 || true
+
+if [ "$BTRBK_CHANGED" = "1" ] \
+   || ( ! sudo systemctl is-enabled btrbk.timer >/dev/null 2>&1 ); then
+    if pacman -Qi btrbk >/dev/null 2>&1; then
+        sudo systemctl enable --now btrbk.timer >/dev/null 2>&1 || true
+        echo "chezmoi: btrbk.timer enabled; run 'sudo btrbk run' once to produce the first snapshot."
+    fi
+fi
 
 # --- post-deploy activation ----------------------------------------------
 if [ "$XE_CHANGED" = "1" ]; then

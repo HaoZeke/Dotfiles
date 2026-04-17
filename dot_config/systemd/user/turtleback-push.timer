@@ -1,0 +1,12 @@
+# Managed by chezmoi (dot_config/systemd/user/turtleback-push.timer).
+[Unit]
+Description=Daily turtleback-push to pCloud (runs after btrbk produces a fresh snapshot)
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=45min
+Persistent=true
+Unit=turtleback-push.service
+
+[Install]
+WantedBy=timers.target

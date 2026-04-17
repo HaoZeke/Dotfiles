@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_turtleback-push).
+#
+# Backup the most recent btrbk-produced snapshot of @home to pCloud
+# via restic + rclone WebDAV. restic does content-defined chunking,
+# zstd compression, and AES-256-GCM encryption -- in that order, so
+# encryption is applied after compression and dedup works. rclone is
+# pure transport here; no rclone crypt layer on top (which would
+# encrypt an already-encrypted-and-compressed blob redundantly and
+# break any future server-side hint-based optimisation).
+#
+# Credential flow (nothing plaintext ever touches disk):
+#   pass services/pcloud  line 1      -> pCloud WebDAV password
+#   pass services/pcloud  email:      -> WebDAV username
+#   pass services/pcloud  webdav_eu:  -> endpoint URL
+#   pass local/borg-pcloud line 1     -> restic repository passphrase
+#
+# restic repository layout:
+#   pcloud:backup-rgx1gen11-restic/   repository root (filename-
+#                                     encrypted opaque blobs)
+#
+# Snapshot discovery:
+#   /btrfs/@.snapshots/@home.TIMESTAMP -> most recent btrbk snapshot
+
+set -euo pipefail
+
+SNAP_DIR=/btrfs/@.snapshots
+USER_SUBDIR=rgoswami
+HOST_TAG=rgx1gen11
+
+log() { printf '%(%F %T)T turtleback-push: %s\n' -1 "$*"; }
+
+# --- 1. locate btrbk snapshot ------------------------------------------------
+
+LATEST=$(ls -1dt "$SNAP_DIR"/@home.* 2>/dev/null | head -1 || true)
+if [ -z "$LATEST" ] || [ ! -d "$LATEST/$USER_SUBDIR" ]; then
+    echo "turtleback-push: no @home snapshot found in $SNAP_DIR" >&2
+    echo "  run 'sudo btrbk run' once to produce an initial snapshot" >&2
+    exit 1
+fi
+log "source snapshot: $LATEST"
+
+# --- 2. pass -> env ---------------------------------------------------------
+
+if ! command -v pass >/dev/null 2>&1; then
+    echo "turtleback-push: pass not in PATH" >&2
+    exit 127
+fi
+if ! command -v restic >/dev/null 2>&1; then
+    echo "turtleback-push: restic not installed" >&2
+    exit 127
+fi
+if ! command -v rclone >/dev/null 2>&1; then
+    echo "turtleback-push: rclone not installed (needed as restic transport)" >&2
+    exit 127
+fi
+
+PCLOUD_ENTRY=$(pass show services/pcloud)
+PCLOUD_PASS=$(printf '%s\n' "$PCLOUD_ENTRY" | sed -n '1p')
+PCLOUD_USER=$(printf '%s\n' "$PCLOUD_ENTRY" | awk '/^email:/{print $2; exit}')
+PCLOUD_URL=$(printf '%s\n'  "$PCLOUD_ENTRY" | awk '/^webdav_eu:/{print $2; exit}')
+
+if [ -z "$PCLOUD_USER" ] || [ -z "$PCLOUD_URL" ] || [ -z "$PCLOUD_PASS" ]; then
+    echo "turtleback-push: services/pcloud incomplete (need password+email+webdav_eu)" >&2
+    exit 1
+fi
+
+# rclone remote "pcloud" purely via env -- no rclone.conf on disk.
+export RCLONE_CONFIG_PCLOUD_TYPE=webdav
+export RCLONE_CONFIG_PCLOUD_VENDOR=other
+export RCLONE_CONFIG_PCLOUD_URL="$PCLOUD_URL"
+export RCLONE_CONFIG_PCLOUD_USER="$PCLOUD_USER"
+export RCLONE_CONFIG_PCLOUD_PASS=$(printf '%s' "$PCLOUD_PASS" | rclone obscure -)
+
+# restic pulls its repo password from a command, not from an env var,
+# so nothing ever sits in RESTIC_PASSWORD.
+export RESTIC_REPOSITORY="rclone:pcloud:backup-rgx1gen11-restic"
+export RESTIC_PASSWORD_COMMAND='pass show local/borg-pcloud | head -n1'
+# Force restic to write its own config to $HOME/.cache/restic, not to
+# some unpredictable default on the snapshot mount.
+export RESTIC_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/restic"
+mkdir -p "$RESTIC_CACHE_DIR"
+
+# --- 3. init repo on first run ---------------------------------------------
+
+if ! restic --quiet cat config >/dev/null 2>&1; then
+    log "repository not initialized; running restic init"
+    restic init
+fi
+
+# --- 4. backup --------------------------------------------------------------
+
+log "backing up $LATEST/$USER_SUBDIR (host=$HOST_TAG tag=home)"
+
+restic backup "$LATEST/$USER_SUBDIR" \
+    --host "$HOST_TAG" \
+    --tag home \
+    --tag "btrbk=$(basename "$LATEST")" \
+    --exclude-caches \
+    --exclude '**/.cache' \
+    --exclude '**/node_modules' \
+    --exclude '**/target' \
+    --exclude '**/__pycache__' \
+    --exclude '**/.venv' \
+    --exclude '**/.mypy_cache' \
+    --exclude '**/.pytest_cache' \
+    --exclude '**/.ruff_cache' \
+    --exclude '**/.npm' \
+    --exclude '**/.cargo/registry' \
+    --exclude '**/.cargo/git' \
+    --exclude '**/.rustup' \
+    --exclude '**/go/pkg' \
+    --exclude '**/.local/share/containers' \
+    --exclude '**/.local/share/Trash' \
+    --exclude '**/.local/share/baloo' \
+    --exclude '**/.mozilla/firefox/*/cache*' \
+    --exclude '**/.mozilla/firefox/*/storage/default' \
+    --exclude '**/.thunderbird/*/ImapMail' \
+    --exclude '**/.config/Code*/Cache*' \
+    --exclude '**/.config/Code*/User/workspaceStorage' \
+    --exclude '**/.config/BraveSoftware/*/Cache' \
+    --exclude '**/.config/chromium/*/Cache*' \
+    --exclude '**/.claude/projects/*/shell-snapshots' \
+    --exclude '**/.claude/plugins/cache' \
+    --exclude '**/Downloads' \
+    --exclude '**/.trash' \
+    --exclude '**/.Trash' \
+    --exclude-if-present .nobackup \
+    --iexclude '*.iso' \
+    --iexclude '*.qcow2' \
+    --iexclude '*.vdi' \
+    --iexclude '*.vmdk'
+
+# --- 5. prune old snapshots (GFS retention) --------------------------------
+
+log "applying retention policy"
+restic forget \
+    --host "$HOST_TAG" \
+    --tag home \
+    --keep-daily 14 \
+    --keep-weekly 8 \
+    --keep-monthly 12 \
+    --keep-yearly 3 \
+    --prune \
+    --quiet
+
+# --- 6. integrity check (cheap, reads pack headers only) --------------------
+
+log "running restic check --read-data-subset=5%"
+restic check --read-data-subset=5% --quiet || \
+    log "WARNING: restic check reported issues; investigate soon"
+
+log "push complete"
