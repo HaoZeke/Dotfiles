@@ -246,3 +246,6 @@ dot_claude/
 ~/.claude/agents/ridley-dev.md
 ~/.claude/agents/ttech-ops-infra.md
 ~/Git/Github/TheochemUI/eOn/.project-ctx.toml
+~/.claude/superpowers-overrides.md
+~/.claude/mcp-dispatched-servers.json
+~/.claude/agent-memory-template.md
