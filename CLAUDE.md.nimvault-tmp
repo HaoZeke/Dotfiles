@@ -1,0 +1,56 @@
+# Chezmoi Dotfiles
+
+This repo manages dotfiles via [chezmoi](https://www.chezmoi.io/).
+Secrets are stored as opaque GPG blobs using [nimvault](https://github.com/HaoZeke/nimvault).
+
+## Vault rules
+
+- **ALL AI-related configuration MUST be vaulted.** This covers three categories:
+
+### Claude Code and global config
+  - `~/.claude/CLAUDE.md` -- global prompt instructions, workflow rules
+  - `~/.claude/settings.json` -- permission model, allowed tools
+  - `~/.claude/.credentials.json` -- API authentication
+  - `~/.claude/claude-mcp-servers.json` -- MCP server definitions (delegate-local, context7, etc.)
+  - `~/.claude/hooks/` -- hook scripts (rtk-rewrite.sh, etc.)
+  - `~/.claude/statusline-command.sh` -- status bar integration
+  - `~/.claude/RTK.md` -- Rust Token Killer proxy docs
+  - `~/.claude/writing-style.md`, `~/.claude/doc-guidelines.md` -- style guides
+
+### Agent definitions, memories, and local LLM infrastructure
+  - `~/.claude/agents/*.md` -- custom agent system prompts, tool permissions, workflow rules
+  - `~/.claude/projects/*/memory/*.md` -- per-project accumulated context (feedback, references, user prefs)
+  - `~/.claude/gpu-llm.md` -- GPU LLM server config (SSH tunnels, ports, model tiers, MCP delegation routing, ICM memory, RAG indexing)
+  - MCP server configs that reference `delegate_to_local`, `pi-coding-agent`, or any local model endpoints
+  - Any shell functions or scripts that wire up `pi-fast`, `pi-write`, `claude-local`, or `gpu-llm-up/down/status`
+  - pi-coding-agent configuration (system prompts, model endpoints, tool permissions)
+  - ICM memory databases and RAG indexes contain project-specific knowledge and should not be committed
+
+### Per-project CLAUDE.md files
+  - Any CLAUDE.md managed through chezmoi for external repos (e.g. `~/Git/.../CLAUDE.md`)
+  - These contain project-specific prompt rules, often referencing internal tooling or private patterns
+
+- **Why vault all of this**: AI config contains prompt instructions, API credentials, tool routing, writing style preferences, local infrastructure details (SSH hosts, ports, model names), and delegation logic. Leaking any of it exposes workflow internals and potentially credentials.
+- When adding new AI-related files, always: `nimvault add <path> && nimvault seal`
+- Verify with `nimvault status` before committing
+
+## Vault operations
+
+```bash
+nimvault list          # Show all tracked files
+nimvault status        # Check sync state
+nimvault seal          # Encrypt all tracked files (before git push)
+nimvault unseal        # Decrypt all tracked files (after git pull)
+nimvault add <path>    # Track a new file
+nimvault rm <path>     # Stop tracking a file
+```
+
+## chezmoi integration
+
+The `run_before` template script calls `nimvault unseal` during `chezmoi apply`,
+so secrets are restored automatically on new machines (requires GPG key via Keybase).
+
+## What NOT to vault
+
+- Public dotfiles (shell rc, git config, editor config) stay as normal chezmoi templates
+- Only vault files that contain secrets, credentials, or AI-specific configuration
