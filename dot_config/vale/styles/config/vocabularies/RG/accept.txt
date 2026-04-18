@@ -163,3 +163,10 @@ vesin
 ntomp
 tmpi
 ASV
+[Mm]ergeability
+review_requested
+MKL
+[Mm]kl
+libomp
+libgomp
+[Cc]eriotti
