@@ -99,7 +99,7 @@ font:
     #   - (Linux/BSD) monospace
     #   - (Windows) Consolas
     # family: CaskaydiaCove Nerd Font
-    family: Intel One Mono
+    family: AtkinsonHyperlegibleMono Nerd Font
 
     # The `style` can be specified to pick a specific face.
     #style: Regular
