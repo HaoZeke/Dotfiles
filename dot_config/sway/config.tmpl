@@ -6,6 +6,12 @@
 
 ### Variables
 #
+# Palette variables populated by rg-theme (~/.config/sway/colors.conf
+# is a symlink into ~/.local/share/rg-theme/palettes/<palette>/<mode>/).
+# Included early so $bar_bg, $ws_focus_bg etc. resolve when the
+# bar { } and client.* blocks below are parsed.
+include $HOME/.config/sway/colors.conf
+
 # Logo key. Use Mod1 for Alt.
 set $mod Mod4
 # Home row direction keys, like vim
@@ -295,13 +301,13 @@ bar {
     font pango:Atkinson Hyperlegible, FontAwesome 12
 
     colors {
-        separator #666666
-        background #222222
-        statusline #dddddd
-        focused_workspace #0088CC #0088CC #ffffff
-        active_workspace #333333 #333333 #ffffff
-        inactive_workspace #333333 #333333 #888888
-        urgent_workspace #2f343a #900000 #ffffff
+        separator          $bar_sep
+        background         $bar_bg
+        statusline         $bar_fg
+        focused_workspace  $ws_focus_bg    $ws_focus_bg    $ws_focus_fg
+        active_workspace   $ws_active_bg   $ws_active_bg   $ws_active_fg
+        inactive_workspace $ws_inactive_bg $ws_inactive_bg $ws_inactive_fg
+        urgent_workspace   $ws_urgent_bg   $ws_urgent_bg   $ws_urgent_fg
     }
 }
 
@@ -314,13 +320,13 @@ bar {
     font pango:Atkinson Hyperlegible, FontAwesome 12
 
     colors {
-        separator #666666
-        background #222222
-        statusline #dddddd
-        focused_workspace #0088CC #0088CC #ffffff
-        active_workspace #333333 #333333 #ffffff
-        inactive_workspace #333333 #333333 #888888
-        urgent_workspace #2f343a #900000 #ffffff
+        separator          $bar_sep
+        background         $bar_bg
+        statusline         $bar_fg
+        focused_workspace  $ws_focus_bg    $ws_focus_bg    $ws_focus_fg
+        active_workspace   $ws_active_bg   $ws_active_bg   $ws_active_fg
+        inactive_workspace $ws_inactive_bg $ws_inactive_bg $ws_inactive_fg
+        urgent_workspace   $ws_urgent_bg   $ws_urgent_bg   $ws_urgent_fg
     }
 }
 
@@ -352,6 +358,20 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080
 # The scaling is because of the DPI stuff
 # Swap 1600 and 0 to get the screen on the relative left
+
+# Window borders pick up the active palette via the same include at
+# the top of this file.
+#             border            background        text              indicator           child_border
+client.focused           $border_focus     $border_focus     $bar_fg           $border_focus_ind   $border_focus
+client.focused_inactive  $border_unfocus   $border_unfocus   $bar_fg           $border_unfocus     $border_unfocus
+client.unfocused         $border_unfocus   $bar_bg           $bar_fg           $border_unfocus     $border_unfocus
+client.urgent            $border_urgent    $border_urgent    $bar_fg           $border_urgent      $border_urgent
+client.placeholder       $border_unfocus   $bar_bg           $bar_fg           $border_unfocus     $border_unfocus
+
+# rg-theme palette toggle + picker. F1 flips light/dark in the current
+# palette; F2 pops the rofi picker for a palette switch.
+bindsym $mod+Shift+F1 exec rg-theme toggle
+bindsym $mod+Shift+F2 exec rg-theme pick
 
 include /etc/sway/config.d/*
 include $HOME/.config/sway/conf.d/*

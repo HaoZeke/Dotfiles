@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Install (or refresh) the rg-theme binary from its source repo at
+# ~/Git/Github/Tools/rg-theme.  Runs on content change of this script
+# and whenever the source tree's HEAD commit changes -- triggered via
+# the HEAD stamp baked into the comment below.
+#
+# HEAD stamp (updates on apply): {{ output "git" "-C" (printf "%s/Git/Github/Tools/rg-theme" .chezmoi.homeDir) "rev-parse" "HEAD" | trim }}
+
+set -euo pipefail
+
+SRC="$HOME/Git/Github/Tools/rg-theme"
+BIN="$HOME/.local/bin/rg-theme"
+
+if [ ! -d "$SRC" ]; then
+    echo "chezmoi: rg-theme source missing at $SRC; skipping install." >&2
+    echo "  git clone git@github.com:HaoZeke/rg-theme.git $SRC" >&2
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "chezmoi: cargo not found; install rustup first, then rerun chezmoi apply." >&2
+    exit 0
+fi
+
+# -j4 cap per the local-build policy in ~/.claude/CLAUDE.md.  This is
+# a user-initiated build (chezmoi apply on the laptop), not an agent
+# compile step, so the cosmolab offload does not apply here -- but
+# the job cap still does.
+export CARGO_BUILD_JOBS=4
+
+echo "chezmoi: installing rg-theme from $SRC into ~/.local ..."
+cargo install --quiet --path "$SRC" --root "$HOME/.local" --locked
+
+# Bootstrap the default state + symlinks if this is a fresh install.
+# rg-theme apply is idempotent; calling it twice is harmless.
+if [ ! -f "$HOME/.local/state/rg-theme/state" ]; then
+    echo "chezmoi: bootstrapping rg-theme state (tomorrow / dark)"
+    "$BIN" apply || true
+fi
+{{- end }}

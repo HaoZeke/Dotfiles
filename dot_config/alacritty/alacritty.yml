@@ -2,6 +2,12 @@
 # Any items in the `env` entry below will be added as
 # environment variables. Some entries may override variables
 # set by alacritty itself.
+
+# colors.yml is a symlink managed by rg-theme; flip the palette or
+# light/dark mode via `rg-theme toggle` or `rg-theme pick`.
+import:
+  - ~/.config/alacritty/colors.yml
+
 #env:
   # TERM variable
   #

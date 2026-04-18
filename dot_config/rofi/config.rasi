@@ -156,4 +156,8 @@ configuration {
       sorting-method:    "name";
   }
 }
+/* Base layout comes from the built-in "solarized" theme; rg-theme
+ * re-points colors.rasi at a palette-specific overlay that recolours
+ * on top. Flip via `rg-theme toggle` / `rg-theme pick`. */
 @theme "solarized"
+@import "~/.config/rofi/colors.rasi"
