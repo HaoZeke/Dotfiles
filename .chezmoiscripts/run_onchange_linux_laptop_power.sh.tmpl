@@ -167,8 +167,17 @@ volume /btrfs
 
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
-# so lid-close goes to suspend-then-hibernate: suspend first for fast
-# resume, fall through to hibernate after the timeout set in sleep.conf.d.
+# so lid-close-on-battery goes to suspend-then-hibernate: suspend first for
+# fast resume, fall through to hibernate after the timeout set in
+# sleep.conf.d. On AC (HandleLidSwitchExternalPower=suspend) there is no
+# hibernate fall-through -- a plugged-in laptop never hibernates from lid.
+#
+# IdleAction is plain suspend (not suspend-then-hibernate) so AC idle
+# never hibernates either. Battery idle still needs to hibernate eventually
+# to protect state across a dead battery; that path is handled in
+# user-space by swayidle calling ~/.local/bin/rg-idle-hibernate, which
+# checks /sys/class/power_supply/AC*/online and no-ops when plugged in.
+#
 # Hardware Fn+Suspend/Fn+Hibernate keys are deliberately ignored; the
 # only sanctioned sleep paths are lid close, idle timeout, the sway
 # keybinding, or an explicit systemctl invocation.
@@ -176,7 +185,7 @@ LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_
 HandleLidSwitch=suspend-then-hibernate
 HandleLidSwitchDocked=ignore
 HandleLidSwitchExternalPower=suspend
-IdleAction=suspend-then-hibernate
+IdleAction=suspend
 IdleActionSec=45min
 HandleSuspendKey=ignore
 HandleHibernateKey=ignore

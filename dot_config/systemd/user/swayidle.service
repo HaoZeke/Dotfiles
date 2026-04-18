@@ -8,10 +8,12 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-# Idle staircase, battery-kind:
+# Idle staircase:
 #   240s   dim the display by 30% (save -> -30%); restore on activity
 #   300s   lock the screen
 #   450s   DPMS off; DPMS on when the user comes back
+#   2700s  rg-idle-hibernate: hibernate only if on battery, no-op on AC
+#          (logind IdleAction=suspend covers AC; this covers battery)
 #   sleep  pause media, lock before actual suspend
 # brightnessctl -s saves current level, brightnessctl -r restores it
 # so a low-brightness work session is not stomped by the idle dim.
@@ -19,6 +21,7 @@ ExecStart=/usr/bin/swayidle -w \
          timeout 240 'brightnessctl -s set 30%-' resume 'brightnessctl -r' \
          timeout 300 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
          timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
+         timeout 2700 '%h/.local/bin/rg-idle-hibernate' \
          before-sleep 'playerctl pause' \
          before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
          idlehint 780
