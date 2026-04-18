@@ -171,27 +171,32 @@ volume /btrfs
 '
 
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# s2idle firmware (no ACPI deep sleep) drains battery during plain suspend,
-# so lid-close-on-battery goes to suspend-then-hibernate: suspend first for
-# fast resume, fall through to hibernate after the timeout set in
-# sleep.conf.d. On AC (HandleLidSwitchExternalPower=suspend) there is no
-# hibernate fall-through -- a plugged-in laptop never hibernates from lid.
+# Policy: on AC the laptop never goes to sleep on its own. Lid close,
+# idle timeout, Fn+Suspend, Fn+Hibernate -- all ignored. The only
+# sanctioned sleep paths on AC are the power button (HandlePowerKey
+# below) and the explicit sway keybindings ($mod+Shift+Escape for
+# suspend-then-hibernate, $mod+Ctrl+Shift+Escape for direct hibernate).
 #
-# IdleAction is plain suspend (not suspend-then-hibernate) so AC idle
-# never hibernates either. Battery idle still needs to hibernate eventually
-# to protect state across a dead battery; that path is handled in
-# user-space by swayidle calling ~/.local/bin/rg-idle-hibernate, which
-# checks /sys/class/power_supply/AC*/online and no-ops when plugged in.
+# On battery, lid-close is still suspend-then-hibernate: plain suspend
+# (s2idle firmware, no ACPI deep sleep) drains battery, so suspend
+# first for fast resume, fall through to hibernate after the timeout
+# set in sleep.conf.d.
 #
-# Hardware Fn+Suspend/Fn+Hibernate keys are deliberately ignored; the
-# only sanctioned sleep paths are lid close, idle timeout, the sway
-# keybinding, or an explicit systemctl invocation.
+# Idle suspend is disabled here unconditionally (IdleAction=ignore).
+# Battery idle hibernation is moved entirely into user-space so it
+# can be AC-conditional: swayidle fires ~/.local/bin/rg-idle-hibernate
+# at 2700s, which checks /sys/class/power_supply/A{C,DP}*/online and
+# hibernates only when unplugged.
+#
+# HandlePowerKey is suspend-then-hibernate so a press of the physical
+# power button on either power source is the manual sleep trigger.
 [Login]
 HandleLidSwitch=suspend-then-hibernate
 HandleLidSwitchDocked=ignore
-HandleLidSwitchExternalPower=suspend
-IdleAction=suspend
+HandleLidSwitchExternalPower=ignore
+IdleAction=ignore
 IdleActionSec=45min
+HandlePowerKey=suspend-then-hibernate
 HandleSuspendKey=ignore
 HandleHibernateKey=ignore
 '
