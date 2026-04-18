@@ -42,10 +42,15 @@ ACTION=="add|change", KERNEL=="mmcblk[0-9]",              ATTR{queue/scheduler}=
 XE_MODPROBE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Intel Xe driver power knobs for the X1 Gen 11 integrated GPU (9a49).
 # Panel Self Refresh and Frame Buffer Compression drop display power
-# draw 10-30% on battery. Panel Replay is the newer successor to PSR
-# for eDP 1.5 panels and only engages when the panel advertises
-# support, so keeping both enabled is safe.
-options xe enable_psr=1 enable_fbc=1 enable_panel_replay=1
+# draw 10-30% on battery.
+#
+# Panel Replay (enable_panel_replay=1) was tried but caused visible
+# post-hibernate redraw lag: swaylock took keystrokes without drawing
+# the ring, and Chromium frames went stale until a mouse move forced
+# a full modeset. The 99-rg-resume-kick hook below works around a
+# chunk of that, but dropping Panel Replay removes the root cause on
+# the Xe + eDP 1.5 combo in this laptop; regular PSR stays on.
+options xe enable_psr=1 enable_fbc=1
 '
 
 SUDO_PAM_CONTENT='#%PAM-1.0
@@ -198,6 +203,58 @@ HibernateDelaySec=20min
 SuspendState=mem
 '
 
+# system-sleep hook that kicks the Wayland session awake after a
+# suspend or hibernate cycle. Without it:
+#   * mouse clicks went completely dead on resume (keyboard fine).
+#     libinput picked up new evdev nodes but the sway seat stayed on
+#     the pre-suspend pointer grab, so clicks hit nothing.
+#   * swaylock showed no keystroke feedback (Panel Replay holding the
+#     last frame until a full modeset came through).
+# The hook is executed by systemd-sleep(8) with $1 in {pre,post} and
+# $2 in {suspend,hibernate,suspend-then-hibernate,hybrid-sleep}.
+RESUME_KICK_CONTENT='#!/usr/bin/env bash
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Re-arm the sway input subsystem after a sleep/hibernate cycle so
+# the mouse is not stuck and the display latches a fresh modeset.
+# Run as root from systemd-sleep; we find the active sway session by
+# scanning the per-user sway IPC sockets.
+
+set -u
+
+case "$1/$2" in
+    post/suspend|post/hibernate|post/suspend-then-hibernate|post/hybrid-sleep)
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+
+# Force libinput to re-enumerate every pointer and keyboard device.
+# This alone unsticks most "clicks do nothing" cases on Intel Xe +
+# Wayland; the swaymsg block below handles the lock-file cursor
+# grab left over from swaylock.
+/usr/bin/udevadm trigger --action=change --subsystem-match=input || true
+
+for sock in /run/user/*/sway-ipc.*.sock; do
+    [ -S "$sock" ] || continue
+    uid=$(stat -c %u "$sock" 2>/dev/null) || continue
+    [ -n "$uid" ] || continue
+    # Re-enable input, drop any stale cursor grab, then bounce DPMS
+    # so the Xe driver re-programs the panel -- enough on its own to
+    # clear a Panel-Replay stuck frame, though we also disabled
+    # Panel Replay at module load.
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:pointer events enabled"    >/dev/null 2>&1 || true
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:touchpad events enabled"   >/dev/null 2>&1 || true
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:keyboard events enabled"   >/dev/null 2>&1 || true
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "seat - cursor_set default"            >/dev/null 2>&1 || true
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "output * dpms off"                    >/dev/null 2>&1 || true
+    sleep 0.2
+    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "output * dpms on"                     >/dev/null 2>&1 || true
+done
+
+exit 0
+'
+
 # TLP: Intel P-state host with HWP and ThinkPad charge thresholds.
 # Matches the 21HM ThinkPad (T14 Gen 3) hardware stack.
 TLP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -267,6 +324,23 @@ write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTE
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
+
+# system-sleep hook: runs as root on every suspend/hibernate cycle.
+# Written with 0755 via a separate path because write_if_diff always
+# stamps 0644, and systemd-sleep refuses to execute non-executable
+# hooks.
+RESUME_KICK_PATH=/usr/lib/systemd/system-sleep/99-rg-resume-kick
+RESUME_KICK_CHANGED=0
+if ! sudo test -f "$RESUME_KICK_PATH" \
+   || ! printf "%s" "$RESUME_KICK_CONTENT" | sudo cmp -s - "$RESUME_KICK_PATH"; then
+    TMP=$(mktemp)
+    printf "%s" "$RESUME_KICK_CONTENT" > "$TMP"
+    sudo install -D -m 0755 -o root -g root "$TMP" "$RESUME_KICK_PATH"
+    rm -f "$TMP"
+    echo "chezmoi: updated $RESUME_KICK_PATH"
+    RESUME_KICK_CHANGED=1
+fi
+
 write_if_diff /etc/pam.d/sudo                                "$SUDO_PAM_CONTENT"     || true
 write_if_diff /etc/pam.d/swaylock                            "$SWAYLOCK_PAM_CONTENT" || true
 write_if_diff /etc/pam.d/polkit-1                            "$POLKIT_PAM_CONTENT"   || true

@@ -19,11 +19,11 @@ Type=simple
 # so a low-brightness work session is not stomped by the idle dim.
 ExecStart=/usr/bin/swayidle -w \
          timeout 240 'brightnessctl -s set 30%-' resume 'brightnessctl -r' \
-         timeout 300 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         timeout 300 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
          timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
          timeout 2700 '%h/.local/bin/rg-idle-hibernate' \
          before-sleep 'playerctl pause' \
-         before-sleep 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         before-sleep 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
          idlehint 780
 # Lock-screen hook fires on before-sleep; losing it mid-suspend leaves
 # the laptop unlocked on wake. Keep this unit out of OOM reach.

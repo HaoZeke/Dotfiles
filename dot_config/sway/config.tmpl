@@ -116,11 +116,11 @@ gaps inner 5
 
     # Lock screen
     # After scu-enable-now swayidle.target
-    bindsym --no-repeat $mod+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png --daemonize'
+    bindsym --no-repeat $mod+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize'
 
     # Lock + suspend-then-hibernate (auto-hibernates after HibernateDelaySec
     # configured in /etc/systemd/sleep.conf.d/50-hibernate.conf).
-    bindsym --no-repeat $mod+Shift+Escape exec 'swaylock -f --clock --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
+    bindsym --no-repeat $mod+Shift+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
 
     # Exit sway (logs you out of your Wayland session)
     bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
