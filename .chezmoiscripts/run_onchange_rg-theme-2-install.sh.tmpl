@@ -18,19 +18,18 @@ if [ ! -d "$SRC" ]; then
     exit 0
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-    echo "chezmoi: cargo not found; install rustup first, then rerun chezmoi apply." >&2
+if ! command -v pixi >/dev/null 2>&1; then
+    echo "chezmoi: pixi not found; install pixi first, then rerun chezmoi apply." >&2
     exit 0
 fi
 
-# -j4 cap per the local-build policy in ~/.claude/CLAUDE.md.  This is
-# a user-initiated build (chezmoi apply on the laptop), not an agent
-# compile step, so the cosmolab offload does not apply here -- but
-# the job cap still does.
+# -j4 cap per the local-build policy in ~/.claude/CLAUDE.md. The
+# pixi task just wraps `cargo install --path . --root ~/.local`, so
+# the env var flows through to cargo and caps parallelism at four.
 export CARGO_BUILD_JOBS=4
 
-echo "chezmoi: installing rg-theme from $SRC into ~/.local ..."
-cargo install --quiet --path "$SRC" --root "$HOME/.local" --locked
+echo "chezmoi: installing rg-theme via 'pixi run install' ..."
+(cd "$SRC" && pixi run install)
 
 # Bootstrap the default state + symlinks if this is a fresh install.
 # rg-theme apply is idempotent; calling it twice is harmless.

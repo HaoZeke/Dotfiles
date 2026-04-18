@@ -237,7 +237,11 @@
     # Context menu.
     context = ctrl+shift+period
 
-{{- template "dunst/tomorrow-night.conf" . -}}
+# Colours are provided by the rg-theme drop-in at
+# ~/.config/dunst/dunstrc.d/50-rg-theme.conf (a symlink into the
+# active palette). dunst >= 1.13 loads dunstrc.d/*.conf automatically;
+# dunstctl reload picks up palette changes without a restart.
+
 # Every section that isn't one of the above is interpreted as a rules to
 # override settings for certain messages.
 #
