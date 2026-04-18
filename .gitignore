@@ -249,3 +249,4 @@ dot_claude/
 ~/.claude/superpowers-overrides.md
 ~/.claude/mcp-dispatched-servers.json
 ~/.claude/agent-memory-template.md
+~/.claude/rp-style-template.md
