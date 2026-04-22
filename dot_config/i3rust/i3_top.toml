@@ -37,7 +37,7 @@ interval = 2
 
 [[block]]
 block = "custom"
-command = "~/.local/bin/rg-caffeine status-json"
+command = "~/.local/bin/rg-caffeine summary-status-json"
 json = true
 interval = 30
 watch_files = ["/home/rgoswami/.local/state"]
@@ -46,36 +46,16 @@ button = "left"
 cmd = "~/.local/bin/rg-caffeine toggle"
 [[block.click]]
 button = "middle"
-cmd = "~/.local/bin/rg-caffeine timed 2h"
-[[block.click]]
-button = "right"
-cmd = "~/.local/bin/rg-caffeine off"
-
-[[block]]
-block = "custom"
-command = "~/.local/bin/rg-caffeine performance-status-json"
-json = true
-interval = 30
-watch_files = ["/home/rgoswami/.local/state"]
-[[block.click]]
-button = "left"
 cmd = "~/.local/bin/rg-caffeine performance-toggle"
 [[block.click]]
 button = "right"
-cmd = "~/.local/bin/rg-caffeine performance-off"
-
-[[block]]
-block = "custom"
-command = "~/.local/bin/rg-caffeine focus-status-json"
-json = true
-interval = 30
-watch_files = ["/home/rgoswami/.local/state"]
-[[block.click]]
-button = "left"
 cmd = "~/.local/bin/rg-caffeine focus-toggle"
 [[block.click]]
-button = "right"
-cmd = "~/.local/bin/rg-caffeine focus-off"
+button = "up"
+cmd = "~/.local/bin/rg-caffeine timed 2h"
+[[block.click]]
+button = "down"
+cmd = "~/.local/bin/rg-caffeine off"
 
 [[block]]
 block = "time"

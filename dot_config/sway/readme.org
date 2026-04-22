@@ -1,7 +1,8 @@
 * Sway Session Modes And Workspace Controls
 
 This machine now has three separate session concepts, and they are meant
-to be read literally:
+to be read literally. In the top bar they are now summarized into one
+compact mode block so they do not eat the whole status line.
 
 | Bar label | Meaning | Locking | Idle sleep | Performance backend |
 |-----------+---------+---------+------------+---------------------|
@@ -9,6 +10,7 @@ to be read literally:
 | = AWAKE= | block idle-triggered sleep only | yes | blocked | unchanged |
 | =BOOST ON= | request the performance profile only | unchanged | unchanged | on |
 | =FOCUS ON= | =AWAKE + BOOST= together | yes | blocked | on |
+| =MIXED= | unusual combination, usually legacy/manual state | varies | varies | varies |
 
 So the intended reading is:
 
@@ -21,6 +23,27 @@ So the intended reading is:
 The old "presentation" idea still exists in =rg-caffeine= as a CLI mode,
 but it is not the main keyboard path anymore. The keyboard path is the
 clearer =focus = awake + boost= behavior.
+
+* Top bar block
+
+The upper bar now uses one compact mode block instead of separate coffee /
+boost / focus segments.
+
+| Bar text | Meaning |
+|----------+---------|
+| = Auto= | default behavior |
+| = Awake= | idle sleep blocked |
+| = Boost= | performance profile only |
+| = Focus= | awake + boost |
+| = Mixed= | non-default combination |
+
+Mouse actions on that block:
+
+- left click: toggle =AWAKE=
+- middle click: toggle =BOOST=
+- right click: toggle =FOCUS=
+- wheel up: timed =AWAKE= for 2 hours
+- wheel down: restore default idle policy
 
 * Keybindings
 

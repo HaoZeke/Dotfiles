@@ -6,7 +6,12 @@ use std::process::{self, Command, ExitStatus, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const TIMED_DEFAULT: &str = "2h";
+const AUTO_ICON: &str = "\u{f236}";
 const COFFEE_ICON: &str = "\u{f0f4}";
+const BOOST_ICON: &str = "\u{f0e7}";
+const FOCUS_ICON: &str = "\u{f140}";
+const PRESENT_ICON: &str = "\u{f108}";
+const MIXED_ICON: &str = "\u{f0ec}";
 const INHIBITOR_SERVICE: &str = "rg-caffeine-idle-inhibit.service";
 const PERFORMANCE_SERVICE: &str = "rg-caffeine-performance.service";
 const SUDO_BIN: &str = "/usr/bin/sudo";
@@ -879,6 +884,93 @@ fn focus_status_json(
     }
 }
 
+fn summary_status_json(
+    idle: State,
+    performance: &PerformanceState,
+    idle_health: Health,
+    performance_health_value: Health,
+) -> String {
+    let combined_health = focus_health(idle_health, performance_health_value);
+    let timer = remaining_text(idle)
+        .map(|remaining| format!(" {remaining}"))
+        .unwrap_or_default();
+
+    match combined_health {
+        Health::Error => format!(
+            "{{\"state\":\"Critical\",\"text\":\"{} Mode\",\"short_text\":\"{}!\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+            MIXED_ICON,
+            MIXED_ICON,
+            idle.mode.as_str(),
+            performance.mode.as_str(),
+            performance.backend.as_str(),
+        ),
+        _ => match (idle.mode, performance.mode) {
+            (Mode::Off, PerformanceMode::Off) => format!(
+                "{{\"state\":\"Idle\",\"text\":\"{} Auto\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                AUTO_ICON,
+                AUTO_ICON,
+                idle.mode.as_str(),
+                performance.mode.as_str(),
+                performance.backend.as_str(),
+            ),
+            (Mode::Idle, PerformanceMode::Off) => format!(
+                "{{\"state\":\"Good\",\"text\":\"{} Awake{}\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                COFFEE_ICON,
+                timer,
+                COFFEE_ICON,
+                idle.mode.as_str(),
+                performance.mode.as_str(),
+                performance.backend.as_str(),
+            ),
+            (Mode::Off, PerformanceMode::Performance) => {
+                let (state, label, short_icon) = if performance.backend == PerformanceBackend::Unavailable {
+                    ("Warning", "Boost?", BOOST_ICON)
+                } else {
+                    ("Good", "Boost", BOOST_ICON)
+                };
+                format!(
+                    "{{\"state\":\"{state}\",\"text\":\"{} {label}\",\"short_text\":\"{short_icon}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                    BOOST_ICON,
+                    idle.mode.as_str(),
+                    performance.mode.as_str(),
+                    performance.backend.as_str(),
+                )
+            }
+            (Mode::Idle, PerformanceMode::Performance) => {
+                let (state, label, short_icon) = if performance.backend == PerformanceBackend::Unavailable {
+                    ("Warning", "Focus?", FOCUS_ICON)
+                } else {
+                    ("Good", "Focus", FOCUS_ICON)
+                };
+                format!(
+                    "{{\"state\":\"{state}\",\"text\":\"{} {label}\",\"short_text\":\"{short_icon}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                    FOCUS_ICON,
+                    idle.mode.as_str(),
+                    performance.mode.as_str(),
+                    performance.backend.as_str(),
+                )
+            }
+            (Mode::Presentation, PerformanceMode::Off) => format!(
+                "{{\"state\":\"Warning\",\"text\":\"{} Present{}\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                PRESENT_ICON,
+                timer,
+                PRESENT_ICON,
+                idle.mode.as_str(),
+                performance.mode.as_str(),
+                performance.backend.as_str(),
+            ),
+            (Mode::Presentation, PerformanceMode::Performance) => format!(
+                "{{\"state\":\"Warning\",\"text\":\"{} Mixed\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                MIXED_ICON,
+                MIXED_ICON,
+                idle.mode.as_str(),
+                performance.mode.as_str(),
+                performance.backend.as_str(),
+            ),
+        },
+    }
+}
+
 fn set_focus(
     idle_path: &PathBuf,
     current_idle: State,
@@ -938,7 +1030,7 @@ fn exit_code(status: ExitStatus) -> i32 {
 
 fn print_usage() {
     eprintln!(
-        "usage: rg-caffeine [toggle|presentation-toggle|on [duration]|timed [duration]|presentation [duration]|off|enabled|mode|action-allowed <action>|run <action> <cmd...>|status|status-json|health|performance-toggle|performance-on|performance-off|performance-enabled|performance-mode|performance-backend|performance-status|performance-status-json|performance-health|performance-apply|performance-release|focus-toggle|focus-on|focus-off|focus-enabled|focus-status|focus-status-json|focus-health]"
+        "usage: rg-caffeine [toggle|presentation-toggle|on [duration]|timed [duration]|presentation [duration]|off|enabled|mode|action-allowed <action>|run <action> <cmd...>|status|status-json|summary-status-json|health|performance-toggle|performance-on|performance-off|performance-enabled|performance-mode|performance-backend|performance-status|performance-status-json|performance-health|performance-apply|performance-release|focus-toggle|focus-on|focus-off|focus-enabled|focus-status|focus-status-json|focus-health]"
     );
 }
 
@@ -1066,6 +1158,18 @@ fn main() {
         }
         "status-json" => {
             println!("{}", status_json(current_state));
+            Ok(0)
+        }
+        "summary-status-json" => {
+            println!(
+                "{}",
+                summary_status_json(
+                    current_state,
+                    &current_performance,
+                    health(current_state),
+                    performance_health(&current_performance),
+                )
+            );
             Ok(0)
         }
         "health" => {
@@ -1351,5 +1455,24 @@ mod tests {
         assert!(json.contains("\"focus\":true"), "{json}");
         assert!(json.contains("\"idle_mode\":\"idle\""), "{json}");
         assert!(json.contains("\"performance_mode\":\"performance\""), "{json}");
+    }
+
+    #[test]
+    fn summary_status_json_uses_focus_label_for_awake_and_performance() {
+        let idle = State {
+            mode: Mode::Idle,
+            expires_at: None,
+        };
+        let perf = PerformanceState {
+            mode: PerformanceMode::Performance,
+            backend: PerformanceBackend::Tlp,
+            restore_profile: None,
+        };
+
+        let json = summary_status_json(idle, &perf, Health::Ok, Health::Ok);
+
+        assert!(json.contains("\"text\":\""), "{json}");
+        assert!(json.contains("Focus"), "{json}");
+        assert!(json.contains("\"performance_backend\":\"tlp\""), "{json}");
     }
 }
