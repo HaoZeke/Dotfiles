@@ -120,16 +120,19 @@ default_floating_border pixel 2
 
     # Lock screen
     # After scu-enable-now swayidle.target
-    bindsym --no-repeat $mod+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize'
+    bindsym --no-repeat $mod+Escape exec '$HOME/.local/bin/rg-lockscreen --daemonize'
 
     # Lock + suspend-then-hibernate (auto-hibernates after HibernateDelaySec
     # configured in /etc/systemd/sleep.conf.d/50-hibernate.conf).
-    bindsym --no-repeat $mod+Shift+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
+    bindsym --no-repeat $mod+Shift+Escape exec '$HOME/.local/bin/rg-lockscreen && systemctl suspend-then-hibernate'
 
-    # Toggle idle-hibernate suppression while preserving swayidle dim/lock/DPMS
-    # and all lid/power-button sleep paths.
+    # Session modes:
+    #   caffeine: block idle sleep, keep lock behavior
+    #   boost: force the battery-side performance backend when requested
+    #   focus: presentation-style idle policy plus boost together
     bindsym --no-repeat $mod+Shift+F3 exec '$HOME/.local/bin/rg-caffeine toggle'
-    bindsym --no-repeat $mod+Ctrl+Shift+F3 exec '$HOME/.local/bin/rg-caffeine presentation-toggle'
+    bindsym --no-repeat $mod+Ctrl+F3 exec '$HOME/.local/bin/rg-caffeine performance-toggle'
+    bindsym --no-repeat $mod+Ctrl+Shift+F3 exec '$HOME/.local/bin/rg-caffeine focus-toggle'
     bindsym --no-repeat $mod+Mod1+Shift+F3 exec '$HOME/.local/bin/rg-caffeine timed 2h'
 
     # Exit sway (logs you out of your Wayland session)
@@ -161,30 +164,84 @@ default_floating_border pixel 2
 #
 # Workspaces:
 #
+    # Named workspaces keep the strip readable without losing number-row muscle
+    # memory. Leading numbers keep bar ordering stable.
+    set $ws1 "1: term"
+    set $ws2 "2: web"
+    set $ws3 "3: code"
+    set $ws4 "4: notes"
+    set $ws5 "5: chat"
+    set $ws6 "6: files"
+    set $ws7 "7: read"
+    set $ws8 "8: media"
+    set $ws9 "9: lab"
+    set $ws10 "10: admin"
+
+    # Repeating the current workspace shortcut flips back to the previous one.
+    workspace_auto_back_and_forth yes
+
     # Switch to workspace
-    bindsym $mod+1 workspace number 1
-    bindsym $mod+2 workspace number 2
-    bindsym $mod+3 workspace number 3
-    bindsym $mod+4 workspace number 4
-    bindsym $mod+5 workspace number 5
-    bindsym $mod+6 workspace number 6
-    bindsym $mod+7 workspace number 7
-    bindsym $mod+8 workspace number 8
-    bindsym $mod+9 workspace number 9
-    bindsym $mod+0 workspace number 10
+    bindsym $mod+1 workspace $ws1
+    bindsym $mod+2 workspace $ws2
+    bindsym $mod+3 workspace $ws3
+    bindsym $mod+4 workspace $ws4
+    bindsym $mod+5 workspace $ws5
+    bindsym $mod+6 workspace $ws6
+    bindsym $mod+7 workspace $ws7
+    bindsym $mod+8 workspace $ws8
+    bindsym $mod+9 workspace $ws9
+    bindsym $mod+0 workspace $ws10
+    bindsym $mod+Tab workspace back_and_forth
+
     # Move focused container to workspace
-    bindsym $mod+Shift+1 move container to workspace number 1
-    bindsym $mod+Shift+2 move container to workspace number 2
-    bindsym $mod+Shift+3 move container to workspace number 3
-    bindsym $mod+Shift+4 move container to workspace number 4
-    bindsym $mod+Shift+5 move container to workspace number 5
-    bindsym $mod+Shift+6 move container to workspace number 6
-    bindsym $mod+Shift+7 move container to workspace number 7
-    bindsym $mod+Shift+8 move container to workspace number 8
-    bindsym $mod+Shift+9 move container to workspace number 9
-    bindsym $mod+Shift+0 move container to workspace number 10
-    # Note: workspaces can have any name you want, not just numbers.
-    # We just use 1-10 as the default.
+    bindsym $mod+Shift+1 move container to workspace $ws1
+    bindsym $mod+Shift+2 move container to workspace $ws2
+    bindsym $mod+Shift+3 move container to workspace $ws3
+    bindsym $mod+Shift+4 move container to workspace $ws4
+    bindsym $mod+Shift+5 move container to workspace $ws5
+    bindsym $mod+Shift+6 move container to workspace $ws6
+    bindsym $mod+Shift+7 move container to workspace $ws7
+    bindsym $mod+Shift+8 move container to workspace $ws8
+    bindsym $mod+Shift+9 move container to workspace $ws9
+    bindsym $mod+Shift+0 move container to workspace $ws10
+
+    # Absent apps do nothing; matching apps land on the workspace that already
+    # matches their role.
+    assign [app_id="firefox"] $ws2
+    assign [app_id="librewolf"] $ws2
+    assign [class="Firefox"] $ws2
+    assign [class="LibreWolf"] $ws2
+
+    assign [app_id="code"] $ws3
+    assign [app_id="codium"] $ws3
+    assign [app_id="emacs"] $ws3
+    assign [class="Code"] $ws3
+    assign [class="VSCodium"] $ws3
+    assign [class="Emacs"] $ws3
+
+    assign [app_id="obsidian"] $ws4
+    assign [class="Obsidian"] $ws4
+
+    assign [app_id="discord"] $ws5
+    assign [app_id="signal"] $ws5
+    assign [app_id="org.telegram.desktop"] $ws5
+    assign [class="discord"] $ws5
+    assign [class="Signal"] $ws5
+    assign [class="Slack"] $ws5
+    assign [class="TelegramDesktop"] $ws5
+
+    assign [app_id="thunar"] $ws6
+    assign [class="Thunar"] $ws6
+
+    assign [app_id="zathura"] $ws7
+    assign [class="Zathura"] $ws7
+
+    assign [app_id="mpv"] $ws8
+    assign [app_id="spotify"] $ws8
+    assign [app_id="vlc"] $ws8
+    assign [class="mpv"] $ws8
+    assign [class="Spotify"] $ws8
+    assign [class="Vlc"] $ws8
 
 # Move workspace to other monitor (left right is essentially the same with two
 # monitors)

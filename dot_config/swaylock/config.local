@@ -13,8 +13,8 @@ indicator-idle-visible
 indicator-caps-lock
 scaling=fill
 
-font=Noto Sans
-font-size=24
+font=Atkinson Hyperlegible
+font-size=28
 
 indicator-radius=120
 indicator-thickness=16

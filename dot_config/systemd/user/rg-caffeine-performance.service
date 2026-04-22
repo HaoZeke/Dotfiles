@@ -1,0 +1,18 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-caffeine-performance.service).
+#
+# Holds a session-scoped boost profile while rg-caffeine asks for it.
+# The binary chooses the actual backend at runtime: prefer TLP on this
+# machine, fall back to rgpower or powerprofilesctl, otherwise no-op.
+[Unit]
+Description=Apply session performance mode while rg-caffeine is enabled
+PartOf=sway-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/rg-caffeine performance-apply
+ExecStop=%h/.local/bin/rg-caffeine performance-release
+TimeoutStartSec=30
+TimeoutStopSec=30

@@ -20,12 +20,12 @@ Type=simple
 ExecStart=/usr/bin/swayidle -w \
          timeout 240 '%h/.local/bin/rg-caffeine run dim brightnessctl -s set 30%-' \
                      resume '%h/.local/bin/rg-caffeine run dim-resume brightnessctl -r' \
-         timeout 300 '%h/.local/bin/rg-caffeine run lock swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         timeout 300 '%h/.local/bin/rg-caffeine run lock %h/.local/bin/rg-lockscreen --daemonize' \
          timeout 450 '%h/.local/bin/rg-caffeine run dpms-off swaymsg "output * dpms off"' \
                      resume '%h/.local/bin/rg-caffeine run dpms-on swaymsg "output * dpms on"' \
          timeout 2700 '%h/.local/bin/rg-idle-hibernate' \
          before-sleep 'playerctl pause' \
-         before-sleep 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         before-sleep '%h/.local/bin/rg-lockscreen --daemonize' \
          idlehint 780
 # Lock-screen hook fires on before-sleep; losing it mid-suspend leaves
 # the laptop unlocked on wake. Keep this unit out of OOM reach.

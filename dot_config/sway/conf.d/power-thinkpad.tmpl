@@ -10,5 +10,5 @@
 
 # Explicit hibernate for pre-flight or "close it for the trip" mode --
 # skip the suspend-first phase, write the image immediately, zero drain.
-bindsym $mod+Ctrl+Shift+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png && systemctl hibernate'
+bindsym $mod+Ctrl+Shift+Escape exec '$HOME/.local/bin/rg-lockscreen && systemctl hibernate'
 {{- end }}
