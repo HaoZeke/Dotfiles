@@ -122,6 +122,10 @@ gaps inner 5
     # configured in /etc/systemd/sleep.conf.d/50-hibernate.conf).
     bindsym --no-repeat $mod+Shift+Escape exec 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png && systemctl suspend-then-hibernate'
 
+    # Toggle idle-hibernate suppression while preserving swayidle dim/lock/DPMS
+    # and all lid/power-button sleep paths.
+    bindsym --no-repeat $mod+Shift+F3 exec '$HOME/.local/bin/rg-caffeine toggle'
+
     # Exit sway (logs you out of your Wayland session)
     bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
 #

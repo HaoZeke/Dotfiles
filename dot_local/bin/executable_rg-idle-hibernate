@@ -12,6 +12,10 @@
 
 set -u
 
+if [ -x "$HOME/.local/bin/rg-caffeine" ] && "$HOME/.local/bin/rg-caffeine" enabled; then
+    exit 0
+fi
+
 online=0
 for f in /sys/class/power_supply/A{C,DP}*/online; do
     [ -r "$f" ] || continue

@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-caffeine).
+#
+# Toggle and report the "caffeine" state for idle hibernate suppression.
+# This only affects the swayidle-triggered battery hibernate path; locking,
+# DPMS, lid-close, and power-button sleep remain unchanged.
+
+set -u
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
+STATE_FILE="${STATE_DIR}/rg-caffeine-idle"
+
+mkdir -p "$STATE_DIR"
+
+write_state() {
+    printf '%s\n' "$1" >"$STATE_FILE"
+}
+
+read_state() {
+    if [ ! -r "$STATE_FILE" ]; then
+        write_state off
+    fi
+
+    state="$(tr -d '[:space:]' <"$STATE_FILE" 2>/dev/null || printf 'off')"
+    case "$state" in
+        on|off)
+            printf '%s\n' "$state"
+            ;;
+        *)
+            write_state off
+            printf 'off\n'
+            ;;
+    esac
+}
+
+notify_state() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Idle caffeine" "$1" >/dev/null 2>&1 || true
+    fi
+}
+
+status_json() {
+    case "$(read_state)" in
+        on)
+            printf '%s\n' '{"state":"Good","text":"☕ ON","short_text":"☕"}'
+            ;;
+        *)
+            printf '%s\n' '{"state":"Idle","text":"☕ OFF","short_text":"☕"}'
+            ;;
+    esac
+}
+
+case "${1:-toggle}" in
+    toggle)
+        case "$(read_state)" in
+            on)
+                write_state off
+                notify_state "idle hibernate enabled"
+                ;;
+            *)
+                write_state on
+                notify_state "idle hibernate disabled"
+                ;;
+        esac
+        ;;
+    on)
+        write_state on
+        notify_state "idle hibernate disabled"
+        ;;
+    off)
+        write_state off
+        notify_state "idle hibernate enabled"
+        ;;
+    enabled)
+        [ "$(read_state)" = "on" ]
+        ;;
+    status)
+        read_state
+        ;;
+    status-json)
+        status_json
+        ;;
+    *)
+        echo "usage: rg-caffeine [toggle|on|off|enabled|status|status-json]" >&2
+        exit 2
+        ;;
+esac

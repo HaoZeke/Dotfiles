@@ -39,6 +39,16 @@ device = "wlan0"
 interval = 1
 
 [[block]]
+block = "custom"
+command = "~/.local/bin/rg-caffeine status-json"
+json = true
+interval = "once"
+watch_files = ["~/.local/state/rg-caffeine-idle"]
+[[block.click]]
+button = "left"
+cmd = "~/.local/bin/rg-caffeine toggle"
+
+[[block]]
 block = "time"
 interval = 60
 [block.format]
