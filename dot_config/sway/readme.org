@@ -1,0 +1,60 @@
+* Sway Session Modes And Workspace Controls
+
+This machine now has three separate session concepts, and they are meant
+to be read literally:
+
+| Bar label | Meaning | Locking | Idle sleep | Performance backend |
+|-----------+---------+---------+------------+---------------------|
+| = AUTO= | default behavior | yes | normal | unchanged |
+| = AWAKE= | block idle-triggered sleep only | yes | blocked | unchanged |
+| =BOOST ON= | request the performance profile only | unchanged | unchanged | on |
+| =FOCUS ON= | =AWAKE + BOOST= together | yes | blocked | on |
+
+So the intended reading is:
+
+- =AWAKE=: keep the machine awake, but still let the normal dim / lock /
+  DPMS path happen.
+- =BOOST=: ask the power backend for the faster profile without changing
+  lock or idle policy.
+- =FOCUS=: turn on both =AWAKE= and =BOOST= at once.
+
+The old "presentation" idea still exists in =rg-caffeine= as a CLI mode,
+but it is not the main keyboard path anymore. The keyboard path is the
+clearer =focus = awake + boost= behavior.
+
+* Keybindings
+
+| Binding | Action |
+|---------+--------|
+| =$mod+Shift+F3= | toggle =AWAKE= |
+| =$mod+Ctrl+F3= | toggle =BOOST= |
+| =$mod+Ctrl+Shift+F3= | toggle =FOCUS= |
+| =$mod+Mod1+Shift+F3= | timed =AWAKE= for 2 hours |
+| =$mod+Escape= | lock now |
+| =$mod+Shift+Escape= | lock, then suspend-then-hibernate |
+| =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
+
+* Workspaces
+
+Workspaces now have semantic names such as =7: read=, but the keyboard
+path should still be the number row.
+
+- =$mod+1 .. 0=: switch by workspace number slot
+- =$mod+Shift+1 .. 0=: move the focused window by workspace number slot
+- =$mod+Tab=: back-and-forth between the last two workspaces
+- =$mod+/=: open a rofi workspace chooser
+
+The number-row bindings use sway's =workspace number ...= form, so the
+keyboard targets the numbered slot rather than requiring the full label.
+That is meant to avoid the "is it =7= or =7:read=?" confusion.
+
+* Files
+
+The current behavior is wired primarily through:
+
+- =~/.config/sway/config=
+- =~/.config/systemd/user/swayidle.service=
+- =~/.config/i3rust/i3_top.toml=
+- =~/.local/bin/rg-caffeine=
+- =~/.local/bin/rg-lockscreen=
+- =~/.local/bin/rg-workspace-menu=
