@@ -1,6 +1,6 @@
 configuration {
 	modes: "window,drun,run,ssh";
-	font: "Atkinson Hyperlegible 18";
+	font: "Atkinson Hyperlegible 20";
 /*	location: 0;*/
 /*	yoffset: 0;*/
 /*	xoffset: 0;*/
