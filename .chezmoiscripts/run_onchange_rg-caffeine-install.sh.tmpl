@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Rebuild rg-caffeine whenever its chezmoi-managed Rust source changes.
+# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-caffeine-src/Cargo.toml" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-caffeine-src/main.rs" .chezmoi.sourceDir)) | trim }}
+
+set -euo pipefail
+
+SRC="$HOME/.local/share/rg-caffeine-src"
+
+if [ ! -d "$SRC" ]; then
+    echo "chezmoi: rg-caffeine source missing at $SRC; skipping install." >&2
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "chezmoi: cargo not found; skipping rg-caffeine build." >&2
+    exit 0
+fi
+
+export CARGO_BUILD_JOBS=4
+
+echo "chezmoi: installing rg-caffeine via cargo install ..."
+cargo install --path "$SRC" --root "$HOME/.local" --force --locked
+{{- end }}

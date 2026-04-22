@@ -4,9 +4,7 @@
 # Repo: https://github.com/greshake/i3status-rust
 
 [theme]
-# "active" is a custom theme file at
-# ~/.config/i3status-rust/themes/active.toml, managed by rg-theme.
-theme = "active"
+theme = "solarized-dark"
 [icons]
 icons = "awesome5"
 
@@ -42,11 +40,17 @@ interval = 1
 block = "custom"
 command = "~/.local/bin/rg-caffeine status-json"
 json = true
-interval = "once"
+interval = 30
 watch_files = ["~/.local/state/rg-caffeine-idle"]
 [[block.click]]
 button = "left"
 cmd = "~/.local/bin/rg-caffeine toggle"
+[[block.click]]
+button = "middle"
+cmd = "~/.local/bin/rg-caffeine timed 2h"
+[[block.click]]
+button = "right"
+cmd = "~/.local/bin/rg-caffeine presentation-toggle"
 
 [[block]]
 block = "time"

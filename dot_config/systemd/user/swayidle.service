@@ -18,9 +18,11 @@ Type=simple
 # brightnessctl -s saves current level, brightnessctl -r restores it
 # so a low-brightness work session is not stomped by the idle dim.
 ExecStart=/usr/bin/swayidle -w \
-         timeout 240 'brightnessctl -s set 30%-' resume 'brightnessctl -r' \
-         timeout 300 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
-         timeout 450 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
+         timeout 240 '%h/.local/bin/rg-caffeine run dim brightnessctl -s set 30%-' \
+                     resume '%h/.local/bin/rg-caffeine run dim-resume brightnessctl -r' \
+         timeout 300 '%h/.local/bin/rg-caffeine run lock swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \
+         timeout 450 '%h/.local/bin/rg-caffeine run dpms-off swaymsg "output * dpms off"' \
+                     resume '%h/.local/bin/rg-caffeine run dpms-on swaymsg "output * dpms on"' \
          timeout 2700 '%h/.local/bin/rg-idle-hibernate' \
          before-sleep 'playerctl pause' \
          before-sleep 'swaylock -f --clock --indicator-idle-visible --image ~/Pictures/Walls/lockscreen.png --daemonize' \

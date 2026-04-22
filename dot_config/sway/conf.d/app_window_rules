@@ -38,8 +38,16 @@ for_window {
   }
 
   # Firefox :: begin
+  [app_id="firefox"] {
+      border none
+  }
+
+  [class="Firefox"] {
+      border none
+  }
+
   [title="Firefox — Sharing Indicator"] {
-      border pixel 3
+      border pixel 2
       floating enable
       nofocus
   }
@@ -53,7 +61,7 @@ for_window {
   [title="^Picture-in-Picture$"] {
       focus
       floating enable
-      border pixel 3
+      border pixel 2
       sticky toggle
       resize set height 280px
       resize set width 500px
@@ -64,7 +72,7 @@ for_window {
   [title="^Picture in picture$"] {
       focus
       floating enable
-      border pixel 3
+      border pixel 2
       sticky toggle
       resize set height 280px
       resize set width 500px
@@ -110,14 +118,6 @@ for_window {
 
   [app_id="com.github.geigi.cozy"] {
       border pixel 0
-  }
-
-  [app_id="org.telegram.desktop"] {
-      border pixel 3
-  }
-
-  [app_id="footclient"] {
-      border pixel 3
   }
 
 }

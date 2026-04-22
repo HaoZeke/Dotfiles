@@ -66,6 +66,10 @@ bindsym --no-repeat XF86AudioPrev exec playerctl previous
 smart_gaps on
 gaps outer 0
 gaps inner 5
+smart_borders on
+hide_edge_borders smart
+default_border pixel 2
+default_floating_border pixel 2
 
 # Daemons
  exec_always "systemctl --user import-environment; systemctl --user start sway-session.target"
@@ -125,6 +129,8 @@ gaps inner 5
     # Toggle idle-hibernate suppression while preserving swayidle dim/lock/DPMS
     # and all lid/power-button sleep paths.
     bindsym --no-repeat $mod+Shift+F3 exec '$HOME/.local/bin/rg-caffeine toggle'
+    bindsym --no-repeat $mod+Ctrl+Shift+F3 exec '$HOME/.local/bin/rg-caffeine presentation-toggle'
+    bindsym --no-repeat $mod+Mod1+Shift+F3 exec '$HOME/.local/bin/rg-caffeine timed 2h'
 
     # Exit sway (logs you out of your Wayland session)
     bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
@@ -302,7 +308,7 @@ bar {
     position          top
     workspace_buttons yes
     tray_output       eDP-1
-    font pango:Atkinson Hyperlegible, FontAwesome 12
+    font pango:AtkinsonHyperlegibleMono Nerd Font 12
 
     colors {
         separator          $bar_sep
@@ -321,7 +327,7 @@ bar {
     position          bottom
     workspace_buttons no
     tray_output none
-    font pango:Atkinson Hyperlegible, FontAwesome 12
+    font pango:AtkinsonHyperlegibleMono Nerd Font 12
 
     colors {
         separator          $bar_sep

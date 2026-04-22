@@ -12,7 +12,8 @@
 
 set -u
 
-if [ -x "$HOME/.local/bin/rg-caffeine" ] && "$HOME/.local/bin/rg-caffeine" enabled; then
+if [ -x "$HOME/.local/bin/rg-caffeine" ] \
+   && ! "$HOME/.local/bin/rg-caffeine" action-allowed hibernate; then
     exit 0
 fi
 
