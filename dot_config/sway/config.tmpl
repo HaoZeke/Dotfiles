@@ -367,10 +367,10 @@ seat seat0 hide_cursor 1000
 bar {
     status_command    eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_top.toml
     position          top
-    height            34
-    status_padding    4
+    height            32
+    status_padding    3
     status_edge_padding 10
-    workspace_min_width 34
+    workspace_min_width 32
     binding_mode_indicator no
     workspace_buttons yes
     tray_output       eDP-1
@@ -381,10 +381,10 @@ bar {
         separator          $bar_sep
         background         $bar_bg
         statusline         $bar_fg
-        focused_workspace  $ws_focus_bg    $ws_focus_bg    $ws_focus_fg
-        active_workspace   $ws_active_bg   $ws_active_bg   $ws_active_fg
-        inactive_workspace $ws_inactive_bg $ws_inactive_bg $ws_inactive_fg
-        urgent_workspace   $ws_urgent_bg   $ws_urgent_bg   $ws_urgent_fg
+        focused_workspace  $ws_focus_border    $ws_focus_bg    $ws_focus_fg
+        active_workspace   $ws_active_border   $ws_active_bg   $ws_active_fg
+        inactive_workspace $ws_inactive_border $ws_inactive_bg $ws_inactive_fg
+        urgent_workspace   $ws_urgent_border   $ws_urgent_bg   $ws_urgent_fg
     }
 }
 
