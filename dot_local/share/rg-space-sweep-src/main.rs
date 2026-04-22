@@ -250,6 +250,51 @@ fn find_tmp_entries(prefixes: &[&str]) -> Result<Vec<PathBuf>, String> {
     Ok(entries)
 }
 
+fn ssh_config_args_for_home(home: &Path) -> Vec<OsString> {
+    let config = home.join(".ssh/config");
+    if config.is_file() {
+        vec![OsString::from("-F"), config.into_os_string()]
+    } else {
+        Vec::new()
+    }
+}
+
+fn cosmolab_remote_cleanup_script() -> &'static str {
+    "set -eu
+if [ -d \"$HOME/Git\" ]; then
+    find \"$HOME/Git\" -type d -name target -prune -print0 | xargs -0r rm -rf
+fi
+rm -rf \"$HOME/.cache/nix\"
+if command -v nix-collect-garbage >/dev/null 2>&1; then
+    nix-collect-garbage -d
+fi"
+}
+
+fn clean_cosmolab_remote(home: &Path, dry_run: bool) -> Result<(), String> {
+    let mut cmd = Command::new("ssh");
+    cmd.args(ssh_config_args_for_home(home));
+    cmd.arg("rg.cosmolab");
+    if dry_run {
+        println!("would run remote cosmolab builder cleanup on rg.cosmolab");
+        println!("{}", cosmolab_remote_cleanup_script());
+        return Ok(());
+    }
+    println!("running remote cosmolab builder cleanup on rg.cosmolab");
+    let output = cmd
+        .arg(cosmolab_remote_cleanup_script())
+        .output()
+        .map_err(|err| format!("failed to run ssh for rg.cosmolab cleanup: {err}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(format!("rg.cosmolab cleanup failed: {stderr}"));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !stdout.is_empty() {
+        println!("{stdout}");
+    }
+    Ok(())
+}
+
 fn has_cargo_parent(path: &Path) -> bool {
     let Some(parent) = path.parent() else {
         return false;
@@ -524,8 +569,15 @@ fn main() {
                                 display_path(&home, &entry.path)
                             );
                         }
+                        if options.categories.contains(&Category::Cosmolab) {
+                            println!();
+                            clean_cosmolab_remote(&home, true)?;
+                        }
                     } else {
                         clean_entries(&home, &entries, options.yes)?;
+                        if options.categories.contains(&Category::Cosmolab) {
+                            clean_cosmolab_remote(&home, false)?;
+                        }
                     }
                 }
             }
@@ -535,5 +587,33 @@ fn main() {
     if let Err(err) = result {
         eprintln!("{err}");
         process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn cosmolab_remote_cleanup_script_cleans_targets_and_nix_state() {
+        let script = cosmolab_remote_cleanup_script();
+        assert!(script.contains("find \"$HOME/Git\""));
+        assert!(script.contains("-name target"));
+        assert!(script.contains("rm -rf \"$HOME/.cache/nix\""));
+        assert!(script.contains("nix-collect-garbage -d"));
+    }
+
+    #[test]
+    fn ssh_command_uses_user_config_when_present() {
+        let tmp = tempdir().expect("tempdir should be created");
+        let ssh_dir = tmp.path().join(".ssh");
+        std::fs::create_dir(&ssh_dir).expect(".ssh dir should be created");
+        let config = ssh_dir.join("config");
+        std::fs::write(&config, "Host rg.cosmolab\n").expect("config should be written");
+
+        let args = ssh_config_args_for_home(tmp.path());
+        assert_eq!(args[0], OsString::from("-F"));
+        assert_eq!(args[1], config.as_os_str());
     }
 }
