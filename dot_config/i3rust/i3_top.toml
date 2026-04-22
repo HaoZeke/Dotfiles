@@ -4,7 +4,7 @@
 # Repo: https://github.com/greshake/i3status-rust
 
 [theme]
-theme = "solarized-dark"
+theme = "active"
 [icons]
 icons = "awesome5"
 
@@ -24,17 +24,16 @@ format_alt = " $icon_swap $swap_used_percents.eng(w:2) "
 
 [[block]]
 block = "cpu"
-interval = 1
+interval = 2
 
 [[block]]
 block = "load"
-interval = 1
+interval = 2
 format = "$1m"
 
 [[block]]
 block = "net"
-device = "wlan0"
-interval = 1
+interval = 2
 
 [[block]]
 block = "custom"
@@ -50,7 +49,7 @@ button = "middle"
 cmd = "~/.local/bin/rg-caffeine timed 2h"
 [[block.click]]
 button = "right"
-cmd = "~/.local/bin/rg-caffeine presentation-toggle"
+cmd = "~/.local/bin/rg-caffeine off"
 
 [[block]]
 block = "time"

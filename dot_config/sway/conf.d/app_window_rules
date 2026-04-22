@@ -46,6 +46,14 @@ for_window {
       border none
   }
 
+  [app_id="viewnior"] {
+      border normal 2
+  }
+
+  [class="Viewnior"] {
+      border normal 2
+  }
+
   [title="Firefox — Sharing Indicator"] {
       border pixel 2
       floating enable

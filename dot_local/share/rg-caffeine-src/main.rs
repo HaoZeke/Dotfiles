@@ -27,7 +27,7 @@ impl Mode {
     fn label(self) -> &'static str {
         match self {
             Self::Off => "OFF",
-            Self::Idle => "AWAKE",
+            Self::Idle => "ON",
             Self::Presentation => "PRESENT",
         }
     }
@@ -392,8 +392,8 @@ fn main() {
                     let message = match state.mode {
                         Mode::Off => "idle policy restored".to_string(),
                         Mode::Idle => remaining_text(state)
-                            .map(|remaining| format!("awake mode for {remaining}"))
-                            .unwrap_or_else(|| "awake mode enabled".to_string()),
+                            .map(|remaining| format!("idle hibernate blocked for {remaining}"))
+                            .unwrap_or_else(|| "idle hibernate blocked".to_string()),
                         Mode::Presentation => unreachable!(),
                     };
                     notify(&message);
@@ -426,8 +426,8 @@ fn main() {
         "on" => match set_mode(&path, Mode::Idle, args.get(1).map(String::as_str)) {
             Ok(state) => {
                 let message = remaining_text(state)
-                    .map(|remaining| format!("awake mode for {remaining}"))
-                    .unwrap_or_else(|| "awake mode enabled".to_string());
+                    .map(|remaining| format!("idle hibernate blocked for {remaining}"))
+                    .unwrap_or_else(|| "idle hibernate blocked".to_string());
                 notify(&message);
                 Ok(0)
             }
@@ -440,7 +440,7 @@ fn main() {
         ) {
             Ok(state) => {
                 let remaining = remaining_text(state).unwrap_or_else(|| TIMED_DEFAULT.to_string());
-                notify(&format!("awake mode for {remaining}"));
+                notify(&format!("idle hibernate blocked for {remaining}"));
                 Ok(0)
             }
             Err(err) => Err(err),
