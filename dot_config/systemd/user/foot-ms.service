@@ -5,7 +5,7 @@ After=foot-server.service tmux-session-ms.service
 Requires=foot-server.service tmux-session-ms.service
 
 [Service]
-ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e tmux attach-session -t mS
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e %h/.local/bin/rg-tmux-role client main
 Restart=on-failure
 
 [Install]

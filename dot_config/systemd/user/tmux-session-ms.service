@@ -7,7 +7,7 @@ Requires=tmux-server.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/tmux new-session -s mS -d
+ExecStart=%h/.local/bin/rg-tmux-role ensure main
 ExecStop=/usr/bin/tmux kill-session -t mS
 
 [Install]

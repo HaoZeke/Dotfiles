@@ -5,7 +5,7 @@ After=foot-server.service tmux-session-subfloat.service
 Requires=foot-server.service tmux-session-subfloat.service
 
 [Service]
-ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="subFloat" -e tmux attach-session -t subFloat
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="subFloat" -e %h/.local/bin/rg-tmux-role client float
 Restart=on-failure
 
 [Install]
