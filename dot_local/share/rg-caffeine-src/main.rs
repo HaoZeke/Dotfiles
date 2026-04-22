@@ -914,7 +914,7 @@ fn summary_status_json(
                 performance.backend.as_str(),
             ),
             (Mode::Idle, PerformanceMode::Off) => format!(
-                "{{\"state\":\"Good\",\"text\":\"{} Awake{}\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
+                "{{\"state\":\"Info\",\"text\":\"{} Awake{}\",\"short_text\":\"{}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",
                 COFFEE_ICON,
                 timer,
                 COFFEE_ICON,
@@ -926,7 +926,7 @@ fn summary_status_json(
                 let (state, label, short_icon) = if performance.backend == PerformanceBackend::Unavailable {
                     ("Warning", "Boost?", BOOST_ICON)
                 } else {
-                    ("Good", "Boost", BOOST_ICON)
+                    ("Warning", "Boost", BOOST_ICON)
                 };
                 format!(
                     "{{\"state\":\"{state}\",\"text\":\"{} {label}\",\"short_text\":\"{short_icon}\",\"idle_mode\":\"{}\",\"performance_mode\":\"{}\",\"performance_backend\":\"{}\"}}",

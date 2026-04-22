@@ -37,6 +37,14 @@ boost / focus segments.
 | = Focus= | awake + boost |
 | = Mixed= | non-default combination |
 
+Color intent:
+
+- =Auto=: neutral / idle
+- =Awake=: informational, should read as "special but not aggressive"
+- =Boost=: warning-like, because it is the more battery-expensive mode by itself
+- =Focus=: positive / active, because it is the deliberate combined mode
+- =Mixed=: warning-like because it usually means an unusual partial/manual state
+
 Mouse actions on that block:
 
 - left click: toggle =AWAKE=
