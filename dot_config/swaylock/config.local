@@ -1,0 +1,60 @@
+# Managed by chezmoi (dot_config/swaylock/config.local).
+#
+# Repo-owned swaylock theme used by rg-lockscreen. Background selection
+# stays in the wrapper so this file can focus on appearance only.
+
+clock
+timestr=%H:%M
+datestr=%A, %d %B
+fade-in=0.2
+show-failed-attempts
+show-keyboard-layout
+indicator-idle-visible
+indicator-caps-lock
+scaling=fill
+
+font=Noto Sans
+font-size=24
+
+indicator-radius=120
+indicator-thickness=16
+line-uses-ring
+separator-color=00000000
+
+effect-blur=8x3
+effect-vignette=0.30:0.55
+effect-greyscale
+
+color=101418
+inside-color=101418c0
+inside-clear-color=1b263bcc
+inside-caps-lock-color=674422cc
+inside-ver-color=1b4332cc
+inside-wrong-color=5c1d24cc
+
+ring-color=e0af68ff
+ring-clear-color=f4a261ff
+ring-caps-lock-color=e9c46aff
+ring-ver-color=84a98cff
+ring-wrong-color=e76f51ff
+
+line-color=e0af68ff
+line-clear-color=f4a261ff
+line-caps-lock-color=e9c46aff
+line-ver-color=84a98cff
+line-wrong-color=e76f51ff
+
+text-color=f8f5f0ff
+text-clear-color=fff3d6ff
+text-caps-lock-color=ffd89cff
+text-ver-color=e9f5dbff
+text-wrong-color=fff1f2ff
+
+key-hl-color=89b4faff
+bs-hl-color=f4a261ff
+caps-lock-key-hl-color=ffd89cff
+caps-lock-bs-hl-color=e9c46aff
+
+layout-bg-color=101418dd
+layout-border-color=e0af68ff
+layout-text-color=f8f5f0ff

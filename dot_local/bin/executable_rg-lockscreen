@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-lockscreen).
+#
+# Repo-owned swaylock wrapper with a polished default presentation:
+# prefer a live screenshot background, fall back to a known wallpaper,
+# and keep the visual theme in ~/.config/swaylock/config.local.
+
+set -eu
+
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+CONFIG_PATH="${RG_LOCKSCREEN_CONFIG:-$XDG_CONFIG_HOME/swaylock/config.local}"
+PREFERRED_IMAGE="${RG_LOCKSCREEN_IMAGE:-$XDG_CONFIG_HOME/swaylock/lockscreen.png}"
+LEGACY_IMAGE="$HOME/Pictures/Walls/lockscreen.png"
+FALLBACK_COLOR="${RG_LOCKSCREEN_COLOR:-101418}"
+MODE="${RG_LOCKSCREEN_MODE:-auto}"
+DRY_RUN=0
+EXTRA_ARGS=""
+
+usage() {
+    cat <<'EOF'
+Usage: rg-lockscreen [wrapper-options] [-- swaylock-args...]
+
+Wrapper options:
+  --dry-run          Print the resolved swaylock command and exit.
+  --screenshots      Force live screenshot mode.
+  --static           Force static wallpaper mode.
+  --color-only       Force solid-color fallback mode.
+  --help             Show this help.
+
+Any other arguments are passed through to swaylock unchanged.
+EOF
+}
+
+add_arg() {
+    if [ -z "$EXTRA_ARGS" ]; then
+        EXTRA_ARGS=$(printf '%s\037' "$1")
+    else
+        EXTRA_ARGS="${EXTRA_ARGS}$(printf '%s\037' "$1")"
+    fi
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=1
+            ;;
+        --screenshots)
+            MODE=screenshots
+            ;;
+        --static)
+            MODE=static
+            ;;
+        --color-only)
+            MODE=color
+            ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            while [ $# -gt 0 ]; do
+                add_arg "$1"
+                shift
+            done
+            break
+            ;;
+        *)
+            add_arg "$1"
+            ;;
+    esac
+    shift
+done
+
+BG_MODE="$MODE"
+if [ "$BG_MODE" = "auto" ]; then
+    if [ -n "${WAYLAND_DISPLAY-}" ]; then
+        BG_MODE=screenshots
+    else
+        BG_MODE=static
+    fi
+fi
+
+if [ -r "$CONFIG_PATH" ]; then
+    set -- swaylock -C "$CONFIG_PATH"
+else
+    set -- swaylock
+fi
+
+case "$BG_MODE" in
+    screenshots)
+        set -- "$@" --screenshots
+        ;;
+    static)
+        IMAGE_PATH=""
+        for candidate in "$PREFERRED_IMAGE" "$LEGACY_IMAGE"; do
+            if [ -r "$candidate" ]; then
+                IMAGE_PATH="$candidate"
+                break
+            fi
+        done
+        if [ -n "$IMAGE_PATH" ]; then
+            set -- "$@" --image "$IMAGE_PATH"
+        else
+            set -- "$@" --color "$FALLBACK_COLOR"
+        fi
+        ;;
+    color)
+        set -- "$@" --color "$FALLBACK_COLOR"
+        ;;
+    *)
+        echo "rg-lockscreen: unsupported mode '$BG_MODE'" >&2
+        exit 2
+        ;;
+esac
+
+if [ -n "$EXTRA_ARGS" ]; then
+    OLDIFS=$IFS
+    IFS=$(printf '\037')
+    # shellcheck disable=SC2086
+    set -- "$@" $EXTRA_ARGS
+    IFS=$OLDIFS
+fi
+
+if [ "$DRY_RUN" = "1" ]; then
+    printf '%q ' "$@"
+    printf '\n'
+    exit 0
+fi
+
+exec "$@"

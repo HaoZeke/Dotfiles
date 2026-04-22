@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-lockscreen-selftest).
+#
+# Minimal behavior checks for the rg-lockscreen wrapper.
+
+set -eu
+
+SCRIPT="${1:?usage: executable_rg-lockscreen-selftest /path/to/executable_rg-lockscreen}"
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *)
+            echo "FAIL: missing ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+tmp_home=$(mktemp -d)
+trap 'rm -rf "$tmp_home"' EXIT
+
+mkdir -p "$tmp_home/.config/swaylock" "$tmp_home/Pictures/Walls"
+touch "$tmp_home/.config/swaylock/config.local"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
+    WAYLAND_DISPLAY=wayland-1 \
+    "$SCRIPT" --dry-run --daemonize
+)
+assert_contains "$out" "--screenshots" "screenshot mode"
+assert_contains "$out" "$tmp_home/.config/swaylock/config.local" "local config path"
+assert_contains "$out" "--daemonize" "daemonize passthrough"
+
+touch "$tmp_home/Pictures/Walls/lockscreen.png"
+out=$(
+    HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
+    WAYLAND_DISPLAY='' \
+    "$SCRIPT" --dry-run
+)
+assert_contains "$out" "--image" "fallback image mode"
+assert_contains "$out" "$tmp_home/Pictures/Walls/lockscreen.png" "fallback image path"
+
+rm -f "$tmp_home/Pictures/Walls/lockscreen.png"
+out=$(
+    HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
+    WAYLAND_DISPLAY='' \
+    "$SCRIPT" --dry-run
+)
+assert_contains "$out" "--color" "solid fallback mode"
+assert_contains "$out" "101418" "solid fallback color"
+
+echo "ok"
