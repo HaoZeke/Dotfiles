@@ -161,3 +161,88 @@ configuration {
  * on top. Flip via `rg-theme toggle` / `rg-theme pick`. */
 @theme "solarized"
 @import "~/.config/rofi/colors.rasi"
+
+* {
+    background-color: transparent;
+}
+
+window {
+    width: 42%;
+    location: north;
+    anchor: north;
+    y-offset: 42px;
+    border: 2px;
+    border-radius: 18px;
+    padding: 18px 22px 22px;
+    background-color: @background;
+}
+
+mainbox {
+    spacing: 16px;
+    children: [ "inputbar", "listview" ];
+}
+
+inputbar {
+    spacing: 12px;
+    padding: 12px 14px;
+    border: 0px 0px 2px 0px;
+    border-color: @border-color;
+    background-color: transparent;
+    children: [ "prompt", "entry" ];
+}
+
+prompt {
+    padding: 8px 14px;
+    border-radius: 999px;
+    background-color: @selected-normal-background;
+    text-color: @selected-normal-foreground;
+}
+
+textbox-prompt-colon {
+    expand: false;
+    str: "";
+}
+
+entry {
+    padding: 8px 0px;
+    text-color: @foreground;
+}
+
+listview {
+    lines: 8;
+    columns: 1;
+    cycle: true;
+    dynamic: false;
+    scrollbar: false;
+    spacing: 8px;
+}
+
+element {
+    padding: 10px 12px;
+    border-radius: 12px;
+    spacing: 12px;
+}
+
+element normal.normal {
+    background-color: transparent;
+    text-color: @foreground;
+}
+
+element selected.normal {
+    background-color: @selected-normal-background;
+    text-color: @selected-normal-foreground;
+}
+
+element selected.active {
+    background-color: @active-background;
+    text-color: @active-foreground;
+}
+
+element selected.urgent {
+    background-color: @urgent-background;
+    text-color: @urgent-foreground;
+}
+
+element-icon {
+    size: 1.15em;
+}

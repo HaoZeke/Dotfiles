@@ -30,14 +30,14 @@
     # the top and down respectively.
     # The width can be negative.  In this case the actual width is the
     # screen width minus the width defined in within the geometry option.
-    geometry = "0x300-10+47"
+    geometry = "380x10-18+52"
 
     # Show how many messages are currently hidden (because of geometry).
     indicate_hidden = yes
 
     # Shrink window if it's smaller than the width.  Will be ignored if
     # width is 0.
-    shrink = no
+    shrink = yes
 
     # The transparency of the window.  Range: [0; 100].
     # This option will only work if a compositing window manager is
@@ -52,17 +52,17 @@
     # Draw a line of "separator_height" pixel height between two
     # notifications.
     # Set to 0 to disable.
-    separator_height = 2
+    separator_height = 0
 
     # Padding between text and separator.
-    padding = 8
+    padding = 14
 
     # Horizontal padding.
-    horizontal_padding = 10
+    horizontal_padding = 14
 
     # Defines width in pixels of frame around the notification window.
     # Set to 0 to disable.
-    frame_width = 2
+    frame_width = 3
 
     # Sort messages by urgency.
     sort = yes
@@ -86,12 +86,12 @@
     #   %n  progress value if set without any extra characters
     #   %%  Literal %
     # Markup is allowed
-    format = "<b>%s</b> from <i>%a</i>\n%b"
+    format = "<b>%s</b>\n<span size='smaller'>%b</span>"
 
     # Show age of message if message is older than show_age_threshold
     # seconds.
     # Set to -1 to disable.
-    show_age_threshold = 60
+    show_age_threshold = 30
 
     # When word_wrap is set to no, specify where to make an ellipsis in long lines.
     # Possible values are "start", "middle" and "end".
@@ -120,7 +120,7 @@
     min_icon_size = 0
 
     # Scale larger icons down to this size, set to 0 to disable
-    max_icon_size = 64
+    max_icon_size = 48
 
     # Paths to default icons.
     icon_path = /usr/share/icons/gnome/16x16/status/:/usr/share/icons/gnome/16x16/devices/
@@ -132,7 +132,7 @@
     sticky_history = yes
 
     # Maximum amount of notifications kept in history
-    history_length = 20
+    history_length = 50
 
     ### Misc/Advanced ###
 
@@ -170,7 +170,7 @@
     # corners.
     # The radius will be automatically lowered if it exceeds half of the
     # notification height to avoid clipping text and/or icons.
-    corner_radius = 0
+    corner_radius = 14
 
     # Ignore the dbus closeNotification message.
     # Useful to enforce the timeout set by dunst configuration. Without this
