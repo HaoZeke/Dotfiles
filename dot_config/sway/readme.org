@@ -76,6 +76,12 @@ path should still be the number row.
 - =$mod+Tab=: back-and-forth between the last two workspaces
 - =$mod+/=: open a rofi workspace chooser
 
+The workspace chooser now:
+
+- pins the current workspace first
+- shows the output name
+- shows a simple occupied / empty marker
+
 The number-row bindings use sway's =workspace number ...= form, so the
 keyboard targets the numbered slot rather than requiring the full label.
 That is meant to avoid the "is it =7= or =7:read=?" confusion.

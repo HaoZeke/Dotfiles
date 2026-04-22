@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-workspace-menu).
 #
-# Keyboard-first workspace chooser for sway. It lists current workspaces
-# in rofi and jumps to the selected one.
+# Keyboard-first workspace chooser for sway. It keeps the current
+# workspace first, shows output placement, and adds a simple occupied
+# marker before jumping via rofi.
 
 set -euo pipefail
 
@@ -13,14 +14,40 @@ for bin in swaymsg jq rofi; do
     fi
 done
 
-selection="$(
+mapfile -t workspace_entries < <(
     swaymsg -t get_workspaces \
-        | jq -r 'sort_by(.num, .name)[] | [.name, (if .focused then "*" else " " end)] | @tsv' \
-        | awk -F '\t' '{ printf "%s  %s\n", $2, $1 }' \
-        | rofi -dmenu -i -p "workspace"
+        | jq -r '
+            map(.occupied = ((.representation // "") != "" and (.representation // "") != "H[]"))
+            | sort_by((if .focused then 0 else 1 end), (if .visible then 0 else 1 end), .output, .num, .name)
+            | .[]
+            | [
+                .name,
+                (
+                    (if .focused then "●" else if .visible then "◉" else "○" end)
+                    + " "
+                    + (if .occupied then "■" else "·" end)
+                    + "  "
+                    + .name
+                    + "  ["
+                    + .output
+                    + "]"
+                )
+              ]
+            | @tsv
+        '
+)
+
+[ "${#workspace_entries[@]}" -gt 0 ] || exit 0
+
+selection_index="$(
+    printf '%s\n' "${workspace_entries[@]}" \
+        | cut -f2- \
+        | rofi -dmenu -i -p "workspace" -format i
 )"
 
-[ -n "${selection:-}" ] || exit 0
+[ -n "${selection_index:-}" ] || exit 0
 
-workspace_name="${selection#??}"
+workspace_name="$(printf '%s\n' "${workspace_entries[$selection_index]}" | cut -f1)"
+[ -n "${workspace_name:-}" ] || exit 0
+
 exec swaymsg workspace "$workspace_name"
