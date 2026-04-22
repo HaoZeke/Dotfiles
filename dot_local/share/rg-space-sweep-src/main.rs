@@ -32,7 +32,7 @@ impl Category {
 
     fn expand(token: &str) -> Result<Vec<Self>, String> {
         match token {
-            "default" => Ok(vec![Self::Rust, Self::Python, Self::Pixi, Self::Tox]),
+            "default" => Ok(vec![Self::Rust, Self::Python, Self::Tox]),
             "all" => Ok(vec![
                 Self::Rust,
                 Self::Python,
@@ -68,6 +68,12 @@ struct Options {
 }
 
 #[derive(Clone, Debug)]
+struct Candidate {
+    category: Category,
+    path: PathBuf,
+}
+
+#[derive(Clone, Debug)]
 struct Entry {
     category: Category,
     path: PathBuf,
@@ -85,10 +91,10 @@ clean
     Remove the matching directories. Requires --yes, or use --dry-run to preview.
 
 default
-    rust python pixi tox
+    rust python tox
 
 all
-    default + venv + js"
+    default + pixi + venv + js"
 }
 
 fn parse_args() -> Result<Options, String> {
@@ -182,6 +188,21 @@ fn find_dirs(home: &Path, terms: &[&str]) -> Result<Vec<PathBuf>, String> {
     let mut args = vec![
         home.as_os_str().to_os_string(),
         OsString::from("-xdev"),
+        OsString::from("("),
+        OsString::from("-path"),
+        home.join(".cache").into_os_string(),
+        OsString::from("-o"),
+        OsString::from("-path"),
+        home.join(".cargo").into_os_string(),
+        OsString::from("-o"),
+        OsString::from("-path"),
+        home.join(".local/share/containers").into_os_string(),
+        OsString::from("-o"),
+        OsString::from("-path"),
+        home.join(".local/share/Trash").into_os_string(),
+        OsString::from(")"),
+        OsString::from("-prune"),
+        OsString::from("-o"),
         OsString::from("-type"),
         OsString::from("d"),
     ];
@@ -245,7 +266,7 @@ fn emit_category_paths(home: &Path, category: Category) -> Result<Vec<PathBuf>, 
             ]);
             paths
         }
-        Category::Pixi => find_named_dirs(home, ".pixi")?,
+        Category::Pixi => vec![home.join(".cache/rattler/cache")],
         Category::Tox => find_named_dirs(home, ".tox")?,
         Category::Venv => find_named_dirs(home, ".venv")?,
         Category::Js => {
@@ -257,7 +278,7 @@ fn emit_category_paths(home: &Path, category: Category) -> Result<Vec<PathBuf>, 
     Ok(paths)
 }
 
-fn collect_entries(home: &Path, categories: &[Category]) -> Result<Vec<Entry>, String> {
+fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candidate>, String> {
     let mut seen = BTreeSet::new();
     let mut entries = Vec::new();
 
@@ -266,15 +287,23 @@ fn collect_entries(home: &Path, categories: &[Category]) -> Result<Vec<Entry>, S
             if !path.exists() || !seen.insert(path.clone()) {
                 continue;
             }
-            let size = path_size_bytes(&path)?;
-            entries.push(Entry {
-                category,
-                path,
-                size,
-            });
+            entries.push(Candidate { category, path });
         }
     }
 
+    Ok(entries)
+}
+
+fn size_entries(candidates: &[Candidate]) -> Result<Vec<Entry>, String> {
+    let mut entries = Vec::with_capacity(candidates.len());
+    for candidate in candidates {
+        let size = path_size_bytes(&candidate.path)?;
+        entries.push(Entry {
+            category: candidate.category,
+            path: candidate.path.clone(),
+            size,
+        });
+    }
     entries.sort_by(|left, right| right.size.cmp(&left.size).then_with(|| left.path.cmp(&right.path)));
     Ok(entries)
 }
@@ -353,8 +382,11 @@ fn print_report(home: &Path, entries: &[Entry], limit: usize) {
     );
 }
 
-fn safe_to_remove(home: &Path, entry: &Entry) -> bool {
+fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     if !entry.path.starts_with(home) || entry.path == home {
+        return false;
+    }
+    if entry.path.starts_with(home.join(".local/bin")) || entry.path.starts_with(home.join(".cargo/bin")) {
         return false;
     }
 
@@ -363,6 +395,7 @@ fn safe_to_remove(home: &Path, entry: &Entry) -> bool {
         home.join(".cargo/git/db"),
         home.join(".cache/pip"),
         home.join(".cache/uv"),
+        home.join(".cache/rattler/cache"),
         home.join(".cache/pre-commit"),
         home.join(".local/share/hatch"),
         home.join(".npm"),
@@ -378,7 +411,7 @@ fn safe_to_remove(home: &Path, entry: &Entry) -> bool {
     match entry.category {
         Category::Rust => name == "target" && has_cargo_parent(&entry.path) && looks_like_rust_target(&entry.path),
         Category::Python => matches!(name, ".pytest_cache" | ".mypy_cache" | ".ruff_cache" | ".hypothesis"),
-        Category::Pixi => name == ".pixi",
+        Category::Pixi => entry.path.ends_with(Path::new(".cache/rattler/cache")),
         Category::Tox => name == ".tox",
         Category::Venv => name == ".venv",
         Category::Js => {
@@ -393,8 +426,8 @@ fn safe_to_remove(home: &Path, entry: &Entry) -> bool {
     }
 }
 
-fn clean_entries(home: &Path, entries: &[Entry], dry_run: bool, yes: bool) -> Result<(), String> {
-    if !dry_run && !yes {
+fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), String> {
+    if !yes {
         return Err("refusing to clean without --yes".to_string());
     }
 
@@ -404,26 +437,8 @@ fn clean_entries(home: &Path, entries: &[Entry], dry_run: bool, yes: bool) -> Re
         }
     }
 
-    if dry_run {
-        println!("Dry run");
-        for entry in entries {
-            println!(
-                "would remove {}  {:<6}  {}",
-                format_bytes(entry.size),
-                entry.category.label(),
-                display_path(home, &entry.path)
-            );
-        }
-        return Ok(());
-    }
-
     for entry in entries {
-        println!(
-            "removing {}  {:<6}  {}",
-            format_bytes(entry.size),
-            entry.category.label(),
-            display_path(home, &entry.path)
-        );
+        println!("removing {:<6}  {}", entry.category.label(), display_path(home, &entry.path));
         fs::remove_dir_all(&entry.path)
             .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
     }
@@ -447,14 +462,27 @@ fn main() {
     };
 
     let result = home_dir()
-        .and_then(|home| collect_entries(&home, &options.categories).map(|entries| (home, entries)))
+        .and_then(|home| collect_candidates(&home, &options.categories).map(|entries| (home, entries)))
         .and_then(|(home, entries)| {
             match options.mode {
-                Mode::Report => print_report(&home, &entries, options.limit),
+                Mode::Report => print_report(&home, &size_entries(&entries)?, options.limit),
                 Mode::Clean => {
-                    print_report(&home, &entries, options.limit);
-                    println!();
-                    clean_entries(&home, &entries, options.dry_run, options.yes)?;
+                    if options.dry_run {
+                        let sized = size_entries(&entries)?;
+                        print_report(&home, &sized, options.limit);
+                        println!();
+                        println!("Dry run");
+                        for entry in &sized {
+                            println!(
+                                "would remove {}  {:<6}  {}",
+                                format_bytes(entry.size),
+                                entry.category.label(),
+                                display_path(&home, &entry.path)
+                            );
+                        }
+                    } else {
+                        clean_entries(&home, &entries, options.yes)?;
+                    }
                 }
             }
             Ok(())
