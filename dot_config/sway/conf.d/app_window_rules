@@ -128,6 +128,14 @@ for_window {
       border pixel 0
   }
 
+  [app_id="tmuxChooser"] {
+      floating enable
+      border pixel 2
+      resize set width 72 ppt
+      resize set height 68 ppt
+      move position center
+  }
+
 }
 
 ################
