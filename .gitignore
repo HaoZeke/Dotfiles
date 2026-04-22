@@ -78,6 +78,8 @@ Temporary Items
 src/
 
 # Private config (sealed in vault, never commit)
+private_dot_codex/
+private_dot_omp/
 CLAUDE.md
 .claude/
 dot_claude/
