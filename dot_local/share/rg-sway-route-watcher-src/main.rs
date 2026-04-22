@@ -103,13 +103,24 @@ fn app_label(app: &str) -> Option<&'static str> {
         "discord" | "Signal" | "signal" | "TelegramDesktop" | "org.telegram.desktop" => {
             Some("Chat")
         }
-        _ => Some("App"),
+        _ => None,
     }
 }
 
 fn notify_route(label: &str, workspace: &str) -> Result<(), String> {
     let status = Command::new(NOTIFY_SEND_BIN)
-        .args(["-a", "sway", "Routed Window", &format!("{label} -> {workspace}")])
+        .args([
+            "-a",
+            "sway",
+            "-u",
+            "low",
+            "-t",
+            "1600",
+            "-h",
+            "string:x-dunst-stack-tag:rg-route",
+            "Routed",
+            &format!("{label} -> {workspace}"),
+        ])
         .status()
         .map_err(|err| format!("failed to run notify-send: {err}"))?;
     if status.success() {

@@ -98,6 +98,8 @@ dot_claude/
 
 # Local Rust build output for chezmoi-managed helper sources
 dot_local/share/rg-caffeine-src/target/
+dot_local/share/rg-desktop-help-src/target/
+dot_local/share/rg-wob-bridge-src/target/
 dot_local/share/rg-space-sweep-src/target/
 dot_local/share/rg-tmux-role-src/target/
 dot_local/share/rg-sway-route-watcher-src/target/

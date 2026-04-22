@@ -13,7 +13,7 @@ block = "disk_space"
 path = "/"
 info_type = "available"
 alert_unit = "GB"
-interval = 20
+interval = 30
 warning = 20.0
 alert = 10.0
 
@@ -24,16 +24,16 @@ format_alt = " $icon_swap $swap_used_percents.eng(w:2) "
 
 [[block]]
 block = "cpu"
-interval = 2
+interval = 3
 
 [[block]]
 block = "load"
-interval = 2
+interval = 3
 format = "$1m"
 
 [[block]]
 block = "net"
-interval = 2
+interval = 3
 
 [[block]]
 block = "custom"

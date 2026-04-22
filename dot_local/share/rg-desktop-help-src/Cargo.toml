@@ -1,0 +1,8 @@
+[package]
+name = "rg-desktop-help"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rg-desktop-help"
+path = "main.rs"

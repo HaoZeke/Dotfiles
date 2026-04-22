@@ -19,8 +19,8 @@ if [ -z "$NEW_BRIGHTNESS" ]; then
     exit 1
 fi
 
-# Update WOBSOCK immediately if it exists
-if [ -n "$WOBSOCK" ]; then
+# Update WOBSOCK immediately if it is the expected FIFO
+if [ -p "$WOBSOCK" ]; then
     echo "$NEW_BRIGHTNESS" > "$WOBSOCK"
 fi
 

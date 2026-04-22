@@ -66,6 +66,7 @@ Mouse actions on that block:
 | =$mod+F1= | open tmux session chooser in a fresh foot client |
 | =$mod+F5= | save tmux state via resurrect |
 | =$mod+F6= | restore tmux state and rehydrate named sessions |
+| =$mod+Shift+/= | open the desktop control/help palette |
 | =$mod+Escape= | lock now |
 | =$mod+Shift+Escape= | lock, then suspend-then-hibernate |
 | =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
@@ -109,6 +110,18 @@ modifier chord set:
 
 The mode exits immediately after a jump, or with =Escape= / =Return=.
 
+* Desktop palette
+
+=~/.local/bin/rg-desktop-help= provides a compact keyboard-first control
+palette. It is intentionally small and action-oriented, not a second full
+launcher.
+
+- It opens on =$mod+Shift+/=
+- It includes the high-value workspace jumps, session mode toggles, tmux
+  save/restore/chooser, lock, and the existing workspace chooser
+- Entries include the matching keybinding in the label so the menu doubles as
+  rediscovery/help
+
 * Tmux
 
 The terminal layer is now intentionally hybrid:
@@ -136,7 +149,8 @@ named =mS= and =subFloat= sessions exist again for the sway scratchpads.
 Cross-workspace app launches now also have a small watcher service:
 =rg-sway-route-watcher.service=. It emits a short notification such as
 =PDF -> 7: read= only when a newly created window lands on a workspace other
-than the one currently focused.
+than the one currently focused. These route hints are low-urgency and
+stack-replaced so repeated launches do not flood notification history.
 
 * Files
 
@@ -146,9 +160,12 @@ The current behavior is wired primarily through:
 - =~/.config/systemd/user/swayidle.service=
 - =~/.config/systemd/user/tmux-restore.service=
 - =~/.config/systemd/user/rg-sway-route-watcher.service=
+- =~/.config/systemd/user/wob.service=
 - =~/.config/i3rust/i3_top.toml=
 - =~/.local/bin/rg-caffeine=
+- =~/.local/bin/rg-desktop-help=
 - =~/.local/bin/rg-tmux-role=
+- =~/.local/bin/rg-wob-bridge=
 - =~/.local/bin/rg-sway-route-watcher=
 - =~/.local/bin/rg-lockscreen=
 - =~/.local/bin/rg-workspace-menu=
