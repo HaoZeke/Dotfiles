@@ -73,6 +73,7 @@ default_floating_border pixel 2
 
 # Daemons
  exec_always "systemctl --user import-environment; systemctl --user start sway-session.target"
+ exec_always "$HOME/.local/bin/rg-workspace-sync"
 
 ### Input configuration
 #

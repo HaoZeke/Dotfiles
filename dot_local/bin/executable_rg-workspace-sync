@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-workspace-sync).
+#
+# Ensure numeric sway workspaces on startup get promoted to the semantic
+# labels configured in sway. This keeps number-row keyboard flow intact
+# while making the bar readable.
+
+set -euo pipefail
+
+if ! command -v swaymsg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    exit 0
+fi
+
+workspace_map_json='{
+  "1": "1:\uf120 term",
+  "2": "2:\uf269 web",
+  "3": "3:\uf121 code",
+  "4": "4:\uf044 notes",
+  "5": "5:\uf5fc chat",
+  "6": "6:\uf07c files",
+  "7": "7:\uf02d read",
+  "8": "8:\uf001 media",
+  "9": "9:\uf12e lab",
+  "10": "10:\uf013 admin"
+}'
+
+while IFS=$'\t' read -r current_name current_num; do
+    [ -n "${current_num:-}" ] || continue
+    target_name="$(jq -r --arg num "$current_num" '.[$num] // empty' <<<"$workspace_map_json")"
+    [ -n "${target_name:-}" ] || continue
+
+    if [ "$current_name" = "$target_name" ]; then
+        continue
+    fi
+
+    if [[ "$current_name" =~ ^[0-9]+$ ]]; then
+        swaymsg "rename workspace \"$current_name\" to \"$target_name\"" >/dev/null
+    fi
+done < <(
+    swaymsg -t get_workspaces \
+        | jq -r '.[] | [.name, (.num|tostring)] | @tsv'
+)

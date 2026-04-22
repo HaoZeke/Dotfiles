@@ -79,6 +79,10 @@ The number-row bindings use sway's =workspace number ...= form, so the
 keyboard targets the numbered slot rather than requiring the full label.
 That is meant to avoid the "is it =7= or =7:read=?" confusion.
 
+On reload/startup, =~/.local/bin/rg-workspace-sync= renames plain numeric
+workspaces like =7= into their semantic labels like =7: read=. That keeps
+the keyboard model numeric while making the strip readable again.
+
 * Files
 
 The current behavior is wired primarily through:
@@ -89,3 +93,4 @@ The current behavior is wired primarily through:
 - =~/.local/bin/rg-caffeine=
 - =~/.local/bin/rg-lockscreen=
 - =~/.local/bin/rg-workspace-menu=
+- =~/.local/bin/rg-workspace-sync=
