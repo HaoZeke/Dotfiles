@@ -82,3 +82,19 @@ CLAUDE.md
 .claude/
 dot_claude/
 .chezmoiscripts/*setup*.tmpl
+~/.codex/AGENTS.md
+~/.codex/config.toml
+~/.codex/RTK.md
+~/.codex/TOOLING.md
+~/.codex/AGENTS.md
+~/.codex/RTK.md
+~/.codex/config.toml
+~/.omp/mcp.json
+~/.omp/agent/AGENTS.md
+~/.omp/agent/config.yml
+~/.omp/agent/models.yml
+~/.omp/agent/mcp.json
+~/.omp/agent/GITHUB_CONTRACT.md
+
+# Local Rust build output for chezmoi-managed helper sources
+dot_local/share/rg-tmux-role-src/target/
