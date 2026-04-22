@@ -16,6 +16,7 @@ enum Category {
     Tox,
     Venv,
     Js,
+    Cosmolab,
 }
 
 impl Category {
@@ -27,6 +28,7 @@ impl Category {
             Self::Tox => "tox",
             Self::Venv => "venv",
             Self::Js => "js",
+            Self::Cosmolab => "cosmolab",
         }
     }
 
@@ -40,6 +42,7 @@ impl Category {
                 Self::Tox,
                 Self::Venv,
                 Self::Js,
+                Self::Cosmolab,
             ]),
             "rust" => Ok(vec![Self::Rust]),
             "python" => Ok(vec![Self::Python]),
@@ -47,6 +50,7 @@ impl Category {
             "tox" => Ok(vec![Self::Tox]),
             "venv" => Ok(vec![Self::Venv]),
             "js" => Ok(vec![Self::Js]),
+            "cosmolab" => Ok(vec![Self::Cosmolab]),
             other => Err(format!("unknown category: {other}")),
         }
     }
@@ -82,7 +86,7 @@ struct Entry {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [report|clean] [--dry-run] [--yes] [--limit N] [default|all|rust|python|pixi|tox|venv|js]
+usage: rg-space-sweep [report|clean] [--dry-run] [--yes] [--limit N] [default|all|rust|python|pixi|tox|venv|js|cosmolab]
 
 report
     Show category totals and the largest matching cache/build directories.
@@ -94,7 +98,7 @@ default
     rust python tox
 
 all
-    default + pixi + venv + js"
+    default + pixi + venv + js + cosmolab"
 }
 
 fn parse_args() -> Result<Options, String> {
@@ -224,6 +228,28 @@ fn find_path_dirs(home: &Path, pattern: &str) -> Result<Vec<PathBuf>, String> {
     find_dirs(home, &["-path", pattern])
 }
 
+fn find_tmp_entries(prefixes: &[&str]) -> Result<Vec<PathBuf>, String> {
+    let tmp = Path::new("/tmp");
+    let mut entries = Vec::new();
+    let dir = match fs::read_dir(tmp) {
+        Ok(dir) => dir,
+        Err(err) => return Err(format!("failed to read {}: {err}", tmp.display())),
+    };
+
+    for entry in dir {
+        let entry = entry.map_err(|err| format!("failed to read {} entry: {err}", tmp.display()))?;
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if prefixes.iter().any(|prefix| name.starts_with(prefix)) {
+            entries.push(path);
+        }
+    }
+
+    Ok(entries)
+}
+
 fn has_cargo_parent(path: &Path) -> bool {
     let Some(parent) = path.parent() else {
         return false;
@@ -274,6 +300,7 @@ fn emit_category_paths(home: &Path, category: Category) -> Result<Vec<PathBuf>, 
             paths.push(home.join(".npm"));
             paths
         }
+        Category::Cosmolab => find_tmp_entries(&["cosmolab-"])?,
     };
     Ok(paths)
 }
@@ -383,6 +410,15 @@ fn print_report(home: &Path, entries: &[Entry], limit: usize) {
 }
 
 fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
+    if entry.category == Category::Cosmolab {
+        return entry.path.starts_with("/tmp/")
+            && entry
+                .path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|name| name.starts_with("cosmolab-"));
+    }
+
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
     }
@@ -423,6 +459,7 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
                     .and_then(|value| value.to_str())
                     == Some("node_modules")
         }
+        Category::Cosmolab => false,
     }
 }
 
@@ -439,8 +476,15 @@ fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), St
 
     for entry in entries {
         println!("removing {:<6}  {}", entry.category.label(), display_path(home, &entry.path));
-        fs::remove_dir_all(&entry.path)
-            .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
+        let meta = fs::symlink_metadata(&entry.path)
+            .map_err(|err| format!("failed to stat {}: {err}", entry.path.display()))?;
+        if meta.is_dir() {
+            fs::remove_dir_all(&entry.path)
+                .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
+        } else {
+            fs::remove_file(&entry.path)
+                .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
+        }
     }
 
     Ok(())
