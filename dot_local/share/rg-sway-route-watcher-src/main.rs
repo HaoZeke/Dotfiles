@@ -175,7 +175,7 @@ fn run() -> Result<(), String> {
     ensure_binary(NOTIFY_SEND_BIN)?;
 
     let mut child = Command::new(SWAYMSG_BIN)
-        .args(["-t", "subscribe", r#"["window"]"#])
+        .args(["-m", "-t", "subscribe", r#"["window"]"#])
         .stdout(Stdio::piped())
         .spawn()
         .map_err(|err| format!("failed to subscribe to sway window events: {err}"))?;

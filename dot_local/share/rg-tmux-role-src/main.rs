@@ -54,7 +54,13 @@ where
 
 fn ensure_session(role: Role) -> Result<(), String> {
     let session = role.session();
-    let status = run_tmux(["has-session", "-t", session])?;
+    let status = Command::new(TMUX_BIN)
+        .args(["has-session", "-t", session])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|err| format!("failed to check tmux session: {err}"))?;
     if status.success() {
         return Ok(());
     }

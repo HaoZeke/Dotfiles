@@ -2,10 +2,12 @@
 Description=Sway routed-window watcher
 After=graphical-session.target
 PartOf=sway-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 ExecStart=%h/.local/bin/rg-sway-route-watcher
-Restart=on-failure
+Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=sway-session.target
