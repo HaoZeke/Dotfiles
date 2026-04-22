@@ -61,6 +61,11 @@ Mouse actions on that block:
 | =$mod+Ctrl+F3= | toggle =BOOST= |
 | =$mod+Ctrl+Shift+F3= | toggle =FOCUS= |
 | =$mod+Mod1+Shift+F3= | timed =AWAKE= for 2 hours |
+| =F1= | show or start main tmux scratchpad |
+| =F5= | show or start floating tmux scratchpad |
+| =$mod+F1= | open tmux session chooser in a fresh foot client |
+| =$mod+F5= | save tmux state via resurrect |
+| =$mod+F6= | restore tmux state and rehydrate named sessions |
 | =$mod+Escape= | lock now |
 | =$mod+Shift+Escape= | lock, then suspend-then-hibernate |
 | =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
@@ -74,6 +79,7 @@ path should still be the number row.
 - =$mod+Shift+1 .. 0=: move the focused window by workspace number slot
 - =$mod+,= / =$mod+.=: previous / next workspace on the current output
 - =$mod+Tab=: back-and-forth between the last two workspaces
+- =$mod+g=: temporary =goto= mode for semantic workspace jumps
 - =$mod+/=: open a rofi workspace chooser
 
 The workspace chooser now:
@@ -90,14 +96,60 @@ On reload/startup, =~/.local/bin/rg-workspace-sync= renames plain numeric
 workspaces like =7= into their semantic labels like =7: read=. That keeps
 the keyboard model numeric while making the strip readable again.
 
+The =goto= mode is a short mnemonic leader rather than another full-time
+modifier chord set:
+
+- =r= -> =7: read=
+- =n= -> =4: note=
+- =f= -> =6: file=
+- =w= -> =2: web=
+- =c= -> =3: code=
+- =m= -> =8: media=
+- =s= -> =10: sys=
+
+The mode exits immediately after a jump, or with =Escape= / =Return=.
+
+* Tmux
+
+The terminal layer is now intentionally hybrid:
+
+- =sway= owns workspace switching, app routing, scratchpads, and a few
+  global tmux entry points
+- =tmux= owns panes, windows, sessions, and save/restore
+- =~/.local/bin/rg-tmux-role= is the authoritative glue command
+
+The main terminal rules are:
+
+- prefix is now =Ctrl+a=
+- pane movement uses =h n e i= to match the Colemak/kanata movement model
+- =prefix w= opens the window chooser
+- =prefix s= opens the session chooser
+- =prefix Space= opens the tree chooser
+- =prefix S= saves tmux state
+- =prefix R= restores tmux state
+
+Restore is explicit rather than magical. The user service
+=tmux-restore.service= runs =~/.local/bin/rg-tmux-role restore=, which will
+start the tmux server, run =tmux-resurrect= if available, and ensure that the
+named =mS= and =subFloat= sessions exist again for the sway scratchpads.
+
+Cross-workspace app launches now also have a small watcher service:
+=rg-sway-route-watcher.service=. It emits a short notification such as
+=PDF -> 7: read= only when a newly created window lands on a workspace other
+than the one currently focused.
+
 * Files
 
 The current behavior is wired primarily through:
 
 - =~/.config/sway/config=
 - =~/.config/systemd/user/swayidle.service=
+- =~/.config/systemd/user/tmux-restore.service=
+- =~/.config/systemd/user/rg-sway-route-watcher.service=
 - =~/.config/i3rust/i3_top.toml=
 - =~/.local/bin/rg-caffeine=
+- =~/.local/bin/rg-tmux-role=
+- =~/.local/bin/rg-sway-route-watcher=
 - =~/.local/bin/rg-lockscreen=
 - =~/.local/bin/rg-workspace-menu=
 - =~/.local/bin/rg-workspace-sync=

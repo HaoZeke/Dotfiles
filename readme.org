@@ -20,7 +20,7 @@ Note that the ~chezmoi init~ command is being run twice, to grab some sensitive
 information which needs the encryption settings, as [[https://github.com/twpayne/chezmoi/pull/1521#issuecomment-940840570][discussed here]].
 
 ** Desktop Notes
-The current sway-session semantics and keyboard controls are documented in
+The current sway-session semantics, tmux integration, and keyboard controls are documented in
 [[file:dot_config/sway/readme.org][dot_config/sway/readme.org]].
 
 * License
