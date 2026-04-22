@@ -1,0 +1,11 @@
+[Unit]
+Description=Sway routed-window watcher
+After=graphical-session.target
+PartOf=sway-session.target
+
+[Service]
+ExecStart=%h/.local/bin/rg-sway-route-watcher
+Restart=on-failure
+
+[Install]
+WantedBy=sway-session.target

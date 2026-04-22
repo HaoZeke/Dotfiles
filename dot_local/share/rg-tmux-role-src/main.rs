@@ -108,6 +108,22 @@ fn run_resurrect(name: &str) -> Result<(), String> {
     }
 }
 
+fn run_optional_resurrect(name: &str) -> Result<(), String> {
+    let script = resurrect_script(name)?;
+    if !script.is_file() {
+        return Ok(());
+    }
+    let status = Command::new(TMUX_BIN)
+        .args(["run-shell", script.to_string_lossy().as_ref()])
+        .status()
+        .map_err(|err| format!("failed to run tmux resurrect hook: {err}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("tmux exited with status {status}"))
+    }
+}
+
 fn choose_session() -> Result<(), String> {
     let status = Command::new(TMUX_BIN)
         .args(["choose-tree", "-Zs"])
@@ -123,18 +139,42 @@ fn choose_session() -> Result<(), String> {
     }
 }
 
+fn attach_chooser() -> Result<(), String> {
+    ensure_session(Role::Main)?;
+    let status = Command::new(TMUX_BIN)
+        .args([
+            "attach-session",
+            "-t",
+            Role::Main.session(),
+            ";",
+            "choose-tree",
+            "-Zs",
+        ])
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .map_err(|err| format!("failed to open tmux chooser client: {err}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("tmux exited with status {status}"))
+    }
+}
+
 fn save_state() -> Result<(), String> {
     run_resurrect("save.sh")
 }
 
 fn restore_state() -> Result<(), String> {
-    run_resurrect("restore.sh")?;
+    run_tmux_checked(["start-server"])?;
+    run_optional_resurrect("restore.sh")?;
     ensure_session(Role::Main)?;
     ensure_session(Role::Float)
 }
 
 fn usage() -> &'static str {
-    "usage: rg-tmux-role {ensure|client|chooser|save|restore|session} [role]"
+    "usage: rg-tmux-role {ensure|client|chooser|client-chooser|save|restore|session} [role]"
 }
 
 fn main() {
@@ -152,6 +192,7 @@ fn main() {
             .and_then(|role| Role::from_str(&role))
             .and_then(attach_session),
         Some("chooser") => choose_session(),
+        Some("client-chooser") => attach_chooser(),
         Some("save") => save_state(),
         Some("restore") => restore_state(),
         Some("session") => args

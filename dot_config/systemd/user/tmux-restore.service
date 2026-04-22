@@ -1,0 +1,12 @@
+[Unit]
+Description=Tmux restore bootstrap
+After=tmux-server.service
+Requires=tmux-server.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-tmux-role restore
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

@@ -23,6 +23,7 @@ set $right i
 set $term_server foot -s
 # XDG_RUNTIME_DIR should be /run/user/$(id -u $USER)/
 set $term footclient --server-socket=$XDG_RUNTIME_DIR/foot-server.sock
+set $tmux_chooser footclient --server-socket=$XDG_RUNTIME_DIR/foot-server.sock --app-id=tmuxChooser -T tmux-chooser -e $HOME/.local/bin/rg-tmux-role client-chooser
 # Your preferred application launcher
 # Note: pass the final command to swaymsg so that the resulting window can be opened
 # on the original workspace that the command was run on.
@@ -135,6 +136,9 @@ default_floating_border pixel 2
     bindsym --no-repeat $mod+Ctrl+F3 exec '$HOME/.local/bin/rg-caffeine performance-toggle'
     bindsym --no-repeat $mod+Ctrl+Shift+F3 exec '$HOME/.local/bin/rg-caffeine focus-toggle'
     bindsym --no-repeat $mod+Mod1+Shift+F3 exec '$HOME/.local/bin/rg-caffeine timed 2h'
+    bindsym --no-repeat $mod+F1 exec $tmux_chooser
+    bindsym --no-repeat $mod+F5 exec '$HOME/.local/bin/rg-tmux-role save'
+    bindsym --no-repeat $mod+F6 exec '$HOME/.local/bin/rg-tmux-role restore'
 
     # Exit sway (logs you out of your Wayland session)
     bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
@@ -198,6 +202,7 @@ default_floating_border pixel 2
     bindsym $mod+comma workspace prev_on_output
     bindsym $mod+period workspace next_on_output
     bindsym $mod+Tab workspace back_and_forth
+    bindsym --no-repeat $mod+g mode "goto"
     bindsym --no-repeat $mod+slash exec '$HOME/.local/bin/rg-workspace-menu'
 
     # Move focused container to workspace
@@ -238,6 +243,19 @@ default_floating_border pixel 2
     assign [class="TelegramDesktop"] $ws5
 
     assign [app_id="thunar"] $ws6
+
+mode "goto" {
+    bindsym r workspace number $ws7, mode "default"
+    bindsym n workspace number $ws4, mode "default"
+    bindsym f workspace number $ws6, mode "default"
+    bindsym w workspace number $ws2, mode "default"
+    bindsym c workspace number $ws3, mode "default"
+    bindsym m workspace number $ws8, mode "default"
+    bindsym s workspace number $ws10, mode "default"
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
     assign [class="Thunar"] $ws6
 
     assign [app_id="zathura"] $ws7
@@ -374,7 +392,7 @@ bar {
     status_padding    3
     status_edge_padding 10
     workspace_min_width 32
-    binding_mode_indicator no
+    binding_mode_indicator yes
     workspace_buttons yes
     tray_output       eDP-1
     tray_padding      6
