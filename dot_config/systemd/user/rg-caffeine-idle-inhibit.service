@@ -1,0 +1,18 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-caffeine-idle-inhibit.service).
+#
+# Holds a logind idle inhibitor while rg-caffeine is enabled. This
+# blocks IdleAction-based suspend/hibernate without touching lid-close
+# or power-button behavior.
+[Unit]
+Description=Inhibit logind idle sleep while caffeine is enabled
+PartOf=sway-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/systemd-inhibit --what=idle --mode=block --who=rg-caffeine "--why=Block idle sleep while caffeine is enabled" /usr/bin/sleep infinity
+Restart=on-failure
+RestartSec=3
+OOMScoreAdjust=-500
+ManagedOOMPreference=avoid

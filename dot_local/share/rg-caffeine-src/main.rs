@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const TIMED_DEFAULT: &str = "2h";
 const COFFEE_ICON: &str = "\u{f0f4}";
+const INHIBITOR_SERVICE: &str = "rg-caffeine-idle-inhibit.service";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Mode {
@@ -197,7 +198,20 @@ fn parse_duration(raw: Option<&str>) -> Result<Option<u64>, String> {
     Ok(Some(seconds))
 }
 
-fn set_mode(path: &PathBuf, mode: Mode, duration: Option<&str>) -> Result<State, String> {
+fn sync_idle_inhibitor(mode: Mode) -> Result<(), String> {
+    let action = if mode == Mode::Off { "stop" } else { "start" };
+    let status = Command::new("systemctl")
+        .args(["--user", action, INHIBITOR_SERVICE])
+        .status()
+        .map_err(|err| err.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("failed to {action} {INHIBITOR_SERVICE}"))
+    }
+}
+
+fn set_mode(path: &PathBuf, current: State, mode: Mode, duration: Option<&str>) -> Result<State, String> {
     let expires_at = if mode == Mode::Off {
         None
     } else {
@@ -207,6 +221,10 @@ fn set_mode(path: &PathBuf, mode: Mode, duration: Option<&str>) -> Result<State,
 
     let state = State { mode, expires_at };
     write_state(path, state).map_err(|err| err.to_string())?;
+    if let Err(err) = sync_idle_inhibitor(mode) {
+        let _ = write_state(path, current);
+        return Err(err);
+    }
     Ok(state)
 }
 
@@ -266,6 +284,18 @@ fn notify(summary: &str) {
         .status();
 }
 
+fn service_active(name: &str) -> Result<bool, ()> {
+    let output = Command::new("systemctl")
+        .args(["--user", "show", "-p", "ActiveState", name])
+        .output()
+        .map_err(|_| ())?;
+    if !output.status.success() {
+        return Err(());
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    Ok(text.contains("ActiveState=active"))
+}
+
 fn health(state: State) -> Health {
     let output = match Command::new("systemctl")
         .args(["--user", "show", "-p", "ActiveState", "-p", "ExecStart", "swayidle.service"])
@@ -292,6 +322,12 @@ fn health(state: State) -> Health {
             || !text.contains("rg-caffeine run dim"))
     {
         return Health::Error;
+    }
+    match service_active(INHIBITOR_SERVICE) {
+        Ok(true) if state.mode == Mode::Off => return Health::Error,
+        Ok(false) if state.mode != Mode::Off => return Health::Error,
+        Err(_) if state.mode != Mode::Off => return Health::Unknown,
+        _ => {}
     }
 
     Health::Ok
@@ -383,17 +419,17 @@ fn main() {
     let result = match command {
         "toggle" => {
             let new_state = if current_state.mode == Mode::Idle {
-                set_mode(&path, Mode::Off, None)
+                set_mode(&path, current_state, Mode::Off, None)
             } else {
-                set_mode(&path, Mode::Idle, args.get(1).map(String::as_str))
+                set_mode(&path, current_state, Mode::Idle, args.get(1).map(String::as_str))
             };
             match new_state {
                 Ok(state) => {
                     let message = match state.mode {
                         Mode::Off => "idle policy restored".to_string(),
                         Mode::Idle => remaining_text(state)
-                            .map(|remaining| format!("idle hibernate blocked for {remaining}"))
-                            .unwrap_or_else(|| "idle hibernate blocked".to_string()),
+                            .map(|remaining| format!("idle sleep blocked for {remaining}"))
+                            .unwrap_or_else(|| "idle sleep blocked".to_string()),
                         Mode::Presentation => unreachable!(),
                     };
                     notify(&message);
@@ -404,9 +440,9 @@ fn main() {
         }
         "presentation-toggle" => {
             let new_state = if current_state.mode == Mode::Presentation {
-                set_mode(&path, Mode::Off, None)
+                set_mode(&path, current_state, Mode::Off, None)
             } else {
-                set_mode(&path, Mode::Presentation, args.get(1).map(String::as_str))
+                set_mode(&path, current_state, Mode::Presentation, args.get(1).map(String::as_str))
             };
             match new_state {
                 Ok(state) => {
@@ -423,11 +459,11 @@ fn main() {
                 Err(err) => Err(err),
             }
         }
-        "on" => match set_mode(&path, Mode::Idle, args.get(1).map(String::as_str)) {
+        "on" => match set_mode(&path, current_state, Mode::Idle, args.get(1).map(String::as_str)) {
             Ok(state) => {
                 let message = remaining_text(state)
-                    .map(|remaining| format!("idle hibernate blocked for {remaining}"))
-                    .unwrap_or_else(|| "idle hibernate blocked".to_string());
+                    .map(|remaining| format!("idle sleep blocked for {remaining}"))
+                    .unwrap_or_else(|| "idle sleep blocked".to_string());
                 notify(&message);
                 Ok(0)
             }
@@ -435,17 +471,18 @@ fn main() {
         },
         "timed" => match set_mode(
             &path,
+            current_state,
             Mode::Idle,
             Some(args.get(1).map(String::as_str).unwrap_or(TIMED_DEFAULT)),
         ) {
             Ok(state) => {
                 let remaining = remaining_text(state).unwrap_or_else(|| TIMED_DEFAULT.to_string());
-                notify(&format!("idle hibernate blocked for {remaining}"));
+                notify(&format!("idle sleep blocked for {remaining}"));
                 Ok(0)
             }
             Err(err) => Err(err),
         },
-        "presentation" => match set_mode(&path, Mode::Presentation, args.get(1).map(String::as_str))
+        "presentation" => match set_mode(&path, current_state, Mode::Presentation, args.get(1).map(String::as_str))
         {
             Ok(state) => {
                 let message = remaining_text(state)
@@ -456,7 +493,7 @@ fn main() {
             }
             Err(err) => Err(err),
         },
-        "off" => match set_mode(&path, Mode::Off, None) {
+        "off" => match set_mode(&path, current_state, Mode::Off, None) {
             Ok(_) => {
                 notify("idle policy restored");
                 Ok(0)
