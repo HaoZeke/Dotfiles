@@ -816,7 +816,7 @@ fn performance_status_json(state: &PerformanceState, health: Health) -> String {
 }
 
 fn focus_enabled(idle: State, performance: &PerformanceState) -> bool {
-    idle.mode == Mode::Presentation && performance.mode == PerformanceMode::Performance
+    idle.mode == Mode::Idle && performance.mode == PerformanceMode::Performance
 }
 
 fn focus_health(idle_health: Health, performance_health: Health) -> Health {
@@ -837,7 +837,7 @@ fn focus_status_json(
 ) -> String {
     let focus = focus_enabled(idle, performance);
     let combined_health = focus_health(idle_health, performance_health_value);
-    let partially_enabled = idle.mode == Mode::Presentation || performance.mode == PerformanceMode::Performance;
+    let partially_enabled = idle.mode != Mode::Off || performance.mode == PerformanceMode::Performance;
 
     match combined_health {
         Health::Error => format!(
@@ -891,7 +891,7 @@ fn set_focus(
             idle_path,
             current_idle,
             State {
-                mode: Mode::Presentation,
+                mode: Mode::Idle,
                 expires_at: None,
             },
         )?;
@@ -1168,8 +1168,8 @@ fn main() {
                 Ok((_, performance_state)) => {
                     let summary = if target {
                         match performance_state.backend {
-                            PerformanceBackend::Unavailable => "focus mode enabled (idle only; no power backend)",
-                            _ => "focus mode enabled",
+                            PerformanceBackend::Unavailable => "focus mode enabled (awake only; no power backend)",
+                            _ => "focus mode enabled (awake + boost)",
                         }
                     } else {
                         "focus mode disabled"
@@ -1184,8 +1184,8 @@ fn main() {
         {
             Ok((_, performance_state)) => {
                 let summary = match performance_state.backend {
-                    PerformanceBackend::Unavailable => "focus mode enabled (idle only; no power backend)",
-                    _ => "focus mode enabled",
+                    PerformanceBackend::Unavailable => "focus mode enabled (awake only; no power backend)",
+                    _ => "focus mode enabled (awake + boost)",
                 };
                 notify(summary);
                 Ok(0)
@@ -1304,9 +1304,9 @@ mod tests {
     }
 
     #[test]
-    fn focus_enabled_requires_presentation_and_performance() {
+    fn focus_enabled_requires_awake_and_performance() {
         let idle = State {
-            mode: Mode::Presentation,
+            mode: Mode::Idle,
             expires_at: None,
         };
         let perf = PerformanceState {
@@ -1318,7 +1318,7 @@ mod tests {
         assert!(focus_enabled(idle, &perf));
         assert!(!focus_enabled(
             State {
-                mode: Mode::Idle,
+                mode: Mode::Off,
                 expires_at: None,
             },
             &perf,
@@ -1336,7 +1336,7 @@ mod tests {
     #[test]
     fn focus_status_json_is_good_when_presentation_and_performance_are_on() {
         let idle = State {
-            mode: Mode::Presentation,
+            mode: Mode::Idle,
             expires_at: None,
         };
         let perf = PerformanceState {
@@ -1349,7 +1349,7 @@ mod tests {
 
         assert!(json.contains("\"state\":\"Good\""), "{json}");
         assert!(json.contains("\"focus\":true"), "{json}");
-        assert!(json.contains("\"idle_mode\":\"presentation\""), "{json}");
+        assert!(json.contains("\"idle_mode\":\"idle\""), "{json}");
         assert!(json.contains("\"performance_mode\":\"performance\""), "{json}");
     }
 }

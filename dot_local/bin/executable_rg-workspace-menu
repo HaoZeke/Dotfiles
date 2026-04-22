@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-workspace-menu).
+#
+# Keyboard-first workspace chooser for sway. It lists current workspaces
+# in rofi and jumps to the selected one.
+
+set -euo pipefail
+
+for bin in swaymsg jq rofi; do
+    if ! command -v "$bin" >/dev/null 2>&1; then
+        echo "rg-workspace-menu: missing dependency: $bin" >&2
+        exit 1
+    fi
+done
+
+selection="$(
+    swaymsg -t get_workspaces \
+        | jq -r 'sort_by(.num, .name)[] | [.name, (if .focused then "*" else " " end)] | @tsv' \
+        | awk -F '\t' '{ printf "%s  %s\n", $2, $1 }' \
+        | rofi -dmenu -i -p "workspace"
+)"
+
+[ -n "${selection:-}" ] || exit 0
+
+workspace_name="${selection#??}"
+exec swaymsg workspace "$workspace_name"
