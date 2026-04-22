@@ -72,6 +72,7 @@ path should still be the number row.
 
 - =$mod+1 .. 0=: switch by workspace number slot
 - =$mod+Shift+1 .. 0=: move the focused window by workspace number slot
+- =$mod+,= / =$mod+.=: previous / next workspace on the current output
 - =$mod+Tab=: back-and-forth between the last two workspaces
 - =$mod+/=: open a rofi workspace chooser
 

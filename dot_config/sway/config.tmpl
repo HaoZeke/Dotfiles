@@ -170,13 +170,13 @@ default_floating_border pixel 2
     set $ws1 "1: term"
     set $ws2 "2: web"
     set $ws3 "3: code"
-    set $ws4 "4: notes"
+    set $ws4 "4: note"
     set $ws5 "5: chat"
-    set $ws6 "6: files"
+    set $ws6 "6: file"
     set $ws7 "7: read"
     set $ws8 "8: media"
     set $ws9 "9: lab"
-    set $ws10 "10: admin"
+    set $ws10 "10: sys"
 
     # Repeating the current workspace shortcut flips back to the previous one.
     # The "workspace number" form prefers the numbered slot if it already
@@ -195,6 +195,8 @@ default_floating_border pixel 2
     bindsym $mod+8 workspace number $ws8
     bindsym $mod+9 workspace number $ws9
     bindsym $mod+0 workspace number $ws10
+    bindsym $mod+comma workspace prev_on_output
+    bindsym $mod+period workspace next_on_output
     bindsym $mod+Tab workspace back_and_forth
     bindsym --no-repeat $mod+slash exec '$HOME/.local/bin/rg-workspace-menu'
 

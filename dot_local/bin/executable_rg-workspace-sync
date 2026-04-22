@@ -15,13 +15,13 @@ workspace_map_json='{
   "1": "1:\uf120 term",
   "2": "2:\uf269 web",
   "3": "3:\uf121 code",
-  "4": "4:\uf044 notes",
+  "4": "4:\uf044 note",
   "5": "5:\uf5fc chat",
-  "6": "6:\uf07c files",
+  "6": "6:\uf07c file",
   "7": "7:\uf02d read",
   "8": "8:\uf001 media",
   "9": "9:\uf12e lab",
-  "10": "10:\uf013 admin"
+  "10": "10:\uf013 sys"
 }'
 
 while IFS=$'\t' read -r current_name current_num; do
@@ -33,7 +33,7 @@ while IFS=$'\t' read -r current_name current_num; do
         continue
     fi
 
-    if [[ "$current_name" =~ ^[0-9]+$ ]]; then
+    if [[ "$current_name" =~ ^[0-9]+$ ]] || [[ "$current_name" =~ ^${current_num}: ]]; then
         swaymsg "rename workspace \"$current_name\" to \"$target_name\"" >/dev/null
     fi
 done < <(
