@@ -1,0 +1,15 @@
+[Unit]
+Description=rg-space-sweep auto-clean timer (hourly)
+Documentation=https://github.com/HaoZeke/dotfiles
+
+[Timer]
+# 15 min after login, then every hour thereafter. Persistent=true catches
+# runs missed while the machine was off.
+OnBootSec=15min
+OnUnitActiveSec=1h
+Persistent=true
+AccuracySec=1min
+Unit=rg-space-sweep.service
+
+[Install]
+WantedBy=timers.target

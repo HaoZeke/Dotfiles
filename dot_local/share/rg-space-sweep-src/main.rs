@@ -8,6 +8,59 @@ use std::process::{self, Command, Stdio};
 const FIND_BIN: &str = "/usr/bin/find";
 const DU_BIN: &str = "/usr/bin/du";
 
+/// First-pass btrfs snapshot cleanup: keeps the newest dated snapshot of
+/// each prefix (@ and @home) as a safety net.
+const BTRFS_CLEANUP_SCRIPT: &str = include_str!("btrfs-cleanup.sh");
+
+/// Aggressive variant: removes TODAY's snapshots too and runs a full
+/// `-dusage=100 -musage=100` balance so previously-snapshot-held blocks
+/// are actually released.
+const BTRFS_CLEANUP_SCRIPT_AGGRESSIVE: &str = r#"#!/usr/bin/env bash
+# btrfs-snapshot-cleanup-aggressive.sh
+# Removes ALL dated snapshots and runs full balance. Loses today's
+# rollback. Run with: sudo bash <this-script>
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "must run as root (use sudo)" >&2
+  exit 1
+fi
+
+SNAP_DIR=/.snapshots
+
+echo "=== before ==="
+df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
+echo
+
+mapfile -t snaps < <(
+  find "$SNAP_DIR" -mindepth 1 -maxdepth 1 -type d \
+    -regextype posix-extended \
+    -regex ".*/@(home)?\.[0-9]+T[0-9]+$" -printf '%p\n' 2>/dev/null | sort
+)
+
+if ((${#snaps[@]} == 0)); then
+  echo "no dated snapshots found under $SNAP_DIR"
+else
+  echo "deleting ${#snaps[@]} dated snapshot(s):"
+  for s in "${snaps[@]}"; do
+    echo "  $s"
+    btrfs subvolume delete "$s"
+  done
+fi
+
+echo
+echo "=== balance /home (-dusage=100 -musage=100) ==="
+btrfs balance start -dusage=100 -musage=100 /home || true
+echo
+echo "=== balance / ==="
+btrfs balance start -dusage=100 -musage=100 / || true
+
+echo
+echo "=== after ==="
+df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
+btrfs fi usage /home | head -20
+"#;
+
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum Category {
     Rust,
@@ -16,7 +69,6 @@ enum Category {
     Tox,
     Venv,
     Js,
-    Cosmolab,
 }
 
 impl Category {
@@ -28,7 +80,6 @@ impl Category {
             Self::Tox => "tox",
             Self::Venv => "venv",
             Self::Js => "js",
-            Self::Cosmolab => "cosmolab",
         }
     }
 
@@ -42,7 +93,6 @@ impl Category {
                 Self::Tox,
                 Self::Venv,
                 Self::Js,
-                Self::Cosmolab,
             ]),
             "rust" => Ok(vec![Self::Rust]),
             "python" => Ok(vec![Self::Python]),
@@ -50,7 +100,6 @@ impl Category {
             "tox" => Ok(vec![Self::Tox]),
             "venv" => Ok(vec![Self::Venv]),
             "js" => Ok(vec![Self::Js]),
-            "cosmolab" => Ok(vec![Self::Cosmolab]),
             other => Err(format!("unknown category: {other}")),
         }
     }
@@ -60,6 +109,13 @@ impl Category {
 enum Mode {
     Report,
     Clean,
+    /// Check free space on $HOME; clean only if it is below the threshold.
+    /// Always implies `--yes` when it fires. Intended for a systemd timer.
+    AutoClean,
+    /// Report dated btrfs snapshots under /.snapshots and write a root-only
+    /// cleanup script to /tmp. Cannot delete subvolumes directly because
+    /// btrfs operations require root; the user runs the generated script.
+    Snapshots,
 }
 
 #[derive(Debug)]
@@ -69,6 +125,12 @@ struct Options {
     dry_run: bool,
     yes: bool,
     limit: usize,
+    /// For AutoClean: only clean when free space on $HOME drops below N GB.
+    min_free_gb: u64,
+    /// For Snapshots: where to write the cleanup script.
+    script_path: PathBuf,
+    /// For Snapshots: also include TODAY's snapshots (aggressive).
+    aggressive: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -86,7 +148,7 @@ struct Entry {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [report|clean] [--dry-run] [--yes] [--limit N] [default|all|rust|python|pixi|tox|venv|js|cosmolab]
+usage: rg-space-sweep [report|clean|auto-clean|snapshots] [--dry-run] [--yes] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
 
 report
     Show category totals and the largest matching cache/build directories.
@@ -94,11 +156,21 @@ report
 clean
     Remove the matching directories. Requires --yes, or use --dry-run to preview.
 
+auto-clean
+    Check free space on $HOME; clean only if below --min-free-gb (default 10).
+    Always implies --yes when firing. Intended for a systemd timer.
+
+snapshots
+    Report dated btrfs snapshots under /.snapshots and write a root-only
+    cleanup script (keeps newest @ and @home, deletes older pairs, runs
+    balance). Default path: /tmp/btrfs-snapshot-cleanup.sh. Override via
+    --script-path. Run the script with `sudo bash <path>`.
+
 default
     rust python tox
 
 all
-    default + pixi + venv + js + cosmolab"
+    default + pixi + venv + js"
 }
 
 fn parse_args() -> Result<Options, String> {
@@ -106,6 +178,9 @@ fn parse_args() -> Result<Options, String> {
     let mut dry_run = false;
     let mut yes = false;
     let mut limit = 20usize;
+    let mut min_free_gb: u64 = 10;
+    let mut script_path = PathBuf::from("/tmp/btrfs-snapshot-cleanup.sh");
+    let mut aggressive = false;
     let mut category_tokens = Vec::new();
 
     let mut args = env::args().skip(1);
@@ -113,6 +188,8 @@ fn parse_args() -> Result<Options, String> {
         match first.as_str() {
             "report" => mode = Mode::Report,
             "clean" => mode = Mode::Clean,
+            "auto-clean" => mode = Mode::AutoClean,
+            "snapshots" => mode = Mode::Snapshots,
             "-h" | "--help" | "help" => return Err(usage().to_string()),
             other => category_tokens.push(other.to_string()),
         }
@@ -122,6 +199,7 @@ fn parse_args() -> Result<Options, String> {
         match arg.as_str() {
             "--dry-run" => dry_run = true,
             "--yes" => yes = true,
+            "--aggressive" => aggressive = true,
             "--limit" => {
                 let value = args
                     .next()
@@ -130,13 +208,30 @@ fn parse_args() -> Result<Options, String> {
                     .parse::<usize>()
                     .map_err(|_| format!("invalid --limit value: {value}"))?;
             }
+            "--min-free-gb" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "--min-free-gb requires a value".to_string())?;
+                min_free_gb = value
+                    .parse::<u64>()
+                    .map_err(|_| format!("invalid --min-free-gb value: {value}"))?;
+            }
+            "--script-path" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "--script-path requires a value".to_string())?;
+                script_path = PathBuf::from(value);
+            }
             "-h" | "--help" | "help" => return Err(usage().to_string()),
             other => category_tokens.push(other.to_string()),
         }
     }
 
     if category_tokens.is_empty() {
-        category_tokens.push("default".to_string());
+        category_tokens.push(match mode {
+            Mode::AutoClean => "all".to_string(),
+            _ => "default".to_string(),
+        });
     }
 
     let mut seen = BTreeSet::new();
@@ -159,7 +254,103 @@ fn parse_args() -> Result<Options, String> {
         dry_run,
         yes,
         limit,
+        min_free_gb,
+        script_path,
+        aggressive,
     })
+}
+
+/// List dated btrfs snapshots under /.snapshots, newest last.
+fn dated_snapshots() -> Vec<PathBuf> {
+    let snap_dir = Path::new("/.snapshots");
+    let mut out = Vec::new();
+    let Ok(entries) = fs::read_dir(snap_dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name_str) = name.to_str() else { continue };
+        // Matches @.<digits>T<digits> and @home.<digits>T<digits>
+        let rest = if let Some(r) = name_str.strip_prefix("@home.") {
+            r
+        } else if let Some(r) = name_str.strip_prefix("@.") {
+            r
+        } else {
+            continue;
+        };
+        let parts: Vec<&str> = rest.splitn(2, 'T').collect();
+        if parts.len() == 2
+            && !parts[0].is_empty()
+            && !parts[1].is_empty()
+            && parts[0].chars().all(|c| c.is_ascii_digit())
+            && parts[1].chars().all(|c| c.is_ascii_digit())
+        {
+            out.push(entry.path());
+        }
+    }
+    out.sort();
+    out
+}
+
+fn write_snapshot_script(options: &Options) -> Result<(), String> {
+    let snaps = dated_snapshots();
+    if snaps.is_empty() {
+        println!("no dated snapshots found under /.snapshots; nothing to script");
+        return Ok(());
+    }
+    println!("found {} dated snapshot(s) under /.snapshots:", snaps.len());
+    for s in &snaps {
+        println!("  {}", s.display());
+    }
+    let script = if options.aggressive {
+        BTRFS_CLEANUP_SCRIPT_AGGRESSIVE
+    } else {
+        BTRFS_CLEANUP_SCRIPT
+    };
+    fs::write(&options.script_path, script)
+        .map_err(|e| format!("write {}: {e}", options.script_path.display()))?;
+    // Mark executable (0o755).
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(meta) = fs::metadata(&options.script_path) {
+        let mut p = meta.permissions();
+        p.set_mode(0o755);
+        let _ = fs::set_permissions(&options.script_path, p);
+    }
+    let mode_label = if options.aggressive {
+        "aggressive (removes TODAY's snapshots too)"
+    } else {
+        "standard (keeps newest of each prefix as safety)"
+    };
+    println!();
+    println!("wrote {} script to: {}", mode_label, options.script_path.display());
+    println!("run with: sudo bash {}", options.script_path.display());
+    if !options.aggressive {
+        println!();
+        println!("if space is still tight after the first pass, rerun with --aggressive:");
+        println!("  rg-space-sweep snapshots --aggressive");
+    }
+    Ok(())
+}
+
+/// Return free bytes on the filesystem that owns `path`, via statvfs.
+fn free_bytes_for(path: &Path) -> Result<u64, String> {
+    use std::ffi::CString;
+    use std::os::unix::ffi::OsStrExt;
+    let c_path = CString::new(path.as_os_str().as_bytes())
+        .map_err(|e| format!("path contains NUL: {e}"))?;
+    // SAFETY: libc::statvfs writes into a zeroed struct we own; we check the
+    // return value before reading fields.
+    unsafe {
+        let mut stat: libc::statvfs = std::mem::zeroed();
+        if libc::statvfs(c_path.as_ptr(), &mut stat) != 0 {
+            return Err(format!(
+                "statvfs({}) failed: {}",
+                path.display(),
+                std::io::Error::last_os_error()
+            ));
+        }
+        Ok(stat.f_bavail as u64 * stat.f_frsize as u64)
+    }
 }
 
 fn home_dir() -> Result<PathBuf, String> {
@@ -228,73 +419,6 @@ fn find_path_dirs(home: &Path, pattern: &str) -> Result<Vec<PathBuf>, String> {
     find_dirs(home, &["-path", pattern])
 }
 
-fn find_tmp_entries(prefixes: &[&str]) -> Result<Vec<PathBuf>, String> {
-    let tmp = Path::new("/tmp");
-    let mut entries = Vec::new();
-    let dir = match fs::read_dir(tmp) {
-        Ok(dir) => dir,
-        Err(err) => return Err(format!("failed to read {}: {err}", tmp.display())),
-    };
-
-    for entry in dir {
-        let entry = entry.map_err(|err| format!("failed to read {} entry: {err}", tmp.display()))?;
-        let path = entry.path();
-        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
-            continue;
-        };
-        if prefixes.iter().any(|prefix| name.starts_with(prefix)) {
-            entries.push(path);
-        }
-    }
-
-    Ok(entries)
-}
-
-fn ssh_config_args_for_home(home: &Path) -> Vec<OsString> {
-    let config = home.join(".ssh/config");
-    if config.is_file() {
-        vec![OsString::from("-F"), config.into_os_string()]
-    } else {
-        Vec::new()
-    }
-}
-
-fn cosmolab_remote_cleanup_script() -> &'static str {
-    "set -eu
-if [ -d \"$HOME/Git\" ]; then
-    find \"$HOME/Git\" -type d -name target -prune -print0 | xargs -0r rm -rf
-fi
-rm -rf \"$HOME/.cache/nix\"
-if command -v nix-collect-garbage >/dev/null 2>&1; then
-    nix-collect-garbage -d
-fi"
-}
-
-fn clean_cosmolab_remote(home: &Path, dry_run: bool) -> Result<(), String> {
-    let mut cmd = Command::new("ssh");
-    cmd.args(ssh_config_args_for_home(home));
-    cmd.arg("rg.cosmolab");
-    if dry_run {
-        println!("would run remote cosmolab builder cleanup on rg.cosmolab");
-        println!("{}", cosmolab_remote_cleanup_script());
-        return Ok(());
-    }
-    println!("running remote cosmolab builder cleanup on rg.cosmolab");
-    let output = cmd
-        .arg(cosmolab_remote_cleanup_script())
-        .output()
-        .map_err(|err| format!("failed to run ssh for rg.cosmolab cleanup: {err}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("rg.cosmolab cleanup failed: {stderr}"));
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if !stdout.is_empty() {
-        println!("{stdout}");
-    }
-    Ok(())
-}
-
 fn has_cargo_parent(path: &Path) -> bool {
     let Some(parent) = path.parent() else {
         return false;
@@ -345,7 +469,6 @@ fn emit_category_paths(home: &Path, category: Category) -> Result<Vec<PathBuf>, 
             paths.push(home.join(".npm"));
             paths
         }
-        Category::Cosmolab => find_tmp_entries(&["cosmolab-"])?,
     };
     Ok(paths)
 }
@@ -455,15 +578,6 @@ fn print_report(home: &Path, entries: &[Entry], limit: usize) {
 }
 
 fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
-    if entry.category == Category::Cosmolab {
-        return entry.path.starts_with("/tmp/")
-            && entry
-                .path
-                .file_name()
-                .and_then(|value| value.to_str())
-                .is_some_and(|name| name.starts_with("cosmolab-"));
-    }
-
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
     }
@@ -504,7 +618,6 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
                     .and_then(|value| value.to_str())
                     == Some("node_modules")
         }
-        Category::Cosmolab => false,
     }
 }
 
@@ -521,15 +634,8 @@ fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), St
 
     for entry in entries {
         println!("removing {:<6}  {}", entry.category.label(), display_path(home, &entry.path));
-        let meta = fs::symlink_metadata(&entry.path)
-            .map_err(|err| format!("failed to stat {}: {err}", entry.path.display()))?;
-        if meta.is_dir() {
-            fs::remove_dir_all(&entry.path)
-                .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
-        } else {
-            fs::remove_file(&entry.path)
-                .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
-        }
+        fs::remove_dir_all(&entry.path)
+            .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
     }
 
     Ok(())
@@ -569,16 +675,44 @@ fn main() {
                                 display_path(&home, &entry.path)
                             );
                         }
-                        if options.categories.contains(&Category::Cosmolab) {
-                            println!();
-                            clean_cosmolab_remote(&home, true)?;
-                        }
                     } else {
                         clean_entries(&home, &entries, options.yes)?;
-                        if options.categories.contains(&Category::Cosmolab) {
-                            clean_cosmolab_remote(&home, false)?;
-                        }
                     }
+                }
+                Mode::AutoClean => {
+                    let free = free_bytes_for(&home)?;
+                    let threshold = options.min_free_gb.saturating_mul(1024 * 1024 * 1024);
+                    if free >= threshold {
+                        println!(
+                            "free={} on {}, above threshold={} GB; no-op",
+                            format_bytes(free),
+                            home.display(),
+                            options.min_free_gb
+                        );
+                        return Ok(());
+                    }
+                    println!(
+                        "free={} below threshold={} GB; cleaning",
+                        format_bytes(free),
+                        options.min_free_gb
+                    );
+                    clean_entries(&home, &entries, true)?;
+                    let after = free_bytes_for(&home)?;
+                    println!(
+                        "post-clean free={} ({} reclaimed)",
+                        format_bytes(after),
+                        format_bytes(after.saturating_sub(free))
+                    );
+                    // Still tight? Suggest the snapshot route so the user
+                    // does not have to remember it.
+                    if after < threshold && Path::new("/.snapshots").is_dir() {
+                        println!();
+                        println!("still below threshold. btrfs snapshots likely hold reclaimable space.");
+                        println!("run: rg-space-sweep snapshots && sudo bash /tmp/btrfs-snapshot-cleanup.sh");
+                    }
+                }
+                Mode::Snapshots => {
+                    write_snapshot_script(&options)?;
                 }
             }
             Ok(())
@@ -587,33 +721,5 @@ fn main() {
     if let Err(err) = result {
         eprintln!("{err}");
         process::exit(1);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn cosmolab_remote_cleanup_script_cleans_targets_and_nix_state() {
-        let script = cosmolab_remote_cleanup_script();
-        assert!(script.contains("find \"$HOME/Git\""));
-        assert!(script.contains("-name target"));
-        assert!(script.contains("rm -rf \"$HOME/.cache/nix\""));
-        assert!(script.contains("nix-collect-garbage -d"));
-    }
-
-    #[test]
-    fn ssh_command_uses_user_config_when_present() {
-        let tmp = tempdir().expect("tempdir should be created");
-        let ssh_dir = tmp.path().join(".ssh");
-        std::fs::create_dir(&ssh_dir).expect(".ssh dir should be created");
-        let config = ssh_dir.join("config");
-        std::fs::write(&config, "Host rg.cosmolab\n").expect("config should be written");
-
-        let args = ssh_config_args_for_home(tmp.path());
-        assert_eq!(args[0], OsString::from("-F"));
-        assert_eq!(args[1], config.as_os_str());
     }
 }
