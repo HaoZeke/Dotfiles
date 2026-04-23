@@ -72,6 +72,7 @@ dot_claude/history.jsonl
 dot_claude/paste-cache/
 dot_claude/plugins/
 dot_claude/projects/
+dot_claude/private_projects/
 dot_claude/session-env/
 dot_claude/shell-snapshots/
 dot_claude/tasks/
@@ -83,6 +84,27 @@ dot_claude/teams/
 dot_claude/downloads/
 dot_claude/stats-cache.json
 dot_claude/mcp-needs-auth-cache.json
+dot_claude/settings.local.json
+dot_claude/private_settings.local.json
+# Codex (machine-specific state)
+private_dot_codex/cache/
+private_dot_codex/log/
+private_dot_codex/memories/
+private_dot_codex/plugins/
+private_dot_codex/sessions/
+private_dot_codex/shell_snapshots/
+private_dot_codex/tmp/
+private_dot_codex/skills/
+private_dot_codex/auth.json
+private_dot_codex/private_auth.json
+private_dot_codex/history.jsonl
+private_dot_codex/installation_id
+private_dot_codex/logs_*.sqlite*
+private_dot_codex/models_cache.json
+private_dot_codex/state_*.sqlite*
+private_dot_codex/version.json
+private_dot_codex/.personality_migration
+private_dot_codex/config.json
 # Qwen Code (machine-specific state)
 dot_qwen/debug/
 dot_qwen/projects/
