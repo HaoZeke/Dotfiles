@@ -123,3 +123,8 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.claude/hooks/rtk-rewrite.sh
 ~/.claude/rules/context7.md
 ~/.claude/agent-memory/realpython-reviewer/reference_publishing_pipeline.md
+~/.claude/.project-ctx.toml
+~/.claude/projects/-home-rgoswami--claude/memory/MEMORY.md
+~/.claude/projects/-home-rgoswami--claude/memory/reference_nimtasks_binaries.md
+~/.claude/projects/-home-rgoswami--claude/memory/feedback_tool_defaults.md
+~/.claude/projects/-home-rgoswami--claude/memory/feedback_claude_config_edit_flow.md
