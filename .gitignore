@@ -146,3 +146,6 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.claude/agent-memory/ttech-ops-infra/project_kanidm_migration.md
 ~/.claude/agent-memory/ttech-ops-infra/MEMORY.md
 ~/.claude/projects/-home-rgoswami--claude/memory/feedback_disk_full_triage.md
+~/.config/vale/styles/realpython/UseImgMacro.yml
+~/.config/vale/styles/realpython/MixedMonospacePossessive.yml
+~/.config/vale/styles/realpython/AlertMacroRequired.yml
