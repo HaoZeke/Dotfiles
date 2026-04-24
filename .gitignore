@@ -227,3 +227,9 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/vale/styles/realpython/USSpelling.yml
 ~/.config/vale/styles/realpython/VsDot.yml
 ~/.config/vale/styles/realpython/Wordiness.yml
+~/.config/vale/styles/realpython/ClickHereLink.yml
+~/.config/vale/styles/realpython/BashHighlighter.yml
+~/.config/vale/styles/realpython/PyconPrompt.yml
+~/.config/vale/styles/realpython/NoCodeBlockBeforeHeading.yml
+~/.config/vale/styles/realpython/ColonIntroducesVisual.yml
+~/.config/vale/styles/realpython/FileTreeNoLangHeader.yml
