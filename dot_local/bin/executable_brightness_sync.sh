@@ -6,13 +6,10 @@
 BRIGHTNESS_CHANGE=$1
 WOBSOCK=$2
 CACHE_FILE="/tmp/ddc_monitors_cache"
+LOCK_FILE="/tmp/brightness_sync_ddc.lock"
 
-# 1. Clean up concurrency
-# Kill previous instances to prevent I2C bus pile-ups.
-pgrep -f "brightness_sync.sh" | grep -v $$ | xargs -r kill
-
-# 2. IMMEDIATE ACTION: Internal Screen & UI
-# We do this first so the laptop feels responsive instantly.
+# 1. IMMEDIATE ACTION: Internal Screen & UI
+# Always update on every press so the laptop feels responsive.
 NEW_BRIGHTNESS=$(brightnessctl set "$BRIGHTNESS_CHANGE" -m | cut -d, -f4 | tr -d '%')
 
 if [ -z "$NEW_BRIGHTNESS" ]; then
@@ -24,21 +21,26 @@ if [ -p "$WOBSOCK" ]; then
     echo "$NEW_BRIGHTNESS" > "$WOBSOCK"
 fi
 
-# 3. Monitor Discovery (Lazy Loading)
-# Change: We use -f (file exists) instead of -s (file has content).
-# If the file exists but is empty, it means we scanned and found NO screens.
-# We respect that empty state and do not re-scan.
-if [ ! -f "$CACHE_FILE" ]; then
-    ddcutil detect --terse | \
-    awk '/^Display/ {valid=1} /^Invalid/ {valid=0} valid && /I2C bus:/ {print $NF}' | \
-    sed 's/.*i2c-//' > "$CACHE_FILE"
-fi
+# 2. External monitors via DDC/CI: serialize with a non-blocking flock.
+# A burst of F5/F6 presses must not pile up I2C traffic, so any press that
+# arrives while a prior round is still running is dropped here. The internal
+# panel above still tracked every press.
+(
+    exec 9>"$LOCK_FILE"
+    flock -n 9 || exit 0
 
-# 4. Adjust External Monitors (Background)
-# If CACHE_FILE is empty (no screens), this loop simply doesn't run.
-while read -r bus_id; do
-    ddcutil setvcp 10 "$NEW_BRIGHTNESS" --bus "$bus_id" --noverify &
-done < "$CACHE_FILE"
+    # Monitor discovery (lazy). An empty file means we scanned and found
+    # no external screens; respect that and do not re-scan.
+    if [ ! -f "$CACHE_FILE" ]; then
+        ddcutil detect --terse | \
+            awk '/^Display/ {valid=1} /^Invalid/ {valid=0} valid && /I2C bus:/ {print $NF}' | \
+            sed 's/.*i2c-//' > "$CACHE_FILE"
+    fi
+
+    while read -r bus_id; do
+        ddcutil setvcp 10 "$NEW_BRIGHTNESS" --bus "$bus_id" --noverify
+    done < "$CACHE_FILE"
+) &
 
 # TODO(rg): write up as a short post / blog
 # Addenum :: udev hotplug
