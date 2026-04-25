@@ -21,9 +21,7 @@ indicator-thickness=16
 line-uses-ring
 separator-color=00000000
 
-effect-blur=8x3
 effect-vignette=0.30:0.55
-effect-greyscale
 
 color=101418
 inside-color=101418c0

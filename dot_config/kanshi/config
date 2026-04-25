@@ -1,18 +1,21 @@
-# You can get the names of your outputs by running: swaymsg -t get_outputs
-# See also
-# here: https://github.com/swaywm/wlroots/pull/2064#issuecomment-622647075
+# Output descriptions come from `swaymsg -t get_outputs`. Use aliases in
+# profiles so connector renumbering does not break the layout after reboots or
+# dock changes.
+output "Chimei Innolux Corporation 0x1417 Unknown" alias $panel mode preferred scale 1 adaptive_sync on
+output "Lenovo Group Limited LEN L27i-28 0x54573152" alias $home-lenovo mode 1920x1080@74.973Hz scale 1 adaptive_sync off
+output "Lenovo Group Limited M14 V904H2WF" alias $portable-m14 mode preferred scale 1 adaptive_sync off
+output "BNQ BenQ PD2705Q V3N03357019" alias $theochem-benq mode preferred scale 1 adaptive_sync off
+output "Acer Technologies Acer B277 0x02918A2B" alias $theochem-acer mode preferred scale 1 adaptive_sync off
+
 profile homeLabIS {
   # eDP-1, inbuilt on the left
-  output "Chimei Innolux Corporation 0x1417 Unknown" {
+  output $panel {
    enable
-   mode 1920x1200
    position 0,0
-   scale 1
   }
   # Home screen, to the right
-  output "Lenovo Group Limited LEN L27i-28 0x54573152" {
+  output $home-lenovo {
    enable
-   mode 1920x1080
    position 1920,0
   }
 }
@@ -20,16 +23,16 @@ profile homeLabIS {
 profile homeLabTripleIS {
     # Left: Lenovo M14 (External)
     # Starts at 0
-    output "Lenovo Group Limited M14 V904H2WF" position 0,0
+    output $portable-m14 enable position 0,0
 
     # Center: Laptop Screen (Internal)
     # Starts after the M14 (1920 pixels)
     # We use the Model identifier here as the serial is "Unknown"
-    output "Chimei Innolux Corporation 0x1417 Unknown" position 1920,0
+    output $panel enable position 1920,0
 
     # Right: Lenovo L27i (External)
     # Starts after the Laptop (1920 + 1920 = 3840 pixels)
-    output "Lenovo Group Limited LEN L27i-28 0x54573152" position 3840,0
+    output $home-lenovo enable position 3840,0
 
     # --- M14 (Display 2) Settings ---
     # Set to sRGB mode (01) to fix washed out colors
@@ -46,34 +49,28 @@ profile TheochemUI_myGrant {
   # [1] https://github.com/swaywm/wlroots/issues/958
   # [2] https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/395#note_555613
   # eDP-1, inbuilt on the right
-  output "Chimei Innolux Corporation 0x1417 Unknown" {
+  output $panel {
    enable
-   mode 1920x1200
    position 2560,0
-   scale 1
   }
   # HI Lab screen, to the left
   # Dell P2416D, 23.8 inches, 123.41 PPI (see https://www.sven.de/dpi/)
-  output "BNQ BenQ PD2705Q V3N03357019" {
+  output $theochem-benq {
    enable
-   mode 2560x1440
    position 0,0
   }
 }
 
 profile travelWork {
   # eDP-1, inbuilt on the left
-  output "Chimei Innolux Corporation 0x1417 Unknown" {
+  output $panel {
    enable
-   mode 1920x1200
    position 0,0
-   scale 1
   }
   # Travel screen, to the right
   # Dell P2416D, 22 inches, 100.13 PPI (see https://www.sven.de/dpi/)
-  output "Lenovo Group Limited M14 V904H2WF" {
+  output $portable-m14 {
    enable
-   mode 1920x1080
    position 1920,0
   }
 }
@@ -84,16 +81,20 @@ profile TheochemUI_eigill {
   # [1] https://github.com/swaywm/wlroots/issues/958
   # [2] https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/395#note_555613
   # eDP-1, inbuilt on the right
-  output "Chimei Innolux Corporation 0x1417 Unknown" {
+  output $panel {
    enable
-   mode 1920x1200
    position 2560,0
-   scale 1
   }
   # HI Lab screen, to the left
-  output "Acer Technologies Acer B277 0x02918A2B" {
+  output $theochem-acer {
    enable
-   mode 1920x1080
+   position 0,0
+  }
+}
+
+profile laptopOnly {
+  output $panel {
+   enable
    position 0,0
   }
 }

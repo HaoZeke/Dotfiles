@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-lockscreen).
 #
-# Repo-owned swaylock wrapper with a polished default presentation:
-# prefer a live screenshot background, fall back to a known wallpaper,
-# and keep the visual theme in ~/.config/swaylock/config.local.
+# Repo-owned swaylock wrapper with a stable static lockscreen:
+# prefer the cat wallpaper, allow explicit live screenshots, and keep
+# the visual theme in ~/.config/swaylock/config.local.
 
 set -eu
 
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 CONFIG_PATH="${RG_LOCKSCREEN_CONFIG:-$XDG_CONFIG_HOME/swaylock/config.local}"
-PREFERRED_IMAGE="${RG_LOCKSCREEN_IMAGE:-$XDG_CONFIG_HOME/swaylock/lockscreen.png}"
-LEGACY_IMAGE="$HOME/Pictures/Walls/lockscreen.png"
+PREFERRED_IMAGE="${RG_LOCKSCREEN_IMAGE:-$HOME/Pictures/Walls/lockscreen.png}"
+FALLBACK_IMAGE="$XDG_CONFIG_HOME/swaylock/lockscreen.png"
 FALLBACK_COLOR="${RG_LOCKSCREEN_COLOR:-101418}"
 MODE="${RG_LOCKSCREEN_MODE:-auto}"
 DRY_RUN=0
@@ -23,7 +23,7 @@ Usage: rg-lockscreen [wrapper-options] [-- swaylock-args...]
 Wrapper options:
   --dry-run          Print the resolved swaylock command and exit.
   --screenshots      Force live screenshot mode.
-  --static           Force static wallpaper mode.
+  --static           Force static wallpaper mode (default).
   --color-only       Force solid-color fallback mode.
   --help             Show this help.
 
@@ -74,11 +74,7 @@ done
 
 BG_MODE="$MODE"
 if [ "$BG_MODE" = "auto" ]; then
-    if [ -n "${WAYLAND_DISPLAY-}" ]; then
-        BG_MODE=screenshots
-    else
-        BG_MODE=static
-    fi
+    BG_MODE=static
 fi
 
 if [ -r "$CONFIG_PATH" ]; then
@@ -93,7 +89,7 @@ case "$BG_MODE" in
         ;;
     static)
         IMAGE_PATH=""
-        for candidate in "$PREFERRED_IMAGE" "$LEGACY_IMAGE"; do
+        for candidate in "$PREFERRED_IMAGE" "$FALLBACK_IMAGE"; do
             if [ -r "$candidate" ]; then
                 IMAGE_PATH="$candidate"
                 break
