@@ -111,6 +111,13 @@ default_floating_border pixel 2
     # Lookup copied items
     bindsym --no-repeat $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard -show-icons'
 
+    # vissue: rofi-driven launcher for vault issues. Default mode lists
+    # actionable items (TODO/STARTED, no open blocker) and opens the chosen
+    # one in $EDITOR at the heading's line. Shift variant prompts for a
+    # project then a title and creates a new issue.
+    bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/vissue-rofi'
+    bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/vissue-rofi new'
+
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
     # Despite the name, also works for non-floating windows.
