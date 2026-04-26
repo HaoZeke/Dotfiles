@@ -234,3 +234,8 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/vale/styles/realpython/ColonIntroducesVisual.yml
 ~/.config/vale/styles/realpython/FileTreeNoLangHeader.yml
 ~/.local/share/chezmoi/hooks/pre-push
+~/.claude/rules/coding.md
+~/.claude/rules/process.md
+~/.claude/rules/tooling.md
+~/.claude/obsidian-sql.md
+~/.claude/graphviz-style.md
