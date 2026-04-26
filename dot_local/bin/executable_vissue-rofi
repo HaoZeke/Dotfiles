@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# vissue-rofi: rofi launcher for vault-issue. Default mode shows actionable
+# items (`vissue ready`) and on selection opens the heading in $EDITOR.
+#
+# Modes (passed as the first arg):
+#   ready  (default) - pick from TODO/STARTED with no open blocker
+#   all              - pick from every issue, regardless of state
+#   stale            - pick from issues older than 30 days
+#   new              - prompt for project then title and create one
+#
+# Examples:
+#   vissue-rofi
+#   vissue-rofi all
+#   vissue-rofi new
+#
+# Bind in your i3 / sway / hyprland config:
+#   bindsym $mod+i exec --no-startup-id vissue-rofi
+#   bindsym $mod+Shift+i exec --no-startup-id vissue-rofi new
+
+set -eu
+
+mode="${1:-ready}"
+editor="${EDITOR:-vi}"
+
+pick_one() {
+    local prompt="$1"
+    local listing="$2"
+    printf '%s\n' "${listing}" | rofi -dmenu -i -p "${prompt}" -no-custom
+}
+
+case "${mode}" in
+    ready|all|stale)
+        case "${mode}" in
+            ready) listing=$(vissue ready) ;;
+            all)   listing=$(vissue list) ;;
+            stale) listing=$(vissue stale) ;;
+        esac
+        if [ -z "${listing}" ]; then
+            notify-send "vissue (${mode})" "no issues found" 2>/dev/null || true
+            exit 0
+        fi
+        chosen=$(pick_one "vissue ${mode} >" "${listing}")
+        [ -z "${chosen}" ] && exit 0
+        id=$(printf '%s' "${chosen}" | awk '{print $1}')
+        # `vissue show` prints `File: <path>:<from>-<to>`; pull path and line
+        info=$(vissue show "${id}")
+        path=$(printf '%s' "${info}" | awk -F': *' '/^File:/ {print $2}' | awk -F: '{print $1}')
+        line=$(printf '%s' "${info}" | awk -F: '/^File:/ {n=split($NF,a,"-"); print a[1]}')
+        if [ -z "${path}" ]; then
+            notify-send "vissue" "could not resolve file for ${id}" 2>/dev/null || true
+            exit 1
+        fi
+        # Some terminals need an explicit emulator wrapper; assume $TERMINAL.
+        term="${TERMINAL:-${TERM_PROGRAM:-x-terminal-emulator}}"
+        "${term}" -e "${editor}" "+${line}" "${path}"
+        ;;
+    new)
+        # Project picker first, then title.
+        project=$(vissue list \
+            | awk '{print $NF}' | tr -d '()' | sort -u \
+            | rofi -dmenu -i -p "project >")
+        [ -z "${project}" ] && exit 0
+        title=$(printf '' | rofi -dmenu -i -p "title >")
+        [ -z "${title}" ] && exit 0
+        new_id=$(vissue q "${title}" -P "${project}")
+        notify-send "vissue" "created ${new_id}" 2>/dev/null || true
+        printf '%s\n' "${new_id}"
+        ;;
+    *)
+        printf 'unknown mode: %s\n' "${mode}" >&2
+        printf 'usage: vissue-rofi [ready|all|stale|new]\n' >&2
+        exit 1
+        ;;
+esac

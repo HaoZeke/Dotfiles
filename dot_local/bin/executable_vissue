@@ -1,0 +1,27 @@
+#!/bin/sh
+# vissue: thin wrapper around `vault-tools --root <vault> issue`.
+#
+# The vault root defaults to ~/Git/Gitlab/obsidian-notes; override with the
+# VISSUE_ROOT environment variable. Every flag and subcommand from
+# `vault-tools issue ...` works unchanged.
+#
+# Examples:
+#   vissue ready                       # actionable items across all projects
+#   vissue q "fix the thing" -P OokCite # quick capture
+#   vissue tui                         # interactive
+#   vissue export -P OokCite | jq      # bulk read
+#
+# To pin a different vault transiently:
+#   VISSUE_ROOT=/path/to/other-vault vissue list
+
+set -eu
+
+VAULT="${VISSUE_ROOT:-${HOME}/Git/Gitlab/obsidian-notes}"
+
+if [ ! -d "${VAULT}" ]; then
+    printf '[vissue] vault root does not exist: %s\n' "${VAULT}" >&2
+    printf '         set VISSUE_ROOT to override.\n' >&2
+    exit 1
+fi
+
+exec vault-tools --root "${VAULT}" issue "$@"
