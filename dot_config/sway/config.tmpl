@@ -115,8 +115,8 @@ default_floating_border pixel 2
     # actionable items (TODO/STARTED, no open blocker) and opens the chosen
     # one in $EDITOR at the heading's line. Shift variant prompts for a
     # project then a title and creates a new issue.
-    bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/vissue-rofi'
-    bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/vissue-rofi new'
+    # bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/vissue-rofi'
+    # bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/vissue-rofi new'
 
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
@@ -228,30 +228,30 @@ default_floating_border pixel 2
 
     # Absent apps do nothing; matching apps land on the workspace that already
     # matches their role.
-    assign [app_id="firefox"] $ws2
-    assign [app_id="librewolf"] $ws2
-    assign [class="Firefox"] $ws2
-    assign [class="LibreWolf"] $ws2
+    # assign [app_id="firefox"] $ws2
+    # assign [app_id="librewolf"] $ws2
+    # assign [class="Firefox"] $ws2
+    # assign [class="LibreWolf"] $ws2
 
-    assign [app_id="code"] $ws3
-    assign [app_id="codium"] $ws3
-    assign [app_id="emacs"] $ws3
-    assign [class="Code"] $ws3
-    assign [class="VSCodium"] $ws3
-    assign [class="Emacs"] $ws3
+    # assign [app_id="code"] $ws3
+    # assign [app_id="codium"] $ws3
+    # assign [app_id="emacs"] $ws3
+    # assign [class="Code"] $ws3
+    # assign [class="VSCodium"] $ws3
+    # assign [class="Emacs"] $ws3
 
-    assign [app_id="obsidian"] $ws4
-    assign [class="Obsidian"] $ws4
+    # assign [app_id="obsidian"] $ws4
+    # assign [class="Obsidian"] $ws4
 
-    assign [app_id="discord"] $ws5
-    assign [app_id="signal"] $ws5
-    assign [app_id="org.telegram.desktop"] $ws5
-    assign [class="discord"] $ws5
-    assign [class="Signal"] $ws5
-    assign [class="Slack"] $ws5
-    assign [class="TelegramDesktop"] $ws5
+    # assign [app_id="discord"] $ws5
+    # assign [app_id="signal"] $ws5
+    # assign [app_id="org.telegram.desktop"] $ws5
+    # assign [class="discord"] $ws5
+    # assign [class="Signal"] $ws5
+    # assign [class="Slack"] $ws5
+    # assign [class="TelegramDesktop"] $ws5
 
-    assign [app_id="thunar"] $ws6
+    # assign [app_id="thunar"] $ws6
 
 mode "goto" {
     bindsym r workspace number $ws7, mode "default"
@@ -265,17 +265,17 @@ mode "goto" {
     bindsym Return mode "default"
     bindsym Escape mode "default"
 }
-    assign [class="Thunar"] $ws6
+    # assign [class="Thunar"] $ws6
 
-    assign [app_id="zathura"] $ws7
-    assign [class="Zathura"] $ws7
+    # assign [app_id="zathura"] $ws7
+    # assign [class="Zathura"] $ws7
 
-    assign [app_id="mpv"] $ws8
-    assign [app_id="spotify"] $ws8
-    assign [app_id="vlc"] $ws8
-    assign [class="mpv"] $ws8
-    assign [class="Spotify"] $ws8
-    assign [class="Vlc"] $ws8
+    # assign [app_id="mpv"] $ws8
+    # assign [app_id="spotify"] $ws8
+    # assign [app_id="vlc"] $ws8
+    # assign [class="mpv"] $ws8
+    # assign [class="Spotify"] $ws8
+    # assign [class="Vlc"] $ws8
 
 # Move workspace to other monitor (left right is essentially the same with two
 # monitors)
