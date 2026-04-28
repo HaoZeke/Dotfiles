@@ -400,7 +400,7 @@ exec xsettingsd
 # Here: https://www.reddit.com/r/swaywm/comments/p9ah2v/completely_hide_mouse_pointer_wayland/
 seat seat0 hide_cursor 1000
 bar {
-    status_command    eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_top.toml
+    status_command    i3status-rs ~/.config/i3rust/i3_top.toml
     position          top
     height            32
     status_padding    3
@@ -425,7 +425,7 @@ bar {
 
 
 bar {
-    status_command   eval $(gpg --decrypt $HOME/.config/keys.sh.gpg) && i3status-rs ~/.config/i3rust/i3_bottom.toml
+    status_command   i3status-rs ~/.config/i3rust/i3_bottom.toml
     position          bottom
     height            30
     status_padding    4
