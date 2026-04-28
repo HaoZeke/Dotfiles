@@ -109,7 +109,7 @@ if (which aura | is-not-empty) {
     alias auras = aura -As --both
     alias auupd = sudo aura -Sy
     alias auupg = sudo sh -c "aura -Syu && aura -Au"
-    alias ausu = sudo sh -c "aura -Syu --no-confirm && aura -Au --no-confirm"
+    alias ausu = sudo sh -c "aura -Syu && aura -Au"
     alias auown = aura -Qqo
     alias auls = aura -Qql
     export def auownloc [...rest: string] { aura -Qi (aura -Qqo ...$rest) }
@@ -120,7 +120,7 @@ if (which pacaur | is-not-empty) {
     alias pacclean = pacaur -Sc
     alias pacclr = pacaur -Scc
     alias paupg = pacaur -Syu
-    alias pasu = pacaur -Syu --noconfirm
+    alias pasu = pacaur -Syu
     alias pain = pacaur -S
     alias pains = pacaur -U
     alias pare = pacaur -R
@@ -139,7 +139,7 @@ if (which pacaur | is-not-empty) {
 if (which trizen | is-not-empty) {
     alias trconf = trizen -C
     alias trupg = trizen -Syua
-    alias trsu = trizen -Syua --noconfirm
+    alias trsu = trizen -Syua
     alias trin = trizen -S
     alias trclean = trizen -Sc
     alias trclr = trizen -Scc
@@ -168,7 +168,7 @@ export def upgrade [] {
     if $installed_ver != $current_ver {
         print " Arch Linux PGP Keyring is out of date."
         print " Updating before full system upgrade."
-        sudo pacman -S --needed --noconfirm archlinux-keyring
+        sudo pacman -S --needed archlinux-keyring
     } else {
         print " Arch Linux PGP Keyring is up to date."
     }
