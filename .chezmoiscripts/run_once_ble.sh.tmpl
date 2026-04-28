@@ -21,6 +21,7 @@ if [[ ! -d $HOME/.local/share/blesh/ ]]; then
     echo "Installing ble.sh for a more powerful prompt..."
 
     TMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TMP_DIR"' EXIT
     (
         cd "$TMP_DIR"
         git clone --recursive --depth 1 \
@@ -28,7 +29,6 @@ if [[ ! -d $HOME/.local/share/blesh/ ]]; then
             https://github.com/akinomyoga/ble.sh.git
         make -C ble.sh install PREFIX="$HOME/.local"
     )
-    rm -rf "$TMP_DIR"
     echo "ble.sh installation complete."
 fi
 
