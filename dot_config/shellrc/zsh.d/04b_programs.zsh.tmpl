@@ -25,14 +25,13 @@ zinit light 'sharkdp/fd'
 zinit ice as"command" from"gh-r" bpick"*{{ .chezmoi.os }}*" mv"bat* -> bat" pick"bat/bat"
 zinit light 'sharkdp/bat'
 
-# ogham/exa, replacement for ls
+# eza-community/eza, replacement for ls
 {{ if eq .chezmoi.os "darwin" -}}
-# Sadly this is released as macos
-zinit ice from"gh-r" as"program" bpick"*macos*" mv"*/exa* -> exa"
+zinit ice from"gh-r" as"program" bpick"*apple-darwin*" mv"*/eza* -> eza"
 {{ else if eq .chezmoi.os "linux" -}}
-zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/exa* -> exa"
+zinit ice from"gh-r" as"program" bpick"*linux*" mv"*/eza* -> eza"
 {{ end -}}
-zinit light ogham/exa
+zinit light eza-community/eza
 
 # Evaluated
 

@@ -29,7 +29,9 @@ alias ec='emacsclient -nw -a ""'
 alias emacs='emacs -nw'
 
 # Better ls
-if which exa >/dev/null 2>&1; then
+if command -v eza >/dev/null 2>&1; then
+	alias ls=eza
+elif command -v exa >/dev/null 2>&1; then
 	alias ls=exa
 fi
 
