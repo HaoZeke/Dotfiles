@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# TODO(rg): Technically x-cmd can be run on windows too, and can also handle zsh
-# and friends
-{{ if and (ne .chezmoi.os "windows") (lookPath "bash") -}}
+{{ if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") (lookPath "bash") -}}
+# x-cmd CLI bundle for rgx1gen11 only.
 set -euo pipefail
 
 if [[ ! -d "$HOME/.x-cmd.root/" ]]; then
     echo "x-cmd not found. Installing..."
+    installer=$(mktemp /tmp/x-cmd-install.XXXXXX)
+    trap 'rm -f "$installer"' EXIT
     if command -v curl >/dev/null 2>&1; then
-        eval "$(curl -fsSL https://get.x-cmd.com)"
-    # Use wget as a fallback.
+        curl -fsSL https://get.x-cmd.com -o "$installer"
     elif command -v wget >/dev/null 2>&1; then
-        eval "$(wget -qO- https://get.x-cmd.com)"
+        wget -qO "$installer" https://get.x-cmd.com
     else
         echo "Error: Neither curl nor wget is available. Cannot install x-cmd." >&2
         exit 1
     fi
+    bash "$installer"
     echo "x-cmd installation complete."
 fi
 
@@ -25,7 +26,7 @@ tools=(
     "bat"
     "btm"
     "delta" # git-delta
-    "difft" # TODO(rg): setup
+    "difft"
     "dust" # du-dust
     "eza" # like exa but maintained
     "fd"
@@ -34,7 +35,7 @@ tools=(
     "hexyl"
     "navi"
     "ouch"
-    "pueue" # TODO(rg): test
+    "pueue"
     "starship"
     "tokei"
     "watchexec"
@@ -44,15 +45,15 @@ tools=(
 tools+=(
     "bun"
     "chezmoi"
-    "czg" # TODO(rg): setup
+    "czg"
     "fzf"
-    "gopass" # TODO(rg): setup
+    "gopass"
     "hadolint"
     "mermaid-cli"
     "miller"
     "pandoc"
     "shfmt"
-    "upx" # TODO(rg): test
+    "upx"
     "uv"
     "vale"
     # NOTE(rg): khal?
