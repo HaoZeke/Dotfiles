@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-{{- if eq .chezmoi.os "linux" }}
-# Install /etc memory/zram/oomd tuning under sudo and reload affected units.
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Install /etc memory/zram/oomd tuning under sudo and reload affected units
+# on rgx1gen11 only. Other Linux hosts must opt in explicitly before they
+# receive workstation memory-pressure policy.
 # chezmoi re-runs this when the rendered script changes; per-file `cmp -s`
 # guards mean unchanged content skips the sudo write.
 
