@@ -2,15 +2,16 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-mkdir -p /tmp/blah
-cd /tmp/blah
+WORK_DIR=$(mktemp -d /tmp/texlive-install.XXXXXX)
+trap 'rm -rf "$WORK_DIR"' EXIT
+cd "$WORK_DIR"
 
 MACHINE_TYPE=$(uname -m)
 readonly MACHINE_TYPE
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
 readonly OS_TYPE
 
-readonly TEXLIVE_URL="http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
+readonly TEXLIVE_URL="https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
 
 # declarations
 TEXLIVE_DIR=""
@@ -40,9 +41,6 @@ install_texlive() {
   cd "$install_dir"
   ./install-tl --profile="$TEXLIVE_PROFILE"
   cd ..
-  # cleanup
-  rm -rf "$install_dir"
-  rm -rf install-tl-unx.tar.gz
 }
 
 create_profile() {
