@@ -7,7 +7,7 @@
 # reflects the freed space.
 #
 # Safe to rerun.
-# Run with: sudo bash /tmp/btrfs-snapshot-cleanup.sh
+# Run with: sudo bash <path-printed-by-rg-space-sweep>
 
 set -euo pipefail
 

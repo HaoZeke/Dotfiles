@@ -113,8 +113,8 @@ enum Mode {
     /// Always implies `--yes` when it fires. Intended for a systemd timer.
     AutoClean,
     /// Report dated btrfs snapshots under /.snapshots and write a root-only
-    /// cleanup script to /tmp. Cannot delete subvolumes directly because
-    /// btrfs operations require root; the user runs the generated script.
+    /// cleanup script. Cannot delete subvolumes directly because btrfs
+    /// operations require root; the user runs the generated script.
     Snapshots,
 }
 
@@ -146,6 +146,44 @@ struct Entry {
     size: u64,
 }
 
+fn default_snapshot_script_path_for(runtime_dir: Option<&Path>, uid: u32) -> PathBuf {
+    match runtime_dir {
+        Some(dir) if dir.is_absolute() => dir.join("rg-space-sweep/btrfs-snapshot-cleanup.sh"),
+        _ => PathBuf::from(format!(
+            "/tmp/rg-space-sweep-{uid}/btrfs-snapshot-cleanup.sh"
+        )),
+    }
+}
+
+fn default_snapshot_script_path() -> PathBuf {
+    let runtime_dir = env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
+    default_snapshot_script_path_for(runtime_dir.as_deref(), unsafe { libc::geteuid() })
+}
+
+fn ensure_script_parent(path: &Path) -> Result<(), String> {
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    fs::create_dir_all(parent).map_err(|e| format!("create {}: {e}", parent.display()))?;
+
+    let is_default_private_dir = parent
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name == "rg-space-sweep" || name.starts_with("rg-space-sweep-"))
+        .unwrap_or(false);
+    if is_default_private_dir {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(parent)
+            .map_err(|e| format!("stat {}: {e}", parent.display()))?
+            .permissions();
+        perms.set_mode(0o700);
+        fs::set_permissions(parent, perms)
+            .map_err(|e| format!("chmod {}: {e}", parent.display()))?;
+    }
+
+    Ok(())
+}
+
 fn usage() -> &'static str {
     "\
 usage: rg-space-sweep [report|clean|auto-clean|snapshots] [--dry-run] [--yes] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
@@ -163,8 +201,8 @@ auto-clean
 snapshots
     Report dated btrfs snapshots under /.snapshots and write a root-only
     cleanup script (keeps newest @ and @home, deletes older pairs, runs
-    balance). Default path: /tmp/btrfs-snapshot-cleanup.sh. Override via
-    --script-path. Run the script with `sudo bash <path>`.
+    balance). The default path is under the user-scoped runtime directory.
+    Override via --script-path. Run the script with `sudo bash <path>`.
 
 default
     rust python tox
@@ -179,7 +217,7 @@ fn parse_args() -> Result<Options, String> {
     let mut yes = false;
     let mut limit = 20usize;
     let mut min_free_gb: u64 = 10;
-    let mut script_path = PathBuf::from("/tmp/btrfs-snapshot-cleanup.sh");
+    let mut script_path = default_snapshot_script_path();
     let mut aggressive = false;
     let mut category_tokens = Vec::new();
 
@@ -269,7 +307,9 @@ fn dated_snapshots() -> Vec<PathBuf> {
     };
     for entry in entries.flatten() {
         let name = entry.file_name();
-        let Some(name_str) = name.to_str() else { continue };
+        let Some(name_str) = name.to_str() else {
+            continue;
+        };
         // Matches @.<digits>T<digits> and @home.<digits>T<digits>
         let rest = if let Some(r) = name_str.strip_prefix("@home.") {
             r
@@ -307,13 +347,14 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
     } else {
         BTRFS_CLEANUP_SCRIPT
     };
+    ensure_script_parent(&options.script_path)?;
     fs::write(&options.script_path, script)
         .map_err(|e| format!("write {}: {e}", options.script_path.display()))?;
-    // Mark executable (0o755).
+    // Keep the generated root script readable only by the current user.
     use std::os::unix::fs::PermissionsExt;
     if let Ok(meta) = fs::metadata(&options.script_path) {
         let mut p = meta.permissions();
-        p.set_mode(0o755);
+        p.set_mode(0o700);
         let _ = fs::set_permissions(&options.script_path, p);
     }
     let mode_label = if options.aggressive {
@@ -322,7 +363,11 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
         "standard (keeps newest of each prefix as safety)"
     };
     println!();
-    println!("wrote {} script to: {}", mode_label, options.script_path.display());
+    println!(
+        "wrote {} script to: {}",
+        mode_label,
+        options.script_path.display()
+    );
     println!("run with: sudo bash {}", options.script_path.display());
     if !options.aggressive {
         println!();
@@ -336,8 +381,8 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
 fn free_bytes_for(path: &Path) -> Result<u64, String> {
     use std::ffi::CString;
     use std::os::unix::ffi::OsStrExt;
-    let c_path = CString::new(path.as_os_str().as_bytes())
-        .map_err(|e| format!("path contains NUL: {e}"))?;
+    let c_path =
+        CString::new(path.as_os_str().as_bytes()).map_err(|e| format!("path contains NUL: {e}"))?;
     // SAFETY: libc::statvfs writes into a zeroed struct we own; we check the
     // return value before reading fields.
     unsafe {
@@ -499,7 +544,12 @@ fn size_entries(candidates: &[Candidate]) -> Result<Vec<Entry>, String> {
             size,
         });
     }
-    entries.sort_by(|left, right| right.size.cmp(&left.size).then_with(|| left.path.cmp(&right.path)));
+    entries.sort_by(|left, right| {
+        right
+            .size
+            .cmp(&left.size)
+            .then_with(|| left.path.cmp(&right.path))
+    });
     Ok(entries)
 }
 
@@ -581,7 +631,9 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
     }
-    if entry.path.starts_with(home.join(".local/bin")) || entry.path.starts_with(home.join(".cargo/bin")) {
+    if entry.path.starts_with(home.join(".local/bin"))
+        || entry.path.starts_with(home.join(".cargo/bin"))
+    {
         return false;
     }
 
@@ -604,8 +656,13 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     };
 
     match entry.category {
-        Category::Rust => name == "target" && has_cargo_parent(&entry.path) && looks_like_rust_target(&entry.path),
-        Category::Python => matches!(name, ".pytest_cache" | ".mypy_cache" | ".ruff_cache" | ".hypothesis"),
+        Category::Rust => {
+            name == "target" && has_cargo_parent(&entry.path) && looks_like_rust_target(&entry.path)
+        }
+        Category::Python => matches!(
+            name,
+            ".pytest_cache" | ".mypy_cache" | ".ruff_cache" | ".hypothesis"
+        ),
         Category::Pixi => entry.path.ends_with(Path::new(".cache/rattler/cache")),
         Category::Tox => name == ".tox",
         Category::Venv => name == ".venv",
@@ -628,12 +685,19 @@ fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), St
 
     for entry in entries {
         if !safe_to_remove(home, entry) {
-            return Err(format!("refusing to remove unexpected path: {}", entry.path.display()));
+            return Err(format!(
+                "refusing to remove unexpected path: {}",
+                entry.path.display()
+            ));
         }
     }
 
     for entry in entries {
-        println!("removing {:<6}  {}", entry.category.label(), display_path(home, &entry.path));
+        println!(
+            "removing {:<6}  {}",
+            entry.category.label(),
+            display_path(home, &entry.path)
+        );
         fs::remove_dir_all(&entry.path)
             .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
     }
@@ -657,7 +721,9 @@ fn main() {
     };
 
     let result = home_dir()
-        .and_then(|home| collect_candidates(&home, &options.categories).map(|entries| (home, entries)))
+        .and_then(|home| {
+            collect_candidates(&home, &options.categories).map(|entries| (home, entries))
+        })
         .and_then(|(home, entries)| {
             match options.mode {
                 Mode::Report => print_report(&home, &size_entries(&entries)?, options.limit),
@@ -707,8 +773,12 @@ fn main() {
                     // does not have to remember it.
                     if after < threshold && Path::new("/.snapshots").is_dir() {
                         println!();
-                        println!("still below threshold. btrfs snapshots likely hold reclaimable space.");
-                        println!("run: rg-space-sweep snapshots && sudo bash /tmp/btrfs-snapshot-cleanup.sh");
+                        println!(
+                            "still below threshold. btrfs snapshots likely hold reclaimable space."
+                        );
+                        println!(
+                            "run: rg-space-sweep snapshots, then run the printed sudo command"
+                        );
                     }
                 }
                 Mode::Snapshots => {
@@ -721,5 +791,31 @@ fn main() {
     if let Err(err) = result {
         eprintln!("{err}");
         process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn default_snapshot_script_path_uses_user_scoped_runtime_dir() {
+        let path = default_snapshot_script_path_for(Some(Path::new("/run/user/1001")), 1001);
+
+        assert_eq!(
+            path,
+            PathBuf::from("/run/user/1001/rg-space-sweep/btrfs-snapshot-cleanup.sh")
+        );
+    }
+
+    #[test]
+    fn default_snapshot_script_path_falls_back_to_user_scoped_tmp_dir() {
+        let path = default_snapshot_script_path_for(None, 1001);
+
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/rg-space-sweep-1001/btrfs-snapshot-cleanup.sh")
+        );
     }
 }
