@@ -369,8 +369,10 @@ fi
 # LUKS passphrase so it cannot run from a non-interactive chezmoi
 # script. Print the exact one-liner for the user to run once.
 if [ -e /dev/mapper/luks ] && command -v cryptsetup >/dev/null 2>&1; then
-    if ! sudo -n cryptsetup status luks 2>/dev/null \
+    if cryptsetup status luks 2>/dev/null \
          | grep -qE 'no_(read|write)_workqueue'; then
+        :
+    else
         cat <<MSG
 chezmoi: dm-crypt no-workqueue flags not yet set on luks. Run once,
 interactively, at a shell with a TTY (you will be asked for your
@@ -406,13 +408,16 @@ fi
 
 if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
-    # Migrate away from a pre-existing do-not-suspend.conf drop-in
-    # whose HandleLidSwitch=ignore would override 50-lid.conf because
-    # it sorts alphabetically after. Everything worth keeping from
-    # that drop-in (Fn-key ignores) is now in 50-lid.conf.
+    # A later-sorting drop-in can override 50-lid.conf. The script
+    # reports the conflict and leaves root-owned config removal to an
+    # interactive command.
     if [ -f /etc/systemd/logind.conf.d/do-not-suspend.conf ]; then
-        echo "chezmoi: removing superseded do-not-suspend.conf drop-in"
-        sudo rm /etc/systemd/logind.conf.d/do-not-suspend.conf
+        cat <<MSG
+chezmoi: /etc/systemd/logind.conf.d/do-not-suspend.conf exists and sorts after 50-lid.conf.
+It can override the managed lid policy. Review it, then remove it manually:
+
+    sudo trash-put /etc/systemd/logind.conf.d/do-not-suspend.conf
+MSG
     fi
     # DO NOT restart systemd-logind from here. On sway sessions a
     # logind restart can terminate the session scope (sway dies,
@@ -422,7 +427,7 @@ if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     # session just confirm the drop-in is in place and tell the
     # user the lid behavior will be live after the next reboot.
     echo "chezmoi: logind drop-in updated."
-    echo "  Live until next reboot: the previous HandleLidSwitch value remains in effect."
+    echo "  Live until next reboot: the active HandleLidSwitch value remains in effect."
     echo "  Effective after reboot: HandleLidSwitch=hibernate."
     echo "  If you need it live immediately, run 'sudo systemctl restart systemd-logind'"
     echo "  manually and accept the risk that sway sessions can drop."

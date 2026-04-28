@@ -43,7 +43,7 @@ notify() {
 
 # Thresholds and the messages for each. Compare as integers.
 if   [ "$capacity" -le 5 ]  && [ "$prior" -gt 5 ]; then
-    notify critical battery-caution "Battery 5%" "Plug in NOW. Suspend-then-hibernate imminent." 0
+    notify critical battery-caution "Battery 5%" "Plug in NOW. Hibernate imminent." 0
     echo 5 > "$STATE"
 elif [ "$capacity" -le 10 ] && [ "$prior" -gt 10 ]; then
     notify critical battery-low "Battery 10%" "Plug in -- hibernation threshold approaching." 15000

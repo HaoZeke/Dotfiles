@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-idle-hibernate).
 #
-# Battery-only hibernate trigger for swayidle. The logind IdleAction is
-# plain suspend (so AC idle never hibernates), and this script is the
-# late-timeout hook that hibernates specifically when the idle laptop
-# is unplugged and the battery would otherwise drain during a long
-# suspend.
+# Battery-only hibernate trigger for swayidle. logind idle sleep is
+# disabled; this script is the late-timeout hook that hibernates when
+# the idle laptop is unplugged and the battery would otherwise drain.
 #
-# Exits silently on AC so a plugged-in laptop that idles through the
-# swayidle late timeout just stays in the earlier suspend state.
+# Exits silently on AC so a plugged-in laptop can idle without entering
+# a sleep state.
 
 set -u
 
