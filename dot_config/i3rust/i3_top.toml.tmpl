@@ -40,7 +40,7 @@ block = "custom"
 command = "~/.local/bin/rg-caffeine summary-status-json"
 json = true
 interval = 30
-watch_files = ["/home/rgoswami/.local/state"]
+watch_files = ["{{ .chezmoi.homeDir }}/.local/state"]
 [[block.click]]
 button = "left"
 cmd = "~/.local/bin/rg-caffeine toggle"
