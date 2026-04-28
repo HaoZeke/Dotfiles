@@ -24,7 +24,7 @@ pathdup() {
 
 # Calibre Upgrade
 caliup() {
-	sudo -v && wget --no-check-certificate -nv -O- https://download.calibre-ebook.com/linux-installer.py | sudo python -c "import sys; main=lambda:sys.stderr.write('Download failed\n'); exec(sys.stdin.read()); main()"
+	sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin
 }
 
 # Transfer.sh is dead, switched hosts
