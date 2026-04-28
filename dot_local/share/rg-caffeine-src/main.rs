@@ -419,6 +419,18 @@ fn choose_performance_backend(
     }
 }
 
+fn release_backend_for_state(
+    backend: PerformanceBackend,
+    allow_privileged: bool,
+) -> PerformanceBackend {
+    match backend {
+        PerformanceBackend::Tlp | PerformanceBackend::RgPower if !allow_privileged => {
+            PerformanceBackend::Unavailable
+        }
+        backend => backend,
+    }
+}
+
 fn detect_performance_backend() -> PerformanceBackend {
     choose_performance_backend(
         tlp_path().is_some(),
@@ -596,7 +608,7 @@ fn performance_apply(path: &PathBuf) -> Result<PerformanceState, String> {
 fn performance_release(path: &PathBuf) -> Result<PerformanceState, String> {
     let mut state = load_performance_state(path).map_err(|err| err.to_string())?;
 
-    match state.backend {
+    match release_backend_for_state(state.backend, privileged_power_allowed()) {
         PerformanceBackend::Tlp => {
             run_privileged_absolute(TLP_BIN, &["start"])?;
         }
@@ -1450,6 +1462,26 @@ mod tests {
         assert_eq!(
             choose_performance_backend(false, true, false, true),
             PerformanceBackend::RgPower
+        );
+    }
+
+    #[test]
+    fn release_backend_ignores_stale_privileged_state_without_opt_in() {
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::Tlp, false),
+            PerformanceBackend::Unavailable
+        );
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::RgPower, false),
+            PerformanceBackend::Unavailable
+        );
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::PowerProfilesCtl, false),
+            PerformanceBackend::PowerProfilesCtl
+        );
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::Tlp, true),
+            PerformanceBackend::Tlp
         );
     }
 
