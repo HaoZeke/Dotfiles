@@ -33,25 +33,47 @@ assert_not_contains() {
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
 
-mkdir -p "$tmp_home/.config/swaylock" "$tmp_home/Pictures/Walls"
+mkdir -p \
+    "$tmp_home/.config/swaylock" \
+    "$tmp_home/.local/share/rg-theme/palettes/catppuccin/light" \
+    "$tmp_home/.local/state/rg-theme" \
+    "$tmp_home/Pictures/Walls"
 touch "$tmp_home/.config/swaylock/config.local"
+touch "$tmp_home/.config/swaylock/override.conf"
+printf 'color=eff1f5\n' > "$tmp_home/.local/share/rg-theme/palettes/catppuccin/light/swaylock.conf"
+printf 'palette=catppuccin\nmode=light\n' > "$tmp_home/.local/state/rg-theme/state"
 touch "$tmp_home/Pictures/Walls/lockscreen.png"
 
 out=$(
     HOME="$tmp_home" \
     XDG_CONFIG_HOME="$tmp_home/.config" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
     WAYLAND_DISPLAY=wayland-1 \
     "$SCRIPT" --dry-run --daemonize
 )
 assert_contains "$out" "--image" "default static image mode"
 assert_contains "$out" "$tmp_home/Pictures/Walls/lockscreen.png" "default cat image path"
 assert_not_contains "$out" "--screenshots" "screenshot mode by default"
-assert_contains "$out" "$tmp_home/.config/swaylock/config.local" "local config path"
+assert_contains "$out" "$tmp_home/.local/share/rg-theme/palettes/catppuccin/light/swaylock.conf" "theme config path"
 assert_contains "$out" "--daemonize" "daemonize passthrough"
 
 out=$(
     HOME="$tmp_home" \
     XDG_CONFIG_HOME="$tmp_home/.config" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LOCKSCREEN_CONFIG="$tmp_home/.config/swaylock/override.conf" \
+    WAYLAND_DISPLAY=wayland-1 \
+    "$SCRIPT" --dry-run
+)
+assert_contains "$out" "$tmp_home/.config/swaylock/override.conf" "explicit config override"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
     WAYLAND_DISPLAY=wayland-1 \
     "$SCRIPT" --dry-run --screenshots
 )
@@ -61,10 +83,12 @@ rm -f "$tmp_home/Pictures/Walls/lockscreen.png"
 out=$(
     HOME="$tmp_home" \
     XDG_CONFIG_HOME="$tmp_home/.config" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
     WAYLAND_DISPLAY=wayland-1 \
     "$SCRIPT" --dry-run
 )
 assert_contains "$out" "--color" "solid fallback mode"
-assert_contains "$out" "101418" "solid fallback color"
+assert_contains "$out" "eff1f5" "theme fallback color"
 
 echo "ok"

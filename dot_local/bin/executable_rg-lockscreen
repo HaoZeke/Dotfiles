@@ -8,7 +8,8 @@
 set -eu
 
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-CONFIG_PATH="${RG_LOCKSCREEN_CONFIG:-$XDG_CONFIG_HOME/swaylock/config.local}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 PREFERRED_IMAGE="${RG_LOCKSCREEN_IMAGE:-$HOME/Pictures/Walls/lockscreen.png}"
 FALLBACK_IMAGE="$XDG_CONFIG_HOME/swaylock/lockscreen.png"
 FALLBACK_COLOR="${RG_LOCKSCREEN_COLOR:-101418}"
@@ -29,6 +30,76 @@ Wrapper options:
 
 Any other arguments are passed through to swaylock unchanged.
 EOF
+}
+
+theme_config_path() {
+    local state_path="${RG_THEME_STATE:-$XDG_STATE_HOME/rg-theme/state}"
+    local palette_root="${RG_THEME_PALETTE_ROOT:-$XDG_DATA_HOME/rg-theme/palettes}"
+    local palette="tomorrow"
+    local mode="dark"
+    local key value candidate
+
+    if [ -r "$state_path" ]; then
+        while IFS='=' read -r key value; do
+            case "$key" in
+                palette)
+                    palette="$value"
+                    ;;
+                mode)
+                    mode="$value"
+                    ;;
+            esac
+        done < "$state_path"
+    fi
+
+    case "$palette" in
+        tomorrow|catppuccin|gruvbox) ;;
+        *) palette="tomorrow" ;;
+    esac
+    case "$mode" in
+        dark|light) ;;
+        *) mode="dark" ;;
+    esac
+
+    candidate="$palette_root/$palette/$mode/swaylock.conf"
+    if [ -r "$candidate" ]; then
+        printf '%s\n' "$candidate"
+    else
+        printf '%s\n' "$XDG_CONFIG_HOME/swaylock/config.local"
+    fi
+}
+
+resolve_config_path() {
+    if [ -n "${RG_LOCKSCREEN_CONFIG:-}" ]; then
+        printf '%s\n' "$RG_LOCKSCREEN_CONFIG"
+    else
+        theme_config_path
+    fi
+}
+
+resolve_fallback_color() {
+    local config_path="$1"
+    local key value
+
+    if [ -n "${RG_LOCKSCREEN_COLOR:-}" ]; then
+        printf '%s\n' "$RG_LOCKSCREEN_COLOR"
+        return
+    fi
+
+    if [ -r "$config_path" ]; then
+        while IFS='=' read -r key value; do
+            case "$key" in
+                color)
+                    if [ -n "$value" ]; then
+                        printf '%s\n' "$value"
+                        return
+                    fi
+                    ;;
+            esac
+        done < "$config_path"
+    fi
+
+    printf '%s\n' "$FALLBACK_COLOR"
 }
 
 add_arg() {
@@ -77,6 +148,7 @@ if [ "$BG_MODE" = "auto" ]; then
     BG_MODE=static
 fi
 
+CONFIG_PATH="$(resolve_config_path)"
 if [ -r "$CONFIG_PATH" ]; then
     set -- swaylock -C "$CONFIG_PATH"
 else
@@ -98,11 +170,11 @@ case "$BG_MODE" in
         if [ -n "$IMAGE_PATH" ]; then
             set -- "$@" --image "$IMAGE_PATH"
         else
-            set -- "$@" --color "$FALLBACK_COLOR"
+            set -- "$@" --color "$(resolve_fallback_color "$CONFIG_PATH")"
         fi
         ;;
     color)
-        set -- "$@" --color "$FALLBACK_COLOR"
+        set -- "$@" --color "$(resolve_fallback_color "$CONFIG_PATH")"
         ;;
     *)
         echo "rg-lockscreen: unsupported mode '$BG_MODE'" >&2
