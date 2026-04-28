@@ -1,39 +1,10 @@
 {{ if and (ne .chezmoi.os "windows") (lookPath "zsh") -}}
 #!/usr/bin/env zsh
 
-# Check if running interactively and not a dumb terminal
-if [[ $- == *i* && $TERM != "dumb" ]]; then
-  # Check if ZI is installed
-  if [[ ! -d ~/.zi ]]; then
-    echo "ZI not found. Installing..."
-    # Install ZI (consider adding error handling for curl)
-    source <(curl -sL git.io/zi-loader)
+emulate -L zsh
 
-    # Initialize ZI (check if successful)
-    if ! zzinit; then
-      echo "Error: ZI initialization failed."
-      exit 1
-    fi
-  fi
-
-  # Check if ZI is initialized, source it if not.
-  if (( ! $+functions[zi] )); then
-    echo "ZI not sourced. Sourcing..."
-    source "$HOME/.zi/bin/zi.zsh"
-  fi
-
-  # Load completion for ZI
-  autoload -Uz _zi
-  (( ${+_comps} )) && _comps[zi]=_zi
-
-  echo "ZI setup complete."
-else
-  echo "Non-interactive shell or dumb terminal detected. Skipping ZI setup."
-fi
-
-# Continue with the rest of your script or launch a new zsh shell
-# If you want to always launch a new zsh shell, uncomment the following line:
-# exec zsh
+# Zinit is bootstrapped by ~/.config/shellrc/zsh.d/03_plugins.zsh.
+exit 0
 
 {{ else -}}
 {{ end -}}

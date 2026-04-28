@@ -2,9 +2,17 @@
 #####################
 
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
-[ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)"
-[ ! -d $ZINIT_HOME/.git ] && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
-source "${ZINIT_HOME}/zinit.zsh"
+if [[ ! -d "$ZINIT_HOME/.git" ]]; then
+    if command -v git >/dev/null 2>&1; then
+        mkdir -p "${ZINIT_HOME:h}"
+        git clone --depth=1 https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+    else
+        return 0
+    fi
+fi
+
+[[ -r "$ZINIT_HOME/zinit.zsh" ]] || return 0
+source "$ZINIT_HOME/zinit.zsh"
 
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
