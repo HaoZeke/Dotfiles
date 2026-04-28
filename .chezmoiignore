@@ -39,10 +39,13 @@ encrypted_chezmoi_toml_linux
 .config/systemd/user/sway-session.target
 .config/systemd/user/wob.service
 .local/bin/battery-warn
+.local/bin/browser-launcher
 .local/bin/browser-media-watchdog
 .local/bin/brightness_sync.sh
+.local/bin/chromium
 .local/bin/cliphist-rofi
 .local/bin/cliphist-rofi-img
+.local/bin/firefox
 .local/bin/rg-idle-hibernate
 .local/bin/rg-lockscreen
 .local/bin/rg-lockscreen-selftest
@@ -58,6 +61,7 @@ encrypted_chezmoi_toml_linux
 .config/systemd/user/turtleback-push.service
 .config/systemd/user/turtleback-push.timer
 .local/bin/rclone-pcloud
+.local/bin/rgpower
 .local/bin/turtleback-push
 {{ end }}
 # No encryption, so don't try to restore..
