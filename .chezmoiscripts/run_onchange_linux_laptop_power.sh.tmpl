@@ -273,8 +273,9 @@ if command -v pacman >/dev/null 2>&1; then
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
-        echo "chezmoi: installing ${PKGS_NEEDED[*]}"
-        sudo pacman -S --noconfirm --needed "${PKGS_NEEDED[@]}"
+        echo "chezmoi: missing required packages: ${PKGS_NEEDED[*]}" >&2
+        echo "chezmoi: install them with: sudo pacman -S --needed ${PKGS_NEEDED[*]}" >&2
+        exit 1
     fi
 fi
 
