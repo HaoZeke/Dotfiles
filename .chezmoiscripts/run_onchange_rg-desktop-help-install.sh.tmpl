@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if eq .chezmoi.os "linux" }}
+{{- if and (eq .chezmoi.os "linux") (ne .display_manager "none") }}
 # Rebuild rg-desktop-help whenever its chezmoi-managed Rust source changes.
 # hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-desktop-help-src/Cargo.toml" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-desktop-help-src/main.rs" .chezmoi.sourceDir)) | trim }}
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if eq .chezmoi.os "linux" }}
+{{- if and (eq .chezmoi.os "linux") (ne .display_manager "none") }}
 # Emit every rg-theme palette file under
 # ~/.local/share/rg-theme/palettes/<palette>/<mode>/{foot,alacritty,rofi,sway-colors}.conf
 # Colours are defined once (per palette/mode) as shell vars and fanned

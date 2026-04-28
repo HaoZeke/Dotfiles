@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if eq .chezmoi.os "linux" }}
+{{- if and (eq .chezmoi.os "linux") (ne .display_manager "none") }}
 # Install (or refresh) the rg-theme binary from its source repo at
 # ~/Git/Github/Tools/rg-theme.  Runs on content change of this script
 # and whenever the source tree's HEAD commit changes -- triggered via

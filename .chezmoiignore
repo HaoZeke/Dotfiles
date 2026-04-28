@@ -48,6 +48,10 @@ encrypted_chezmoi_toml_linux
 .local/bin/rg-lockscreen-selftest
 .local/bin/rg-workspace-menu
 .local/bin/rg-workspace-sync
+.local/share/rg-caffeine-src
+.local/share/rg-desktop-help-src
+.local/share/rg-sway-route-watcher-src
+.local/share/rg-wob-bridge-src
 {{ end }}
 {{ if ne .chezmoi.hostname "rgx1gen11" }}
 # rgx1gen11 backup helpers
