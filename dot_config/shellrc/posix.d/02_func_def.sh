@@ -23,9 +23,14 @@ pathdup() {
 }
 
 # Calibre Upgrade
-caliup() {
-	sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin
-}
+caliup() (
+	set -e
+	_installer=$(mktemp /tmp/calibre-install.XXXXXX)
+	trap 'rm -f "$_installer"' EXIT HUP INT TERM
+	wget -nv -O "$_installer" https://download.calibre-ebook.com/linux-installer.sh
+	sudo -v
+	sudo sh "$_installer"
+)
 
 # Transfer.sh is dead, switched hosts
 transfer() {
