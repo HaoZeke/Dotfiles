@@ -28,7 +28,6 @@ caliup() (
 	_installer=$(mktemp /tmp/calibre-install.XXXXXX)
 	trap 'rm -f "$_installer"' EXIT HUP INT TERM
 	wget -nv -O "$_installer" https://download.calibre-ebook.com/linux-installer.sh
-	sudo -v
 	sudo sh "$_installer"
 )
 
