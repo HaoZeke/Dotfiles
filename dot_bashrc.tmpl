@@ -56,17 +56,14 @@ fi
 export PATH="$HOME/.pixi/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 
-{{- /* DEEPSEEK_API_KEY: prefer pass if the entry exists, fall back to
-       the hardcoded value so a fresh chezmoi apply on a box without
-       the pass entry does not strip the working env var. Long term
-       the hardcoded value should be removed once the pass entry is
-       populated on every host that needs it. */ -}}
-{{- $deepseek := output "bash" "-c" "pass show services/deepseek-api-key 2>/dev/null || true" | trim -}}
-{{- if $deepseek }}
-export DEEPSEEK_API_KEY="{{ $deepseek }}"
-{{- else }}
-export DEEPSEEK_API_KEY="REDACTED_ROTATE_ME"
-{{- end }}
+# Keep API keys in pass; export only when the entry exists.
+if command -v pass >/dev/null 2>&1; then
+	_deepseek_api_key=$(pass show services/deepseek-api-key 2>/dev/null | sed -n '1p') || _deepseek_api_key=
+	if [ -n "$_deepseek_api_key" ]; then
+		export DEEPSEEK_API_KEY="$_deepseek_api_key"
+	fi
+	unset _deepseek_api_key
+fi
 
 # OMP Puppeteer
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
