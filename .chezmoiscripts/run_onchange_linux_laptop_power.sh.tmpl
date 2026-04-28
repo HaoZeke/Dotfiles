@@ -5,8 +5,8 @@
 # thresholds, TLP, or lid-handler changes.
 #
 #   * BFQ on NVMe/SATA for interactive latency under I/O pressure
-#   * suspend-then-hibernate on lid close (firmware only offers s2idle, so
-#     plain suspend drains battery -- hibernate after 20 min preserves it)
+#   * direct hibernate for deliberate sleep paths; firmware only offers
+#     s2idle for suspend, and hibernate is the reliable state-preserving path
 #   * TLP with Intel + ThinkPad charge thresholds (75/80) to extend battery
 #     health on a laptop that already shows 81% design capacity.
 #
@@ -174,13 +174,11 @@ LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_
 # Policy: on AC the laptop never goes to sleep on its own. Lid close,
 # idle timeout, Fn+Suspend, Fn+Hibernate -- all ignored. The only
 # sanctioned sleep paths on AC are the power button (HandlePowerKey
-# below) and the explicit sway keybindings ($mod+Shift+Escape for
-# suspend-then-hibernate, $mod+Ctrl+Shift+Escape for direct hibernate).
+# below) and the explicit sway keybindings, all of which hibernate.
 #
-# On battery, lid-close is still suspend-then-hibernate: plain suspend
-# (s2idle firmware, no ACPI deep sleep) drains battery, so suspend
-# first for fast resume, fall through to hibernate after the timeout
-# set in sleep.conf.d.
+# On battery, lid-close hibernates directly. The kernel exposes only
+# s2idle for suspend on this host, so mem sleep is not a reliable
+# recovery boundary.
 #
 # Idle suspend is disabled here unconditionally (IdleAction=ignore).
 # Battery idle hibernation is moved entirely into user-space so it
@@ -188,24 +186,26 @@ LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_
 # at 2700s, which checks /sys/class/power_supply/A{C,DP}*/online and
 # hibernates only when unplugged.
 #
-# HandlePowerKey is suspend-then-hibernate so a press of the physical
-# power button on either power source is the manual sleep trigger.
+# HandlePowerKey hibernates so a press of the physical power button on
+# either power source is the manual sleep trigger.
 [Login]
-HandleLidSwitch=suspend-then-hibernate
+HandleLidSwitch=hibernate
 HandleLidSwitchDocked=ignore
 HandleLidSwitchExternalPower=ignore
 IdleAction=ignore
 IdleActionSec=45min
-HandlePowerKey=suspend-then-hibernate
+HandlePowerKey=hibernate
 HandleSuspendKey=ignore
 HandleHibernateKey=ignore
 '
 
 SLEEP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Suspend first, hibernate after 20 minutes of continued sleep.
+# Hibernate is the only enabled sleep state on rgx1gen11. Plain suspend
+# writes "mem", which maps to s2idle on this firmware.
 [Sleep]
-HibernateDelaySec=20min
-SuspendState=mem
+AllowSuspend=no
+AllowSuspendThenHibernate=no
+AllowHybridSleep=no
 '
 
 # system-sleep hook that kicks the Wayland session awake after a
@@ -489,7 +489,7 @@ if [ "$LOGIND_CHANGED" = "1" ] || [ "$SLEEP_CHANGED" = "1" ]; then
     # user the lid behavior will be live after the next reboot.
     echo "chezmoi: logind drop-in updated."
     echo "  Live until next reboot: the previous HandleLidSwitch value remains in effect."
-    echo "  New HandleLidSwitch=suspend-then-hibernate takes effect on the next boot."
+    echo "  Effective after reboot: HandleLidSwitch=hibernate."
     echo "  If you need it live immediately, run 'sudo systemctl restart systemd-logind'"
     echo "  manually and accept the risk that sway sessions can drop."
 fi

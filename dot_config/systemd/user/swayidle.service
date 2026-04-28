@@ -13,7 +13,6 @@ Type=simple
 #   300s   lock the screen
 #   450s   DPMS off; DPMS on when the user comes back
 #   2700s  rg-idle-hibernate: hibernate only if on battery, no-op on AC
-#          (logind IdleAction=suspend covers AC; this covers battery)
 #   sleep  pause media, lock before actual suspend
 # brightnessctl -s saves current level, brightnessctl -r restores it
 # so a low-brightness work session is not stomped by the idle dim.

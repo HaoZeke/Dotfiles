@@ -68,7 +68,7 @@ Mouse actions on that block:
 | =$mod+F6= | restore tmux state and rehydrate named sessions |
 | =$mod+Shift+/= | open the desktop control/help palette |
 | =$mod+Escape= | lock now |
-| =$mod+Shift+Escape= | lock, then suspend-then-hibernate |
+| =$mod+Shift+Escape= | lock, then hibernate on rgx1gen11; suspend-then-hibernate elsewhere |
 | =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
 
 * Workspaces

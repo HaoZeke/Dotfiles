@@ -2,10 +2,9 @@
 # other hosts get only this header (a harmless empty sway include).
 #
 # The everyday lock+sleep shortcut ($mod+Shift+Escape) lives in the main
-# config now that it invokes `systemctl suspend-then-hibernate` directly,
-# so we do not redefine it here (which would produce an "Overwriting
-# binding" warning on every sway start/reload). The only binding added
-# per-host is the explicit hibernate shortcut below.
+# config, so we do not redefine it here (which would produce an
+# "Overwriting binding" warning on every sway start/reload). The only
+# binding added per-host is the explicit hibernate shortcut below.
 {{- if eq .chezmoi.hostname "rgx1gen11" }}
 
 # Explicit hibernate for pre-flight or "close it for the trip" mode --
