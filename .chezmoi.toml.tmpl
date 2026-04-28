@@ -58,6 +58,10 @@
 {{- else}}
 {{- $setup_nix = promptString "setup_nix (yes / no)" -}}
 {{- end -}}
+{{- $setup_texlive := "yes" -}}
+{{- if (hasKey . "setup_texlive")}}
+{{- $setup_texlive = .setup_texlive -}}
+{{- end -}}
 {{- $use_rust := "" -}}
 {{- if (hasKey . "use_rust")}}
 {{- $use_rust = .use_rust -}}
@@ -104,6 +108,7 @@ setup_mamba = {{ $setup_mamba | quote }}
 setup_pixi = {{ $setup_pixi | quote }}
 setup_spack = {{ $setup_spack | quote }}
 setup_nix = {{ $setup_nix | quote }}
+setup_texlive = {{ $setup_texlive | quote }}
 use_rust = {{ $use_rust | quote }}
 tex_date = {{ $tex_date | quote }}
 have_cuda = {{ $have_cuda | quote }}

@@ -1,4 +1,8 @@
-{{ if ne .chezmoi.os "windows" -}}
+{{- $setup_texlive := "yes" -}}
+{{- if (hasKey . "setup_texlive") -}}
+{{- $setup_texlive = .setup_texlive -}}
+{{- end -}}
+{{ if and (ne .chezmoi.os "windows") (eq $setup_texlive "yes") -}}
 #!/usr/bin/env bash
 
 set -euo pipefail
@@ -94,9 +98,8 @@ main() {
 
 main "$@"
 
-{{ end }}
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
 # End:
+{{ end }}
