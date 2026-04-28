@@ -1,5 +1,5 @@
 # Generic stuff
-fish_add_path /home/rgoswami/.local/bin/
+fish_add_path "$HOME/.local/bin"
 if command -q pixi
-   fish_add_path /home/rgoswami/.pixi/bin
+   fish_add_path "$HOME/.pixi/bin"
 end
