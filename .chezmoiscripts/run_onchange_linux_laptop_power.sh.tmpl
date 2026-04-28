@@ -53,26 +53,6 @@ XE_MODPROBE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_la
 options xe enable_psr=1 enable_fbc=1
 '
 
-SUDO_PAM_CONTENT='#%PAM-1.0
-# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Fingerprint-or-password for sudo. pam_fprintd runs the Synaptics
-# Prometheus sensor (06cb:00fc); on failure or absent finger, PAM
-# falls through to the normal system-auth chain so typed-password
-# always works as a fallback.
-auth      sufficient pam_fprintd.so
-auth      include    system-auth
-account   include    system-auth
-session   include    system-auth
-'
-
-SWAYLOCK_PAM_CONTENT='#%PAM-1.0
-# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Swaylock: fingerprint unlocks; falls through to the login PAM chain
-# for typed-password unlock.
-auth      sufficient pam_fprintd.so
-auth      include    login
-'
-
 NFTABLES_CONTENT='#!/usr/sbin/nft -f
 # Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Host firewall: default-deny inbound, allow established + loopback +
@@ -132,25 +112,6 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
 '
-
-POLKIT_PAM_CONTENT='#%PAM-1.0
-# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Graphical auth prompts (polkit agent) accept fingerprint.
-auth      sufficient pam_fprintd.so
-auth      include    system-auth
-account   include    system-auth
-password  include    system-auth
-session   include    system-auth
-'
-
-# KANATA_SYSTEM_CONTENT removed. The earlier attempt to run kanata as
-# a boot-time system service caused a double-Colemak scramble at the
-# greeter: kanata applied Colemak to raw QWERTY, then the greeter's
-# own Colemak xkb applied Colemak again. kanata is back to being a
-# --user service (dot_config/systemd/user/kanata.service) that starts
-# only after sway-session.target, so the greeter keeps its raw QWERTY
-# input path and applies Colemak exactly once.
-KANATA_SYSTEM_CONTENT=''
 
 BTRBK_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Local btrfs snapshot lifecycle for @home and @. Remote push to
@@ -346,30 +307,9 @@ if ! sudo test -f "$RESUME_KICK_PATH" \
     RESUME_KICK_CHANGED=1
 fi
 
-write_if_diff /etc/pam.d/sudo                                "$SUDO_PAM_CONTENT"     || true
-write_if_diff /etc/pam.d/swaylock                            "$SWAYLOCK_PAM_CONTENT" || true
-write_if_diff /etc/pam.d/polkit-1                            "$POLKIT_PAM_CONTENT"   || true
 BTRBK_CHANGED=0
 NFT_CHANGED=0
 SMARTD_CHANGED=0
-KANATA_CHANGED=0
-# The system-level kanata.service is deliberately removed; if it
-# still exists from the earlier migration, delete it so the user-
-# level unit (chezmoi-deployed at ~/.config/systemd/user/) owns
-# kanata again.
-if [ -f /etc/systemd/system/kanata.service ]; then
-    echo "chezmoi: removing obsolete /etc/systemd/system/kanata.service (caused double-Colemak at greeter)"
-    sudo systemctl disable --now kanata.service >/dev/null 2>&1 || true
-    sudo rm -f /etc/systemd/system/kanata.service
-    sudo systemctl daemon-reload
-    KANATA_CHANGED=1
-fi
-# Re-enable the user-level unit now that the system one is gone.
-if [ -f "$HOME/.config/systemd/user/kanata.service" ]; then
-    if ! systemctl --user is-enabled kanata.service >/dev/null 2>&1; then
-        systemctl --user enable --now kanata.service 2>&1 | head
-    fi
-fi
 write_if_diff /etc/btrbk/btrbk.conf                          "$BTRBK_CONTENT"        && BTRBK_CHANGED=1 || true
 write_if_diff /etc/nftables.conf                             "$NFTABLES_CONTENT"     && NFT_CHANGED=1 || true
 write_if_diff /etc/smartd.conf                               "$SMARTD_CONTENT"       && SMARTD_CHANGED=1 || true
@@ -416,12 +356,6 @@ if [ "$SMARTD_CHANGED" = "1" ] \
    || ( ! sudo systemctl is-enabled smartd.service >/dev/null 2>&1 ); then
     sudo systemctl enable --now smartd.service >/dev/null 2>&1 || true
 fi
-
-# Kanata stays a --user service (see KANATA_SYSTEM_CONTENT comment
-# above). The migration block that installed /etc/systemd/system/
-# kanata.service has been removed; cleanup of any leftover state
-# from that attempt is handled inline above where the system unit
-# file is deleted.
 
 # --- post-deploy activation ----------------------------------------------
 if [ "$XE_CHANGED" = "1" ]; then
