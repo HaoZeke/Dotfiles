@@ -1,16 +1,25 @@
-########
-# ASDF #
-########
+#################
+# Tool Versions #
+#################
 
 # Usage (lines other than the first are optional):
 ## use asdf
+## use mise
 #
-# This loads asdf and uses a cached setup which circumvents one reshim
-#
-# https://github.com/asdf-community/asdf-direnv
+# asdf-direnv provides `use asdf` when asdf is installed.
+# mise provides `use mise` when
+# ~/.config/direnv/lib/use_mise.sh contains the generated helper.
 #
 
-source "$(asdf direnv hook asdf)"
+if command -v asdf >/dev/null 2>&1; then
+  source "$(asdf direnv hook asdf)"
+fi
+
+mise_direnv_hook="${XDG_CONFIG_HOME:-$HOME/.config}/direnv/lib/use_mise.sh"
+if [ -r "$mise_direnv_hook" ]; then
+  source "$mise_direnv_hook"
+fi
+unset mise_direnv_hook
 
 ########
 # Ruby #
