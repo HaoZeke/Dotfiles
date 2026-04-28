@@ -17,6 +17,7 @@ const PERFORMANCE_SERVICE: &str = "rg-caffeine-performance.service";
 const SUDO_BIN: &str = "/usr/bin/sudo";
 const TLP_BIN: &str = "/usr/bin/tlp";
 const TLP_STAT_BIN: &str = "/usr/bin/tlp-stat";
+const PRIVILEGED_POWER_ENV: &str = "RG_CAFFEINE_ALLOW_PRIVILEGED_POWER";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Mode {
@@ -394,16 +395,37 @@ fn tlp_path() -> Option<PathBuf> {
     }
 }
 
-fn detect_performance_backend() -> PerformanceBackend {
-    if tlp_path().is_some() {
+fn privileged_power_allowed() -> bool {
+    match env::var(PRIVILEGED_POWER_ENV) {
+        Ok(value) => matches!(value.as_str(), "1" | "true" | "yes" | "on"),
+        Err(_) => false,
+    }
+}
+
+fn choose_performance_backend(
+    has_tlp: bool,
+    has_rgpower: bool,
+    has_powerprofilesctl: bool,
+    allow_privileged: bool,
+) -> PerformanceBackend {
+    if allow_privileged && has_tlp {
         PerformanceBackend::Tlp
-    } else if rgpower_path().is_some() {
-        PerformanceBackend::RgPower
-    } else if command_path("powerprofilesctl").is_some() {
+    } else if has_powerprofilesctl {
         PerformanceBackend::PowerProfilesCtl
+    } else if allow_privileged && has_rgpower {
+        PerformanceBackend::RgPower
     } else {
         PerformanceBackend::Unavailable
     }
+}
+
+fn detect_performance_backend() -> PerformanceBackend {
+    choose_performance_backend(
+        tlp_path().is_some(),
+        rgpower_path().is_some(),
+        command_path("powerprofilesctl").is_some(),
+        privileged_power_allowed(),
+    )
 }
 
 fn run_command(program: &PathBuf, args: &[&str]) -> Result<(), String> {
@@ -1405,6 +1427,30 @@ mod tests {
         assert!(json.contains("\"state\":\"Warning\""), "{json}");
         assert!(json.contains("\"backend\":\"unavailable\""), "{json}");
         assert!(json.contains("\"mode\":\"performance\""), "{json}");
+    }
+
+    #[test]
+    fn backend_selection_does_not_choose_privileged_sudo_backend_without_opt_in() {
+        assert_eq!(
+            choose_performance_backend(true, false, false, false),
+            PerformanceBackend::Unavailable
+        );
+        assert_eq!(
+            choose_performance_backend(false, true, false, false),
+            PerformanceBackend::Unavailable
+        );
+        assert_eq!(
+            choose_performance_backend(true, false, true, false),
+            PerformanceBackend::PowerProfilesCtl
+        );
+        assert_eq!(
+            choose_performance_backend(true, false, false, true),
+            PerformanceBackend::Tlp
+        );
+        assert_eq!(
+            choose_performance_backend(false, true, false, true),
+            PerformanceBackend::RgPower
+        );
     }
 
     #[test]

@@ -1,8 +1,8 @@
 # Managed by chezmoi (dot_config/systemd/user/rg-caffeine-performance.service).
 #
 # Holds a session-scoped boost profile while rg-caffeine asks for it.
-# The binary chooses the actual backend at runtime: prefer TLP on this
-# machine, fall back to rgpower or powerprofilesctl, otherwise no-op.
+# The binary chooses only non-privileged backends by default. TLP and
+# rgpower require an explicit environment opt-in because they invoke sudo.
 [Unit]
 Description=Apply session performance mode while rg-caffeine is enabled
 PartOf=sway-session.target
