@@ -16,6 +16,11 @@ encrypted_chezmoi_toml_linux
 {{ end }}
 {{ if eq .display_manager "none" }}
 # Graphical session files
+Pictures/Walls/*
+.config/alacritty/*
+.config/dunst/*
+.config/foot/*
+.config/rofi/*
 **/sway/*
 **/i3rust/*
 **/kanata/*
