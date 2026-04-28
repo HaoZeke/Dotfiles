@@ -6,7 +6,10 @@ chck() { command -v $1 > /dev/null && echo $? ; }
 # Brew
 command -v brew > /dev/null || { \
     echo "Homebrew not found, installing"  &&  \
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+    brew_installer=$(mktemp /tmp/homebrew-install.XXXXXX) && \
+    trap 'rm -f "$brew_installer"' EXIT && \
+    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o "$brew_installer" && \
+    /bin/bash "$brew_installer" \
 ;}
 
 # Basics
