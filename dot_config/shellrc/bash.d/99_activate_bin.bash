@@ -5,9 +5,6 @@
 # Rust
 #######
 
-# https://www.x-cmd.com/
-[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
-
 # Almost all of these are with cargo install blah blah
 programs=(zoxide atuin starship)
 

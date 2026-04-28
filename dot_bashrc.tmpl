@@ -52,7 +52,9 @@ fi
 
 [[ ! ${BLE_VERSION-} ]] || ble-attach
 
-[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X" # boot up x-cmd.
+{{- if eq .chezmoi.hostname "rgx1gen11" }}
+[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
+{{- end }}
 export PATH="$HOME/.pixi/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 
