@@ -18,6 +18,13 @@ encrypted_chezmoi_toml_linux
 **/share/applications/*
 {{ end }}
 {{ end }}
+{{ if ne .chezmoi.hostname "rgx1gen11" }}
+# rgx1gen11 backup helpers
+.config/systemd/user/turtleback-push.service
+.config/systemd/user/turtleback-push.timer
+.local/bin/rclone-pcloud
+.local/bin/turtleback-push
+{{ end }}
 # No encryption, so don't try to restore..
 {{ if eq .encrypted "no" }}
 **/*.age
