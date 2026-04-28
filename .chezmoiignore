@@ -11,12 +11,43 @@ encrypted_chezmoi_darwin.toml.asc
 {{ if ne .chezmoi.os "linux" }}
 # Only on linux
 encrypted_chezmoi_toml_linux
-{{ if eq .display_manager "none" }}
-**/sway/*
-**/i3rust/*
-**/swaylock/*
+**/systemd/user/*
 **/share/applications/*
 {{ end }}
+{{ if eq .display_manager "none" }}
+# Graphical session files
+**/sway/*
+**/i3rust/*
+**/kanata/*
+**/kanshi/*
+**/swaylock/*
+**/share/applications/*
+.config/systemd/user/battery-warn.service
+.config/systemd/user/battery-warn.timer
+.config/systemd/user/browser-media-watchdog.service
+.config/systemd/user/dunst.service
+.config/systemd/user/foot-ms.service
+.config/systemd/user/foot-server.service
+.config/systemd/user/foot-subfloat.service
+.config/systemd/user/gammastep.service
+.config/systemd/user/kanata.service
+.config/systemd/user/kanshi.service
+.config/systemd/user/rg-caffeine-idle-inhibit.service
+.config/systemd/user/rg-caffeine-performance.service
+.config/systemd/user/rg-sway-route-watcher.service
+.config/systemd/user/swayidle.service
+.config/systemd/user/sway-session.target
+.config/systemd/user/wob.service
+.local/bin/battery-warn
+.local/bin/browser-media-watchdog
+.local/bin/brightness_sync.sh
+.local/bin/cliphist-rofi
+.local/bin/cliphist-rofi-img
+.local/bin/rg-idle-hibernate
+.local/bin/rg-lockscreen
+.local/bin/rg-lockscreen-selftest
+.local/bin/rg-workspace-menu
+.local/bin/rg-workspace-sync
 {{ end }}
 {{ if ne .chezmoi.hostname "rgx1gen11" }}
 # rgx1gen11 backup helpers
