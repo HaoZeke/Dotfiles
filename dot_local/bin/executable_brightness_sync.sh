@@ -5,8 +5,18 @@
 # Parameters
 BRIGHTNESS_CHANGE=$1
 WOBSOCK=$2
-CACHE_FILE="/tmp/ddc_monitors_cache"
-LOCK_FILE="/tmp/brightness_sync_ddc.lock"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+case "$RUNTIME_DIR" in
+    /run/user/*|/tmp) ;;
+    *)
+        echo "brightness_sync.sh: refusing unsafe runtime directory: $RUNTIME_DIR" >&2
+        exit 1
+        ;;
+esac
+CACHE_DIR="$RUNTIME_DIR/brightness-sync"
+mkdir -p -m 700 "$CACHE_DIR"
+CACHE_FILE="$CACHE_DIR/ddc_monitors_cache"
+LOCK_FILE="$CACHE_DIR/ddc.lock"
 
 # 1. IMMEDIATE ACTION: Internal Screen & UI
 # Always update on every press so the laptop feels responsive.
@@ -42,11 +52,5 @@ fi
     done < "$CACHE_FILE"
 ) &
 
-# TODO(rg): write up as a short post / blog
-# Addenum :: udev hotplug
-# sudo nano /etc/udev/rules.d/99-ddc-cache-reset.rules
-# ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="/usr/bin/rm -f /tmp/ddc_monitors_cache"
-# sudo udevadm control --reload-rules && sudo udevadm trigger
-# To control
-# ls -l /tmp/ddc_monitors_cache
-# Could alternatively use kanshi but that needs a profile for every single one
+# Delete "$CACHE_FILE" after monitor topology changes to force DDC
+# rediscovery.
