@@ -1,27 +1,41 @@
 {{ if eq .encrypted "age" -}}
 {{ if ne .chezmoi.os "windows" -}}
 #!/usr/bin/env bash
-# This is problematic, and necessary
-# Will try, in order:
-# - brew
-# - source build (with go)
-# - prebuilt binaries
 
+set -euo pipefail
 
 if command -v age >/dev/null 2>&1; then
     echo "got age, good to go"
-    # has age, continue
-else
-    if command -v brew >/dev/null 2>&1; then
-        brew install age # Typically MacOS
-    fi
-    if command -v go >/dev/null 2>&1; then
-        git clone https://filippo.io/age && cd age
+    exit 0
+fi
+
+if command -v brew >/dev/null 2>&1; then
+    brew install age
+fi
+
+if command -v age >/dev/null 2>&1; then
+    echo "got age, good to go"
+    exit 0
+fi
+
+if command -v go >/dev/null 2>&1; then
+    work_dir=$(mktemp -d /tmp/age-build.XXXXXX)
+    trap 'rm -rf "$work_dir"' EXIT
+    git clone https://filippo.io/age "$work_dir/age"
+    (
+        cd "$work_dir/age"
         go build -o . filippo.io/age/cmd/...
-        mkdir -p ~/.local/bin
-        mv age age-keygen ~/.local/bin
-        export PATH=$PATH:$HOME/.local/bin
-    fi
+        mkdir -p "$HOME/.local/bin"
+        install -m 0755 age age-keygen "$HOME/.local/bin/"
+    )
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+if command -v age >/dev/null 2>&1; then
+    echo "got age, good to go"
+else
+    echo "age is unavailable; install Homebrew or Go to bootstrap age" >&2
+    exit 1
 fi
 
 {{ end }}
