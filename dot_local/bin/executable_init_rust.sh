@@ -3,7 +3,10 @@
 # Installer
 command -v rustup >/dev/null || {
     echo "Installing rustup" &&
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+        rustup_installer=$(mktemp /tmp/rustup-init.XXXXXX) &&
+        trap 'rm -f "$rustup_installer"' EXIT &&
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$rustup_installer" &&
+        sh "$rustup_installer"
 }
 
 # Grab the nightly
