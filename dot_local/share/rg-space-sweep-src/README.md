@@ -67,17 +67,17 @@ rg-space-sweep target list
 rg-space-sweep target show rg.cosmolab
 rg-space-sweep target check rg.cosmolab
 rg-space-sweep pressure --target rg.cosmolab
-rg-space-sweep report --target cosmolab --limit 20 all
-rg-space-sweep clean --target cosmolab --dry-run all
+rg-space-sweep report --target rg.cosmolab --limit 20 all
+rg-space-sweep clean --target rg.cosmolab --dry-run all
 ```
 
 Clean only after reviewing the dry-run output:
 
 ```bash
-rg-space-sweep clean --target cosmolab --yes all
+rg-space-sweep clean --target rg.cosmolab --yes all
 ```
 
-Use `all` on cosmolab because remote build hosts accumulate Rust targets,
+Use `all` on `rg.cosmolab` because remote build hosts accumulate Rust targets,
 Python caches, tox environments, pixi/rattler caches, virtual environments, and
 JavaScript cache directories from mixed workloads.
 
@@ -88,8 +88,10 @@ The default target config path is `~/.config/rg-space-sweep/targets.toml`;
 `--target-config PATH` overrides it. The built-in `rg.cosmolab` target uses
 SSH-via-GSocket so it can work without the VPN route. Store the GSocket secret
 in a file with strict permissions; do not put raw secrets in TOML, shell
-history, or repository files. The remote GSocket listener is managed by the
-cosmolab CLI, not by `rg-space-sweep`:
+history, or repository files. `rg-space-sweep` checks for a local `gs-netcat`
+binary and a private secret file before using the GSocket transport, and retries
+transient SSH transport exit 255 up to three times. The remote GSocket listener
+is managed by the cosmolab CLI, not by `rg-space-sweep`:
 
 ```bash
 install -d -m 700 ~/.config/cosmolab/gsocket
@@ -123,6 +125,12 @@ rg-space-sweep target check rg.cosmolab
 rg-space-sweep report --target rg.cosmolab
 rg-space-sweep clean --target rg.cosmolab --dry-run
 ```
+
+`target show --json rg.cosmolab` includes non-secret connection metadata such as
+the effective SSH target, SSH config path, configured roots, categories, and
+whether a GSocket secret path is configured. Remote `report --json` and
+`clean --dry-run --json` include per-category `totals`, `top_paths`, and the
+same `grand_total_bytes`/`matched_paths` fields as local reports.
 
 ## Snapshots
 

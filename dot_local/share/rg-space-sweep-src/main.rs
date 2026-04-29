@@ -190,6 +190,7 @@ struct RemoteInvocation {
     program: String,
     args: Vec<String>,
     stdin: String,
+    max_attempts: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -258,11 +259,24 @@ struct JsonReport {
 struct JsonTargetProfile {
     name: String,
     host: String,
+    ssh_target: String,
     runner: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user: Option<String>,
     home: String,
     roots: Vec<String>,
+    prune: Vec<String>,
+    exclude: Vec<String>,
+    categories: Vec<&'static str>,
     min_free_gb: u64,
     snapshots: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ssh_config_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    host_key_alias: Option<String>,
+    gsocket_secret_file_configured: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    gsocket_secret_file_path: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -585,12 +599,25 @@ fn local_home_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("/home/rgoswami"))
 }
 
-fn ssh_config_args() -> Vec<String> {
+fn ssh_config_path() -> Option<PathBuf> {
     let config = local_home_dir().join(".ssh/config");
     if config.is_file() {
-        vec!["-F".to_string(), config.display().to_string()]
+        Some(config)
     } else {
-        Vec::new()
+        None
+    }
+}
+
+fn ssh_config_args() -> Vec<String> {
+    ssh_config_path()
+        .map(|config| vec!["-F".to_string(), config.display().to_string()])
+        .unwrap_or_default()
+}
+
+fn ssh_target_for(profile: &RemoteProfile) -> String {
+    match profile.user.as_ref() {
+        Some(user) => format!("{user}@{}", profile.host),
+        None => profile.host.clone(),
     }
 }
 
@@ -598,15 +625,39 @@ fn json_target_profile(profile: &RemoteProfile) -> JsonTargetProfile {
     JsonTargetProfile {
         name: profile.name.clone(),
         host: profile.host.clone(),
+        ssh_target: ssh_target_for(profile),
         runner: runner_label(profile.runner),
+        user: profile.user.clone(),
         home: profile.home.display().to_string(),
         roots: profile
             .roots
             .iter()
             .map(|path| path.display().to_string())
             .collect(),
+        prune: profile
+            .prune
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect(),
+        exclude: profile
+            .exclude
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect(),
+        categories: profile
+            .categories
+            .iter()
+            .map(|category| category.label())
+            .collect(),
         min_free_gb: profile.min_free_gb,
         snapshots: profile.snapshots,
+        ssh_config_path: ssh_config_path().map(|path| path.display().to_string()),
+        host_key_alias: profile.host_key_alias.clone(),
+        gsocket_secret_file_configured: profile.gsocket_secret_file.is_some(),
+        gsocket_secret_file_path: profile
+            .gsocket_secret_file
+            .as_ref()
+            .map(|path| path.display().to_string()),
     }
 }
 
@@ -1413,6 +1464,61 @@ fn proxy_command_quote(value: &str) -> String {
     shell_quote(value)
 }
 
+fn local_command_exists(command: &str) -> bool {
+    Command::new("sh")
+        .args(["-c", "command -v \"$1\" >/dev/null 2>&1", "sh", command])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn validate_gsocket_preflight(profile: &RemoteProfile) -> Result<(), String> {
+    if profile.runner != RemoteRunner::Gsocket {
+        return Ok(());
+    }
+    if !local_command_exists("gs-netcat") {
+        return Err("local gs-netcat is missing; install gsocket or run cosmolab gsocket setup from a host with gs-netcat".to_string());
+    }
+
+    let secret = profile.gsocket_secret_file.as_ref().ok_or_else(|| {
+        format!(
+            "target {} uses runner = \"gsocket\" but has no gsocket_secret_file",
+            profile.name
+        )
+    })?;
+    let metadata =
+        fs::metadata(secret).map_err(|err| format!("stat {}: {err}", secret.display()))?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "target {} gsocket_secret_file is not a file: {}",
+            profile.name,
+            secret.display()
+        ));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = metadata.permissions().mode() & 0o777;
+        if !secret_permissions_private(mode) {
+            return Err(format!(
+                "target {} gsocket_secret_file permissions are too open ({mode:o}); run: chmod 600 {}",
+                profile.name,
+                secret.display()
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(unix)]
+fn secret_permissions_private(mode: u32) -> bool {
+    mode & 0o077 == 0
+}
+
 fn mode_label(mode: Mode) -> &'static str {
     match mode {
         Mode::Report => "report",
@@ -1512,10 +1618,7 @@ fn remote_invocation_for(
     options: &Options,
 ) -> Result<RemoteInvocation, String> {
     validate_target_mode(options)?;
-    let ssh_target = match profile.user.as_ref() {
-        Some(user) => format!("{user}@{}", profile.host),
-        None => profile.host.clone(),
-    };
+    let ssh_target = ssh_target_for(profile);
     match profile.runner {
         RemoteRunner::Ssh => {
             let mut args = ssh_config_args();
@@ -1534,6 +1637,7 @@ fn remote_invocation_for(
                 program: "ssh".to_string(),
                 args,
                 stdin: remote_script_for(profile, options)?,
+                max_attempts: 1,
             })
         }
         RemoteRunner::Gsocket => {
@@ -1576,42 +1680,58 @@ fn remote_invocation_for(
                 program: "ssh".to_string(),
                 args,
                 stdin: remote_script_for(profile, options)?,
+                max_attempts: 3,
             })
         }
     }
 }
 
+fn should_retry_remote_status(
+    status: std::process::ExitStatus,
+    attempt: usize,
+    max_attempts: usize,
+) -> bool {
+    attempt < max_attempts && status.code() == Some(255)
+}
+
 fn run_remote_invocation(invocation: &RemoteInvocation) -> Result<(), String> {
-    let mut child = Command::new(&invocation.program)
-        .args(&invocation.args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .map_err(|err| format!("failed to run {}: {err}", invocation.program))?;
+    let max_attempts = invocation.max_attempts.max(1);
+    for attempt in 1..=max_attempts {
+        let mut child = Command::new(&invocation.program)
+            .args(&invocation.args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|err| format!("failed to run {}: {err}", invocation.program))?;
 
-    {
-        let stdin = child
-            .stdin
-            .as_mut()
-            .ok_or_else(|| "failed to open remote command stdin".to_string())?;
-        stdin
-            .write_all(invocation.stdin.as_bytes())
-            .map_err(|err| format!("write remote script: {err}"))?;
-    }
+        {
+            let stdin = child
+                .stdin
+                .as_mut()
+                .ok_or_else(|| "failed to open remote command stdin".to_string())?;
+            stdin
+                .write_all(invocation.stdin.as_bytes())
+                .map_err(|err| format!("write remote script: {err}"))?;
+        }
 
-    let status = child
-        .wait()
-        .map_err(|err| format!("wait for remote command: {err}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("remote command exited with status {status}"))
+        let status = child
+            .wait()
+            .map_err(|err| format!("wait for remote command: {err}"))?;
+        if status.success() {
+            return Ok(());
+        }
+        if should_retry_remote_status(status, attempt, max_attempts) {
+            continue;
+        }
+        return Err(format!("remote command exited with status {status}"));
     }
+    Err("remote command failed without a recorded exit status".to_string())
 }
 
 fn run_remote_mode(target_name: &str, options: &Options) -> Result<(), String> {
     let profile = remote_profile_for(target_name, options.target_config_path.as_deref())?;
+    validate_gsocket_preflight(&profile)?;
     let invocation = remote_invocation_for(&profile, options)?;
     run_remote_invocation(&invocation)
 }
@@ -1959,6 +2079,25 @@ mod tests {
     }
 
     #[test]
+    fn target_profile_json_exposes_non_secret_connection_metadata() {
+        let mut profile = builtin_remote_profiles()["rg.cosmolab"].clone();
+        profile.categories = vec![Category::Python, Category::Rust];
+
+        let json = serde_json::to_value(json_target_profile(&profile)).expect("target json");
+
+        assert_eq!(json["name"], "rg.cosmolab");
+        assert_eq!(json["runner"], "gsocket");
+        assert_eq!(json["ssh_target"], "rg.cosmolab");
+        assert_eq!(json["gsocket_secret_file_configured"], true);
+        assert!(json["gsocket_secret_file_path"]
+            .as_str()
+            .expect("secret path")
+            .ends_with(".config/cosmolab/gsocket/rg.cosmolab.secret"));
+        assert_eq!(json["categories"][0], "python");
+        assert_eq!(json["categories"][1], "rust");
+    }
+
+    #[test]
     fn remote_invocation_uses_ssh_and_generated_script() {
         let profile = builtin_remote_profiles()["cosmolab"].clone();
         let options = parse_args_from(["report", "--target", "cosmolab", "--limit", "8", "all"])
@@ -1983,6 +2122,7 @@ mod tests {
         assert!(invocation.stdin.contains("MODE='report'"));
         assert!(invocation.stdin.contains("LIMIT='8'"));
         assert!(!invocation.stdin.contains("rg-space-sweep"));
+        assert_eq!(invocation.max_attempts, 3);
     }
 
     #[test]
@@ -2002,6 +2142,28 @@ mod tests {
         assert!(invocation.stdin.contains("MODE='clean'"));
         assert!(invocation.stdin.contains("YES='1'"));
         assert!(invocation.stdin.contains("rm -rf --"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn retry_policy_only_retries_ssh_transport_exit_255() {
+        use std::os::unix::process::ExitStatusExt;
+
+        let ssh_transport_failure = std::process::ExitStatus::from_raw(255 << 8);
+        let remote_usage_failure = std::process::ExitStatus::from_raw(64 << 8);
+
+        assert!(should_retry_remote_status(ssh_transport_failure, 1, 3));
+        assert!(!should_retry_remote_status(ssh_transport_failure, 3, 3));
+        assert!(!should_retry_remote_status(remote_usage_failure, 1, 3));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn gsocket_secret_permissions_must_be_private() {
+        assert!(secret_permissions_private(0o600));
+        assert!(secret_permissions_private(0o400));
+        assert!(!secret_permissions_private(0o640));
+        assert!(!secret_permissions_private(0o604));
     }
 
     #[test]
@@ -2123,6 +2285,7 @@ mod tests {
         let script = remote_script_for(&profile, &options).expect("remote script");
 
         assert!(REMOTE_SWEEP_SCRIPT.contains("collect_candidates"));
+        assert!(REMOTE_SWEEP_SCRIPT.contains("\"totals\":["));
         assert!(script.contains("OUTPUT_FORMAT='json'"));
         assert!(script.contains("'/scratch/goswami'"));
         assert!(script.contains("'/scratch/goswami/raw'"));

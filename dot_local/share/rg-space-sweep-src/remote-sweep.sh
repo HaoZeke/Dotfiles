@@ -223,9 +223,17 @@ print_report_text() {
 }
 
 print_report_json() {
-  local size category path count total_all first display
+  local size category path count total_all first display total paths
   read -r total_all count < <(awk -F '\t' '{ total += $1; count += 1 } END { printf "%s %s\n", total + 0, count + 0 }' "$SORTED")
-  printf '{"mode":"%s","target":"%s","grand_total_bytes":%s,"matched_paths":%s,"top_paths":[' "$MODE" "$(json_escape "$TARGET_NAME")" "$total_all" "$count"
+  printf '{"mode":"%s","target":"%s","grand_total_bytes":%s,"matched_paths":%s,"totals":[' "$MODE" "$(json_escape "$TARGET_NAME")" "$total_all" "$count"
+  first=1
+  while IFS=$'\t' read -r category total paths; do
+    [[ -n "${category:-}" ]] || continue
+    if [[ "$first" == 0 ]]; then printf ','; fi
+    first=0
+    printf '{"category":"%s","size_bytes":%s,"paths":%s}' "$(json_escape "$category")" "$total" "$paths"
+  done < <(awk -F '\t' '{ total[$2] += $1; count[$2] += 1 } END { for (category in total) printf "%s\t%s\t%s\n", category, total[category] + 0, count[category] + 0 }' "$SORTED" | sort)
+  printf '],"top_paths":['
   first=1
   while IFS=$'\t' read -r size category path; do
     [[ -n "${size:-}" ]] || continue
