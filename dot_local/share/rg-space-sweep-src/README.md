@@ -7,7 +7,7 @@ under `$HOME`. It is installed by chezmoi from this source tree with:
 cargo install --path "$HOME/.local/share/rg-space-sweep-src" --root "$HOME/.local" --force --locked
 ```
 
-## Targets
+## Category Sets
 
 The default category profile is:
 
@@ -21,7 +21,7 @@ rust python tox
 rust python tox pixi venv js
 ```
 
-Targets map to rebuildable directories only. The cleaner refuses unexpected
+Category sets map to rebuildable directories only. The cleaner refuses unexpected
 paths and will not remove `$HOME`, `.local/bin`, or `.cargo/bin`.
 
 ## Local Default Profile
@@ -51,27 +51,50 @@ rg-space-sweep auto-clean --min-free-gb 10 all
 `auto-clean` implies `--yes` when the threshold is crossed, so use `report` and
 `clean --dry-run` for manual inspection before relying on the timer.
 
-## Cosmolab Remote Orchestration Profile
+## Remote Machine Profiles
 
-`rg.cosmolab` is a disposable remote build and deployment host. Treat cleanup
-there as remote orchestration of the same CLI, not as a separate local target.
+Remote machine cleanup is controlled from the local `rg-space-sweep` binary. The
+remote host only needs SSH, `bash`, `find`, `du`, `awk`, `sort`, and standard
+coreutils; it does not need `rg-space-sweep` installed.
 
-Inspect first over SSH:
+`cosmolab` and `rg.cosmolab` are built-in aliases for the disposable
+`rg.cosmolab` build and deployment host.
+
+Inspect first:
 
 ```bash
-ssh rg.cosmolab 'rg-space-sweep report all'
-ssh rg.cosmolab 'rg-space-sweep clean --dry-run all'
+rg-space-sweep report --target cosmolab --limit 20 all
+rg-space-sweep clean --target cosmolab --dry-run all
 ```
 
 Clean only after reviewing the dry-run output:
 
 ```bash
-ssh rg.cosmolab 'rg-space-sweep clean --yes all'
+rg-space-sweep clean --target cosmolab --yes all
 ```
 
 Use `all` on cosmolab because remote build hosts accumulate Rust targets,
 Python caches, tox environments, pixi/rattler caches, virtual environments, and
 JavaScript cache directories from mixed workloads.
+
+Additional remote machines can be configured with TOML. The default path is
+`~/.config/rg-space-sweep/targets.toml`; `--target-config PATH` overrides it.
+
+```toml
+[targets.labbox]
+host = "labbox.example.org"
+home = "/home/labuser"
+runner = "ssh"
+min_free_gb = 75
+snapshots = false
+```
+
+Then run:
+
+```bash
+rg-space-sweep report --target labbox all
+rg-space-sweep clean --target labbox --dry-run all
+```
 
 ## Snapshots
 
