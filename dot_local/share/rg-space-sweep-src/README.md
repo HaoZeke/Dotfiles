@@ -89,6 +89,14 @@ The default target config path is `~/.config/rg-space-sweep/targets.toml`;
 overridden there, including SSH-via-GSocket for cases where the VPN route is not
 available. Store the GSocket secret in a file with strict permissions; do not
 put raw secrets in TOML, shell history, or repository files.
+The remote GSocket listener is managed by the cosmolab CLI, not by
+`rg-space-sweep`:
+
+```bash
+cosmolab gsocket setup --secret-file /run/user/"$(id -u)"/gsocket/rg.cosmolab.secret --yes
+cosmolab gsocket status
+cosmolab gsocket space-sweep-config --secret-file /run/user/"$(id -u)"/gsocket/rg.cosmolab.secret
+```
 
 ```toml
 [targets."rg.cosmolab"]
