@@ -1519,6 +1519,24 @@ fn secret_permissions_private(mode: u32) -> bool {
     mode & 0o077 == 0
 }
 
+fn gsocket_secret_file_ok(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        return secret_permissions_private(metadata.permissions().mode() & 0o777);
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
 fn mode_label(mode: Mode) -> &'static str {
     match mode {
         Mode::Report => "report",
@@ -1560,6 +1578,40 @@ fn remote_script_for(profile: &RemoteProfile, options: &Options) -> Result<Strin
 
     script.push_str("#!/usr/bin/env bash\nset -euo pipefail\n\n");
     push_shell_var(&mut script, "TARGET_NAME", &profile.name);
+    push_shell_var(&mut script, "RUNNER", runner_label(profile.runner));
+    push_shell_var(&mut script, "SSH_TARGET", &ssh_target_for(profile));
+    let ssh_config = ssh_config_path()
+        .map(|path| path.display().to_string())
+        .unwrap_or_default();
+    push_shell_var(&mut script, "SSH_CONFIG_PATH", &ssh_config);
+    push_shell_var(
+        &mut script,
+        "GSOCKET_SECRET_FILE_CONFIGURED",
+        if profile.gsocket_secret_file.is_some() {
+            "1"
+        } else {
+            "0"
+        },
+    );
+    let gsocket_secret_ok = profile
+        .gsocket_secret_file
+        .as_ref()
+        .map(|path| gsocket_secret_file_ok(path))
+        .unwrap_or(false);
+    push_shell_var(
+        &mut script,
+        "GSOCKET_SECRET_FILE_OK",
+        if gsocket_secret_ok { "1" } else { "0" },
+    );
+    push_shell_var(
+        &mut script,
+        "LOCAL_GS_NETCAT_OK",
+        if local_command_exists("gs-netcat") {
+            "1"
+        } else {
+            "0"
+        },
+    );
     push_shell_var(&mut script, "HOME_DIR", home.as_ref());
     push_shell_var(&mut script, "MODE", mode_label(options.mode));
     push_shell_var(&mut script, "CATEGORIES", &categories);
@@ -2286,7 +2338,11 @@ mod tests {
 
         assert!(REMOTE_SWEEP_SCRIPT.contains("collect_candidates"));
         assert!(REMOTE_SWEEP_SCRIPT.contains("\"totals\":["));
+        assert!(REMOTE_SWEEP_SCRIPT.contains("\"local_gsocket\""));
         assert!(script.contains("OUTPUT_FORMAT='json'"));
+        assert!(script.contains("RUNNER='gsocket'"));
+        assert!(script.contains("SSH_TARGET='rg.cosmolab'"));
+        assert!(script.contains("GSOCKET_SECRET_FILE_CONFIGURED='1'"));
         assert!(script.contains("'/scratch/goswami'"));
         assert!(script.contains("'/scratch/goswami/raw'"));
         assert!(script.contains("'/home/goswami/.cache/keep'"));

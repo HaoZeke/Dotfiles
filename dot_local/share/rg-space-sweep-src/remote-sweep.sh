@@ -12,6 +12,14 @@ json_escape() {
   sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' <<<"$1"
 }
 
+json_bool() {
+  if [[ "${1:-0}" == "1" ]]; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
 display_path() {
   local path="$1"
   if [[ "$path" == "$HOME_DIR" ]]; then
@@ -353,7 +361,18 @@ target_check() {
   local missing=0 tool fs_type
   if [[ "$OUTPUT_FORMAT" == "json" ]]; then
     fs_type="$(stat -f -c '%T' "$HOME_DIR" 2>/dev/null || true)"
-    printf '{"mode":"target-check","target":"%s","home":"%s","fs_type":"%s","tools":{' "$(json_escape "$TARGET_NAME")" "$(json_escape "$HOME_DIR")" "$(json_escape "$fs_type")"
+    printf '{"mode":"target-check","target":"%s","runner":"%s","ssh_target":"%s","home":"%s","fs_type":"%s"' \
+      "$(json_escape "$TARGET_NAME")" "$(json_escape "$RUNNER")" "$(json_escape "$SSH_TARGET")" "$(json_escape "$HOME_DIR")" "$(json_escape "$fs_type")"
+    if [[ -n "${SSH_CONFIG_PATH:-}" ]]; then
+      printf ',"ssh_config_path":"%s"' "$(json_escape "$SSH_CONFIG_PATH")"
+    fi
+    printf ',"local_gsocket":{"secret_file_configured":'
+    json_bool "$GSOCKET_SECRET_FILE_CONFIGURED"
+    printf ',"secret_file_ok":'
+    json_bool "$GSOCKET_SECRET_FILE_OK"
+    printf ',"gs_netcat":'
+    json_bool "$LOCAL_GS_NETCAT_OK"
+    printf '},"tools":{'
     local first=1
     for tool in bash find du awk sort df stat rm; do
       if [[ "$first" == 0 ]]; then printf ','; fi
@@ -370,6 +389,11 @@ target_check() {
     printf '}\n'
   else
     echo "Target: $TARGET_NAME"
+    echo "Runner: $RUNNER"
+    echo "SSH target: $SSH_TARGET"
+    if [[ -n "${SSH_CONFIG_PATH:-}" ]]; then
+      echo "SSH config: $SSH_CONFIG_PATH"
+    fi
     echo "Home: $HOME_DIR"
     echo "Host: $(hostname 2>/dev/null || true)"
     echo "Tools:"
