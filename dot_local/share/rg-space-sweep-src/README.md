@@ -85,17 +85,20 @@ Use `--json` with `target list`, `target show`, `target check`, `pressure`,
 `report`, or `clean --dry-run` when another tool needs stable output.
 
 The default target config path is `~/.config/rg-space-sweep/targets.toml`;
-`--target-config PATH` overrides it. The built-in `rg.cosmolab` target can be
-overridden there, including SSH-via-GSocket for cases where the VPN route is not
-available. Store the GSocket secret in a file with strict permissions; do not
-put raw secrets in TOML, shell history, or repository files.
-The remote GSocket listener is managed by the cosmolab CLI, not by
-`rg-space-sweep`:
+`--target-config PATH` overrides it. The built-in `rg.cosmolab` target uses
+SSH-via-GSocket so it can work without the VPN route. Store the GSocket secret
+in a file with strict permissions; do not put raw secrets in TOML, shell
+history, or repository files. The remote GSocket listener is managed by the
+cosmolab CLI, not by `rg-space-sweep`:
 
 ```bash
-cosmolab gsocket setup --secret-file /run/user/"$(id -u)"/gsocket/rg.cosmolab.secret --yes
+install -d -m 700 ~/.config/cosmolab/gsocket
+gs-netcat -g > ~/.config/cosmolab/gsocket/rg.cosmolab.secret
+chmod 600 ~/.config/cosmolab/gsocket/rg.cosmolab.secret
+
+cosmolab gsocket setup --secret-file ~/.config/cosmolab/gsocket/rg.cosmolab.secret --install-local-gs-netcat --yes
 cosmolab gsocket status
-cosmolab gsocket space-sweep-config --secret-file /run/user/"$(id -u)"/gsocket/rg.cosmolab.secret
+cosmolab gsocket space-sweep-config --secret-file ~/.config/cosmolab/gsocket/rg.cosmolab.secret
 ```
 
 ```toml
@@ -104,9 +107,7 @@ host = "rg.cosmolab"
 user = "goswami"
 home = "/home/goswami"
 runner = "gsocket"
-gsocket_secret_file = "/run/user/1001/gsocket/rg.cosmolab.secret"
-ssh_identity = "/home/rgoswami/.ssh/id_cosmolab"
-host_key_alias = "rg.cosmolab-gsocket"
+gsocket_secret_file = "/home/rgoswami/.config/cosmolab/gsocket/rg.cosmolab.secret"
 roots = ["/home/goswami"]
 prune = ["/home/goswami/Git/.archive"]
 exclude = ["/home/goswami/.cache/keep"]

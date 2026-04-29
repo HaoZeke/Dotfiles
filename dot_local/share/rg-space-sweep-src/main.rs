@@ -578,6 +578,22 @@ fn runner_label(runner: RemoteRunner) -> &'static str {
     }
 }
 
+fn local_home_dir() -> PathBuf {
+    env::var_os("HOME")
+        .filter(|home| !home.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/home/rgoswami"))
+}
+
+fn ssh_config_args() -> Vec<String> {
+    let config = local_home_dir().join(".ssh/config");
+    if config.is_file() {
+        vec!["-F".to_string(), config.display().to_string()]
+    } else {
+        Vec::new()
+    }
+}
+
 fn json_target_profile(profile: &RemoteProfile) -> JsonTargetProfile {
     JsonTargetProfile {
         name: profile.name.clone(),
@@ -596,13 +612,14 @@ fn json_target_profile(profile: &RemoteProfile) -> JsonTargetProfile {
 
 fn builtin_remote_profiles() -> BTreeMap<String, RemoteProfile> {
     let mut profiles = BTreeMap::new();
+    let local_home = local_home_dir();
     let cosmolab = RemoteProfile {
         name: "cosmolab".to_string(),
         host: "rg.cosmolab".to_string(),
         user: None,
         home: PathBuf::from("/home/goswami"),
-        runner: RemoteRunner::Ssh,
-        gsocket_secret_file: None,
+        runner: RemoteRunner::Gsocket,
+        gsocket_secret_file: Some(local_home.join(".config/cosmolab/gsocket/rg.cosmolab.secret")),
         ssh_identity: None,
         host_key_alias: None,
         roots: vec![PathBuf::from("/home/goswami")],
@@ -1500,9 +1517,9 @@ fn remote_invocation_for(
         None => profile.host.clone(),
     };
     match profile.runner {
-        RemoteRunner::Ssh => Ok(RemoteInvocation {
-            program: "ssh".to_string(),
-            args: vec![
+        RemoteRunner::Ssh => {
+            let mut args = ssh_config_args();
+            args.extend([
                 "-T".to_string(),
                 "-o".to_string(),
                 "BatchMode=yes".to_string(),
@@ -1512,9 +1529,13 @@ fn remote_invocation_for(
                 "bash".to_string(),
                 "-s".to_string(),
                 "--".to_string(),
-            ],
-            stdin: remote_script_for(profile, options)?,
-        }),
+            ]);
+            Ok(RemoteInvocation {
+                program: "ssh".to_string(),
+                args,
+                stdin: remote_script_for(profile, options)?,
+            })
+        }
         RemoteRunner::Gsocket => {
             let secret = profile.gsocket_secret_file.as_ref().ok_or_else(|| {
                 format!(
@@ -1522,11 +1543,8 @@ fn remote_invocation_for(
                     profile.name
                 )
             })?;
-            let host_key_alias = profile
-                .host_key_alias
-                .clone()
-                .unwrap_or_else(|| format!("{}-gsocket", profile.name));
-            let mut args = vec![
+            let mut args = ssh_config_args();
+            args.extend([
                 "-T".to_string(),
                 "-o".to_string(),
                 "BatchMode=yes".to_string(),
@@ -1538,10 +1556,12 @@ fn remote_invocation_for(
                     proxy_command_quote(&secret.to_string_lossy())
                 ),
                 "-o".to_string(),
-                format!("HostKeyAlias={host_key_alias}"),
-                "-o".to_string(),
                 "StrictHostKeyChecking=yes".to_string(),
-            ];
+            ]);
+            if let Some(host_key_alias) = profile.host_key_alias.as_ref() {
+                args.push("-o".to_string());
+                args.push(format!("HostKeyAlias={host_key_alias}"));
+            }
             if let Some(identity) = profile.ssh_identity.as_ref() {
                 args.push("-i".to_string());
                 args.push(identity.to_string_lossy().into_owned());
@@ -1927,7 +1947,15 @@ mod tests {
                 snapshots: false,
             })
         );
-        assert_eq!(builtin_remote_profiles()["cosmolab"].host, "rg.cosmolab");
+        let builtin = &builtin_remote_profiles()["cosmolab"];
+        assert_eq!(builtin.host, "rg.cosmolab");
+        assert_eq!(builtin.runner, RemoteRunner::Gsocket);
+        assert_eq!(
+            builtin.gsocket_secret_file,
+            Some(local_home_dir().join(".config/cosmolab/gsocket/rg.cosmolab.secret"))
+        );
+        assert_eq!(builtin.ssh_identity, None);
+        assert_eq!(builtin.host_key_alias, None);
     }
 
     #[test]
@@ -1942,6 +1970,15 @@ mod tests {
         assert!(invocation.args.contains(&"-T".to_string()));
         assert!(invocation.args.contains(&"BatchMode=yes".to_string()));
         assert!(invocation.args.contains(&"rg.cosmolab".to_string()));
+        assert!(!invocation.args.contains(&"-i".to_string()));
+        assert!(invocation
+            .args
+            .iter()
+            .any(|arg| arg.starts_with("ProxyCommand=gs-netcat -q -k ")));
+        assert!(!invocation
+            .args
+            .iter()
+            .any(|arg| arg.starts_with("HostKeyAlias=")));
         assert!(invocation.stdin.contains("HOME_DIR='/home/goswami'"));
         assert!(invocation.stdin.contains("MODE='report'"));
         assert!(invocation.stdin.contains("LIMIT='8'"));
