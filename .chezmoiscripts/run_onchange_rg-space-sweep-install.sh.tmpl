@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 {{- if eq .chezmoi.os "linux" }}
 # Rebuild rg-space-sweep whenever its chezmoi-managed Rust source changes.
-# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-space-sweep-src/Cargo.toml" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/main.rs" .chezmoi.sourceDir)) | trim }}
+# hash: {{ output "bash" "-lc" (printf "cat %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-space-sweep-src/Cargo.toml" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/main.rs" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/btrfs-cleanup.sh" .chezmoi.sourceDir)) | trim }}
 
 set -euo pipefail
 

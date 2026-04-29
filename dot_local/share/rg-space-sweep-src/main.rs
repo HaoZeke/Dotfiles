@@ -12,13 +12,12 @@ const DU_BIN: &str = "/usr/bin/du";
 /// each prefix (@ and @home) as a safety net.
 const BTRFS_CLEANUP_SCRIPT: &str = include_str!("btrfs-cleanup.sh");
 
-/// Aggressive variant: removes TODAY's snapshots too and runs a full
-/// `-dusage=100 -musage=100` balance so previously-snapshot-held blocks
-/// are actually released.
+/// Aggressive variant: removes every dated @/@home snapshot and runs a full
+/// `-dusage=100 -musage=100` balance so snapshot-held blocks are released.
 const BTRFS_CLEANUP_SCRIPT_AGGRESSIVE: &str = r#"#!/usr/bin/env bash
 # btrfs-snapshot-cleanup-aggressive.sh
-# Removes ALL dated snapshots and runs full balance. Loses today's
-# rollback. Run with: sudo bash <this-script>
+# Removes every dated @/@home snapshot and runs full balance.
+# Run with: sudo bash <this-script>
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
@@ -31,6 +30,12 @@ SNAP_DIR=/.snapshots
 echo "=== before ==="
 df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
 echo
+echo "=== btrfs subvolume snapshots ==="
+btrfs subvolume list -s / || true
+echo
+echo "=== btrfs filesystem usage before ==="
+btrfs filesystem usage -T / || true
+echo
 
 mapfile -t snaps < <(
   find "$SNAP_DIR" -mindepth 1 -maxdepth 1 -type d \
@@ -38,12 +43,16 @@ mapfile -t snaps < <(
     -regex ".*/@(home)?\.[0-9]+T[0-9]+$" -printf '%p\n' 2>/dev/null | sort
 )
 
+echo "=== snapshot deletion plan ==="
 if ((${#snaps[@]} == 0)); then
   echo "no dated snapshots found under $SNAP_DIR"
 else
-  echo "deleting ${#snaps[@]} dated snapshot(s):"
+  echo "aggressive mode will delete ${#snaps[@]} dated snapshot(s):"
   for s in "${snaps[@]}"; do
     echo "  $s"
+  done
+  echo
+  for s in "${snaps[@]}"; do
     btrfs subvolume delete "$s"
   done
 fi
@@ -58,7 +67,12 @@ btrfs balance start -dusage=100 -musage=100 / || true
 echo
 echo "=== after ==="
 df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
-btrfs fi usage /home | head -20
+echo
+echo "=== btrfs filesystem usage after ==="
+btrfs filesystem usage -T / || true
+echo
+echo "btrfs fi usage /home:"
+btrfs fi usage /home | head -20 || true
 "#;
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -146,6 +160,13 @@ struct Entry {
     size: u64,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct SnapshotDeletePlan {
+    prefix: &'static str,
+    found: usize,
+    standard_deletes: usize,
+}
+
 fn default_snapshot_script_path_for(runtime_dir: Option<&Path>, uid: u32) -> PathBuf {
     match runtime_dir {
         Some(dir) if dir.is_absolute() => dir.join("rg-space-sweep/btrfs-snapshot-cleanup.sh"),
@@ -186,7 +207,7 @@ fn ensure_script_parent(path: &Path) -> Result<(), String> {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [report|clean|auto-clean|snapshots] [--dry-run] [--yes] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
+usage: rg-space-sweep [report|clean|auto-clean|snapshots] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
 
 report
     Show category totals and the largest matching cache/build directories.
@@ -202,7 +223,8 @@ snapshots
     Report dated btrfs snapshots under /.snapshots and write a root-only
     cleanup script (keeps newest @ and @home, deletes older pairs, runs
     balance). The default path is under the user-scoped runtime directory.
-    Override via --script-path. Run the script with `sudo bash <path>`.
+    Override via --script-path. Use --aggressive to delete every dated
+    @/@home snapshot. Run the script with `sudo bash <path>`.
 
 default
     rust python tox
@@ -332,6 +354,41 @@ fn dated_snapshots() -> Vec<PathBuf> {
     out
 }
 
+fn snapshot_prefix_for_path(path: &Path) -> Option<&'static str> {
+    let name = path.file_name()?.to_str()?;
+    if name.starts_with("@home.") {
+        Some("@home")
+    } else if name.starts_with("@.") {
+        Some("@")
+    } else {
+        None
+    }
+}
+
+fn snapshot_delete_plan(snaps: &[PathBuf]) -> Vec<SnapshotDeletePlan> {
+    ["@", "@home"]
+        .into_iter()
+        .map(|prefix| {
+            let found = snaps
+                .iter()
+                .filter(|path| snapshot_prefix_for_path(path) == Some(prefix))
+                .count();
+            SnapshotDeletePlan {
+                prefix,
+                found,
+                standard_deletes: found.saturating_sub(1),
+            }
+        })
+        .collect()
+}
+
+fn standard_snapshot_delete_total(snaps: &[PathBuf]) -> usize {
+    snapshot_delete_plan(snaps)
+        .iter()
+        .map(|plan| plan.standard_deletes)
+        .sum()
+}
+
 fn write_snapshot_script(options: &Options) -> Result<(), String> {
     let snaps = dated_snapshots();
     if snaps.is_empty() {
@@ -341,6 +398,34 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
     println!("found {} dated snapshot(s) under /.snapshots:", snaps.len());
     for s in &snaps {
         println!("  {}", s.display());
+    }
+    let plan = snapshot_delete_plan(&snaps);
+    let standard_deletes = standard_snapshot_delete_total(&snaps);
+    println!();
+    println!("standard deletion plan:");
+    for item in &plan {
+        println!(
+            "  {}: {} found, {} deleted by standard mode, {} kept",
+            item.prefix,
+            item.found,
+            item.standard_deletes,
+            item.found.saturating_sub(item.standard_deletes)
+        );
+    }
+    if options.aggressive {
+        println!();
+        println!(
+            "aggressive mode will delete all {} dated snapshot(s).",
+            snaps.len()
+        );
+    } else if standard_deletes == 0 {
+        println!();
+        println!("standard mode will delete 0 snapshots for this set.");
+        println!("generate an aggressive script instead:");
+        println!(
+            "  rg-space-sweep snapshots --aggressive --script-path {}",
+            options.script_path.display()
+        );
     }
     let script = if options.aggressive {
         BTRFS_CLEANUP_SCRIPT_AGGRESSIVE
@@ -358,7 +443,7 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
         let _ = fs::set_permissions(&options.script_path, p);
     }
     let mode_label = if options.aggressive {
-        "aggressive (removes TODAY's snapshots too)"
+        "aggressive (removes every dated @/@home snapshot)"
     } else {
         "standard (keeps newest of each prefix as safety)"
     };
@@ -371,8 +456,11 @@ fn write_snapshot_script(options: &Options) -> Result<(), String> {
     println!("run with: sudo bash {}", options.script_path.display());
     if !options.aggressive {
         println!();
-        println!("if space is still tight after the first pass, rerun with --aggressive:");
-        println!("  rg-space-sweep snapshots --aggressive");
+        println!("if space is still tight after the first pass, generate an aggressive script:");
+        println!(
+            "  rg-space-sweep snapshots --aggressive --script-path {}",
+            options.script_path.display()
+        );
     }
     Ok(())
 }
@@ -705,6 +793,10 @@ fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), St
     Ok(())
 }
 
+fn mode_requires_candidate_scan(mode: Mode) -> bool {
+    !matches!(mode, Mode::Snapshots)
+}
+
 fn main() {
     let options = match parse_args() {
         Ok(options) => options,
@@ -719,6 +811,14 @@ fn main() {
             process::exit(64);
         }
     };
+
+    if !mode_requires_candidate_scan(options.mode) {
+        if let Err(err) = write_snapshot_script(&options) {
+            eprintln!("{err}");
+            process::exit(1);
+        }
+        return;
+    }
 
     let result = home_dir()
         .and_then(|home| {
@@ -779,6 +879,9 @@ fn main() {
                         println!(
                             "run: rg-space-sweep snapshots, then run the printed sudo command"
                         );
+                        println!(
+                            "if standard mode reports 0 deletes, run: rg-space-sweep snapshots --aggressive"
+                        );
                     }
                 }
                 Mode::Snapshots => {
@@ -817,5 +920,58 @@ mod tests {
             path,
             PathBuf::from("/tmp/rg-space-sweep-1001/btrfs-snapshot-cleanup.sh")
         );
+    }
+
+    #[test]
+    fn standard_snapshot_plan_keeps_single_root_and_home_snapshots() {
+        let snaps = vec![
+            PathBuf::from("/.snapshots/@.20260429T0000"),
+            PathBuf::from("/.snapshots/@home.20260429T0000"),
+        ];
+
+        assert_eq!(standard_snapshot_delete_total(&snaps), 0);
+        assert_eq!(
+            snapshot_delete_plan(&snaps),
+            vec![
+                SnapshotDeletePlan {
+                    prefix: "@",
+                    found: 1,
+                    standard_deletes: 0,
+                },
+                SnapshotDeletePlan {
+                    prefix: "@home",
+                    found: 1,
+                    standard_deletes: 0,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn standard_snapshot_plan_deletes_older_root_and_home_pairs() {
+        let snaps = vec![
+            PathBuf::from("/.snapshots/@.20260428T0000"),
+            PathBuf::from("/.snapshots/@.20260429T0000"),
+            PathBuf::from("/.snapshots/@home.20260428T0000"),
+            PathBuf::from("/.snapshots/@home.20260429T0000"),
+        ];
+
+        assert_eq!(standard_snapshot_delete_total(&snaps), 2);
+    }
+
+    #[test]
+    fn aggressive_snapshot_script_reports_btrfs_state_before_deleting() {
+        assert!(usage().contains("--aggressive"));
+        assert!(BTRFS_CLEANUP_SCRIPT_AGGRESSIVE.contains("=== snapshot deletion plan ==="));
+        assert!(BTRFS_CLEANUP_SCRIPT_AGGRESSIVE.contains("btrfs subvolume list -s /"));
+        assert!(BTRFS_CLEANUP_SCRIPT_AGGRESSIVE.contains("btrfs filesystem usage -T /"));
+    }
+
+    #[test]
+    fn snapshots_mode_does_not_need_cache_candidate_scan() {
+        assert!(!mode_requires_candidate_scan(Mode::Snapshots));
+        assert!(mode_requires_candidate_scan(Mode::Report));
+        assert!(mode_requires_candidate_scan(Mode::Clean));
+        assert!(mode_requires_candidate_scan(Mode::AutoClean));
     }
 }

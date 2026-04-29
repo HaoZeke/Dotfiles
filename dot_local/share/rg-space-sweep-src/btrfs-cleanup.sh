@@ -26,6 +26,12 @@ fi
 echo "=== before ==="
 df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
 echo
+echo "=== btrfs subvolume snapshots ==="
+btrfs subvolume list -s / || true
+echo
+echo "=== btrfs filesystem usage before ==="
+btrfs filesystem usage -T / || true
+echo
 
 # Collect dated snapshot names for a given prefix ("@" or "@home"),
 # newest last (lexical sort works because names are ISO-style timestamps).
@@ -54,6 +60,7 @@ delete_old() {
   done
 }
 
+echo "=== snapshot deletion plan ==="
 delete_old "@"
 delete_old "@home"
 
@@ -70,8 +77,11 @@ echo
 echo "=== after ==="
 df -h /home / 2>/dev/null | awk 'NR==1 || /\/(home)?$/'
 echo
+echo "=== btrfs filesystem usage after ==="
+btrfs filesystem usage -T / || true
+echo
 echo "btrfs fi usage /home:"
-btrfs fi usage /home | head -20
+btrfs fi usage /home | head -20 || true
 
 echo
 echo "Done. If df still shows full, rerun with -dusage=75 then 90:"
