@@ -63,6 +63,10 @@ coreutils; it does not need `rg-space-sweep` installed.
 Inspect first:
 
 ```bash
+rg-space-sweep target list
+rg-space-sweep target show rg.cosmolab
+rg-space-sweep target check rg.cosmolab
+rg-space-sweep pressure --target rg.cosmolab
 rg-space-sweep report --target cosmolab --limit 20 all
 rg-space-sweep clean --target cosmolab --dry-run all
 ```
@@ -77,23 +81,38 @@ Use `all` on cosmolab because remote build hosts accumulate Rust targets,
 Python caches, tox environments, pixi/rattler caches, virtual environments, and
 JavaScript cache directories from mixed workloads.
 
-Additional remote machines can be configured with TOML. The default path is
-`~/.config/rg-space-sweep/targets.toml`; `--target-config PATH` overrides it.
+Use `--json` with `target list`, `target show`, `target check`, `pressure`,
+`report`, or `clean --dry-run` when another tool needs stable output.
+
+The default target config path is `~/.config/rg-space-sweep/targets.toml`;
+`--target-config PATH` overrides it. The built-in `rg.cosmolab` target can be
+overridden there, including SSH-via-GSocket for cases where the VPN route is not
+available. Store the GSocket secret in a file with strict permissions; do not
+put raw secrets in TOML, shell history, or repository files.
 
 ```toml
-[targets.labbox]
-host = "labbox.example.org"
-home = "/home/labuser"
-runner = "ssh"
-min_free_gb = 75
+[targets."rg.cosmolab"]
+host = "rg.cosmolab"
+user = "goswami"
+home = "/home/goswami"
+runner = "gsocket"
+gsocket_secret_file = "/run/user/1001/gsocket/rg.cosmolab.secret"
+ssh_identity = "/home/rgoswami/.ssh/id_cosmolab"
+host_key_alias = "rg.cosmolab-gsocket"
+roots = ["/home/goswami"]
+prune = ["/home/goswami/Git/.archive"]
+exclude = ["/home/goswami/.cache/keep"]
+categories = ["python", "rust", "tox"]
+min_free_gb = 200
 snapshots = false
 ```
 
 Then run:
 
 ```bash
-rg-space-sweep report --target labbox all
-rg-space-sweep clean --target labbox --dry-run all
+rg-space-sweep target check rg.cosmolab
+rg-space-sweep report --target rg.cosmolab
+rg-space-sweep clean --target rg.cosmolab --dry-run
 ```
 
 ## Snapshots

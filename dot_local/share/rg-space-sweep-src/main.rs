@@ -6,7 +6,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+mod remote_template;
+
+use remote_template::REMOTE_SWEEP_SCRIPT;
 
 const FIND_BIN: &str = "/usr/bin/find";
 const DU_BIN: &str = "/usr/bin/du";
@@ -78,7 +82,8 @@ echo "btrfs fi usage /home:"
 btrfs fi usage /home | head -20 || true
 "#;
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "lowercase")]
 enum Category {
     Rust,
     Python,
@@ -133,6 +138,20 @@ enum Mode {
     /// cleanup script. Cannot delete subvolumes directly because btrfs
     /// operations require root; the user runs the generated script.
     Snapshots,
+    /// Show all configured remote targets.
+    TargetList,
+    /// Show one configured remote target.
+    TargetShow,
+    /// Check local or remote target reachability and basic tool availability.
+    TargetCheck,
+    /// Show filesystem/cache pressure without doing a full sweep.
+    Pressure,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum OutputFormat {
+    Text,
+    Json,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -152,8 +171,16 @@ enum RemoteRunner {
 struct RemoteProfile {
     name: String,
     host: String,
+    user: Option<String>,
     home: PathBuf,
     runner: RemoteRunner,
+    gsocket_secret_file: Option<PathBuf>,
+    ssh_identity: Option<PathBuf>,
+    host_key_alias: Option<String>,
+    roots: Vec<PathBuf>,
+    prune: Vec<PathBuf>,
+    exclude: Vec<PathBuf>,
+    categories: Vec<Category>,
     min_free_gb: u64,
     snapshots: bool,
 }
@@ -182,6 +209,10 @@ struct Options {
     target: Target,
     /// Optional TOML file containing remote target profiles.
     target_config_path: Option<PathBuf>,
+    /// Output format for report/dry-run/target metadata.
+    output_format: OutputFormat,
+    /// Whether categories were supplied explicitly on the CLI.
+    categories_explicit: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -195,6 +226,43 @@ struct Entry {
     category: Category,
     path: PathBuf,
     size: u64,
+}
+
+#[derive(Serialize)]
+struct JsonPathEntry {
+    category: &'static str,
+    path: String,
+    size_bytes: u64,
+}
+
+#[derive(Serialize)]
+struct JsonCategoryTotal {
+    category: &'static str,
+    size_bytes: u64,
+    paths: usize,
+}
+
+#[derive(Serialize)]
+struct JsonReport {
+    grand_total_bytes: u64,
+    matched_paths: usize,
+    totals: Vec<JsonCategoryTotal>,
+    top_paths: Vec<JsonPathEntry>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dry_run: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    would_remove: Option<Vec<JsonPathEntry>>,
+}
+
+#[derive(Serialize)]
+struct JsonTargetProfile {
+    name: String,
+    host: String,
+    runner: &'static str,
+    home: String,
+    roots: Vec<String>,
+    min_free_gb: u64,
+    snapshots: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -244,7 +312,8 @@ fn ensure_script_parent(path: &Path) -> Result<(), String> {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [report|clean|auto-clean|snapshots] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
+usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
+       rg-space-sweep target list|show NAME|check NAME [--json] [--target-config PATH]
 
 report
     Show category totals and the largest matching cache/build directories.
@@ -291,6 +360,7 @@ where
     let mut aggressive = false;
     let mut target = Target::Local;
     let mut target_config_path = None;
+    let mut output_format = OutputFormat::Text;
     let mut category_tokens = Vec::new();
 
     let mut args = args
@@ -315,9 +385,42 @@ where
                 mode = Mode::Snapshots;
                 mode_seen = true;
             }
+            "pressure" if !mode_seen => {
+                mode = Mode::Pressure;
+                mode_seen = true;
+            }
+            "target" if !mode_seen => {
+                let subcommand = args
+                    .next()
+                    .ok_or_else(|| "target requires list, show, or check".to_string())?;
+                match subcommand.as_str() {
+                    "list" => mode = Mode::TargetList,
+                    "show" => {
+                        let name = args
+                            .next()
+                            .ok_or_else(|| "target show requires a target name".to_string())?;
+                        mode = Mode::TargetShow;
+                        target = Target::Remote(name);
+                    }
+                    "check" => {
+                        let name = args
+                            .next()
+                            .ok_or_else(|| "target check requires a target name".to_string())?;
+                        mode = Mode::TargetCheck;
+                        target = Target::Remote(name);
+                    }
+                    other => {
+                        return Err(format!(
+                            "unknown target subcommand: {other}; use list, show, or check"
+                        ))
+                    }
+                }
+                mode_seen = true;
+            }
             "--dry-run" => dry_run = true,
             "--yes" => yes = true,
             "--aggressive" => aggressive = true,
+            "--json" => output_format = OutputFormat::Json,
             "--target" => {
                 let value = args
                     .next()
@@ -358,7 +461,13 @@ where
         }
     }
 
-    if category_tokens.is_empty() {
+    let categories_explicit = !category_tokens.is_empty();
+    if category_tokens.is_empty()
+        && matches!(
+            mode,
+            Mode::Report | Mode::Clean | Mode::AutoClean | Mode::Snapshots
+        )
+    {
         category_tokens.push(match mode {
             Mode::AutoClean => "all".to_string(),
             _ => "default".to_string(),
@@ -390,6 +499,8 @@ where
         aggressive,
         target,
         target_config_path,
+        output_format,
+        categories_explicit,
     };
     validate_target_mode(&options)?;
     Ok(options)
@@ -427,9 +538,25 @@ struct RemoteProfilesFile {
 #[derive(Debug, Deserialize)]
 struct RemoteProfileToml {
     host: String,
+    #[serde(default)]
+    user: Option<String>,
     home: PathBuf,
     #[serde(default = "default_remote_runner")]
     runner: RemoteRunner,
+    #[serde(default)]
+    gsocket_secret_file: Option<PathBuf>,
+    #[serde(default)]
+    ssh_identity: Option<PathBuf>,
+    #[serde(default)]
+    host_key_alias: Option<String>,
+    #[serde(default)]
+    roots: Vec<PathBuf>,
+    #[serde(default)]
+    prune: Vec<PathBuf>,
+    #[serde(default)]
+    exclude: Vec<PathBuf>,
+    #[serde(default)]
+    categories: Vec<Category>,
     #[serde(default = "default_remote_min_free_gb")]
     min_free_gb: u64,
     #[serde(default)]
@@ -444,13 +571,44 @@ fn default_remote_min_free_gb() -> u64 {
     10
 }
 
+fn runner_label(runner: RemoteRunner) -> &'static str {
+    match runner {
+        RemoteRunner::Ssh => "ssh",
+        RemoteRunner::Gsocket => "gsocket",
+    }
+}
+
+fn json_target_profile(profile: &RemoteProfile) -> JsonTargetProfile {
+    JsonTargetProfile {
+        name: profile.name.clone(),
+        host: profile.host.clone(),
+        runner: runner_label(profile.runner),
+        home: profile.home.display().to_string(),
+        roots: profile
+            .roots
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect(),
+        min_free_gb: profile.min_free_gb,
+        snapshots: profile.snapshots,
+    }
+}
+
 fn builtin_remote_profiles() -> BTreeMap<String, RemoteProfile> {
     let mut profiles = BTreeMap::new();
     let cosmolab = RemoteProfile {
         name: "cosmolab".to_string(),
         host: "rg.cosmolab".to_string(),
+        user: None,
         home: PathBuf::from("/home/goswami"),
         runner: RemoteRunner::Ssh,
+        gsocket_secret_file: None,
+        ssh_identity: None,
+        host_key_alias: None,
+        roots: vec![PathBuf::from("/home/goswami")],
+        prune: Vec::new(),
+        exclude: Vec::new(),
+        categories: Vec::new(),
         min_free_gb: 200,
         snapshots: false,
     };
@@ -483,13 +641,61 @@ fn remote_profiles_from_toml(input: &str) -> Result<BTreeMap<String, RemoteProfi
                 profile.home.display()
             ));
         }
+        let roots = if profile.roots.is_empty() {
+            vec![profile.home.clone()]
+        } else {
+            profile.roots
+        };
+        for (field, paths) in [
+            ("roots", roots.as_slice()),
+            ("prune", profile.prune.as_slice()),
+            ("exclude", profile.exclude.as_slice()),
+        ] {
+            for path in paths {
+                if !path.is_absolute() {
+                    return Err(format!(
+                        "target {name} {field} path must be absolute: {}",
+                        path.display()
+                    ));
+                }
+            }
+        }
+        if profile.runner == RemoteRunner::Gsocket && profile.gsocket_secret_file.is_none() {
+            return Err(format!(
+                "target {name} uses runner = \"gsocket\" but has no gsocket_secret_file"
+            ));
+        }
+        if let Some(path) = profile.gsocket_secret_file.as_ref() {
+            if !path.is_absolute() {
+                return Err(format!(
+                    "target {name} gsocket_secret_file must be absolute: {}",
+                    path.display()
+                ));
+            }
+        }
+        if let Some(path) = profile.ssh_identity.as_ref() {
+            if !path.is_absolute() {
+                return Err(format!(
+                    "target {name} ssh_identity must be absolute: {}",
+                    path.display()
+                ));
+            }
+        }
         profiles.insert(
             name.clone(),
             RemoteProfile {
                 name,
                 host: profile.host,
+                user: profile.user,
                 home: profile.home,
                 runner: profile.runner,
+                gsocket_secret_file: profile.gsocket_secret_file,
+                ssh_identity: profile.ssh_identity,
+                host_key_alias: profile.host_key_alias,
+                roots,
+                prune: profile.prune,
+                exclude: profile.exclude,
+                categories: profile.categories,
                 min_free_gb: profile.min_free_gb,
                 snapshots: profile.snapshots,
             },
@@ -544,6 +750,90 @@ fn remote_profile_for(
     load_remote_profiles(config_path)?
         .remove(target_name)
         .ok_or_else(|| format!("unknown remote target: {target_name}"))
+}
+
+fn list_targets(options: &Options) -> Result<(), String> {
+    let profiles = load_remote_profiles(options.target_config_path.as_deref())?;
+    if options.output_format == OutputFormat::Json {
+        let values = profiles
+            .values()
+            .map(json_target_profile)
+            .collect::<Vec<_>>();
+        println!(
+            "{}",
+            serde_json::to_string(&values).map_err(|err| format!("serialize targets: {err}"))?
+        );
+    } else {
+        for profile in profiles.values() {
+            println!(
+                "{:<12} {:<8} {}",
+                profile.name,
+                runner_label(profile.runner),
+                profile.host
+            );
+        }
+    }
+    Ok(())
+}
+
+fn show_target(target_name: &str, options: &Options) -> Result<(), String> {
+    let profile = remote_profile_for(target_name, options.target_config_path.as_deref())?;
+    if options.output_format == OutputFormat::Json {
+        println!(
+            "{}",
+            serde_json::to_string(&json_target_profile(&profile))
+                .map_err(|err| format!("serialize target: {err}"))?
+        );
+    } else {
+        println!("name: {}", profile.name);
+        println!("host: {}", profile.host);
+        println!("runner: {}", runner_label(profile.runner));
+        if let Some(user) = profile.user.as_ref() {
+            println!("user: {user}");
+        }
+        println!("home: {}", profile.home.display());
+        println!("min_free_gb: {}", profile.min_free_gb);
+        println!("roots:");
+        for root in &profile.roots {
+            println!("  {}", root.display());
+        }
+    }
+    Ok(())
+}
+
+fn run_local_target_check(options: &Options) -> Result<(), String> {
+    let home = home_dir()?;
+    if options.output_format == OutputFormat::Json {
+        println!(
+            "{{\"mode\":\"target-check\",\"target\":\"local\",\"home\":\"{}\",\"ok\":true}}",
+            home.display()
+        );
+    } else {
+        println!("Target: local");
+        println!("Home: {}", home.display());
+        println!("find: {}", Path::new(FIND_BIN).display());
+        println!("du: {}", Path::new(DU_BIN).display());
+    }
+    Ok(())
+}
+
+fn run_local_pressure(options: &Options) -> Result<(), String> {
+    let home = home_dir()?;
+    let free = free_bytes_for(&home)?;
+    if options.output_format == OutputFormat::Json {
+        println!(
+            "{{\"mode\":\"pressure\",\"target\":\"local\",\"home\":\"{}\",\"free_bytes\":{},\"min_free_gb\":{}}}",
+            home.display(),
+            free,
+            options.min_free_gb
+        );
+    } else {
+        println!("Target: local");
+        println!("Home: {}", home.display());
+        println!("Free: {}", format_bytes(free));
+        println!("Min free: {}G", options.min_free_gb);
+    }
+    Ok(())
 }
 
 /// List dated btrfs snapshots under /.snapshots, newest last.
@@ -941,6 +1231,67 @@ fn print_report(home: &Path, entries: &[Entry], limit: usize) {
     );
 }
 
+fn report_json(
+    home: &Path,
+    entries: &[Entry],
+    limit: usize,
+    dry_run: Option<bool>,
+) -> Result<String, String> {
+    let mut totals: BTreeMap<Category, (u64, usize)> = BTreeMap::new();
+    let mut grand_total = 0u64;
+    for entry in entries {
+        grand_total += entry.size;
+        let item = totals.entry(entry.category).or_insert((0, 0));
+        item.0 += entry.size;
+        item.1 += 1;
+    }
+
+    let totals = totals
+        .into_iter()
+        .map(|(category, (size_bytes, paths))| JsonCategoryTotal {
+            category: category.label(),
+            size_bytes,
+            paths,
+        })
+        .collect::<Vec<_>>();
+    let json_entry = |entry: &Entry| JsonPathEntry {
+        category: entry.category.label(),
+        path: display_path(home, &entry.path),
+        size_bytes: entry.size,
+    };
+    let top_paths = entries
+        .iter()
+        .take(limit)
+        .map(json_entry)
+        .collect::<Vec<_>>();
+    let would_remove = dry_run.and_then(|value| {
+        if value {
+            Some(entries.iter().map(json_entry).collect::<Vec<_>>())
+        } else {
+            None
+        }
+    });
+    serde_json::to_string(&JsonReport {
+        grand_total_bytes: grand_total,
+        matched_paths: entries.len(),
+        totals,
+        top_paths,
+        dry_run,
+        would_remove,
+    })
+    .map_err(|err| format!("serialize report json: {err}"))
+}
+
+fn print_report_json(
+    home: &Path,
+    entries: &[Entry],
+    limit: usize,
+    dry_run: Option<bool>,
+) -> Result<(), String> {
+    println!("{}", report_json(home, entries, limit, dry_run)?);
+    Ok(())
+}
+
 fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
@@ -1030,22 +1381,53 @@ fn push_shell_var(script: &mut String, name: &str, value: &str) {
     script.push('\n');
 }
 
+fn push_shell_array(script: &mut String, name: &str, values: &[String]) {
+    script.push_str(name);
+    script.push_str("=(\n");
+    for value in values {
+        script.push_str("  ");
+        script.push_str(&shell_quote(value));
+        script.push('\n');
+    }
+    script.push_str(")\n");
+}
+
+fn proxy_command_quote(value: &str) -> String {
+    shell_quote(value)
+}
+
 fn mode_label(mode: Mode) -> &'static str {
     match mode {
         Mode::Report => "report",
         Mode::Clean => "clean",
         Mode::AutoClean => "auto-clean",
         Mode::Snapshots => "snapshots",
+        Mode::TargetList => "target-list",
+        Mode::TargetShow => "target-show",
+        Mode::TargetCheck => "target-check",
+        Mode::Pressure => "pressure",
+    }
+}
+
+fn effective_remote_categories(profile: &RemoteProfile, options: &Options) -> Vec<Category> {
+    if !options.categories_explicit && !profile.categories.is_empty() {
+        profile.categories.clone()
+    } else {
+        options.categories.clone()
     }
 }
 
 fn remote_script_for(profile: &RemoteProfile, options: &Options) -> Result<String, String> {
-    if matches!(options.mode, Mode::AutoClean | Mode::Snapshots) {
-        return Err("remote script supports report and clean only".to_string());
+    if matches!(
+        options.mode,
+        Mode::AutoClean | Mode::Snapshots | Mode::TargetList | Mode::TargetShow
+    ) {
+        return Err(
+            "remote script supports report, clean, pressure, and target check only".to_string(),
+        );
     }
 
-    let categories = options
-        .categories
+    let categories = effective_remote_categories(profile, options)
         .iter()
         .map(|category| category.label())
         .collect::<Vec<_>>()
@@ -1054,10 +1436,19 @@ fn remote_script_for(profile: &RemoteProfile, options: &Options) -> Result<Strin
     let mut script = String::new();
 
     script.push_str("#!/usr/bin/env bash\nset -euo pipefail\n\n");
+    push_shell_var(&mut script, "TARGET_NAME", &profile.name);
     push_shell_var(&mut script, "HOME_DIR", home.as_ref());
     push_shell_var(&mut script, "MODE", mode_label(options.mode));
     push_shell_var(&mut script, "CATEGORIES", &categories);
     push_shell_var(&mut script, "LIMIT", &options.limit.to_string());
+    push_shell_var(
+        &mut script,
+        "OUTPUT_FORMAT",
+        match options.output_format {
+            OutputFormat::Text => "text",
+            OutputFormat::Json => "json",
+        },
+    );
     push_shell_var(
         &mut script,
         "DRY_RUN",
@@ -1067,281 +1458,35 @@ fn remote_script_for(profile: &RemoteProfile, options: &Options) -> Result<Strin
         push_shell_var(&mut script, "YES", "1");
     }
     push_shell_var(&mut script, "MIN_FREE_GB", &profile.min_free_gb.to_string());
-
-    script.push_str(
-        r#"
-CANDIDATES="$(mktemp)"
-SIZES="$(mktemp)"
-SORTED="$(mktemp)"
-trap 'rm -f "$CANDIDATES" "$SIZES" "$SORTED"' EXIT
-
-format_bytes() {
-  awk -v bytes="$1" 'BEGIN { printf "%6.1fG", bytes / 1024 / 1024 / 1024 }'
-}
-
-display_path() {
-  local path="$1"
-  if [[ "$path" == "$HOME_DIR" ]]; then
-    printf '~\n'
-  elif [[ "$path" == "$HOME_DIR/"* ]]; then
-    printf '~/%s\n' "${path#"$HOME_DIR"/}"
-  else
-    printf '%s\n' "$path"
-  fi
-}
-
-add_candidate() {
-  local category="$1"
-  local path="$2"
-  [[ -d "$path" ]] || return 0
-  printf '%s\t%s\n' "$category" "$path" >> "$CANDIDATES"
-}
-
-find_dirs() {
-  find "$HOME_DIR" -xdev \
-    \( -path "$HOME_DIR/.cache" \
-    -o -path "$HOME_DIR/.cargo" \
-    -o -path "$HOME_DIR/.local/share/containers" \
-    -o -path "$HOME_DIR/.local/share/Trash" \
-    -o -name .git \
-    -o -name .direnv \
-    -o -name .pixi \
-    -o -name .nox \
-    -o -name __pycache__ \) -prune \
-    -o -type d "$@" -prune -print 2>/dev/null || true
-}
-
-find_named() {
-  find_dirs -name "$1"
-}
-
-find_path() {
-  find_dirs -path "$1"
-}
-
-find_python_caches() {
-  find "$HOME_DIR" -xdev \
-    \( -path "$HOME_DIR/.cache" \
-    -o -path "$HOME_DIR/.cargo" \
-    -o -path "$HOME_DIR/.local/share/containers" \
-    -o -path "$HOME_DIR/.local/share/Trash" \
-    -o -name .git \
-    -o -name .direnv \
-    -o -name .pixi \
-    -o -name .nox \
-    -o -name __pycache__ \
-    -o -name target \
-    -o -name node_modules \
-    -o -name .venv \
-    -o -name .tox \) -prune \
-    -o -type d \( -name .pytest_cache \
-    -o -name .mypy_cache \
-    -o -name .ruff_cache \
-    -o -name .hypothesis \) -prune -print 2>/dev/null || true
-}
-
-has_cargo_parent() {
-  local path="$1"
-  local parent
-  parent="$(dirname "$path")"
-  [[ -f "$parent/Cargo.toml" || -f "$parent/Cargo.lock" ]]
-}
-
-looks_like_rust_target() {
-  local path="$1"
-  [[ -d "$path/debug" || -d "$path/release" || -d "$path/.fingerprint" || -e "$path/.rustc_info.json" ]]
-}
-
-collect_category() {
-  local category="$1"
-  local path
-  case "$category" in
-    rust)
-      while IFS= read -r path; do
-        if has_cargo_parent "$path" && looks_like_rust_target "$path"; then
-          add_candidate rust "$path"
-        fi
-      done < <(find_named target)
-      add_candidate rust "$HOME_DIR/.cargo/registry/cache"
-      add_candidate rust "$HOME_DIR/.cargo/git/db"
-      ;;
-    python)
-      while IFS= read -r path; do
-        add_candidate python "$path"
-      done < <(find_python_caches)
-      add_candidate python "$HOME_DIR/.cache/pip"
-      add_candidate python "$HOME_DIR/.cache/uv"
-      add_candidate python "$HOME_DIR/.cache/pre-commit"
-      add_candidate python "$HOME_DIR/.local/share/hatch"
-      ;;
-    pixi)
-      add_candidate pixi "$HOME_DIR/.cache/rattler/cache"
-      ;;
-    tox)
-      while IFS= read -r path; do
-        add_candidate tox "$path"
-      done < <(find_named .tox)
-      ;;
-    venv)
-      while IFS= read -r path; do
-        add_candidate venv "$path"
-      done < <(find_named .venv)
-      ;;
-    js)
-      while IFS= read -r path; do
-        add_candidate js "$path"
-      done < <(find_path "*/node_modules/.cache")
-      add_candidate js "$HOME_DIR/.npm"
-      ;;
-    *)
-      echo "unknown category in remote script: $category" >&2
-      exit 64
-      ;;
-  esac
-}
-
-collect_candidates() {
-  local category
-  for category in $CATEGORIES; do
-    collect_category "$category"
-  done
-  sort -u "$CANDIDATES" -o "$CANDIDATES"
-}
-
-size_candidates() {
-  local category path size
-  : > "$SIZES"
-  while IFS=$'\t' read -r category path; do
-    [[ -n "${category:-}" && -n "${path:-}" ]] || continue
-    size="$(du -s --block-size=1 "$path" 2>/dev/null | awk '{print $1}')" || continue
-    [[ -n "$size" ]] || continue
-    printf '%s\t%s\t%s\n' "$size" "$category" "$path" >> "$SIZES"
-  done < "$CANDIDATES"
-  sort -rn "$SIZES" > "$SORTED"
-}
-
-print_report() {
-  local category total count shown size label path display total_all count_all
-  echo "Category totals"
-  for category in $CATEGORIES; do
-    read -r total count < <(awk -F '\t' -v cat="$category" '$2 == cat { total += $1; count += 1 } END { printf "%s %s\n", total + 0, count + 0 }' "$SORTED")
-    if [[ "$count" != "0" ]]; then
-      label="$(format_bytes "$total")"
-      printf '%s  %-6s (%2d paths)\n' "$label" "$category" "$count"
-    fi
-  done
-
-  echo
-  echo "Top paths"
-  shown=0
-  while IFS=$'\t' read -r size category path; do
-    [[ -n "${size:-}" ]] || continue
-    label="$(format_bytes "$size")"
-    display="$(display_path "$path")"
-    printf '%s  %-6s  %s\n' "$label" "$category" "$display"
-    shown=$((shown + 1))
-    [[ "$shown" -ge "$LIMIT" ]] && break
-  done < "$SORTED"
-
-  read -r total_all count_all < <(awk -F '\t' '{ total += $1; count += 1 } END { printf "%s %s\n", total + 0, count + 0 }' "$SORTED")
-  echo
-  printf 'Grand total: %s across %d matched paths\n' "$(format_bytes "$total_all")" "$count_all"
-}
-
-safe_to_remove() {
-  local category="$1"
-  local path="$2"
-  local name parent
-  [[ "$path" == "$HOME_DIR/"* ]] || return 1
-  [[ "$path" != "$HOME_DIR" ]] || return 1
-  case "$path" in
-    "$HOME_DIR/.local/bin"|"$HOME_DIR/.local/bin/"*|"$HOME_DIR/.cargo/bin"|"$HOME_DIR/.cargo/bin/"*)
-      return 1
-      ;;
-    "$HOME_DIR/.cargo/registry/cache"|"$HOME_DIR/.cargo/git/db"|"$HOME_DIR/.cache/pip"|"$HOME_DIR/.cache/uv"|"$HOME_DIR/.cache/rattler/cache"|"$HOME_DIR/.cache/pre-commit"|"$HOME_DIR/.local/share/hatch"|"$HOME_DIR/.npm")
-      return 0
-      ;;
-  esac
-
-  name="${path##*/}"
-  case "$category" in
-    rust)
-      [[ "$name" == "target" ]] && has_cargo_parent "$path" && looks_like_rust_target "$path"
-      ;;
-    python)
-      [[ "$name" == ".pytest_cache" || "$name" == ".mypy_cache" || "$name" == ".ruff_cache" || "$name" == ".hypothesis" ]]
-      ;;
-    pixi)
-      [[ "$path" == "$HOME_DIR/.cache/rattler/cache" ]]
-      ;;
-    tox)
-      [[ "$name" == ".tox" ]]
-      ;;
-    venv)
-      [[ "$name" == ".venv" ]]
-      ;;
-    js)
-      parent="$(basename "$(dirname "$path")")"
-      [[ "$name" == ".cache" && "$parent" == "node_modules" ]]
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-clean_paths() {
-  local size category path label display
-  if [[ "${YES:-0}" != "1" ]]; then
-    echo "refusing to clean without --yes; use --dry-run to preview first" >&2
-    exit 64
-  fi
-
-  while IFS=$'\t' read -r size category path; do
-    [[ -n "${path:-}" ]] || continue
-    if ! safe_to_remove "$category" "$path"; then
-      echo "refusing to remove unexpected path: $path" >&2
-      exit 65
-    fi
-  done < "$SORTED"
-
-  while IFS=$'\t' read -r size category path; do
-    [[ -n "${path:-}" ]] || continue
-    label="$(format_bytes "$size")"
-    display="$(display_path "$path")"
-    printf 'removing %s  %-6s  %s\n' "$label" "$category" "$display"
-    rm -rf -- "$path"
-  done < "$SORTED"
-}
-
-collect_candidates
-size_candidates
-
-case "$MODE" in
-  report)
-    print_report
-    ;;
-  clean)
-    if [[ "$DRY_RUN" == "1" ]]; then
-      print_report
-      echo
-      echo "Dry run"
-      while IFS=$'\t' read -r size category path; do
-        [[ -n "${path:-}" ]] || continue
-        printf 'would remove %s  %-6s  %s\n' "$(format_bytes "$size")" "$category" "$(display_path "$path")"
-      done < "$SORTED"
-    else
-      clean_paths
-    fi
-    ;;
-  *)
-    echo "unsupported remote mode: $MODE" >&2
-    exit 64
-    ;;
-esac
-"#,
+    push_shell_array(
+        &mut script,
+        "ROOTS",
+        &profile
+            .roots
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect::<Vec<_>>(),
     );
-
+    push_shell_array(
+        &mut script,
+        "PRUNE_PATHS",
+        &profile
+            .prune
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect::<Vec<_>>(),
+    );
+    push_shell_array(
+        &mut script,
+        "EXCLUDE_PATHS",
+        &profile
+            .exclude
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect::<Vec<_>>(),
+    );
+    script.push('\n');
+    script.push_str(REMOTE_SWEEP_SCRIPT);
     Ok(script)
 }
 
@@ -1350,24 +1495,69 @@ fn remote_invocation_for(
     options: &Options,
 ) -> Result<RemoteInvocation, String> {
     validate_target_mode(options)?;
+    let ssh_target = match profile.user.as_ref() {
+        Some(user) => format!("{user}@{}", profile.host),
+        None => profile.host.clone(),
+    };
     match profile.runner {
         RemoteRunner::Ssh => Ok(RemoteInvocation {
             program: "ssh".to_string(),
             args: vec![
+                "-T".to_string(),
                 "-o".to_string(),
                 "BatchMode=yes".to_string(),
                 "-o".to_string(),
                 "ConnectTimeout=10".to_string(),
-                profile.host.clone(),
+                ssh_target,
                 "bash".to_string(),
                 "-s".to_string(),
+                "--".to_string(),
             ],
             stdin: remote_script_for(profile, options)?,
         }),
-        RemoteRunner::Gsocket => Err(
-            "gsocket remote runner is not supported by rg-space-sweep; use runner = \"ssh\""
-                .to_string(),
-        ),
+        RemoteRunner::Gsocket => {
+            let secret = profile.gsocket_secret_file.as_ref().ok_or_else(|| {
+                format!(
+                    "target {} uses runner = \"gsocket\" but has no gsocket_secret_file",
+                    profile.name
+                )
+            })?;
+            let host_key_alias = profile
+                .host_key_alias
+                .clone()
+                .unwrap_or_else(|| format!("{}-gsocket", profile.name));
+            let mut args = vec![
+                "-T".to_string(),
+                "-o".to_string(),
+                "BatchMode=yes".to_string(),
+                "-o".to_string(),
+                "ConnectTimeout=10".to_string(),
+                "-o".to_string(),
+                format!(
+                    "ProxyCommand=gs-netcat -q -k {}",
+                    proxy_command_quote(&secret.to_string_lossy())
+                ),
+                "-o".to_string(),
+                format!("HostKeyAlias={host_key_alias}"),
+                "-o".to_string(),
+                "StrictHostKeyChecking=yes".to_string(),
+            ];
+            if let Some(identity) = profile.ssh_identity.as_ref() {
+                args.push("-i".to_string());
+                args.push(identity.to_string_lossy().into_owned());
+            }
+            args.extend([
+                ssh_target,
+                "bash".to_string(),
+                "-s".to_string(),
+                "--".to_string(),
+            ]);
+            Ok(RemoteInvocation {
+                program: "ssh".to_string(),
+                args,
+                stdin: remote_script_for(profile, options)?,
+            })
+        }
     }
 }
 
@@ -1411,6 +1601,27 @@ fn mode_requires_candidate_scan(mode: Mode) -> bool {
 }
 
 fn run_local_mode(options: &Options) -> Result<(), String> {
+    match options.mode {
+        Mode::TargetList => return list_targets(options),
+        Mode::TargetShow => {
+            return match &options.target {
+                Target::Remote(target_name) => show_target(target_name, options),
+                Target::Local => Err("target show requires a remote target name".to_string()),
+            };
+        }
+        Mode::TargetCheck => {
+            if matches!(options.target, Target::Local) {
+                return run_local_target_check(options);
+            }
+        }
+        Mode::Pressure => {
+            if matches!(options.target, Target::Local) {
+                return run_local_pressure(options);
+            }
+        }
+        _ => {}
+    }
+
     if !mode_requires_candidate_scan(options.mode) {
         return write_snapshot_script(options);
     }
@@ -1421,20 +1632,35 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
         })
         .and_then(|(home, entries)| {
             match options.mode {
-                Mode::Report => print_report(&home, &size_entries(&entries)?, options.limit),
+                Mode::Report => {
+                    let sized = size_entries(&entries)?;
+                    match options.output_format {
+                        OutputFormat::Text => print_report(&home, &sized, options.limit),
+                        OutputFormat::Json => {
+                            print_report_json(&home, &sized, options.limit, None)?
+                        }
+                    }
+                }
                 Mode::Clean => {
                     if options.dry_run {
                         let sized = size_entries(&entries)?;
-                        print_report(&home, &sized, options.limit);
-                        println!();
-                        println!("Dry run");
-                        for entry in &sized {
-                            println!(
-                                "would remove {}  {:<6}  {}",
-                                format_bytes(entry.size),
-                                entry.category.label(),
-                                display_path(&home, &entry.path)
-                            );
+                        match options.output_format {
+                            OutputFormat::Text => {
+                                print_report(&home, &sized, options.limit);
+                                println!();
+                                println!("Dry run");
+                                for entry in &sized {
+                                    println!(
+                                        "would remove {}  {:<6}  {}",
+                                        format_bytes(entry.size),
+                                        entry.category.label(),
+                                        display_path(&home, &entry.path)
+                                    );
+                                }
+                            }
+                            OutputFormat::Json => {
+                                print_report_json(&home, &sized, options.limit, Some(true))?
+                            }
                         }
                     } else {
                         clean_entries(&home, &entries, options.yes)?;
@@ -1482,6 +1708,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                 Mode::Snapshots => {
                     write_snapshot_script(options)?;
                 }
+                Mode::TargetList | Mode::TargetShow | Mode::TargetCheck | Mode::Pressure => {}
             }
             Ok(())
         })
@@ -1491,7 +1718,11 @@ fn run_options(options: &Options) -> Result<(), String> {
     validate_target_mode(options)?;
     match &options.target {
         Target::Local => run_local_mode(options),
-        Target::Remote(target_name) => run_remote_mode(target_name, options),
+        Target::Remote(target_name) => match options.mode {
+            Mode::TargetList => list_targets(options),
+            Mode::TargetShow => show_target(target_name, options),
+            _ => run_remote_mode(target_name, options),
+        },
     }
 }
 
@@ -1625,13 +1856,13 @@ mod tests {
         let options = parse_args_from([
             "report",
             "--target",
-            "labbox",
+            "rg.cosmolab",
             "--target-config",
             "/tmp/targets.toml",
         ])
         .expect("parse args");
 
-        assert_eq!(options.target, Target::Remote("labbox".to_string()));
+        assert_eq!(options.target, Target::Remote("rg.cosmolab".to_string()));
         assert_eq!(
             options.target_config_path,
             Some(PathBuf::from("/tmp/targets.toml"))
@@ -1651,6 +1882,8 @@ mod tests {
             aggressive: false,
             target: Target::Remote("cosmolab".to_string()),
             target_config_path: None,
+            output_format: OutputFormat::Text,
+            categories_explicit: true,
         };
         let auto_clean = Options {
             mode: Mode::AutoClean,
@@ -1665,9 +1898,9 @@ mod tests {
     fn remote_profiles_load_from_toml_and_keep_cosmolab_builtin() {
         let profiles = remote_profiles_from_toml(
             r#"
-            [targets.labbox]
-            host = "labbox.example.org"
-            home = "/home/labuser"
+            [targets."rg.cosmolab"]
+            host = "rg.cosmolab"
+            home = "/home/goswami"
             runner = "ssh"
             min_free_gb = 75
             snapshots = false
@@ -1676,12 +1909,20 @@ mod tests {
         .expect("parse profiles");
 
         assert_eq!(
-            profiles.get("labbox"),
+            profiles.get("rg.cosmolab"),
             Some(&RemoteProfile {
-                name: "labbox".to_string(),
-                host: "labbox.example.org".to_string(),
-                home: PathBuf::from("/home/labuser"),
+                name: "rg.cosmolab".to_string(),
+                host: "rg.cosmolab".to_string(),
+                user: None,
+                home: PathBuf::from("/home/goswami"),
                 runner: RemoteRunner::Ssh,
+                gsocket_secret_file: None,
+                ssh_identity: None,
+                host_key_alias: None,
+                roots: vec![PathBuf::from("/home/goswami")],
+                prune: Vec::new(),
+                exclude: Vec::new(),
+                categories: Vec::new(),
                 min_free_gb: 75,
                 snapshots: false,
             })
@@ -1698,7 +1939,7 @@ mod tests {
         let invocation = remote_invocation_for(&profile, &options).expect("remote invocation");
 
         assert_eq!(invocation.program, "ssh");
-        assert_eq!(invocation.args[0], "-o");
+        assert!(invocation.args.contains(&"-T".to_string()));
         assert!(invocation.args.contains(&"BatchMode=yes".to_string()));
         assert!(invocation.args.contains(&"rg.cosmolab".to_string()));
         assert!(invocation.stdin.contains("HOME_DIR='/home/goswami'"));
@@ -1724,5 +1965,146 @@ mod tests {
         assert!(invocation.stdin.contains("MODE='clean'"));
         assert!(invocation.stdin.contains("YES='1'"));
         assert!(invocation.stdin.contains("rm -rf --"));
+    }
+
+    #[test]
+    fn parse_args_from_accepts_target_subcommands_pressure_and_json() {
+        let list = parse_args_from(["target", "list", "--json"]).expect("parse target list");
+        let show = parse_args_from(["target", "show", "cosmolab"]).expect("parse target show");
+        let check = parse_args_from(["target", "check", "cosmolab"]).expect("parse target check");
+        let pressure = parse_args_from(["pressure", "--target", "cosmolab", "--json"])
+            .expect("parse pressure");
+
+        assert_eq!(list.mode, Mode::TargetList);
+        assert_eq!(list.output_format, OutputFormat::Json);
+        assert_eq!(show.mode, Mode::TargetShow);
+        assert_eq!(show.target, Target::Remote("cosmolab".to_string()));
+        assert_eq!(check.mode, Mode::TargetCheck);
+        assert_eq!(check.target, Target::Remote("cosmolab".to_string()));
+        assert_eq!(pressure.mode, Mode::Pressure);
+        assert_eq!(pressure.output_format, OutputFormat::Json);
+    }
+
+    #[test]
+    fn remote_profiles_load_controls_and_gsocket_secret_file() {
+        let profiles = remote_profiles_from_toml(
+            r#"
+            [targets."rg.cosmolab"]
+            host = "rg.cosmolab"
+            user = "goswami"
+            home = "/home/goswami"
+            runner = "gsocket"
+            gsocket_secret_file = "/run/user/1001/gsocket/rg.cosmolab.secret"
+            ssh_identity = "/home/rgoswami/.ssh/id_cosmolab"
+            host_key_alias = "rg.cosmolab-gsocket"
+            roots = ["/home/goswami", "/scratch/goswami"]
+            prune = ["/scratch/goswami/raw"]
+            exclude = ["/home/goswami/.cache/keep"]
+            categories = ["python", "rust"]
+            min_free_gb = 75
+            snapshots = false
+            "#,
+        )
+        .expect("parse profiles");
+
+        assert_eq!(
+            profiles.get("rg.cosmolab"),
+            Some(&RemoteProfile {
+                name: "rg.cosmolab".to_string(),
+                host: "rg.cosmolab".to_string(),
+                user: Some("goswami".to_string()),
+                home: PathBuf::from("/home/goswami"),
+                runner: RemoteRunner::Gsocket,
+                gsocket_secret_file: Some(PathBuf::from(
+                    "/run/user/1001/gsocket/rg.cosmolab.secret"
+                )),
+                ssh_identity: Some(PathBuf::from("/home/rgoswami/.ssh/id_cosmolab")),
+                host_key_alias: Some("rg.cosmolab-gsocket".to_string()),
+                roots: vec![
+                    PathBuf::from("/home/goswami"),
+                    PathBuf::from("/scratch/goswami"),
+                ],
+                prune: vec![PathBuf::from("/scratch/goswami/raw")],
+                exclude: vec![PathBuf::from("/home/goswami/.cache/keep")],
+                categories: vec![Category::Python, Category::Rust],
+                min_free_gb: 75,
+                snapshots: false,
+            })
+        );
+    }
+
+    #[test]
+    fn gsocket_invocation_uses_proxycommand_keyfile_and_ssh_identity() {
+        let profile = RemoteProfile {
+            name: "rg.cosmolab".to_string(),
+            host: "rg.cosmolab".to_string(),
+            user: Some("goswami".to_string()),
+            home: PathBuf::from("/home/goswami"),
+            runner: RemoteRunner::Gsocket,
+            gsocket_secret_file: Some(PathBuf::from("/run/user/1001/gsocket/rg.cosmolab secret")),
+            ssh_identity: Some(PathBuf::from("/home/rgoswami/.ssh/id_cosmolab")),
+            host_key_alias: Some("rg.cosmolab-gsocket".to_string()),
+            roots: vec![PathBuf::from("/home/goswami")],
+            prune: Vec::new(),
+            exclude: Vec::new(),
+            categories: Vec::new(),
+            min_free_gb: 75,
+            snapshots: false,
+        };
+        let options =
+            parse_args_from(["report", "--target", "rg.cosmolab", "python"]).expect("parse args");
+
+        let invocation = remote_invocation_for(&profile, &options).expect("remote invocation");
+
+        assert_eq!(invocation.program, "ssh");
+        assert!(invocation.args.contains(&"-T".to_string()));
+        assert!(invocation.args.contains(&"-i".to_string()));
+        assert!(invocation
+            .args
+            .contains(&"/home/rgoswami/.ssh/id_cosmolab".to_string()));
+        assert!(invocation.args.contains(
+            &"ProxyCommand=gs-netcat -q -k '/run/user/1001/gsocket/rg.cosmolab secret'".to_string()
+        ));
+        assert!(invocation
+            .args
+            .contains(&"HostKeyAlias=rg.cosmolab-gsocket".to_string()));
+        assert!(invocation.args.contains(&"goswami@rg.cosmolab".to_string()));
+        assert!(invocation.stdin.contains("MODE='report'"));
+    }
+
+    #[test]
+    fn remote_script_uses_template_and_profile_controls() {
+        let mut profile = builtin_remote_profiles()["cosmolab"].clone();
+        profile.roots.push(PathBuf::from("/scratch/goswami"));
+        profile.prune.push(PathBuf::from("/scratch/goswami/raw"));
+        profile
+            .exclude
+            .push(PathBuf::from("/home/goswami/.cache/keep"));
+        let options =
+            parse_args_from(["report", "--target", "cosmolab", "--json"]).expect("parse args");
+
+        let script = remote_script_for(&profile, &options).expect("remote script");
+
+        assert!(REMOTE_SWEEP_SCRIPT.contains("collect_candidates"));
+        assert!(script.contains("OUTPUT_FORMAT='json'"));
+        assert!(script.contains("'/scratch/goswami'"));
+        assert!(script.contains("'/scratch/goswami/raw'"));
+        assert!(script.contains("'/home/goswami/.cache/keep'"));
+    }
+
+    #[test]
+    fn report_json_includes_totals_and_dry_run_entries() {
+        let home = Path::new("/home/test");
+        let entries = vec![Entry {
+            category: Category::Python,
+            path: PathBuf::from("/home/test/.cache/pip"),
+            size: 42,
+        }];
+
+        let json = report_json(home, &entries, 5, Some(true)).expect("json report");
+
+        assert!(json.contains("\"grand_total_bytes\":42"));
+        assert!(json.contains("\"dry_run\":true"));
+        assert!(json.contains("\"path\":\"~/.cache/pip\""));
     }
 }
