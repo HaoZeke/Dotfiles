@@ -1,0 +1,15 @@
+extends: existence
+message: "Replace '%s' with concrete reader-facing language."
+link: "https://realpython.com/team/#editorial-guidelines"
+level: warning
+ignorecase: true
+tokens:
+  - '\b(?:shared\s+)?operational policy\b'
+  - '\bstakeholder-readable\b'
+  - '\bstakeholder-ready\b'
+  - '\bstakeholder-facing\b'
+  - '\b(?:broader\s+)?platform surface\b'
+  - '\bfull round trip\b'
+  - '\bfull round-trip\b'
+  - '\bcross-batch\b'
+  - '\batomistic-simulation\b'
