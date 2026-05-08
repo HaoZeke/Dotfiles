@@ -174,6 +174,11 @@ AllowHybridSleep=no
 #   * mouse clicks went completely dead on resume (keyboard fine).
 #     libinput picked up new evdev nodes but the sway seat stayed on
 #     the pre-suspend pointer grab, so clicks hit nothing.
+#   * Xwayland clients (Chrome, Zotero, GTK XInput apps) still saw
+#     stale pointer state even after sway re-enabled input; clicks
+#     either did nothing or landed at pre-suspend coordinates. A
+#     1-pixel cursor warp through the wl_seat flushes Xwayland's
+#     pointer cache and restores click delivery to XInput clients.
 #   * swaylock showed no keystroke feedback (Panel Replay holding the
 #     last frame until a full modeset came through).
 # The hook is executed by systemd-sleep(8) with $1 in {pre,post} and
@@ -198,24 +203,36 @@ esac
 # Force libinput to re-enumerate every pointer and keyboard device.
 # This alone unsticks most "clicks do nothing" cases on Intel Xe +
 # Wayland; the swaymsg block below handles the lock-file cursor
-# grab left over from swaylock.
+# grab left over from swaylock and the Xwayland pointer cache.
 /usr/bin/udevadm trigger --action=change --subsystem-match=input || true
 
 for sock in /run/user/*/sway-ipc.*.sock; do
     [ -S "$sock" ] || continue
     uid=$(stat -c %u "$sock" 2>/dev/null) || continue
     [ -n "$uid" ] || continue
-    # Re-enable input, drop any stale cursor grab, then bounce DPMS
-    # so the Xe driver re-programs the panel -- enough on its own to
-    # clear a Panel-Replay stuck frame, though we also disabled
-    # Panel Replay at module load.
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:pointer events enabled"    >/dev/null 2>&1 || true
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:touchpad events enabled"   >/dev/null 2>&1 || true
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "input type:keyboard events enabled"   >/dev/null 2>&1 || true
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "seat - cursor_set default"            >/dev/null 2>&1 || true
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "output * dpms off"                    >/dev/null 2>&1 || true
+    run() { sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "$@" >/dev/null 2>&1 || true; }
+
+    # Toggle each input class disabled->enabled. Plain "enabled" is a
+    # no-op when the device is already enabled, so no fresh device
+    # event reaches the wl_seat; the disabled hop forces sway to push
+    # a new state through libinput.
+    for cls in pointer touchpad keyboard; do
+        run "input type:$cls events disabled"
+        run "input type:$cls events enabled"
+    done
+    run "seat - cursor_set default"
+    # Warp the cursor 1px and back. Xwayland caches the pointer
+    # location across the suspend boundary; XInput clients (Chrome,
+    # Zotero, GTK XWayland apps) need a fresh wl_pointer.motion to
+    # flush that cache before clicks register at the right window.
+    run "seat - cursor move 1 0"
+    run "seat - cursor move -1 0"
+    # Bounce DPMS so the Xe driver re-programs the panel -- enough on
+    # its own to clear a Panel-Replay stuck frame, though Panel
+    # Replay is also disabled at module load.
+    run "output * dpms off"
     sleep 0.2
-    sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "output * dpms on"                     >/dev/null 2>&1 || true
+    run "output * dpms on"
 done
 
 exit 0
