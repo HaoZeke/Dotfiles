@@ -64,7 +64,10 @@ tools+=(
 )
 
 for item in "${tools[@]}"; do
-    x env use "$item"
+    # x-cmd 'env use' aborts on unknown package names (e.g. btm vs the
+    # registry's 'bottom'). Without this guard, a single registry
+    # rename takes the whole chezmoi apply down.
+    x env use "$item" || echo "x_bash: skipping $item (not in x-cmd registry)" >&2
 done
 
 # installables=(
