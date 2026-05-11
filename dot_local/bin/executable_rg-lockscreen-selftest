@@ -91,4 +91,19 @@ out=$(
 assert_contains "$out" "--color" "solid fallback mode"
 assert_contains "$out" "eff1f5" "theme fallback color"
 
+# --prepare-sleep strips --daemonize / -f from the resolved swaylock
+# command (the wrapper manages the fork lifecycle itself) and the
+# dry-run marker confirms the wait branch was taken.
+out=$(
+    HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    WAYLAND_DISPLAY=wayland-1 \
+    "$SCRIPT" --dry-run --prepare-sleep --daemonize
+)
+assert_contains "$out" "(waited for first paint)" "prepare-sleep marker"
+assert_not_contains "$out" "--daemonize" "daemonize stripped under --prepare-sleep"
+assert_not_contains "$out" " -f " "short daemonize stripped under --prepare-sleep"
+
 echo "ok"

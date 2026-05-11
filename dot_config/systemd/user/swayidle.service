@@ -24,10 +24,17 @@ ExecStart=/usr/bin/swayidle -w \
                      resume '%h/.local/bin/rg-caffeine run dpms-on swaymsg "output * dpms on"' \
          timeout 2700 '%h/.local/bin/rg-idle-hibernate' \
          before-sleep 'playerctl pause' \
-         before-sleep '%h/.local/bin/rg-lockscreen --daemonize' \
+         before-sleep '%h/.local/bin/rg-lockscreen --prepare-sleep' \
          idlehint 780
 # Lock-screen hook fires on before-sleep; losing it mid-suspend leaves
 # the laptop unlocked on wake. Keep this unit out of OOM reach.
+#
+# --prepare-sleep (vs. plain --daemonize on the idle timeout above)
+# blocks until the lock surface is composed onto the scanout buffer
+# before swayidle releases its delay inhibitor. Without that gate, the
+# hibernate image captures VRAM with the live desktop on it, and the
+# resume window paints the pre-lock desktop for the full duration of
+# the kernel restore.
 OOMScoreAdjust=-500
 ManagedOOMPreference=avoid
 

@@ -209,8 +209,62 @@ if [ -n "$EXTRA_ARGS" ]; then
 fi
 
 if [ "$DRY_RUN" = "1" ]; then
+    if [ "$PREPARE_SLEEP" = "1" ]; then
+        # Show what swaylock would be invoked with, after stripping the
+        # --daemonize / -f flags that --prepare-sleep manages itself.
+        filtered_dry=()
+        for a in "$@"; do
+            case "$a" in
+                --daemonize|-f) ;;
+                *) filtered_dry+=("$a") ;;
+            esac
+        done
+        printf '%q ' "${filtered_dry[@]}"
+        printf '& (waited for first paint)\n'
+        exit 0
+    fi
     printf '%q ' "$@"
     printf '\n'
+    exit 0
+fi
+
+if [ "$PREPARE_SLEEP" = "1" ]; then
+    # Strip --daemonize / -f: we own the fork. With --daemonize set,
+    # swaylock's parent exits as soon as the keyboard grab is in place,
+    # which is exactly the race --prepare-sleep is here to close.
+    filtered=()
+    for a in "$@"; do
+        case "$a" in
+            --daemonize|-f) ;;
+            *) filtered+=("$a") ;;
+        esac
+    done
+    set -- "${filtered[@]}"
+
+    "$@" &
+    swl_pid=$!
+    disown "$swl_pid" 2>/dev/null || true
+
+    # Wait for the swaylock event loop to park on a poll/epoll/select
+    # syscall. /proc/<pid>/wchan reports the kernel symbol the process
+    # is blocked in: anything containing poll, select, or epoll means
+    # the main loop has finished initial setup and queued its first
+    # frame, and is now waiting on the Wayland fd.
+    deadline=$(( SECONDS + 3 ))
+    while [ "$SECONDS" -lt "$deadline" ]; do
+        kill -0 "$swl_pid" 2>/dev/null || break
+        wchan=$(cat "/proc/$swl_pid/wchan" 2>/dev/null) || break
+        case "$wchan" in
+            *poll*|*select*|*epoll*) break ;;
+        esac
+        sleep 0.05
+    done
+    # Frame-pacing buffer: queuing the first frame is not the same as
+    # the GPU having scanned it out. A short fixed wait covers texture
+    # upload + composite + present for the lockscreen image on the
+    # integrated GPU; the cycle that follows (kernel hibernate write)
+    # is several seconds, so the added latency is invisible.
+    sleep 0.7
     exit 0
 fi
 
