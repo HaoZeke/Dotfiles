@@ -4,6 +4,16 @@
 # Repo-owned swaylock wrapper with a stable static lockscreen:
 # prefer the cat wallpaper, allow explicit live screenshots, and keep
 # the visual theme in ~/.config/swaylock/config.local.
+#
+# --prepare-sleep is the before-sleep / before-hibernate entry point:
+# it spawns swaylock in the background and blocks until the swaylock
+# main loop is parked on a Wayland poll fd, then sleeps a short frame
+# buffer so the lock surface is composed onto the scanout buffer
+# before this script returns. Without this gate, swaylock --daemonize
+# returns as soon as the keyboard grab is set up -- well before the
+# image is decoded, uploaded, and committed -- and the hibernate path
+# captures VRAM with the live desktop still on it, which the kernel
+# faithfully restores during the resume window.
 
 set -eu
 
@@ -15,6 +25,7 @@ FALLBACK_IMAGE="$XDG_CONFIG_HOME/swaylock/lockscreen.png"
 FALLBACK_COLOR="${RG_LOCKSCREEN_COLOR:-101418}"
 MODE="${RG_LOCKSCREEN_MODE:-auto}"
 DRY_RUN=0
+PREPARE_SLEEP=0
 EXTRA_ARGS=""
 
 usage() {
@@ -26,6 +37,10 @@ Wrapper options:
   --screenshots      Force live screenshot mode.
   --static           Force static wallpaper mode (default).
   --color-only       Force solid-color fallback mode.
+  --prepare-sleep    Lock and block until the lock surface is painted,
+                     then return. For swayidle before-sleep hooks: the
+                     hibernate snapshot must see VRAM holding the lock
+                     image, not the desktop.
   --help             Show this help.
 
 Any other arguments are passed through to swaylock unchanged.
@@ -123,6 +138,9 @@ while [ $# -gt 0 ]; do
             ;;
         --color-only)
             MODE=color
+            ;;
+        --prepare-sleep)
+            PREPARE_SLEEP=1
             ;;
         --help)
             usage
