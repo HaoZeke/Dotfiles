@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Hibernate-resume splash, ThinkPad X1 Gen 11 (rgx1gen11) ONLY.
+#
+# Without plymouth, the resume window paints the desktop framebuffer
+# that was captured by the hibernate snapshot for the full duration of
+# the kernel image restore from /dev/mapper/luks (LUKS encrypted swap,
+# ~5min on this laptop with the current dm-crypt workqueue settings),
+# and there is no userspace yet to draw a progress indicator over it.
+#
+# Plymouth, wired into the initramfs and into the rEFInd Arch Linux
+# menuentry, owns the framebuffer end-to-end: it draws the LUKS prompt
+# during the encrypt hook, then the spinner theme during the resume
+# read, then hands the framebuffer back to sway once plymouth-quit
+# fires on graphical.target.
+
+set -euo pipefail
+
+if ! command -v pacman >/dev/null 2>&1; then
+    exit 0
+fi
+if ! pacman -Qi plymouth >/dev/null 2>&1; then
+    cat <<MSG
+chezmoi: plymouth is not installed. Hibernate resume will not show a
+spinner. Install with:
+
+    sudo pacman -S --needed plymouth
+
+then re-run 'chezmoi apply' to wire it into mkinitcpio and the rEFInd
+Arch Linux menuentry.
+MSG
+    exit 0
+fi
+
+# --- mkinitcpio HOOKS ----------------------------------------------------
+# Required transformation, idempotent:
+#   1. Insert "plymouth" right after "udev" so the plymouth daemon is
+#      bundled into early userspace.
+#   2. Replace "encrypt" with "plymouth-encrypt" so the LUKS passphrase
+#      prompt renders on top of the splash instead of dropping plymouth
+#      and falling back to a console prompt.
+MKCONF=/etc/mkinitcpio.conf
+MKINITCPIO_CHANGED=0
+# Skip only when both transformations are already applied. Guarding on
+# plymouth alone would leave a partial state (plymouth inserted but
+# encrypt not swapped) untouched on the next pass.
+if [ -r "$MKCONF" ] && ! grep -qE '^HOOKS=.*\bplymouth\b.*\bplymouth-encrypt\b' "$MKCONF"; then
+    echo "chezmoi: wiring plymouth into $MKCONF"
+    BACKUP="${MKCONF}.bak.$(date +%s)"
+    sudo cp -a "$MKCONF" "$BACKUP"
+    # Two-step sed, each guarded for intrinsic idempotency:
+    #   1. Insert "plymouth" after the udev hook -- but only if the
+    #      pair "udev plymouth" is not already present, otherwise a
+    #      second pass would produce "udev plymouth plymouth" (the
+    #      bare \budev\b boundary keeps matching no matter how many
+    #      hooks follow).
+    #   2. Swap the bare encrypt hook for plymouth-encrypt -- but only
+    #      if plymouth-encrypt is not already on the line. Otherwise a
+    #      second pass would match the "encrypt" tail inside
+    #      "plymouth-encrypt" (word boundary "\b" sits between "-" and
+    #      "encrypt") and produce "plymouth-plymouth-encrypt".
+    # Both substitutions are scoped to a line starting with HOOKS= so
+    # other references to the words ("encrypt" in a comment, etc.) are
+    # safe.
+    sudo sed -i \
+        -e '/^HOOKS=.*udev plymouth/! { /^HOOKS=/ s/\budev\b/udev plymouth/ }' \
+        -e '/^HOOKS=.*plymouth-encrypt/! { /^HOOKS=/ s/\bencrypt\b/plymouth-encrypt/ }' \
+        "$MKCONF"
+    if ! grep -qE '^HOOKS=.*\bplymouth\b.*\bplymouth-encrypt\b' "$MKCONF"; then
+        echo "chezmoi: HOOKS transformation did not produce the expected order; restoring backup" >&2
+        sudo cp -a "$BACKUP" "$MKCONF"
+        exit 1
+    fi
+    MKINITCPIO_CHANGED=1
+fi
+
+# --- plymouth theme ------------------------------------------------------
+# spinner is the cleanest hibernate-resume indicator on this laptop:
+# black background, centered animated spinner, no firmware logo
+# dependency. bgrt (the upstream default) needs the firmware to expose a
+# BGRT table at resume time, which Lenovo X1 Gen 11 firmware does not
+# consistently surface during a hibernate-resume path.
+DESIRED_THEME=spinner
+CURRENT_THEME=$(plymouth-set-default-theme 2>/dev/null || true)
+THEME_CHANGED=0
+if [ "$CURRENT_THEME" != "$DESIRED_THEME" ]; then
+    echo "chezmoi: setting plymouth theme to $DESIRED_THEME (was $CURRENT_THEME)"
+    # -R already rebuilds the initramfs once theme files change.
+    sudo plymouth-set-default-theme -R "$DESIRED_THEME"
+    THEME_CHANGED=1
+fi
+
+# --- mkinitcpio rebuild --------------------------------------------------
+# Only rebuild here if the theme path did not already trigger one. A
+# rebuild failure leaves the previous initramfs in place; the rEFInd
+# fallback submenuentry boots the fallback image regardless.
+if [ "$MKINITCPIO_CHANGED" = "1" ] && [ "$THEME_CHANGED" = "0" ]; then
+    echo "chezmoi: rebuilding initramfs (HOOKS change)"
+    sudo mkinitcpio -P
+fi
+
+# --- rEFInd cmdline ------------------------------------------------------
+# This host uses rEFInd with a manual "Arch Linux" menuentry whose
+# options string is the kernel cmdline. Append "quiet splash" (idempotent)
+# so plymouth takes over the framebuffer from the very first kernel
+# message through resume. Restricted to the "Arch Linux" stanza so the
+# disabled menuentries and the "Boot to terminal" submenuentry's
+# add_options line stay untouched.
+REFIND_CONF=/boot/EFI/refind/refind.conf
+if sudo test -f "$REFIND_CONF"; then
+    if ! sudo grep -qE 'options[[:space:]]+"[^"]*splash' "$REFIND_CONF"; then
+        echo "chezmoi: appending 'quiet splash' to Arch Linux menuentry in $REFIND_CONF"
+        REFIND_BACKUP="${REFIND_CONF}.bak.$(date +%s)"
+        sudo cp -a "$REFIND_CONF" "$REFIND_BACKUP"
+        # Address range is the active "Arch Linux" menuentry block.
+        # Inside it, target the line that starts with whitespace +
+        # "options" + space + a quoted string, and inject "quiet splash"
+        # immediately before the closing quote. add_options lines do
+        # not match because the pattern anchors on the word "options".
+        sudo sed -i '/^menuentry "Arch Linux" {/,/^}/ {
+            /^[[:space:]]*options[[:space:]]\+"/ {
+                /quiet splash/! s/"\([[:space:]]*\)$/ quiet splash"\1/
+            }
+        }' "$REFIND_CONF"
+        if ! sudo grep -qE 'options[[:space:]]+"[^"]*quiet splash' "$REFIND_CONF"; then
+            echo "chezmoi: refind.conf edit did not land; restoring backup" >&2
+            sudo cp -a "$REFIND_BACKUP" "$REFIND_CONF"
+            exit 1
+        fi
+    fi
+else
+    cat <<MSG >&2
+chezmoi: $REFIND_CONF not found. Cannot append 'quiet splash' to the
+kernel cmdline automatically. Add it manually to the active Arch Linux
+menuentry's options line, then reboot.
+MSG
+fi
+
+# --- plymouth services ---------------------------------------------------
+# plymouth-start is hooked by systemd via udev rules already, but
+# plymouth-quit needs to fire on multi-user.target and graphical.target
+# to release the framebuffer back to sway/wayland-session.
+for svc in plymouth-start.service plymouth-quit.service plymouth-quit-wait.service; do
+    sudo systemctl is-enabled "$svc" >/dev/null 2>&1 \
+        || sudo systemctl enable "$svc" >/dev/null 2>&1 \
+        || true
+done
+{{- end }}
