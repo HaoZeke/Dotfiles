@@ -32,63 +32,34 @@ MSG
     exit 0
 fi
 
-# plymouth-encrypt is shipped by NEITHER the plymouth nor the
-# cryptsetup package on Arch; on this host it has to come from the AUR
-# package plymouth-encrypt (or be hand-installed under /etc/initcpio/).
-# Without it, swapping the encrypt hook for plymouth-encrypt in HOOKS
-# produces an initramfs that lacks the LUKS unlock entirely -- the
-# system cannot boot. Gate the entire script on the hook being present
-# so a partial-install state cannot wedge the boot path.
-PE_HOOK_OFFICIAL=/usr/lib/initcpio/install/plymouth-encrypt
-PE_HOOK_LOCAL=/etc/initcpio/install/plymouth-encrypt
-if [ ! -e "$PE_HOOK_OFFICIAL" ] && [ ! -e "$PE_HOOK_LOCAL" ]; then
-    cat >&2 <<MSG
-chezmoi: plymouth-encrypt hook missing. Install via AUR, e.g.:
-
-    yay -S plymouth-encrypt
-
-then re-run 'chezmoi apply'. mkinitcpio.conf and the rEFInd Arch Linux
-menuentry will not be modified until the hook is present.
-MSG
-    exit 0
-fi
-
 # --- mkinitcpio HOOKS ----------------------------------------------------
-# Required transformation, idempotent:
-#   1. Insert "plymouth" right after "udev" so the plymouth daemon is
-#      bundled into early userspace.
-#   2. Replace "encrypt" with "plymouth-encrypt" so the LUKS passphrase
-#      prompt renders on top of the splash instead of dropping plymouth
-#      and falling back to a console prompt.
+# Insert "plymouth" right after the "udev" hook. The plymouth runtime
+# hook calls `plymouthd --mode=boot` followed by `plymouth show-splash`,
+# so the daemon is up before any later hook fires. The encrypt hook in
+# cryptsetup >= 2.7 (current on Arch, 2.8.6 at the time of writing) is
+# already plymouth-aware: at password-prompt time it tests
+# `plymouth --ping`, and if the daemon is alive it pipes the LUKS
+# prompt through `plymouth ask-for-password --command="cryptsetup open
+# --type luks --key-file=- ..."`. So no separate plymouth-encrypt hook
+# is needed -- inserting "plymouth" between udev and the rest is
+# sufficient.
 MKCONF=/etc/mkinitcpio.conf
 MKINITCPIO_CHANGED=0
-# Skip only when both transformations are already applied. Guarding on
-# plymouth alone would leave a partial state (plymouth inserted but
-# encrypt not swapped) untouched on the next pass.
-if [ -r "$MKCONF" ] && ! grep -qE '^HOOKS=.*\bplymouth\b.*\bplymouth-encrypt\b' "$MKCONF"; then
-    echo "chezmoi: wiring plymouth into $MKCONF"
+if [ -r "$MKCONF" ] && ! grep -qE '^HOOKS=.*\bplymouth\b' "$MKCONF"; then
+    echo "chezmoi: inserting plymouth hook into $MKCONF"
     BACKUP="${MKCONF}.bak.$(date +%s)"
     sudo cp -a "$MKCONF" "$BACKUP"
-    # Two-step sed, each guarded for intrinsic idempotency:
-    #   1. Insert "plymouth" after the udev hook -- but only if the
-    #      pair "udev plymouth" is not already present, otherwise a
-    #      second pass would produce "udev plymouth plymouth" (the
-    #      bare \budev\b boundary keeps matching no matter how many
-    #      hooks follow).
-    #   2. Swap the bare encrypt hook for plymouth-encrypt -- but only
-    #      if plymouth-encrypt is not already on the line. Otherwise a
-    #      second pass would match the "encrypt" tail inside
-    #      "plymouth-encrypt" (word boundary "\b" sits between "-" and
-    #      "encrypt") and produce "plymouth-plymouth-encrypt".
-    # Both substitutions are scoped to a line starting with HOOKS= so
-    # other references to the words ("encrypt" in a comment, etc.) are
-    # safe.
+    # Guarded sed: only insert when the pair "udev plymouth" is not
+    # already present. Bare \budev\b matches "udev" no matter what
+    # follows, so without the guard a second pass would produce
+    # "udev plymouth plymouth". The substitution is scoped to lines
+    # starting with HOOKS= so references to "udev" elsewhere in the
+    # file (comments, etc.) stay untouched.
     sudo sed -i \
         -e '/^HOOKS=.*udev plymouth/! { /^HOOKS=/ s/\budev\b/udev plymouth/ }' \
-        -e '/^HOOKS=.*plymouth-encrypt/! { /^HOOKS=/ s/\bencrypt\b/plymouth-encrypt/ }' \
         "$MKCONF"
-    if ! grep -qE '^HOOKS=.*\bplymouth\b.*\bplymouth-encrypt\b' "$MKCONF"; then
-        echo "chezmoi: HOOKS transformation did not produce the expected order; restoring backup" >&2
+    if ! grep -qE '^HOOKS=.*\bplymouth\b' "$MKCONF"; then
+        echo "chezmoi: HOOKS transformation did not insert plymouth; restoring backup" >&2
         sudo cp -a "$BACKUP" "$MKCONF"
         exit 1
     fi
