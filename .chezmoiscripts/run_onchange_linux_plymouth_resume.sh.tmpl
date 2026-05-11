@@ -32,6 +32,27 @@ MSG
     exit 0
 fi
 
+# plymouth-encrypt is shipped by NEITHER the plymouth nor the
+# cryptsetup package on Arch; on this host it has to come from the AUR
+# package plymouth-encrypt (or be hand-installed under /etc/initcpio/).
+# Without it, swapping the encrypt hook for plymouth-encrypt in HOOKS
+# produces an initramfs that lacks the LUKS unlock entirely -- the
+# system cannot boot. Gate the entire script on the hook being present
+# so a partial-install state cannot wedge the boot path.
+PE_HOOK_OFFICIAL=/usr/lib/initcpio/install/plymouth-encrypt
+PE_HOOK_LOCAL=/etc/initcpio/install/plymouth-encrypt
+if [ ! -e "$PE_HOOK_OFFICIAL" ] && [ ! -e "$PE_HOOK_LOCAL" ]; then
+    cat >&2 <<MSG
+chezmoi: plymouth-encrypt hook missing. Install via AUR, e.g.:
+
+    yay -S plymouth-encrypt
+
+then re-run 'chezmoi apply'. mkinitcpio.conf and the rEFInd Arch Linux
+menuentry will not be modified until the hook is present.
+MSG
+    exit 0
+fi
+
 # --- mkinitcpio HOOKS ----------------------------------------------------
 # Required transformation, idempotent:
 #   1. Insert "plymouth" right after "udev" so the plymouth daemon is
