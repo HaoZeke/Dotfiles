@@ -255,7 +255,7 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
         kill -0 "$swl_pid" 2>/dev/null || break
         wchan=$(cat "/proc/$swl_pid/wchan" 2>/dev/null) || break
         case "$wchan" in
-            *poll*|*select*|*epoll*) break ;;
+            *poll*|*select*) break ;;
         esac
         sleep 0.05
     done

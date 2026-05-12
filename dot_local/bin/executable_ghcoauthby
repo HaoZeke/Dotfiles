@@ -1,8 +1,20 @@
 #!/usr/bin/env -S pixi exec --spec jq -- bash
+# shellcheck shell=bash
 
 # From https://sethmlarson.dev/easy-github-co-authored-by
 # xref: https://github.com/awesomebytes/pixibang
 
-login="$@"
-read id display_name < <(echo $(curl -s "https://api.github.com/users/$login" | jq -r '.id, .name'))
-echo "Co-authored-by: $display_name <$id+$login@users.noreply.github.com>"
+set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+    printf 'usage: ghcoauthby <github-login>\n' >&2
+    exit 2
+fi
+
+login="$1"
+IFS=$'\t' read -r id display_name < <(
+    curl -fsS "https://api.github.com/users/$login" |
+        jq -r '[.id, (.name // .login)] | @tsv'
+)
+
+printf 'Co-authored-by: %s <%s+%s@users.noreply.github.com>\n' "$display_name" "$id" "$login"

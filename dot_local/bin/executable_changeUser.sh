@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -e
 
@@ -34,8 +34,8 @@ select SSH_KEY in ~/.ssh/*_rsa ~/.ssh/*_ed25519; do
 done
 
 # Ask user for new name and email
-read -p "Enter new Git user name: " NEW_NAME
-read -p "Enter new Git user email: " NEW_EMAIL
+read -r -p "Enter new Git user name: " NEW_NAME
+read -r -p "Enter new Git user email: " NEW_EMAIL
 
 # Set new git configurations
 git config core.SshCommand "ssh -i $SSH_KEY -F /dev/null"

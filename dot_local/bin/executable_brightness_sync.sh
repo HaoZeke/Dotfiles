@@ -14,7 +14,7 @@ case "$RUNTIME_DIR" in
         ;;
 esac
 CACHE_DIR="$RUNTIME_DIR/brightness-sync"
-mkdir -p -m 700 "$CACHE_DIR"
+install -d -m 700 "$CACHE_DIR"
 CACHE_FILE="$CACHE_DIR/ddc_monitors_cache"
 LOCK_FILE="$CACHE_DIR/ddc.lock"
 

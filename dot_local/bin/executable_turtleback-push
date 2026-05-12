@@ -70,7 +70,8 @@ export RCLONE_CONFIG_PCLOUD_TYPE=webdav
 export RCLONE_CONFIG_PCLOUD_VENDOR=other
 export RCLONE_CONFIG_PCLOUD_URL="$PCLOUD_URL"
 export RCLONE_CONFIG_PCLOUD_USER="$PCLOUD_USER"
-export RCLONE_CONFIG_PCLOUD_PASS=$(printf '%s' "$PCLOUD_PASS" | rclone obscure -)
+RCLONE_CONFIG_PCLOUD_PASS=$(printf '%s' "$PCLOUD_PASS" | rclone obscure -)
+export RCLONE_CONFIG_PCLOUD_PASS
 
 # restic pulls its repo password from a command, not from an env var,
 # so nothing ever sits in RESTIC_PASSWORD.
