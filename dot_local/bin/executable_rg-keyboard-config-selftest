@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+sway_config="$repo/dot_config/sway/config.tmpl"
+power_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+
+test -r "$sway_config" || fail "missing $sway_config"
+test -r "$power_script" || fail "missing $power_script"
+
+rg -q 'input "1:1:AT_Translated_Set_2_keyboard"' "$sway_config" \
+    || fail "sway does not target the raw built-in keyboard"
+rg -q 'events disabled' "$sway_config" \
+    || fail "sway does not disable raw built-in keyboard events"
+rg -q 'AT_Translated_Set_2_keyboard.*events disabled|events disabled.*AT_Translated_Set_2_keyboard' "$power_script" \
+    || fail "resume hook does not re-disable raw built-in keyboard events"
+
+printf 'ok\n'
