@@ -64,4 +64,15 @@ if rg -n '^\[colors\]$' "$REPO/dot_config/foot" "$REPO/.chezmoiscripts/run_oncha
     fail "foot theme snippets must use [colors-dark], not deprecated [colors]"
 fi
 
+if command -v shellcheck >/dev/null 2>&1; then
+    run shellcheck -x -S warning \
+        "$REPO/dot_local/bin/executable_brightness_sync.sh" \
+        "$REPO/dot_local/bin/executable_changeUser.sh" \
+        "$REPO/dot_local/bin/executable_cliphist-rofi-img" \
+        "$REPO/dot_local/bin/executable_get_patched_font.sh" \
+        "$REPO/dot_local/bin/executable_ghcoauthby" \
+        "$REPO/dot_local/bin/executable_rg-lockscreen" \
+        "$REPO/dot_local/bin/executable_turtleback-push"
+fi
+
 printf 'ok\n'
