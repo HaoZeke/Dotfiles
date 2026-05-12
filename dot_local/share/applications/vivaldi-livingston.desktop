@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Vivaldi Livingston System
+Exec=rg-livingston-profile system vivaldi
+Icon=vivaldi
+Categories=Network;WebBrowser;
+Terminal=true

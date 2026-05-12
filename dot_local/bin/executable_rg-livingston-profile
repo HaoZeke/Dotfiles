@@ -13,16 +13,23 @@ BROWSER_LANG="en-US"
 LOCATION_LAT="30.7110"
 LOCATION_LON="-94.9327"
 LOCATION_ACCURACY="35"
+LOCATION_ALTITUDE="40.0"
+GEOCLUE_OVERRIDE="/etc/geoclue/conf.d/99-rg-livingston.conf"
+GEOLOCATION_FILE="/etc/geolocation"
+GEOLOCATION_BACKUP="/etc/geolocation.rg-livingston-backup"
+GEOLOCATION_DISABLED="/etc/geolocation.rg-livingston-disabled"
 
 usage() {
     cat <<'USAGE'
 usage: rg-livingston-profile [--dry-run] [--proxy URL] COMMAND [ARGS...]
 
 Commands:
-  env              Print the Livingston environment values.
-  run -- CMD ...   Run a command with the Livingston process environment.
-  chromium [URL]   Launch Chromium with an isolated Livingston profile.
-  chrome [URL]     Launch Google Chrome with an isolated Livingston profile.
+  env                 Print the Livingston environment values.
+  run -- CMD ...      Run a command with the Livingston process environment.
+  system COMMAND ...  Set the system timezone for COMMAND, then restore it.
+  chromium [URL]      Launch Chromium with an isolated Livingston profile.
+  chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
+  vivaldi [URL]       Launch Vivaldi with an isolated Livingston profile.
 
 Options:
   --proxy URL      Pass URL to Chromium as --proxy-server=URL.
@@ -58,6 +65,14 @@ x_home() {
 
 dry_run=0
 proxy="${RG_LIVINGSTON_PROXY:-}"
+replace_process=1
+timedatectl_bin="${RG_LIVINGSTON_TIMEDATECTL:-timedatectl}"
+sudo_bin="${RG_LIVINGSTON_SUDO:-sudo}"
+systemctl_bin="${RG_LIVINGSTON_SYSTEMCTL:-systemctl}"
+install_bin="${RG_LIVINGSTON_INSTALL:-install}"
+cp_bin="${RG_LIVINGSTON_CP:-cp}"
+mv_bin="${RG_LIVINGSTON_MV:-mv}"
+test_bin="${RG_LIVINGSTON_TEST:-test}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -115,11 +130,29 @@ print_env() {
     done
 }
 
+as_root() {
+    if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+        "$@"
+    else
+        "$sudo_bin" "$@"
+    fi
+}
+
+quote_root_cmd() {
+    if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+        quote_cmd "$@"
+    else
+        quote_cmd "$sudo_bin" "$@"
+    fi
+}
+
 run_cmd() {
     if [ "$dry_run" -eq 1 ]; then
         quote_cmd env "${profile_env[@]}" "$@"
-    else
+    elif [ "$replace_process" -eq 1 ]; then
         exec env "${profile_env[@]}" "$@"
+    else
+        env "${profile_env[@]}" "$@"
     fi
 }
 
@@ -137,6 +170,11 @@ resolve_browser() {
                 [ -x "$resolved" ] && printf '%s\n' "$resolved" && return 0
             done
             ;;
+        vivaldi)
+            for resolved in /usr/bin/vivaldi-stable /usr/bin/vivaldi; do
+                [ -x "$resolved" ] && printf '%s\n' "$resolved" && return 0
+            done
+            ;;
     esac
 
     self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -144,6 +182,7 @@ resolve_browser() {
     case "$name" in
         chromium) resolved="$(PATH="$filtered_path" command -v chromium 2>/dev/null || true)" ;;
         chrome) resolved="$(PATH="$filtered_path" command -v google-chrome-stable 2>/dev/null || PATH="$filtered_path" command -v google-chrome 2>/dev/null || true)" ;;
+        vivaldi) resolved="$(PATH="$filtered_path" command -v vivaldi-stable 2>/dev/null || PATH="$filtered_path" command -v vivaldi 2>/dev/null || true)" ;;
         *) resolved="" ;;
     esac
 
@@ -231,7 +270,190 @@ run_browser() {
     run_cmd "${browser_args[@]}"
 }
 
-case "$cmd" in
+current_timezone() {
+    "$timedatectl_bin" show -p Timezone --value
+}
+
+timezone_set_cmd() {
+    quote_root_cmd "$timedatectl_bin" set-timezone "$1"
+}
+
+set_system_timezone() {
+    as_root "$timedatectl_bin" set-timezone "$1"
+}
+
+write_temp_file() {
+    local target="$1" mode="$2" tmp
+    tmp="$(mktemp)"
+    cat >"$tmp"
+    as_root "$install_bin" -D -m "$mode" "$tmp" "$target"
+    rm -f "$tmp"
+}
+
+write_geoclue_active_config() {
+    write_temp_file "$GEOCLUE_OVERRIDE" 0644 <<EOF
+# Managed by rg-livingston-profile while the system profile is active.
+
+[ip]
+enable=false
+
+[network-nmea]
+enable=false
+
+[3g]
+enable=false
+
+[cdma]
+enable=false
+
+[modem-gps]
+enable=false
+
+[wifi]
+enable=false
+
+[compass]
+enable=false
+
+[static-source]
+enable=true
+
+[chromium]
+allowed=true
+system=false
+users=
+
+[google-chrome]
+allowed=true
+system=false
+users=
+
+[google-chrome-stable]
+allowed=true
+system=false
+users=
+
+[vivaldi]
+allowed=true
+system=false
+users=
+
+[vivaldi-stable]
+allowed=true
+system=false
+users=
+EOF
+}
+
+write_geoclue_inactive_config() {
+    write_temp_file "$GEOCLUE_OVERRIDE" 0644 <<'EOF'
+# Managed by rg-livingston-profile.
+# Inactive: no GeoClue source overrides are applied.
+EOF
+}
+
+write_static_geolocation() {
+    write_temp_file "$GEOLOCATION_FILE" 0644 <<EOF
+$LOCATION_LAT
+$LOCATION_LON
+$LOCATION_ALTITUDE
+$LOCATION_ACCURACY
+EOF
+}
+
+geoclue_active_state() {
+    "$systemctl_bin" is-active geoclue.service >/dev/null 2>&1 && printf 'active\n' || printf 'inactive\n'
+}
+
+reload_geoclue_for_state() {
+    local prior_state="$1"
+    if [ "$prior_state" = "active" ]; then
+        as_root "$systemctl_bin" restart geoclue.service
+    else
+        as_root "$systemctl_bin" stop geoclue.service >/dev/null 2>&1 || true
+    fi
+}
+
+activate_system_location() {
+    local prior_state="$1"
+
+    if "$test_bin" -e "$GEOLOCATION_FILE"; then
+        as_root "$cp_bin" -a "$GEOLOCATION_FILE" "$GEOLOCATION_BACKUP"
+    elif "$test_bin" -e "$GEOLOCATION_BACKUP"; then
+        as_root "$mv_bin" -f "$GEOLOCATION_BACKUP" "$GEOLOCATION_DISABLED"
+    fi
+
+    write_static_geolocation
+    write_geoclue_active_config
+    reload_geoclue_for_state "$prior_state"
+}
+
+restore_system_location() {
+    local prior_state="$1"
+
+    if "$test_bin" -e "$GEOLOCATION_BACKUP"; then
+        as_root "$mv_bin" -f "$GEOLOCATION_BACKUP" "$GEOLOCATION_FILE"
+    elif "$test_bin" -e "$GEOLOCATION_FILE"; then
+        as_root "$mv_bin" -f "$GEOLOCATION_FILE" "$GEOLOCATION_DISABLED"
+    fi
+
+    write_geoclue_inactive_config
+    reload_geoclue_for_state "$prior_state"
+}
+
+print_system_location_dry_run() {
+    printf 'would write: %s with Livingston static coordinates\n' "$GEOLOCATION_FILE"
+    printf 'would write: %s disabling GeoClue IP/Wi-Fi/GPS sources and enabling static-source\n' "$GEOCLUE_OVERRIDE"
+    printf 'would restore: previous %s and inactive %s after command exit\n' "$GEOLOCATION_FILE" "$GEOCLUE_OVERRIDE"
+}
+
+run_system_profile() {
+    local old_tz geoclue_state rc
+    [ $# -gt 0 ] || die "system requires a command"
+
+    old_tz="${RG_LIVINGSTON_PREVIOUS_TZ:-}"
+    if [ -z "$old_tz" ] && [ "$dry_run" -eq 0 ]; then
+        old_tz="$(current_timezone)"
+    elif [ -z "$old_tz" ]; then
+        old_tz="CURRENT"
+    fi
+
+    replace_process=0
+
+    if [ "$dry_run" -eq 1 ]; then
+        printf 'would run: '
+        timezone_set_cmd "$TZ_NAME"
+        print_system_location_dry_run
+        dispatch_command "$@"
+        printf 'would run: '
+        timezone_set_cmd "$old_tz"
+        return 0
+    fi
+
+    geoclue_state="$(geoclue_active_state)"
+
+    restore_timezone() {
+        trap - EXIT HUP INT TERM
+        restore_system_location "$geoclue_state"
+        set_system_timezone "$old_tz"
+    }
+
+    trap restore_timezone EXIT HUP INT TERM
+    set_system_timezone "$TZ_NAME"
+    activate_system_location "$geoclue_state"
+    dispatch_command "$@"
+    rc=$?
+    restore_timezone
+    return "$rc"
+}
+
+dispatch_command() {
+    local dispatch_cmd="${1:-chromium}"
+    if [ $# -gt 0 ]; then
+        shift
+    fi
+
+    case "$dispatch_cmd" in
     env)
         print_env
         ;;
@@ -240,13 +462,22 @@ case "$cmd" in
         [ $# -gt 0 ] || die "run requires a command"
         run_cmd "$@"
         ;;
+    system)
+        run_system_profile "$@"
+        ;;
     chromium)
         run_browser chromium "$@"
         ;;
     chrome | google-chrome | google-chrome-stable)
         run_browser chrome "$@"
         ;;
-    *)
-        die "unknown command: $cmd"
+    vivaldi | vivaldi-stable)
+        run_browser vivaldi "$@"
         ;;
-esac
+    *)
+        die "unknown command: $dispatch_cmd"
+        ;;
+    esac
+}
+
+dispatch_command "$cmd" "$@"

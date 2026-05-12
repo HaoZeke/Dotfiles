@@ -79,6 +79,30 @@ out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
     XDG_STATE_HOME="$tmp_home/.local/state" \
+    "$SCRIPT" --dry-run vivaldi https://example.com
+)
+assert_contains "$out" "env TZ=America/Chicago" "vivaldi env"
+assert_contains "$out" "vivaldi" "vivaldi executable"
+assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi" "vivaldi profile dir"
+assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_PREVIOUS_TZ=Europe/Zurich \
+    "$SCRIPT" --dry-run system vivaldi https://example.com
+)
+assert_contains "$out" "sudo timedatectl set-timezone America/Chicago" "system timezone set"
+assert_contains "$out" "would write: /etc/geolocation with Livingston static coordinates" "system geolocation file"
+assert_contains "$out" "disabling GeoClue IP/Wi-Fi/GPS sources" "system geoclue override"
+assert_contains "$out" "env TZ=America/Chicago" "system wrapped env"
+assert_contains "$out" "sudo timedatectl set-timezone Europe/Zurich" "system timezone restore"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
     "$SCRIPT" --dry-run run date
 )
 assert_contains "$out" "env TZ=America/Chicago" "generic env"
