@@ -5,7 +5,16 @@
 
 set -eu
 
-SCRIPT="${1:?usage: executable_rg-lockscreen-selftest /path/to/executable_rg-lockscreen}"
+if [ $# -gt 1 ]; then
+    echo "usage: executable_rg-lockscreen-selftest [/path/to/executable_rg-lockscreen]" >&2
+    exit 2
+fi
+
+SCRIPT="${1:-}"
+if [ -z "$SCRIPT" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT="$here/executable_rg-lockscreen"
+fi
 
 assert_contains() {
     local haystack="$1" needle="$2" label="$3"
