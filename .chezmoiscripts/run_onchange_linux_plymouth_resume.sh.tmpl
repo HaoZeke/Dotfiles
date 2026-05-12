@@ -138,6 +138,47 @@ fi
 # add_options line stay untouched.
 REFIND_CONF=/boot/EFI/refind/refind.conf
 if sudo test -f "$REFIND_CONF"; then
+    REFIND_IN=$(mktemp)
+    REFIND_OUT=$(mktemp)
+    sudo install -m 0644 -o "$(id -u)" -g "$(id -g)" "$REFIND_CONF" "$REFIND_IN"
+    python - "$REFIND_IN" >"$REFIND_OUT" <<'PY'
+import sys
+
+path = sys.argv[1]
+lines = open(path, encoding="utf-8").read().splitlines()
+out = []
+inside_arch = False
+for line in lines:
+    stripped = line.strip()
+    if stripped == 'menuentry "Arch Linux" {':
+        inside_arch = True
+    if (
+        inside_arch
+        and stripped.startswith('submenuentry "Boot using fallback initramfs"')
+        and not stripped.endswith("{")
+    ):
+        line = line.rstrip() + " {"
+        stripped = line.strip()
+    out.append(line)
+    if inside_arch and stripped == "}":
+        inside_arch = False
+
+sys.stdout.write("\n".join(out) + "\n")
+PY
+    if ! sudo cmp -s "$REFIND_OUT" "$REFIND_CONF"; then
+        echo "chezmoi: normalizing Arch Linux fallback submenu in $REFIND_CONF"
+        REFIND_BACKUP="${REFIND_CONF}.bak.$(date +%s)"
+        sudo cp -a "$REFIND_CONF" "$REFIND_BACKUP"
+        sudo cp "$REFIND_OUT" "$REFIND_CONF"
+        if sudo grep -qE '^[[:space:]]*submenuentry "Boot using fallback initramfs"[[:space:]]*$' "$REFIND_CONF"; then
+            echo "chezmoi: refind.conf submenu normalization failed; restoring backup" >&2
+            sudo cp -a "$REFIND_BACKUP" "$REFIND_CONF"
+            rm -f "$REFIND_IN" "$REFIND_OUT"
+            exit 1
+        fi
+    fi
+    rm -f "$REFIND_IN" "$REFIND_OUT"
+
     if ! sudo grep -qE 'options[[:space:]]+"[^"]*splash' "$REFIND_CONF"; then
         echo "chezmoi: appending 'quiet splash' to Arch Linux menuentry in $REFIND_CONF"
         REFIND_BACKUP="${REFIND_CONF}.bak.$(date +%s)"
