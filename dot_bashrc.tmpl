@@ -41,6 +41,10 @@ if [ -d $shellHome/posix.d ]; then
 	source "$shellHome/posix.d/06_prog_conf.sh"
 fi
 
+{{- if eq .chezmoi.hostname "rgx1gen11" }}
+[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
+{{- end }}
+
 # Load all files from the bashrc.d directory
 if [ -d $shellHome/bash.d ]; then
 	# for file in $shellHome/bash.d/*.bash; do
@@ -52,9 +56,6 @@ fi
 
 [[ ! ${BLE_VERSION-} ]] || ble-attach
 
-{{- if eq .chezmoi.hostname "rgx1gen11" }}
-[ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
-{{- end }}
 export PATH="$HOME/.pixi/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 
