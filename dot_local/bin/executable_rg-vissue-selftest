@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-vissue-selftest).
+
+set -euo pipefail
+
+SCRIPT="${1:-}"
+if [ -z "$SCRIPT" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT="$here/executable_vissue"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$SCRIPT" || fail "missing $SCRIPT"
+
+tmp_home=$(mktemp -d)
+trap 'rm -rf "$tmp_home"' EXIT
+
+fake_bin="$tmp_home/bin"
+fake_vault="$tmp_home/Git/Gitlab/obsidian-notes"
+mkdir -p "$fake_bin" "$fake_vault"
+
+cat > "$fake_bin/vault-tools" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "$*" > "$RG_VISSUE_ARG_LOG"
+
+if [ "$1" = "issue" ] && [ "$2" = "--root" ] && [ -d "$3" ] && [ "$4" = "list" ]; then
+    exit 0
+fi
+
+printf 'unexpected vault-tools arguments: %s\n' "$*" >&2
+exit 64
+EOF
+chmod +x "$fake_bin/vault-tools"
+
+arg_log="$tmp_home/args"
+HOME="$tmp_home" \
+    PATH="$fake_bin:$PATH" \
+    RG_VISSUE_ARG_LOG="$arg_log" \
+    "$SCRIPT" list
+
+expected="issue --root $fake_vault list"
+actual=$(cat "$arg_log")
+[ "$actual" = "$expected" ] || fail "expected '$expected', got '$actual'"
+
+printf 'ok\n'
