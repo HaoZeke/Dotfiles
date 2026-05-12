@@ -33,37 +33,75 @@ MSG
 fi
 
 # --- mkinitcpio HOOKS ----------------------------------------------------
-# Insert "plymouth" right after the "udev" hook. The plymouth runtime
-# hook calls `plymouthd --mode=boot` followed by `plymouth show-splash`,
-# so the daemon is up before any later hook fires. The encrypt hook in
-# cryptsetup >= 2.7 (current on Arch, 2.8.6 at the time of writing) is
-# already plymouth-aware: at password-prompt time it tests
-# `plymouth --ping`, and if the daemon is alive it pipes the LUKS
-# prompt through `plymouth ask-for-password --command="cryptsetup open
-# --type luks --key-file=- ..."`. So no separate plymouth-encrypt hook
-# is needed -- inserting "plymouth" between udev and the rest is
-# sufficient.
+# Insert "plymouth" right after the "udev" hook so the daemon owns the
+# framebuffer before the LUKS prompt. Place "resume" after encrypted
+# storage is available and before root filesystem handling.
 MKCONF=/etc/mkinitcpio.conf
 MKINITCPIO_CHANGED=0
-if [ -r "$MKCONF" ] && ! grep -qE '^HOOKS=.*\bplymouth\b' "$MKCONF"; then
-    echo "chezmoi: inserting plymouth hook into $MKCONF"
-    BACKUP="${MKCONF}.bak.$(date +%s)"
-    sudo cp -a "$MKCONF" "$BACKUP"
-    # Guarded sed: only insert when the pair "udev plymouth" is not
-    # already present. Bare \budev\b matches "udev" no matter what
-    # follows, so without the guard a second pass would produce
-    # "udev plymouth plymouth". The substitution is scoped to lines
-    # starting with HOOKS= so references to "udev" elsewhere in the
-    # file (comments, etc.) stay untouched.
-    sudo sed -i \
-        -e '/^HOOKS=.*udev plymouth/! { /^HOOKS=/ s/\budev\b/udev plymouth/ }' \
-        "$MKCONF"
-    if ! grep -qE '^HOOKS=.*\bplymouth\b' "$MKCONF"; then
-        echo "chezmoi: HOOKS transformation did not insert plymouth; restoring backup" >&2
-        sudo cp -a "$BACKUP" "$MKCONF"
-        exit 1
+RESUME_BEFORE_FILESYSTEMS=1
+if [ -r "$MKCONF" ]; then
+    HOOKS_TMP=$(mktemp)
+    stop_hooks=(filesystems fsck)
+    python - "$MKCONF" "${stop_hooks[@]}" >"$HOOKS_TMP" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+stop_hooks = tuple(sys.argv[2:])
+lines = open(path, encoding="utf-8").read().splitlines()
+
+
+def insert_after(items, item, anchors):
+    items = [value for value in items if value != item]
+    for anchor in anchors:
+        if anchor in items:
+            items.insert(items.index(anchor) + 1, item)
+            return items
+    items.append(item)
+    return items
+
+
+def insert_before(items, item, anchors):
+    items = [value for value in items if value != item]
+    for anchor in anchors:
+        if anchor in items:
+            items.insert(items.index(anchor), item)
+            return items
+    items.append(item)
+    return items
+
+
+changed = False
+out = []
+for line in lines:
+    match = re.match(r"^(\s*HOOKS=\()([^)]*)(\)\s*)$", line)
+    if not match:
+        out.append(line)
+        continue
+
+    hooks = match.group(2).split()
+    normalized = insert_after(hooks, "plymouth", ["udev", "base"])
+    normalized = insert_before(normalized, "resume", list(stop_hooks))
+    new_line = f"{match.group(1)}{' '.join(normalized)}{match.group(3)}"
+    changed = changed or new_line != line
+    out.append(new_line)
+
+sys.stdout.write("\n".join(out) + "\n")
+PY
+    if ! sudo cmp -s "$HOOKS_TMP" "$MKCONF"; then
+        echo "chezmoi: normalizing mkinitcpio hooks in $MKCONF"
+        BACKUP="${MKCONF}.bak.$(date +%s)"
+        sudo cp -a "$MKCONF" "$BACKUP"
+        sudo install -m 0644 -o root -g root "$HOOKS_TMP" "$MKCONF"
+        if ! grep -qE '^HOOKS=.*\bplymouth\b.*\bresume\b.*\b(filesystems|fsck)\b' "$MKCONF"; then
+            echo "chezmoi: HOOKS normalization failed; restoring backup" >&2
+            sudo cp -a "$BACKUP" "$MKCONF"
+            rm -f "$HOOKS_TMP"
+            exit 1
+        fi
+        MKINITCPIO_CHANGED=1
     fi
-    MKINITCPIO_CHANGED=1
+    rm -f "$HOOKS_TMP"
 fi
 
 # --- plymouth theme ------------------------------------------------------

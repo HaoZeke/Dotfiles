@@ -169,6 +169,12 @@ AllowSuspendThenHibernate=no
 AllowHybridSleep=no
 '
 
+JOURNALD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Persistent journal keeps hibernate/resume evidence across boots.
+[Journal]
+Storage=persistent
+'
+
 # system-sleep hook that kicks the Wayland session awake after a
 # suspend or hibernate cycle. Without it:
 #   * mouse clicks went completely dead on resume (keyboard fine).
@@ -301,12 +307,14 @@ UDEV_CHANGED=0
 LOGIND_CHANGED=0
 SLEEP_CHANGED=0
 TLP_CHANGED=0
+JOURNALD_CHANGED=0
 
 XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
 write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTENT" && XE_CHANGED=1 || true
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
+write_if_diff /etc/systemd/journald.conf.d/99-persistent-storage.conf "$JOURNALD_CONTENT" && JOURNALD_CHANGED=1 || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
 
 # system-sleep hook: runs as root on every suspend/hibernate cycle.
@@ -457,14 +465,12 @@ fi
 # empty placeholder on stock Arch installs, and systemd-journald only
 # starts persisting once it finds the directory populated with the
 # right ownership and a flush signal.
-if [ -z "$(sudo ls -A /var/log/journal 2>/dev/null)" ]; then
+if [ "$JOURNALD_CHANGED" = "1" ] || [ -z "$(sudo ls -A /var/log/journal 2>/dev/null)" ]; then
     echo "chezmoi: enabling persistent journal"
     sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal
     sudo systemd-tmpfiles --create --prefix /var/log/journal >/dev/null || true
-    # SIGUSR1 asks journald to flush runtime logs to persistent
-    # storage without a service restart -- safer than `restart
-    # systemd-journald` mid-session.
-    sudo systemctl kill --signal=SIGUSR1 systemd-journald || true
+    sudo systemctl kill --signal=SIGHUP systemd-journald || true
+    sudo journalctl --flush >/dev/null 2>&1 || true
 fi
 
 # Conflicting services first: TLP and power-profiles-daemon cannot both

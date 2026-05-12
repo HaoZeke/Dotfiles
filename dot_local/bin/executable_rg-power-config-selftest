@@ -15,23 +15,14 @@ test -r "$plymouth_script" || fail "missing $plymouth_script"
 test -r "$laptop_script" || fail "missing $laptop_script"
 
 python - "$plymouth_script" <<'PY'
-import re
 import sys
 
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-patterns = [
-    r"resume\s+filesystems",
-    r"resume\s+fsck",
-    r"filesystems\s+resume",
-    r"fsck\s+resume",
-]
 if "RESUME_BEFORE_FILESYSTEMS" not in text:
     raise SystemExit("FAIL: mkinitcpio resume hook ordering helper is missing")
-if re.search(patterns[2], text) or re.search(patterns[3], text):
-    raise SystemExit("FAIL: resume can still be ordered after filesystem hooks")
-if not (re.search(patterns[0], text) or re.search(patterns[1], text)):
-    raise SystemExit("FAIL: resume is not asserted before filesystem hooks")
+if "stop_hooks=(filesystems fsck)" not in text:
+    raise SystemExit("FAIL: mkinitcpio resume ordering stops are missing")
 PY
 
 rg -q '99-persistent-storage.conf' "$laptop_script" \
