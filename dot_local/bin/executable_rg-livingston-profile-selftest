@@ -99,6 +99,10 @@ assert_contains "$out" "disabling GeoClue IP/Wi-Fi/GPS sources" "system geoclue 
 assert_contains "$out" "env TZ=America/Chicago" "system wrapped env"
 assert_contains "$out" "sudo timedatectl set-timezone Europe/Zurich" "system timezone restore"
 
+manifest_path="$(dirname -- "$SCRIPT")/../share/rg-location-profiles/livingston/chromium-geolocation/manifest.json"
+manifest="$(cat "$manifest_path")"
+assert_contains "$manifest" '"world": "MAIN"' "main world manifest"
+
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \

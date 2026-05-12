@@ -1,10 +1,6 @@
 (function () {
   "use strict";
 
-  var script = document.createElement("script");
-  script.textContent = "(" + function () {
-    "use strict";
-
     var profile = {
       latitude: 30.7110,
       longitude: -94.9327,
@@ -161,8 +157,4 @@
         // Permission state is advisory; geolocation is overridden above.
       }
     }
-  } + ")();";
-
-  (document.documentElement || document.head || document).appendChild(script);
-  script.remove();
 })();
