@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-tailscale-operator-bootstrap-selftest).
+#
+# Behavior checks for the Tailscale operator bootstrap helper.
+
+set -eu
+
+if [ $# -gt 1 ]; then
+    echo "usage: executable_rg-tailscale-operator-bootstrap-selftest [/path/to/executable_rg-tailscale-operator-bootstrap]" >&2
+    exit 2
+fi
+
+SCRIPT="${1:-}"
+if [ -z "$SCRIPT" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT="$here/executable_rg-tailscale-operator-bootstrap"
+fi
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *)
+            echo "FAIL: missing ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+assert_not_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*)
+            echo "FAIL: unexpected ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+out=$("$SCRIPT" --dry-run --user rgoswami)
+assert_contains "$out" "target user: rgoswami" "target user"
+assert_contains "$out" "tailscale set --operator=rgoswami" "operator command"
+assert_contains "$out" "tailscale debug prefs" "verification command"
+assert_not_contains "$out" "sudo" "dry-run sudo"
+
+out=$("$SCRIPT" --help)
+assert_contains "$out" "usage:" "help usage"
+assert_contains "$out" "--user USER" "help user option"
+assert_contains "$out" "--dry-run" "help dry-run option"
+
+if "$SCRIPT" --dry-run --user root >/tmp/rg-tailscale-operator-bootstrap-root.out 2>&1; then
+    echo "FAIL: root target should be rejected" >&2
+    cat /tmp/rg-tailscale-operator-bootstrap-root.out >&2
+    exit 1
+fi
+root_out=$(cat /tmp/rg-tailscale-operator-bootstrap-root.out)
+assert_contains "$root_out" "target user must not be root" "root rejection"
+
+echo "ok"

@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-tailscale-operator-bootstrap).
+#
+# Grant one Unix user permission to operate tailscaled through the Tailscale
+# Linux operator setting.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-tailscale-operator-bootstrap [--user USER] [--dry-run]
+
+Grant USER permission to manage tailscaled through Tailscale's Linux operator
+setting. Run once with privileges; after that USER can run tailscale up/set/status
+without elevating.
+
+Options:
+  --user USER  Unix account to grant. Defaults to SUDO_USER, then USER.
+  --dry-run    Print the commands that would run.
+  -h, --help   Show this help.
+USAGE
+}
+
+die() {
+    echo "rg-tailscale-operator-bootstrap: $*" >&2
+    exit 2
+}
+
+dry_run=0
+target_user="${RG_TAILSCALE_OPERATOR_USER:-}"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --user)
+            [ $# -ge 2 ] || die "--user requires an argument"
+            target_user="$2"
+            shift 2
+            ;;
+        --dry-run)
+            dry_run=1
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            die "unknown argument: $1"
+            ;;
+    esac
+done
+
+if [ -z "$target_user" ]; then
+    if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER:-}" != "root" ]; then
+        target_user="$SUDO_USER"
+    else
+        target_user="${USER:-}"
+    fi
+fi
+
+[ -n "$target_user" ] || die "target user could not be inferred; pass --user USER"
+[ "$target_user" != "root" ] || die "target user must not be root"
+
+run() {
+    if [ "$dry_run" -eq 1 ]; then
+        printf 'would run:'
+        printf ' %q' "$@"
+        printf '\n'
+    else
+        "$@"
+    fi
+}
+
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        die "missing required command: $1"
+    fi
+}
+
+if [ "$dry_run" -eq 0 ] && [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    exec sudo -- "$0" --user "$target_user"
+fi
+
+echo "target user: $target_user"
+
+if [ "$dry_run" -eq 0 ]; then
+    require_cmd tailscale
+    id -u "$target_user" >/dev/null || die "user does not exist: $target_user"
+else
+    run id -u "$target_user"
+fi
+
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    if [ "$dry_run" -eq 1 ]; then
+        run systemctl start tailscaled.service
+    elif ! systemctl is-active --quiet tailscaled.service; then
+        run systemctl start tailscaled.service
+    fi
+fi
+
+run tailscale set --operator="$target_user"
+
+echo "verify: tailscale debug prefs"
