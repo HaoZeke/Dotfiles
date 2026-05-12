@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-dotfiles-selftest).
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-dotfiles-selftest [chezmoi-source]\n' >&2
+    exit 2
+fi
+
+if [ $# -eq 1 ]; then
+    REPO="$1"
+elif [ -r "$SCRIPT_DIR/../../.chezmoi.toml.tmpl" ]; then
+    REPO="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+else
+    REPO="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+run() {
+    printf '==> %s\n' "$*"
+    "$@"
+}
+
+test -r "$REPO/.chezmoi.toml.tmpl" || fail "missing chezmoi source at $REPO"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+run "$REPO/dot_local/bin/executable_rg-keyboard-config-selftest" "$REPO"
+run "$REPO/dot_local/bin/executable_rg-power-config-selftest" "$REPO"
+run "$REPO/dot_local/bin/executable_rg-lockscreen-selftest"
+run "$REPO/dot_local/bin/executable_rg-vissue-selftest" "$REPO/dot_local/bin/executable_vissue"
+
+(
+    cd "$REPO"
+    shopt -s nullglob
+    templates=(
+        .chezmoiscripts/*.tmpl
+        dot_bashrc.tmpl
+        dot_shellrc.tmpl
+        dot_config/shellrc/bash.d/*.tmpl
+        dot_config/shellrc/posix.d/*.tmpl
+    )
+
+    for template in "${templates[@]}"; do
+        out="$tmp_dir/render-$(basename "$template").sh"
+        chezmoi --source "$REPO" --no-tty --refresh-externals=never execute-template < "$template" > "$out"
+        bash -n "$out"
+    done
+)
+
+if command -v foot >/dev/null 2>&1; then
+    run foot --check-config --config="$REPO/dot_config/foot/foot.ini"
+fi
+
+if rg -n '^\[colors\]$' "$REPO/dot_config/foot" "$REPO/.chezmoiscripts/run_onchange_rg-theme-1-palettes.sh.tmpl"; then
+    fail "foot theme snippets must use [colors-dark], not deprecated [colors]"
+fi
+
+printf 'ok\n'
