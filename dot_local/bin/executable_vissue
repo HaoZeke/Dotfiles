@@ -1,5 +1,5 @@
 #!/bin/sh
-# vissue: thin wrapper around `vault-tools --root <vault> issue`.
+# vissue: thin wrapper around `vault-tools issue --root <vault>`.
 #
 # The vault root defaults to ~/Git/Gitlab/obsidian-notes; override with the
 # VISSUE_ROOT environment variable. Every flag and subcommand from
@@ -24,4 +24,4 @@ if [ ! -d "${VAULT}" ]; then
     exit 1
 fi
 
-exec vault-tools --root "${VAULT}" issue "$@"
+exec vault-tools issue --root "${VAULT}" "$@"
