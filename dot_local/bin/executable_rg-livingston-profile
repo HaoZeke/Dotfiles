@@ -18,6 +18,8 @@ GEOCLUE_OVERRIDE="/etc/geoclue/conf.d/99-rg-livingston.conf"
 GEOLOCATION_FILE="/etc/geolocation"
 GEOLOCATION_BACKUP="/etc/geolocation.rg-livingston-backup"
 GEOLOCATION_DISABLED="/etc/geolocation.rg-livingston-disabled"
+STARFLEET_URL="https://starfleet.teachx.ai/home"
+STARFLEET_FORWARD_UNIT="rg-starfleet-port-forward"
 
 usage() {
     cat <<'USAGE'
@@ -27,6 +29,7 @@ Commands:
   env                 Print the Livingston environment values.
   run -- CMD ...      Run a command with the Livingston process environment.
   doctor              Print profile, system, browser, and egress diagnostics.
+  starfleet [BROWSER] Launch Starfleet with Tailscale routes and local forwarder.
   system COMMAND ...  Set the system timezone for COMMAND, then restore it.
   chromium [URL]      Launch Chromium with an isolated Livingston profile.
   chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
@@ -80,6 +83,9 @@ test_bin="${RG_LIVINGSTON_TEST:-test}"
 curl_bin="${RG_LIVINGSTON_CURL:-curl}"
 jq_bin="${RG_LIVINGSTON_JQ:-jq}"
 pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
+tailscale_bin="${RG_LIVINGSTON_TAILSCALE:-tailscale}"
+systemd_run_bin="${RG_LIVINGSTON_SYSTEMD_RUN:-systemd-run}"
+starfleet_forward_bin="${RG_STARFLEET_PORT_FORWARD_BIN:-$HOME/.local/bin/rg-starfleet-port-forward}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -213,6 +219,46 @@ warn_egress_location() {
         echo "rg-livingston-profile: warning: public egress appears as ${city:-unknown}, ${region:-unknown}, ${country:-unknown} (${timezone:-unknown}, ${ip:-unknown})" >&2
         echo "rg-livingston-profile: server-side sites can still show that location until traffic exits through Texas" >&2
     fi
+}
+
+ensure_starfleet_routes() {
+    local prefs route_all
+
+    if [ "$dry_run" -eq 1 ]; then
+        printf 'would run: '
+        quote_cmd "$tailscale_bin" set --accept-routes=true
+        return 0
+    fi
+
+    command -v "$tailscale_bin" >/dev/null 2>&1 || die "cannot locate tailscale"
+    prefs="$("$tailscale_bin" debug prefs 2>/dev/null || true)"
+    route_all="$(json_field "$prefs" RouteAll)"
+    if [ "$route_all" != "true" ]; then
+        "$tailscale_bin" set --accept-routes=true
+    fi
+}
+
+ensure_starfleet_forwarder() {
+    local main_pid cmdline
+
+    if [ "$dry_run" -eq 1 ]; then
+        printf 'would run: '
+        quote_cmd "$systemd_run_bin" --user "--unit=$STARFLEET_FORWARD_UNIT" --collect "$starfleet_forward_bin" --replace
+        return 0
+    fi
+
+    [ -x "$starfleet_forward_bin" ] || die "missing executable: $starfleet_forward_bin"
+    if "$systemctl_bin" --user is-active --quiet "$STARFLEET_FORWARD_UNIT.service" 2>/dev/null; then
+        main_pid="$("$systemctl_bin" --user show -p MainPID --value "$STARFLEET_FORWARD_UNIT.service" 2>/dev/null || true)"
+        if [ -n "$main_pid" ] && [ "$main_pid" != "0" ] && [ -r "/proc/$main_pid/cmdline" ]; then
+            cmdline="$(tr '\0' ' ' <"/proc/$main_pid/cmdline")"
+            case "$cmdline" in
+                *"$starfleet_forward_bin"*) return 0 ;;
+            esac
+        fi
+        "$systemctl_bin" --user stop "$STARFLEET_FORWARD_UNIT.service" >/dev/null 2>&1 || true
+    fi
+    "$systemd_run_bin" --user "--unit=$STARFLEET_FORWARD_UNIT" --collect "$starfleet_forward_bin" --replace >/dev/null
 }
 
 run_cmd() {
@@ -480,7 +526,7 @@ print_system_location_dry_run() {
 }
 
 print_doctor() {
-    local system_tz geolocation_values geoclue_override processes
+    local system_tz geolocation_values geoclue_override processes prefs route_all forwarder_state
     printf 'profile=%s\n' "$PROFILE_NAME"
     printf 'profile_timezone=%s\n' "$TZ_NAME"
     printf 'profile_locale=%s\n' "$LANG_NAME"
@@ -509,6 +555,17 @@ print_doctor() {
 
     print_egress_info || true
 
+    if command -v "$tailscale_bin" >/dev/null 2>&1; then
+        prefs="$("$tailscale_bin" debug prefs 2>/dev/null || true)"
+        route_all="$(json_field "$prefs" RouteAll)"
+        printf 'tailscale_accept_routes=%s\n' "${route_all:-unknown}"
+    else
+        printf 'tailscale_accept_routes=unavailable\n'
+    fi
+
+    forwarder_state="$("$systemctl_bin" --user is-active "$STARFLEET_FORWARD_UNIT.service" 2>/dev/null || true)"
+    printf 'starfleet_forwarder=%s\n' "${forwarder_state:-unknown}"
+
     if command -v "$pgrep_bin" >/dev/null 2>&1; then
         processes="$("$pgrep_bin" -af "$profile_root" 2>/dev/null || true)"
         if [ -n "$processes" ]; then
@@ -517,6 +574,24 @@ print_doctor() {
             printf 'profile_processes=none\n'
         fi
     fi
+}
+
+run_starfleet_profile() {
+    if [ $# -eq 0 ]; then
+        set -- vivaldi "$STARFLEET_URL"
+    else
+        case "$1" in
+            chromium | chrome | google-chrome | google-chrome-stable | vivaldi | vivaldi-stable) ;;
+            *) set -- vivaldi "$@" ;;
+        esac
+        if [ $# -eq 1 ]; then
+            set -- "$1" "$STARFLEET_URL"
+        fi
+    fi
+
+    ensure_starfleet_routes
+    ensure_starfleet_forwarder
+    run_system_profile "$@"
 }
 
 run_system_profile() {
@@ -576,6 +651,9 @@ dispatch_command() {
         ;;
     doctor)
         print_doctor
+        ;;
+    starfleet)
+        run_starfleet_profile "$@"
         ;;
     system)
         run_system_profile "$@"

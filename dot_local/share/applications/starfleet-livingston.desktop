@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Starfleet Livingston
+Exec=rg-livingston-profile starfleet vivaldi
+Terminal=true
+Categories=Network;WebBrowser;
