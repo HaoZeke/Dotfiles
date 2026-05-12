@@ -112,6 +112,7 @@ out=$(
     "$SCRIPT" --dry-run --prepare-sleep --daemonize
 )
 assert_contains "$out" "(waited for first paint)" "prepare-sleep marker"
+assert_contains "$out" "swaymsg output \\* dpms on" "prepare-sleep dpms wake"
 assert_not_contains "$out" "--daemonize" "daemonize stripped under --prepare-sleep"
 assert_not_contains "$out" " -f " "short daemonize stripped under --prepare-sleep"
 

@@ -219,6 +219,7 @@ if [ "$DRY_RUN" = "1" ]; then
                 *) filtered_dry+=("$a") ;;
             esac
         done
+        printf 'swaymsg output \\* dpms on; '
         printf '%q ' "${filtered_dry[@]}"
         printf '& (waited for first paint)\n'
         exit 0
@@ -241,6 +242,14 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
     done
     set -- "${filtered[@]}"
 
+    # Idle hibernate commonly starts with outputs in DPMS-off state.
+    # Force a live scanout so the hibernate image captures the lock
+    # surface instead of the stale frame held by the display engine.
+    if command -v swaymsg >/dev/null 2>&1; then
+        swaymsg "output * dpms on" >/dev/null 2>&1 || true
+        sleep 0.2
+    fi
+
     "$@" &
     swl_pid=$!
     disown "$swl_pid" 2>/dev/null || true
@@ -255,7 +264,7 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
         kill -0 "$swl_pid" 2>/dev/null || break
         wchan=$(cat "/proc/$swl_pid/wchan" 2>/dev/null) || break
         case "$wchan" in
-            *poll*|*select*) break ;;
+            *poll*|*select*|*epoll*) break ;;
         esac
         sleep 0.05
     done
