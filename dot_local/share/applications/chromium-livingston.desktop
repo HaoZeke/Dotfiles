@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Chromium Livingston
+Exec=rg-livingston-profile chromium
+Icon=chromium
+Categories=Network;WebBrowser;

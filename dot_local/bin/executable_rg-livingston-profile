@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-livingston-profile).
+#
+# Launch commands and Chromium-family browsers with a Livingston, Texas
+# process profile.
+
+set -euo pipefail
+
+PROFILE_NAME="livingston"
+TZ_NAME="America/Chicago"
+LANG_NAME="en_US.UTF-8"
+BROWSER_LANG="en-US"
+LOCATION_LAT="30.7110"
+LOCATION_LON="-94.9327"
+LOCATION_ACCURACY="35"
+
+usage() {
+    cat <<'USAGE'
+usage: rg-livingston-profile [--dry-run] [--proxy URL] COMMAND [ARGS...]
+
+Commands:
+  env              Print the Livingston environment values.
+  run -- CMD ...   Run a command with the Livingston process environment.
+  chromium [URL]   Launch Chromium with an isolated Livingston profile.
+  chrome [URL]     Launch Google Chrome with an isolated Livingston profile.
+
+Options:
+  --proxy URL      Pass URL to Chromium as --proxy-server=URL.
+                  Also read from RG_LIVINGSTON_PROXY when set.
+  --dry-run        Print the command without executing it.
+  -h, --help       Show this help.
+USAGE
+}
+
+die() {
+    echo "rg-livingston-profile: $*" >&2
+    exit 2
+}
+
+quote_cmd() {
+    printf '%q' "$1"
+    shift
+    for arg in "$@"; do
+        printf ' %q' "$arg"
+    done
+    printf '\n'
+}
+
+x_home() {
+    local var_name="$1" fallback="$2"
+    local value="${!var_name:-}"
+    if [ -n "$value" ]; then
+        printf '%s\n' "$value"
+    else
+        printf '%s\n' "$HOME/$fallback"
+    fi
+}
+
+dry_run=0
+proxy="${RG_LIVINGSTON_PROXY:-}"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run)
+            dry_run=1
+            shift
+            ;;
+        --proxy)
+            [ $# -ge 2 ] || die "--proxy requires an argument"
+            proxy="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+cmd="${1:-chromium}"
+if [ $# -gt 0 ]; then
+    shift
+fi
+
+data_home="$(x_home XDG_DATA_HOME .local/share)"
+state_home="$(x_home XDG_STATE_HOME .local/state)"
+extension_dir="$data_home/rg-location-profiles/$PROFILE_NAME/chromium-geolocation"
+profile_root="$state_home/rg-location-profiles/$PROFILE_NAME"
+
+profile_env=(
+    "TZ=$TZ_NAME"
+    "LANG=$LANG_NAME"
+    "LC_ALL=$LANG_NAME"
+    "LC_TIME=$LANG_NAME"
+    "LC_MONETARY=$LANG_NAME"
+    "LANGUAGE=en_US:en"
+    "RG_LOCATION_NAME=Livingston, Texas"
+    "RG_LOCATION_TIMEZONE=$TZ_NAME"
+    "RG_LOCATION_LAT=$LOCATION_LAT"
+    "RG_LOCATION_LON=$LOCATION_LON"
+    "RG_LOCATION_ACCURACY=$LOCATION_ACCURACY"
+)
+
+print_env() {
+    local entry
+    for entry in "${profile_env[@]}"; do
+        printf '%s\n' "$entry"
+    done
+}
+
+run_cmd() {
+    if [ "$dry_run" -eq 1 ]; then
+        quote_cmd env "${profile_env[@]}" "$@"
+    else
+        exec env "${profile_env[@]}" "$@"
+    fi
+}
+
+resolve_browser() {
+    local name="$1" self_dir filtered_path resolved
+
+    case "$name" in
+        chromium)
+            for resolved in /usr/bin/chromium /usr/lib/chromium/chromium; do
+                [ -x "$resolved" ] && printf '%s\n' "$resolved" && return 0
+            done
+            ;;
+        chrome)
+            for resolved in /usr/bin/google-chrome-stable /usr/bin/google-chrome; do
+                [ -x "$resolved" ] && printf '%s\n' "$resolved" && return 0
+            done
+            ;;
+    esac
+
+    self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    filtered_path="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vFx "$self_dir" | paste -sd:)"
+    case "$name" in
+        chromium) resolved="$(PATH="$filtered_path" command -v chromium 2>/dev/null || true)" ;;
+        chrome) resolved="$(PATH="$filtered_path" command -v google-chrome-stable 2>/dev/null || PATH="$filtered_path" command -v google-chrome 2>/dev/null || true)" ;;
+        *) resolved="" ;;
+    esac
+
+    [ -n "$resolved" ] || return 1
+    printf '%s\n' "$resolved"
+}
+
+seed_chromium_preferences() {
+    local profile_dir="$1" prefs_dir prefs_file
+    prefs_dir="$profile_dir/Default"
+    prefs_file="$prefs_dir/Preferences"
+    mkdir -p "$prefs_dir"
+    if [ ! -e "$prefs_file" ]; then
+        cat >"$prefs_file" <<'JSON'
+{
+  "intl": {
+    "accept_languages": "en-US,en"
+  },
+  "profile": {
+    "default_content_setting_values": {
+      "geolocation": 1
+    }
+  }
+}
+JSON
+    fi
+}
+
+run_browser() {
+    local browser_name="$1" browser_bin profile_dir url
+    local -a browser_args extra_browser_args
+    shift
+
+    browser_bin="$(resolve_browser "$browser_name")" || die "cannot locate $browser_name"
+    profile_dir="$profile_root/$browser_name"
+    url="about:blank"
+    extra_browser_args=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --)
+                shift
+                extra_browser_args+=("$@")
+                set --
+                ;;
+            --*)
+                extra_browser_args+=("$1")
+                shift
+                ;;
+            *)
+                url="$1"
+                shift
+                break
+                ;;
+        esac
+    done
+
+    if [ "$dry_run" -eq 0 ]; then
+        [ -d "$extension_dir" ] || die "missing extension directory: $extension_dir"
+        [ -f "$extension_dir/manifest.json" ] || die "missing extension manifest: $extension_dir/manifest.json"
+        [ -f "$extension_dir/content.js" ] || die "missing extension script: $extension_dir/content.js"
+        seed_chromium_preferences "$profile_dir"
+    fi
+
+    browser_args=(
+        "$browser_bin"
+        "--user-data-dir=$profile_dir"
+        "--lang=$BROWSER_LANG"
+        "--no-first-run"
+        "--no-default-browser-check"
+        "--enable-features=UseOzonePlatform,WaylandWindowDecorations"
+        "--ozone-platform=wayland"
+        "--ozone-platform-hint=auto"
+        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
+        "--disable-extensions-except=$extension_dir"
+        "--load-extension=$extension_dir"
+    )
+
+    if [ -n "$proxy" ]; then
+        browser_args+=("--proxy-server=$proxy")
+    fi
+
+    browser_args+=("${extra_browser_args[@]}")
+    browser_args+=("$url" "$@")
+    run_cmd "${browser_args[@]}"
+}
+
+case "$cmd" in
+    env)
+        print_env
+        ;;
+    run)
+        [ "${1:-}" != "--" ] || shift
+        [ $# -gt 0 ] || die "run requires a command"
+        run_cmd "$@"
+        ;;
+    chromium)
+        run_browser chromium "$@"
+        ;;
+    chrome | google-chrome | google-chrome-stable)
+        run_browser chrome "$@"
+        ;;
+    *)
+        die "unknown command: $cmd"
+        ;;
+esac
