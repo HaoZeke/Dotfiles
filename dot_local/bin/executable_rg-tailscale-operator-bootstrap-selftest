@@ -13,7 +13,14 @@ fi
 SCRIPT="${1:-}"
 if [ -z "$SCRIPT" ]; then
     here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-    SCRIPT="$here/executable_rg-tailscale-operator-bootstrap"
+    case "$(basename -- "$0")" in
+        executable_*)
+            SCRIPT="$here/executable_rg-tailscale-operator-bootstrap"
+            ;;
+        *)
+            SCRIPT="$here/rg-tailscale-operator-bootstrap"
+            ;;
+    esac
 fi
 
 assert_contains() {
