@@ -64,6 +64,10 @@ if rg -n '^\[colors\]$' "$REPO/dot_config/foot" "$REPO/.chezmoiscripts/run_oncha
     fail "foot theme snippets must use [colors-dark], not deprecated [colors]"
 fi
 
+if rg -n '^fade-in=' "$REPO/dot_config/swaylock" "$REPO/.chezmoiscripts/run_onchange_rg-theme-1-palettes.sh.tmpl"; then
+    fail "swaylock fade-in uses screencopy and can show stale desktop frames"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
     run shellcheck -x -S warning \
         "$REPO/dot_local/bin/executable_brightness_sync.sh" \

@@ -6,7 +6,6 @@
 clock
 timestr=%H:%M
 datestr=%A, %d %B
-fade-in=0.2
 show-failed-attempts
 show-keyboard-layout
 indicator-idle-visible
