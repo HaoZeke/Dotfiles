@@ -26,6 +26,7 @@ usage: rg-livingston-profile [--dry-run] [--proxy URL] COMMAND [ARGS...]
 Commands:
   env                 Print the Livingston environment values.
   run -- CMD ...      Run a command with the Livingston process environment.
+  doctor              Print profile, system, browser, and egress diagnostics.
   system COMMAND ...  Set the system timezone for COMMAND, then restore it.
   chromium [URL]      Launch Chromium with an isolated Livingston profile.
   chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
@@ -36,6 +37,9 @@ Options:
                   Also read from RG_LIVINGSTON_PROXY when set.
   --dry-run        Print the command without executing it.
   -h, --help       Show this help.
+
+Environment:
+  RG_LIVINGSTON_SKIP_EGRESS_CHECK=1  Do not warn when public IP is not Texas.
 USAGE
 }
 
@@ -73,6 +77,9 @@ install_bin="${RG_LIVINGSTON_INSTALL:-install}"
 cp_bin="${RG_LIVINGSTON_CP:-cp}"
 mv_bin="${RG_LIVINGSTON_MV:-mv}"
 test_bin="${RG_LIVINGSTON_TEST:-test}"
+curl_bin="${RG_LIVINGSTON_CURL:-curl}"
+jq_bin="${RG_LIVINGSTON_JQ:-jq}"
+pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -143,6 +150,68 @@ quote_root_cmd() {
         quote_cmd "$@"
     else
         quote_cmd "$sudo_bin" "$@"
+    fi
+}
+
+json_field() {
+    local json="$1" key="$2"
+    if command -v "$jq_bin" >/dev/null 2>&1; then
+        printf '%s\n' "$json" | "$jq_bin" -r --arg key "$key" '.[$key] // empty' 2>/dev/null || true
+    else
+        printf '%s\n' "$json" | sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" | head -n 1
+    fi
+}
+
+fetch_egress_json() {
+    command -v "$curl_bin" >/dev/null 2>&1 || return 1
+    "$curl_bin" -fsS --max-time 4 https://ipinfo.io/json 2>/dev/null
+}
+
+print_egress_info() {
+    local json ip city region country timezone org loc
+    json="$(fetch_egress_json || true)"
+    if [ -z "$json" ]; then
+        printf 'egress_status=unavailable\n'
+        return 1
+    fi
+
+    ip="$(json_field "$json" ip)"
+    city="$(json_field "$json" city)"
+    region="$(json_field "$json" region)"
+    country="$(json_field "$json" country)"
+    timezone="$(json_field "$json" timezone)"
+    org="$(json_field "$json" org)"
+    loc="$(json_field "$json" loc)"
+
+    printf 'egress_status=ok\n'
+    printf 'egress_ip=%s\n' "${ip:-unknown}"
+    printf 'egress_city=%s\n' "${city:-unknown}"
+    printf 'egress_region=%s\n' "${region:-unknown}"
+    printf 'egress_country=%s\n' "${country:-unknown}"
+    printf 'egress_timezone=%s\n' "${timezone:-unknown}"
+    printf 'egress_loc=%s\n' "${loc:-unknown}"
+    printf 'egress_org=%s\n' "${org:-unknown}"
+}
+
+warn_egress_location() {
+    local json ip city region country timezone
+    [ "${RG_LIVINGSTON_SKIP_EGRESS_CHECK:-}" != "1" ] || return 0
+
+    json="$(fetch_egress_json || true)"
+    if [ -z "$json" ]; then
+        echo "rg-livingston-profile: warning: public egress location could not be checked" >&2
+        return 0
+    fi
+
+    ip="$(json_field "$json" ip)"
+    city="$(json_field "$json" city)"
+    region="$(json_field "$json" region)"
+    country="$(json_field "$json" country)"
+    timezone="$(json_field "$json" timezone)"
+
+    if [ "$country" != "US" ] || [ "$region" != "Texas" ]; then
+        echo "rg-livingston-profile: warning: public egress appears as ${city:-unknown}, ${region:-unknown}, ${country:-unknown} (${timezone:-unknown}, ${ip:-unknown})" >&2
+        echo "rg-livingston-profile: server-side sites can still show that location until traffic exits through Texas" >&2
     fi
 }
 
@@ -267,6 +336,9 @@ run_browser() {
 
     browser_args+=("${extra_browser_args[@]}")
     browser_args+=("$url" "$@")
+    if [ "$dry_run" -eq 0 ]; then
+        warn_egress_location
+    fi
     run_cmd "${browser_args[@]}"
 }
 
@@ -407,6 +479,46 @@ print_system_location_dry_run() {
     printf 'would restore: previous %s and inactive %s after command exit\n' "$GEOLOCATION_FILE" "$GEOCLUE_OVERRIDE"
 }
 
+print_doctor() {
+    local system_tz geolocation_values geoclue_override processes
+    printf 'profile=%s\n' "$PROFILE_NAME"
+    printf 'profile_timezone=%s\n' "$TZ_NAME"
+    printf 'profile_locale=%s\n' "$LANG_NAME"
+    printf 'profile_location=%s,%s accuracy=%sm\n' "$LOCATION_LAT" "$LOCATION_LON" "$LOCATION_ACCURACY"
+
+    system_tz="$(current_timezone 2>/dev/null || true)"
+    printf 'system_timezone=%s\n' "${system_tz:-unknown}"
+
+    if [ -r "$GEOLOCATION_FILE" ]; then
+        geolocation_values="$(tr '\n' ',' <"$GEOLOCATION_FILE" | sed 's/,$//')"
+        printf 'geolocation_file=%s\n' "$geolocation_values"
+    else
+        printf 'geolocation_file=missing\n'
+    fi
+
+    if [ -r "$GEOCLUE_OVERRIDE" ]; then
+        if grep -q '^\[static-source\]' "$GEOCLUE_OVERRIDE" && grep -q '^enable=true' "$GEOCLUE_OVERRIDE"; then
+            geoclue_override="active"
+        else
+            geoclue_override="inactive"
+        fi
+        printf 'geoclue_override=%s\n' "$geoclue_override"
+    else
+        printf 'geoclue_override=missing\n'
+    fi
+
+    print_egress_info || true
+
+    if command -v "$pgrep_bin" >/dev/null 2>&1; then
+        processes="$("$pgrep_bin" -af "$profile_root" 2>/dev/null || true)"
+        if [ -n "$processes" ]; then
+            printf 'profile_processes=\n%s\n' "$processes"
+        else
+            printf 'profile_processes=none\n'
+        fi
+    fi
+}
+
 run_system_profile() {
     local old_tz geoclue_state rc
     [ $# -gt 0 ] || die "system requires a command"
@@ -461,6 +573,9 @@ dispatch_command() {
         [ "${1:-}" != "--" ] || shift
         [ $# -gt 0 ] || die "run requires a command"
         run_cmd "$@"
+        ;;
+    doctor)
+        print_doctor
         ;;
     system)
         run_system_profile "$@"

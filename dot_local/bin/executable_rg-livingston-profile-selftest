@@ -34,6 +34,24 @@ assert_contains() {
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
 
+fake_curl="$tmp_home/curl"
+cat >"$fake_curl" <<'SH'
+#!/usr/bin/env sh
+printf '%s\n' '{"ip":"198.51.100.9","city":"Livingston","region":"Texas","country":"US","loc":"30.7110,-94.9327","org":"AS64500 Example","timezone":"America/Chicago"}'
+SH
+chmod +x "$fake_curl"
+
+fake_timedatectl="$tmp_home/timedatectl"
+cat >"$fake_timedatectl" <<'SH'
+#!/usr/bin/env sh
+if [ "${1:-}" = "show" ]; then
+    printf '%s\n' 'America/Chicago'
+else
+    printf '%s\n' "$*"
+fi
+SH
+chmod +x "$fake_timedatectl"
+
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
@@ -102,6 +120,20 @@ assert_contains "$out" "sudo timedatectl set-timezone Europe/Zurich" "system tim
 manifest_path="$(dirname -- "$SCRIPT")/../share/rg-location-profiles/livingston/chromium-geolocation/manifest.json"
 manifest="$(cat "$manifest_path")"
 assert_contains "$manifest" '"world": "MAIN"' "main world manifest"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_TIMEDATECTL="$fake_timedatectl" \
+    RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
+    "$SCRIPT" doctor
+)
+assert_contains "$out" "profile=livingston" "doctor profile"
+assert_contains "$out" "system_timezone=America/Chicago" "doctor timezone"
+assert_contains "$out" "egress_region=Texas" "doctor egress region"
+assert_contains "$out" "egress_timezone=America/Chicago" "doctor egress timezone"
 
 out=$(
     HOME="$tmp_home" \
