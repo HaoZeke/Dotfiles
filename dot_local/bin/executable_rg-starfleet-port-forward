@@ -144,20 +144,27 @@ def remote_ports(proxy_url: str) -> list[int] | None:
 
 
 def remote_port_reachable(proxy_url: str, target_port: int) -> bool | None:
-    try:
-        request = urllib.request.Request(
-            proxy_url.rstrip("/") + "/",
-            headers={
-                "User-Agent": "starfleet-local-proxy/1.0",
-                "x-starfleet-proxy-port": str(target_port),
-            },
-        )
-        with urllib.request.urlopen(request, context=ssl.create_default_context(), timeout=5):
-            return True
-    except urllib.error.HTTPError as exc:
-        return exc.code < 500
-    except Exception:
-        return None
+    saw_response = False
+    for path in ("/", "/health"):
+        try:
+            request = urllib.request.Request(
+                proxy_url.rstrip("/") + path,
+                headers={
+                    "User-Agent": "starfleet-local-proxy/1.0",
+                    "x-starfleet-proxy-port": str(target_port),
+                },
+            )
+            with urllib.request.urlopen(request, context=ssl.create_default_context(), timeout=5):
+                return True
+        except urllib.error.HTTPError as exc:
+            saw_response = True
+            if exc.code < 500:
+                return True
+        except Exception:
+            pass
+    if saw_response:
+        return False
+    return None
 
 
 def handle_websocket_via_hades(
