@@ -30,4 +30,49 @@ rg -q '99-persistent-storage.conf' "$laptop_script" \
 rg -q 'Storage=persistent' "$laptop_script" \
     || fail "journald persistent storage is not managed"
 
+if [ -r /etc/mkinitcpio.conf ]; then
+    python - /etc/mkinitcpio.conf <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+match = re.search(r"^HOOKS=\(([^)]*)\)", text, re.M)
+if not match:
+    raise SystemExit("FAIL: /etc/mkinitcpio.conf has no HOOKS line")
+hooks = match.group(1).split()
+if "resume" not in hooks:
+    raise SystemExit("FAIL: /etc/mkinitcpio.conf is missing the resume hook")
+resume_index = hooks.index("resume")
+for stop in ("filesystems", "fsck"):
+    if stop in hooks and resume_index > hooks.index(stop):
+        raise SystemExit(
+            "FAIL: /etc/mkinitcpio.conf puts resume after " + stop
+        )
+PY
+fi
+
+refind_conf=/boot/EFI/refind/refind.conf
+if [ -r "$refind_conf" ]; then
+    python - "$refind_conf" <<'PY'
+import sys
+
+path = sys.argv[1]
+lines = open(path, encoding="utf-8").read().splitlines()
+inside = False
+for line in lines:
+    stripped = line.strip()
+    if stripped == 'menuentry "Arch Linux" {':
+        inside = True
+        continue
+    if inside and stripped == "}":
+        inside = False
+    if inside and stripped.startswith('submenuentry "Boot using fallback initramfs"'):
+        if not stripped.endswith("{"):
+            raise SystemExit(
+                "FAIL: rEFInd fallback submenu is missing its opening brace"
+            )
+PY
+fi
+
 printf 'ok\n'
