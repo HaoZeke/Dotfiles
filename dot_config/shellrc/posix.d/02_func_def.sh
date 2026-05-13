@@ -121,3 +121,38 @@ killmosh() {
 # Find and replace, e.g. agr "np.float" "float"
 # Kanged from: https://gist.github.com/hlissner/db74d23fc00bed81ff62?permalink_comment_id=4492301#gistcomment-4492301
 agr() { ag -0 -l "$1" | AGR_FROM="$1" AGR_TO="$2" xargs -r0 perl -pi -e 'BEGIN{undef $/;} s/$ENV{AGR_FROM}/$ENV{AGR_TO}/g'; }
+
+curl() {
+	_rg_starfleet_forward_url="https://starfleet.teachx.ai/scripts/local_port_forward.py"
+	_rg_starfleet_seen=0
+	_rg_starfleet_plain=1
+	for _rg_starfleet_arg in "$@"; do
+		case "$_rg_starfleet_arg" in
+			"$_rg_starfleet_forward_url")
+				_rg_starfleet_seen=1
+				;;
+			-s | -S | -L | -f | --silent | --show-error | --location | --fail)
+				;;
+			-[sSLf] | -[sSLf][sSLf] | -[sSLf][sSLf][sSLf] | -[sSLf][sSLf][sSLf][sSLf])
+				;;
+			*)
+				_rg_starfleet_plain=0
+				;;
+		esac
+	done
+
+	if [ "$_rg_starfleet_seen" -eq 1 ] && [ "$_rg_starfleet_plain" -eq 1 ] && command -v rg-starfleet-port-forward >/dev/null 2>&1; then
+		cat <<'PY'
+#!/usr/bin/env python3
+import os
+
+helper = os.path.expanduser("~/.local/bin/rg-starfleet-port-forward")
+os.execv(helper, [helper])
+PY
+		unset _rg_starfleet_forward_url _rg_starfleet_seen _rg_starfleet_plain _rg_starfleet_arg
+		return 0
+	fi
+
+	unset _rg_starfleet_forward_url _rg_starfleet_seen _rg_starfleet_plain _rg_starfleet_arg
+	command curl "$@"
+}
