@@ -145,8 +145,7 @@ def remote_ports(proxy_url: str) -> list[int] | None:
 
 def remote_port_reachable(proxy_url: str, target_port: int) -> bool | None:
     saw_response = False
-    paths = ("/health", "/") if target_port == PORT else ("/",)
-    for path in paths:
+    for path in ("/", "/health"):
         try:
             request = urllib.request.Request(
                 proxy_url.rstrip("/") + path,

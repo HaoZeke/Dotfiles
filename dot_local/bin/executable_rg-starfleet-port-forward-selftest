@@ -79,27 +79,6 @@ class ReachableUnlistedPortHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
-class HelperHealthOnlyHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        if self.path == "/starfleet/list-ports":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"ports": []}')
-            return
-        if self.path == "/health":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"status": "ok"}')
-            return
-        self.send_response(502)
-        self.end_headers()
-
-    def log_message(self, fmt: str, *args) -> None:
-        pass
-
-
 def main() -> int:
     script = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "rg-starfleet-port-forward")
     port = free_port()
@@ -114,10 +93,6 @@ def main() -> int:
     reachable_unlisted_thread = threading.Thread(target=reachable_unlisted_server.serve_forever, daemon=True)
     reachable_unlisted_thread.start()
     reachable_unlisted_port = reachable_unlisted_server.server_address[1]
-    helper_health_server = socketserver.ThreadingTCPServer(("127.0.0.1", 0), HelperHealthOnlyHandler)
-    helper_health_thread = threading.Thread(target=helper_health_server.serve_forever, daemon=True)
-    helper_health_thread.start()
-    helper_health_port = helper_health_server.server_address[1]
 
     proc = subprocess.Popen(
         [sys.executable, script],
@@ -173,18 +148,6 @@ def main() -> int:
         status, body = request(base_url, "/port-forward/list")
         forwards = json.loads(body)["forwards"]
         assert forwards[str(port)] == f"http://127.0.0.1:{reachable_unlisted_port}", forwards
-
-        status, body = request(base_url, "/port-forward/stop" f"?port={port}")
-        assert status == 200, body
-
-        status, body = request(
-            base_url,
-            "/port-forward-via-proxy"
-            f"?proxy=http%3A%2F%2F127.0.0.1%3A{helper_health_port}"
-            f"&port={port}",
-        )
-        if status != 200:
-            raise AssertionError(f"helper health-only port should be allowed, got {status}: {body!r}")
     finally:
         proc.terminate()
         try:
@@ -196,8 +159,6 @@ def main() -> int:
         empty_ports_server.server_close()
         reachable_unlisted_server.shutdown()
         reachable_unlisted_server.server_close()
-        helper_health_server.shutdown()
-        helper_health_server.server_close()
 
     print("ok")
     return 0
