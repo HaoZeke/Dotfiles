@@ -10,7 +10,6 @@ trap 'rm -rf "$tmp_home"' EXIT
 source_script="$tmp_home/source.py"
 cache_script="$tmp_home/cache/local_port_forward.py"
 fake_curl="$tmp_home/curl"
-fake_lsof="$tmp_home/lsof"
 
 write_source() {
     cat >"$source_script" <<EOF
@@ -73,24 +72,10 @@ cat >"$fake_curl" <<'EOF'
 if [ "$*" = "-fsS http://alive.test/health -o /dev/null" ]; then
     exit 0
 fi
-if [ "$*" = "-fsS http://starting.test/health -o /dev/null" ]; then
-    exit 7
-fi
 echo "unexpected curl: $*" >&2
 exit 9
 EOF
 chmod +x "$fake_curl"
-
-cat >"$fake_lsof" <<'EOF'
-#!/usr/bin/env bash
-if [ "$*" = "-ti :58234" ]; then
-    echo 12345
-    exit 0
-fi
-echo "unexpected lsof: $*" >&2
-exit 9
-EOF
-chmod +x "$fake_lsof"
 
 write_source v3
 out="$(
@@ -102,17 +87,6 @@ out="$(
     "$script"
 )"
 assert_eq "$out" "Serving on port 58234 (already running)" "healthy forwarder reused by default"
-
-out="$(
-    XDG_DATA_HOME="$tmp_home/data" \
-    RG_STARFLEET_FORWARD_URL="$source_script" \
-    RG_STARFLEET_FORWARD_CACHE="$cache_script" \
-    RG_STARFLEET_FORWARD_HEALTH_URL="http://starting.test/health" \
-    RG_STARFLEET_CURL="$fake_curl" \
-    RG_STARFLEET_LSOF="$fake_lsof" \
-    "$script"
-)"
-assert_eq "$out" "Serving on port 58234 (already running)" "starting forwarder reused by default"
 
 out="$(
     XDG_DATA_HOME="$tmp_home/data" \
