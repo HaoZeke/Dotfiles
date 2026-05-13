@@ -8,6 +8,7 @@ PYTHON_BIN="${RG_STARFLEET_PYTHON:-python3}"
 CURL_BIN="${RG_STARFLEET_CURL:-curl}"
 HEALTH_URL="${RG_STARFLEET_FORWARD_HEALTH_URL:-http://127.0.0.1:58234/health}"
 HEALTH_PORT="${RG_STARFLEET_FORWARD_PORT:-58234}"
+LSOF_BIN="${RG_STARFLEET_LSOF:-lsof}"
 
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 cache_path="${RG_STARFLEET_FORWARD_CACHE:-$data_home/rg-starfleet/local_port_forward.py}"
@@ -55,8 +56,17 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+is_port_owned() {
+    command -v "$LSOF_BIN" >/dev/null 2>&1 || return 1
+    "$LSOF_BIN" -ti ":$HEALTH_PORT" >/dev/null 2>&1
+}
+
 if [ "$refresh" -eq 0 ] && [ "$replace" -eq 0 ] && [ "$#" -eq 0 ]; then
     if "$CURL_BIN" -fsS "$HEALTH_URL" -o /dev/null >/dev/null 2>&1; then
+        printf 'Serving on port %s (already running)\n' "$HEALTH_PORT"
+        exit 0
+    fi
+    if is_port_owned; then
         printf 'Serving on port %s (already running)\n' "$HEALTH_PORT"
         exit 0
     fi
