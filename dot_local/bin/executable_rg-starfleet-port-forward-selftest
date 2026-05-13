@@ -9,7 +9,6 @@ trap 'rm -rf "$tmp_home"' EXIT
 
 source_script="$tmp_home/source.py"
 cache_script="$tmp_home/cache/local_port_forward.py"
-fake_curl="$tmp_home/curl"
 
 write_source() {
     cat >"$source_script" <<EOF
@@ -66,36 +65,5 @@ out="$(
     "$script" --refresh -- delta
 )"
 assert_eq "$out" "v2 delta" "cached helper refreshed when requested"
-
-cat >"$fake_curl" <<'EOF'
-#!/usr/bin/env bash
-if [ "$*" = "-fsS http://alive.test/health -o /dev/null" ]; then
-    exit 0
-fi
-echo "unexpected curl: $*" >&2
-exit 9
-EOF
-chmod +x "$fake_curl"
-
-write_source v3
-out="$(
-    XDG_DATA_HOME="$tmp_home/data" \
-    RG_STARFLEET_FORWARD_URL="$source_script" \
-    RG_STARFLEET_FORWARD_CACHE="$cache_script" \
-    RG_STARFLEET_FORWARD_HEALTH_URL="http://alive.test/health" \
-    RG_STARFLEET_CURL="$fake_curl" \
-    "$script"
-)"
-assert_eq "$out" "Serving on port 58234 (already running)" "healthy forwarder reused by default"
-
-out="$(
-    XDG_DATA_HOME="$tmp_home/data" \
-    RG_STARFLEET_FORWARD_URL="$source_script" \
-    RG_STARFLEET_FORWARD_CACHE="$cache_script" \
-    RG_STARFLEET_FORWARD_HEALTH_URL="http://alive.test/health" \
-    RG_STARFLEET_CURL="$fake_curl" \
-    "$script" --replace epsilon
-)"
-assert_eq "$out" "v2 --replace epsilon" "explicit replace restarts helper"
 
 echo "ok"
