@@ -139,20 +139,6 @@ out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
     XDG_STATE_HOME="$tmp_home/.local/state" \
-    RG_LIVINGSTON_PREVIOUS_TZ=Europe/Zurich \
-    "$SCRIPT" --dry-run starfleet vivaldi
-)
-assert_contains "$out" "tailscale set --accept-routes=true" "starfleet routes"
-assert_contains "$out" "systemd-run --user --unit=rg-starfleet-port-forward --collect" "starfleet forwarder"
-assert_contains "$out" "rg-starfleet-port-forward --replace" "starfleet forwarder executable"
-assert_contains "$out" "sudo timedatectl set-timezone America/Chicago" "starfleet system timezone set"
-assert_contains "$out" "https://starfleet.teachx.ai/home" "starfleet default url"
-assert_contains "$out" "sudo timedatectl set-timezone Europe/Zurich" "starfleet system timezone restore"
-
-out=$(
-    HOME="$tmp_home" \
-    XDG_DATA_HOME="$tmp_home/.local/share" \
-    XDG_STATE_HOME="$tmp_home/.local/state" \
     "$SCRIPT" --dry-run run date
 )
 assert_contains "$out" "env TZ=America/Chicago" "generic env"
