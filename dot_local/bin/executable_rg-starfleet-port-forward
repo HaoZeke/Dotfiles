@@ -120,29 +120,6 @@ def proxy_url_parts(proxy_url: str) -> tuple[str, int, bool]:
     return host, port, parsed.scheme == "https"
 
 
-def remote_ports(proxy_url: str) -> list[int] | None:
-    try:
-        request = urllib.request.Request(
-            proxy_url.rstrip("/") + "/starfleet/list-ports",
-            headers={"User-Agent": "starfleet-local-proxy/1.0"},
-        )
-        with urllib.request.urlopen(request, context=ssl.create_default_context(), timeout=5) as response:
-            data = json.loads(response.read())
-    except Exception:
-        return None
-
-    ports = data.get("ports")
-    if not isinstance(ports, list):
-        return None
-    found = []
-    for port in ports:
-        try:
-            found.append(int(port))
-        except (TypeError, ValueError):
-            pass
-    return found
-
-
 def handle_websocket_via_hades(
     handler: http.server.BaseHTTPRequestHandler,
     proxy_url: str,
@@ -291,21 +268,6 @@ def register_forward_via_proxy(
     target_port: int,
 ) -> None:
     forward_key = f"via-proxy:{proxy_url}:{local_port}:{target_port}"
-    ports = remote_ports(proxy_url)
-    if ports is not None and target_port not in ports:
-        _json_response(
-            handler,
-            424,
-            {
-                "error": "remote_port_missing",
-                "proxy": proxy_url,
-                "target_port": target_port,
-                "ports": ports,
-                "message": f"Remote container is reachable but port {target_port} is not listening",
-            },
-        )
-        return
-
     if local_port in active_forwards:
         if active_forwards[local_port].get("forward_key") == forward_key:
             _json_response(
@@ -409,11 +371,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not proxy_url:
                 _json_response(self, 400, {"error": "Missing ?proxy=<hades-proxy-url>"})
                 return
-            ports = remote_ports(proxy_url)
-            if ports is None:
-                _json_response(self, 502, {"error": "could not fetch remote ports", "ports": []})
-            else:
-                _json_response(self, 200, {"ports": ports})
+            try:
+                request = urllib.request.Request(
+                    proxy_url.rstrip("/") + "/starfleet/list-ports",
+                    headers={"User-Agent": "starfleet-local-proxy/1.0"},
+                )
+                with urllib.request.urlopen(request, context=ssl.create_default_context(), timeout=5) as response:
+                    data = json.loads(response.read())
+                _json_response(self, 200, data)
+            except Exception as exc:
+                _json_response(self, 502, {"error": str(exc), "ports": []})
             return
 
         if parsed.path == "/port-forward-via-proxy":
