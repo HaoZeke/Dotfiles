@@ -143,23 +143,6 @@ def remote_ports(proxy_url: str) -> list[int] | None:
     return found
 
 
-def remote_port_reachable(proxy_url: str, target_port: int) -> bool | None:
-    try:
-        request = urllib.request.Request(
-            proxy_url.rstrip("/") + "/",
-            headers={
-                "User-Agent": "starfleet-local-proxy/1.0",
-                "x-starfleet-proxy-port": str(target_port),
-            },
-        )
-        with urllib.request.urlopen(request, context=ssl.create_default_context(), timeout=5):
-            return True
-    except urllib.error.HTTPError as exc:
-        return exc.code < 500
-    except Exception:
-        return None
-
-
 def handle_websocket_via_hades(
     handler: http.server.BaseHTTPRequestHandler,
     proxy_url: str,
@@ -310,22 +293,18 @@ def register_forward_via_proxy(
     forward_key = f"via-proxy:{proxy_url}:{local_port}:{target_port}"
     ports = remote_ports(proxy_url)
     if ports is not None and target_port not in ports:
-        reachable = remote_port_reachable(proxy_url, target_port)
-        if reachable is True:
-            ports = None
-        else:
-            _json_response(
-                handler,
-                424,
-                {
-                    "error": "remote_port_missing",
-                    "proxy": proxy_url,
-                    "target_port": target_port,
-                    "ports": ports,
-                    "message": f"Remote container is reachable but port {target_port} is not listening",
-                },
-            )
-            return
+        _json_response(
+            handler,
+            424,
+            {
+                "error": "remote_port_missing",
+                "proxy": proxy_url,
+                "target_port": target_port,
+                "ports": ports,
+                "message": f"Remote container is reachable but port {target_port} is not listening",
+            },
+        )
+        return
 
     if local_port in active_forwards:
         if active_forwards[local_port].get("forward_key") == forward_key:
