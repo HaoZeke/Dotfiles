@@ -239,7 +239,7 @@ ensure_starfleet_routes() {
 }
 
 ensure_starfleet_forwarder() {
-    local main_pid cmdline forward_cache
+    local main_pid cmdline
 
     if [ "$dry_run" -eq 1 ]; then
         printf 'would run: '
@@ -248,7 +248,6 @@ ensure_starfleet_forwarder() {
     fi
 
     [ -x "$starfleet_forward_bin" ] || die "missing executable: $starfleet_forward_bin"
-    forward_cache="$("$starfleet_forward_bin" --print-cache-path 2>/dev/null || true)"
     if "$systemctl_bin" --user is-active --quiet "$STARFLEET_FORWARD_UNIT.service" 2>/dev/null; then
         main_pid="$("$systemctl_bin" --user show -p MainPID --value "$STARFLEET_FORWARD_UNIT.service" 2>/dev/null || true)"
         if [ -n "$main_pid" ] && [ "$main_pid" != "0" ] && [ -r "/proc/$main_pid/cmdline" ]; then
@@ -256,11 +255,6 @@ ensure_starfleet_forwarder() {
             case "$cmdline" in
                 *"$starfleet_forward_bin"*) return 0 ;;
             esac
-            if [ -n "$forward_cache" ]; then
-                case "$cmdline" in
-                    *"$forward_cache"*) return 0 ;;
-                esac
-            fi
         fi
         "$systemctl_bin" --user stop "$STARFLEET_FORWARD_UNIT.service" >/dev/null 2>&1 || true
     fi
