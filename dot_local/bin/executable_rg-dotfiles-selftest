@@ -68,6 +68,16 @@ if rg -n '^fade-in=' "$REPO/dot_config/swaylock" "$REPO/.chezmoiscripts/run_onch
     fail "swaylock fade-in uses screencopy and can show stale desktop frames"
 fi
 
+sway_launcher="$REPO/.chezmoiscripts/run_onchange_linux_sway_launcher.sh.tmpl"
+test -r "$sway_launcher" || fail "missing managed sway launcher installer"
+rg -q '/usr/local/bin/start-sway' "$sway_launcher" \
+    || fail "sway launcher installer does not manage /usr/local/bin/start-sway"
+if rg -n 'WLR_RENDERER=pixman' "$sway_launcher"; then
+    fail "sway launcher forces the pixman renderer"
+fi
+rg -q 'for group in render video' "$sway_launcher" \
+    || fail "sway launcher installer does not ensure GPU access groups"
+
 if command -v shellcheck >/dev/null 2>&1; then
     run shellcheck -x -S warning \
         "$REPO/dot_local/bin/executable_brightness_sync.sh" \
