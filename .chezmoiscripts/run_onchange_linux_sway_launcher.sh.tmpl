@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .display_manager "sway") }}
+# Install the sway login launcher and GPU access groups for Wayland capture.
+
+set -euo pipefail
+
+target_user="{{ .chezmoi.username }}"
+if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER:-}" != "root" ]; then
+    target_user="$SUDO_USER"
+fi
+
+write_if_diff() {
+    local dst="$1" mode="$2" content="$3"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+START_SWAY_CONTENT='#!/bin/sh
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=sway
+export XDG_CURRENT_DESKTOP=sway
+
+export QT_QPA_PLATFORM=wayland
+export SDL_VIDEODRIVER=wayland
+export _JAVA_AWT_WM_NONREPARENTING=1
+
+exec sway "$@"
+'
+
+write_if_diff /usr/local/bin/start-sway 0755 "$START_SWAY_CONTENT" || true
+
+groups_changed=0
+for group in render video; do
+    if ! getent group "$group" >/dev/null 2>&1; then
+        echo "chezmoi: group $group does not exist; skipping"
+        continue
+    fi
+    if id -nG "$target_user" | tr ' ' '\n' | grep -qx "$group"; then
+        continue
+    fi
+    echo "chezmoi: adding $target_user to $group"
+    sudo usermod -aG "$group" "$target_user"
+    groups_changed=1
+done
+
+if [ "$groups_changed" = "1" ]; then
+    echo "chezmoi: log out of sway completely and log back in for group changes"
+fi
+{{- end }}
