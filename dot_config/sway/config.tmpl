@@ -153,6 +153,7 @@ default_floating_border pixel 2
     bindsym --no-repeat $mod+F5 exec '$HOME/.local/bin/rg-tmux-role save'
     bindsym --no-repeat $mod+F6 exec '$HOME/.local/bin/rg-tmux-role restore'
     bindsym --no-repeat $mod+Shift+slash exec '$HOME/.local/bin/rg-desktop-help'
+    bindsym --no-repeat $mod+Ctrl+F12 exec '$HOME/.local/bin/rg-sway-input-rearm'
 
     # Exit sway (logs you out of your Wayland session)
     bindsym --no-repeat $mod+Shift+q exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'

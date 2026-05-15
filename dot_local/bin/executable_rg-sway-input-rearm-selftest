@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Selftest for rg-sway-input-rearm's Sway command sequence.
+
+set -euo pipefail
+
+self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+repo_root="$(cd -- "$self_dir/../.." >/dev/null 2>&1 && pwd)"
+script="${1:-"$repo_root/dot_local/bin/executable_rg-sway-input-rearm"}"
+
+if [ ! -x "$script" ]; then
+    printf 'not executable: %s\n' "$script" >&2
+    exit 1
+fi
+
+tmpdir="$(mktemp -d)"
+trap 'trash-put "$tmpdir" >/dev/null 2>&1 || true' EXIT
+
+log="$tmpdir/swaymsg.log"
+fake_swaymsg="$tmpdir/swaymsg"
+fake_socket="$tmpdir/sway.sock"
+: > "$fake_socket"
+
+cat > "$fake_swaymsg" <<'FAKE_SWAYMSG'
+#!/usr/bin/env bash
+set -eu
+
+printf '%s|%s\n' "${SWAYSOCK:-}" "$*" >> "$RG_SWAYMSG_LOG"
+
+if [ "$#" -eq 2 ] && [ "$1" = "-t" ] && [ "$2" = "get_version" ]; then
+    printf '{"human_readable":"sway fake"}\n'
+fi
+FAKE_SWAYMSG
+chmod +x "$fake_swaymsg"
+
+RG_SWAYMSG="$fake_swaymsg" \
+RG_SWAYMSG_LOG="$log" \
+RG_SWAY_INPUT_REARM_ALLOW_FAKE_SOCKET=1 \
+SWAYSOCK="$fake_socket" \
+    "$script" --dpms >/dev/null
+
+cat > "$tmpdir/expected" <<EOF
+$fake_socket|-t get_version
+$fake_socket|input type:pointer events disabled
+$fake_socket|input type:pointer events enabled
+$fake_socket|input type:touchpad events disabled
+$fake_socket|input type:touchpad events enabled
+$fake_socket|input type:keyboard events disabled
+$fake_socket|input type:keyboard events enabled
+$fake_socket|input "1:1:AT_Translated_Set_2_keyboard" events disabled
+$fake_socket|seat - cursor_set default
+$fake_socket|seat - cursor move 1 0
+$fake_socket|seat - cursor move -1 0
+$fake_socket|output * dpms off
+$fake_socket|output * dpms on
+EOF
+
+diff -u "$tmpdir/expected" "$log"

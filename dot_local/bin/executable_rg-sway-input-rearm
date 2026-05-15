@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Re-arm Sway input classes from the user session.
+
+set -euo pipefail
+
+swaymsg_bin="${RG_SWAYMSG:-swaymsg}"
+verbose=0
+dpms=0
+socket_override=""
+
+usage() {
+    cat <<'USAGE'
+Usage: rg-sway-input-rearm [--dpms] [--socket PATH] [--verbose]
+
+Toggle Sway pointer, touchpad, and keyboard event handling to refresh the
+active seat. This is a user-session recovery helper and does not use sudo.
+
+Options:
+  --dpms         Also bounce DPMS off/on after re-arming input.
+  --socket PATH  Use a specific Sway IPC socket.
+  --verbose      Print the socket and commands being used.
+  -h, --help     Show this help.
+USAGE
+}
+
+die() {
+    printf 'rg-sway-input-rearm: %s\n' "$*" >&2
+    exit 1
+}
+
+log() {
+    if [ "$verbose" -eq 1 ]; then
+        printf 'rg-sway-input-rearm: %s\n' "$*" >&2
+    fi
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --dpms)
+            dpms=1
+            ;;
+        --socket)
+            shift
+            [ "$#" -gt 0 ] || die '--socket requires a path'
+            socket_override="$1"
+            ;;
+        --verbose|-v)
+            verbose=1
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+socket_exists() {
+    local candidate=$1
+    [ -S "$candidate" ] || [ "${RG_SWAY_INPUT_REARM_ALLOW_FAKE_SOCKET:-0}" = "1" ]
+}
+
+socket_works() {
+    local candidate=$1
+    socket_exists "$candidate" || return 1
+    SWAYSOCK="$candidate" "$swaymsg_bin" -t get_version >/dev/null 2>&1
+}
+
+find_socket() {
+    local candidate
+    local uid
+
+    if [ -n "$socket_override" ]; then
+        socket_works "$socket_override" || return 1
+        printf '%s\n' "$socket_override"
+        return 0
+    fi
+
+    if [ -n "${SWAYSOCK:-}" ] && socket_works "$SWAYSOCK"; then
+        printf '%s\n' "$SWAYSOCK"
+        return 0
+    fi
+
+    uid=$(id -u)
+    shopt -s nullglob
+    for candidate in /run/user/"$uid"/sway-ipc."$uid".*.sock; do
+        if socket_works "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+
+    return 1
+}
+
+socket=$(find_socket) || die 'could not find a usable Sway IPC socket'
+log "using $socket"
+
+run_sway() {
+    log "swaymsg $*"
+    SWAYSOCK="$socket" "$swaymsg_bin" "$@" >/dev/null
+}
+
+run_sway_optional() {
+    run_sway "$@" || log "ignored failure from: $*"
+}
+
+for class in pointer touchpad keyboard; do
+    run_sway_optional "input type:$class events disabled"
+    run_sway_optional "input type:$class events enabled"
+done
+
+run_sway_optional 'input "1:1:AT_Translated_Set_2_keyboard" events disabled'
+run_sway_optional 'seat - cursor_set default'
+run_sway_optional 'seat - cursor move 1 0'
+run_sway_optional 'seat - cursor move -1 0'
+
+if [ "$dpms" -eq 1 ]; then
+    run_sway_optional 'output * dpms off'
+    sleep 0.2
+    run_sway_optional 'output * dpms on'
+fi
