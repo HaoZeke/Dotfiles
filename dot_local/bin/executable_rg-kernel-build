@@ -30,6 +30,7 @@ usage() {
 usage:
   rg-kernel-build list
   rg-kernel-build preflight
+  rg-kernel-build remote-preflight
   rg-kernel-build package-base [lane]
   rg-kernel-build build [lane]
   rg-kernel-build build-all
@@ -186,6 +187,76 @@ preflight() {
     printf 'fallback kernel preflight ok\n'
 }
 
+remote_preflight() {
+    refuse_local_build
+    ssh "$RG_KERNEL_REMOTE" \
+        RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
+        RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
+        bash -s <<'REMOTE'
+set -euo pipefail
+
+select_container_engine() {
+    case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
+        auto)
+            for candidate in docker podman; do
+                if command -v "$candidate" >/dev/null 2>&1 \
+                    && "$candidate" info >/dev/null 2>&1; then
+                    printf '%s\n' "$candidate"
+                    return 0
+                fi
+            done
+            ;;
+        docker|podman)
+            if command -v "$RG_KERNEL_CONTAINER_ENGINE" >/dev/null 2>&1 \
+                && "$RG_KERNEL_CONTAINER_ENGINE" info >/dev/null 2>&1; then
+                printf '%s\n' "$RG_KERNEL_CONTAINER_ENGINE"
+                return 0
+            fi
+            ;;
+    esac
+    return 1
+}
+
+missing=0
+for cmd in bash git rsync sed find awk; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        printf 'missing remote command: %s\n' "$cmd" >&2
+        missing=1
+    fi
+done
+
+if [ "$missing" -ne 0 ]; then
+    exit 1
+fi
+
+if command -v makepkg >/dev/null 2>&1; then
+    if ! command -v sudo >/dev/null 2>&1; then
+        printf 'missing remote command: sudo\n' >&2
+        exit 1
+    fi
+    if ! sudo -n true >/dev/null 2>&1; then
+        cat >&2 <<'MSG'
+remote sudo is not noninteractive; native makepkg --syncdeps may fail if build
+dependencies are missing. Install dependencies on the remote or allow
+noninteractive sudo for pacman dependency installation.
+MSG
+    fi
+    printf 'remote kernel build preflight ok (native makepkg)\n'
+    exit 0
+fi
+
+engine=$(select_container_engine) || {
+    cat >&2 <<'MSG'
+remote makepkg is missing and no usable Docker/Podman engine is available.
+MSG
+    exit 1
+}
+
+printf 'remote kernel build preflight ok (container: %s, image: %s)\n' \
+    "$engine" "$RG_KERNEL_CONTAINER_IMAGE"
+REMOTE
+}
+
 sync_patch_queue() {
     local lane=$1
     local local_patch_dir="$RG_KERNEL_PATCH_ROOT/$lane"
@@ -208,6 +279,8 @@ remote_build() {
         RG_KERNEL_BASE_URL="$base_url" \
         RG_KERNEL_PACKAGE_BASE="$package_base" \
         RG_KERNEL_MAKEPKG_ENV="$makepkg_env" \
+        RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
+        RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
         RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
         bash -s <<'REMOTE'
 set -euo pipefail
@@ -217,8 +290,38 @@ fail() {
     exit 1
 }
 
+select_container_engine() {
+    case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
+        auto)
+            for candidate in docker podman; do
+                if command -v "$candidate" >/dev/null 2>&1 \
+                    && "$candidate" info >/dev/null 2>&1; then
+                    printf '%s\n' "$candidate"
+                    return 0
+                fi
+            done
+            ;;
+        docker|podman)
+            if command -v "$RG_KERNEL_CONTAINER_ENGINE" >/dev/null 2>&1 \
+                && "$RG_KERNEL_CONTAINER_ENGINE" info >/dev/null 2>&1; then
+                printf '%s\n' "$RG_KERNEL_CONTAINER_ENGINE"
+                return 0
+            fi
+            ;;
+        "")
+            ;;
+        *)
+            fail "unknown container engine '$RG_KERNEL_CONTAINER_ENGINE'"
+            ;;
+    esac
+    return 1
+}
+
 command -v git >/dev/null 2>&1 || fail "git is not installed"
-command -v makepkg >/dev/null 2>&1 || fail "makepkg is not installed"
+if ! command -v makepkg >/dev/null 2>&1; then
+    select_container_engine >/dev/null \
+        || fail "makepkg is not installed and no usable container engine was found"
+fi
 
 src_root="$RG_KERNEL_REMOTE_ROOT/src"
 pkg_root="$RG_KERNEL_REMOTE_ROOT/pkg"
@@ -262,8 +365,7 @@ rewrite_kernel_pkgbase() {
 rewrite_kernel_pkgbase
 find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -delete
 
-(
-    cd "$lane_dir"
+run_makepkg_command() {
     if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
         read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"
         env "${makepkg_env_args[@]}" \
@@ -271,7 +373,64 @@ find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -delete
     else
         makepkg --syncdeps --noconfirm --cleanbuild --clean --log
     fi
-)
+}
+
+run_native_makepkg() {
+    (
+        cd "$lane_dir"
+        run_makepkg_command
+    )
+}
+
+run_container_makepkg() {
+    local engine uid gid
+    engine=$(select_container_engine) \
+        || fail "makepkg is not installed and no usable container engine was found"
+    uid=$(id -u)
+    gid=$(id -g)
+
+    "$engine" run --rm \
+        -e "HOST_UID=$uid" \
+        -e "HOST_GID=$gid" \
+        -e "RG_KERNEL_REMOTE_ROOT=$RG_KERNEL_REMOTE_ROOT" \
+        -e "RG_KERNEL_LANE=$RG_KERNEL_LANE" \
+        -e "RG_KERNEL_MAKEPKG_ENV=$RG_KERNEL_MAKEPKG_ENV" \
+        -v "$RG_KERNEL_REMOTE_ROOT:$RG_KERNEL_REMOTE_ROOT" \
+        -w "$lane_dir" \
+        "$RG_KERNEL_CONTAINER_IMAGE" \
+        bash -lc '
+set -euo pipefail
+
+pacman -Syu --needed --noconfirm sudo git rsync base-devel
+
+if ! getent group "$HOST_GID" >/dev/null 2>&1; then
+    groupadd -g "$HOST_GID" builder
+fi
+group_name=$(getent group "$HOST_GID" | cut -d: -f1)
+
+if ! id -u builder >/dev/null 2>&1; then
+    useradd -m -u "$HOST_UID" -g "$group_name" builder
+fi
+
+printf "builder ALL=(ALL) NOPASSWD: ALL\n" >/etc/sudoers.d/builder
+chmod 0440 /etc/sudoers.d/builder
+chown -R "$HOST_UID:$HOST_GID" "$RG_KERNEL_REMOTE_ROOT"
+
+if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
+    read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"
+    sudo -u builder -H env "${makepkg_env_args[@]}" \
+        makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+else
+    sudo -u builder -H makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+fi
+'
+}
+
+if command -v makepkg >/dev/null 2>&1; then
+    run_native_makepkg
+else
+    run_container_makepkg
+fi
 
 find "$lane_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -exec cp -f {} "$pkg_dir/" \;
 find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -print
@@ -323,6 +482,9 @@ case "$cmd" in
         ;;
     preflight)
         preflight
+        ;;
+    remote-preflight)
+        remote_preflight
         ;;
     package-base)
         validate_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"

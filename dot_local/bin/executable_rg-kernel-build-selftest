@@ -38,9 +38,25 @@ rg -q '^RG_KERNEL_KERNEL_LANES=.*ck-muqss' "$policy" \
     || fail "kernel build policy does not mark ck-muqss as a kernel lane"
 rg -q '^RG_KERNEL_MAKEPKG_ENV_cachy_bore=.*_cpusched=bore' "$policy" \
     || fail "cachy-bore lane does not select the BORE scheduler"
+rg -q '^RG_KERNEL_CONTAINER_IMAGE=docker\.io/archlinux:base-devel$' "$policy" \
+    || fail "kernel build policy does not define an Arch base-devel container"
+rg -q '^RG_KERNEL_CONTAINER_ENGINE=auto$' "$policy" \
+    || fail "kernel build policy does not auto-detect a container engine"
 
 rg -q 'refuse_local_build' "$launcher" \
     || fail "launcher does not expose a local-build refusal guard"
+rg -q 'remote_preflight' "$launcher" \
+    || fail "launcher does not expose a remote preflight"
+rg -q 'remote-preflight' "$launcher" \
+    || fail "launcher does not route the remote preflight command"
+rg -q 'select_container_engine' "$launcher" \
+    || fail "launcher does not select a container engine"
+rg -q 'run_container_makepkg' "$launcher" \
+    || fail "launcher does not build through an Arch container"
+rg -q 'RG_KERNEL_CONTAINER_IMAGE' "$launcher" \
+    || fail "launcher does not pass a container image to remote builds"
+rg -q 'command -v "\$cmd"' "$launcher" \
+    || fail "remote preflight does not check required commands"
 rg -q 'rewrite_kernel_pkgbase' "$launcher" \
     || fail "launcher does not isolate kernel package bases"
 rg -q 'RG_KERNEL_PACKAGE_BASE' "$launcher" \
