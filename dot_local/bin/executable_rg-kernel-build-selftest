@@ -24,8 +24,10 @@ rg -q '^RG_KERNEL_LANES=.*cachy-bore' "$policy" \
     || fail "kernel build policy is missing cachy-bore lane"
 rg -q '^RG_KERNEL_LANES=.*ck-muqss' "$policy" \
     || fail "kernel build policy is missing ck-muqss lane"
-rg -q '^RG_KERNEL_REQUIRED_FALLBACKS=.*linux-lts' "$policy" \
-    || fail "kernel build policy does not require linux-lts fallback"
+rg -q '^RG_KERNEL_REQUIRED_FALLBACKS="linux"$' "$policy" \
+    || fail "kernel build policy must require the stock linux fallback"
+rg -q '^RG_KERNEL_RECOMMENDED_FALLBACKS=.*linux-lts' "$policy" \
+    || fail "kernel build policy does not recommend linux-lts fallback"
 
 rg -q 'refuse_local_build' "$launcher" \
     || fail "launcher does not expose a local-build refusal guard"

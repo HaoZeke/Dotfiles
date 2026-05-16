@@ -6,9 +6,11 @@
 
 * Laptop policy
 
-The laptop keeps the stock Arch kernel plus =linux-lts= as bootable fallback
-entries. Custom work lands in one experimental slot at a time through package
-artifacts built on =rg.cosmolab=.
+The laptop keeps the stock Arch =linux= kernel as the required bootable
+fallback. =linux-lts= is recommended as an extra rollback branch because it
+does not track the same fast-moving kernel series, but the working stock
+kernel is the install gate for custom artifacts. Custom work lands in one
+experimental slot at a time through package artifacts built on =rg.cosmolab=.
 
 The first laptop lane is =arch-zen=. It stays close to maintained Arch
 packaging while giving an interactive desktop baseline. =sched-ext= builds the
@@ -28,4 +30,4 @@ rg-kernel-build install-command arch-zen
 #+end_src
 
 Kernel packages are installed manually with the printed =pacman -U= command
-after fallback boot entries are present.
+after the required fallback boot entry is present.
