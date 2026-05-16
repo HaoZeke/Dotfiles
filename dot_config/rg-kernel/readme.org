@@ -29,6 +29,8 @@ state is far behind the laptop's kernel series.
 #+begin_src shell
 rg-kernel-build list
 rg-kernel-build preflight
+rg-kernel-build remote-preflight
+rg-kernel-build prepare arch-zen
 rg-kernel-build build arch-zen
 rg-kernel-build build-all
 rg-kernel-build install-command arch-zen

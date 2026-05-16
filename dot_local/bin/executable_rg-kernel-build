@@ -32,6 +32,7 @@ usage:
   rg-kernel-build preflight
   rg-kernel-build remote-preflight
   rg-kernel-build package-base [lane]
+  rg-kernel-build prepare [lane]
   rg-kernel-build build [lane]
   rg-kernel-build build-all
   rg-kernel-build install-command [lane]
@@ -268,6 +269,86 @@ sync_patch_queue() {
     fi
 }
 
+remote_prepare() {
+    local lane=$1
+    local base_url=$2
+    local package_base=$3
+
+    ssh "$RG_KERNEL_REMOTE" \
+        RG_KERNEL_LANE="$lane" \
+        RG_KERNEL_BASE_URL="$base_url" \
+        RG_KERNEL_PACKAGE_BASE="$package_base" \
+        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
+        bash -s <<'REMOTE'
+set -euo pipefail
+
+fail() {
+    printf 'remote rg-kernel-build: %s\n' "$*" >&2
+    exit 1
+}
+
+case "$RG_KERNEL_REMOTE_ROOT" in
+    /*) ;;
+    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
+esac
+
+command -v git >/dev/null 2>&1 || fail "git is not installed"
+
+src_root="$RG_KERNEL_REMOTE_ROOT/src"
+lane_dir="$src_root/$RG_KERNEL_LANE"
+patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$RG_KERNEL_LANE"
+
+mkdir -p "$src_root" "$patch_dir"
+
+if [ ! -d "$lane_dir/.git" ]; then
+    git clone "$RG_KERNEL_BASE_URL" "$lane_dir"
+fi
+
+default_branch=$(git -C "$lane_dir" remote show origin | awk '/HEAD branch/ {print $NF}')
+if [ -z "$default_branch" ]; then
+    fail "could not determine default branch for $RG_KERNEL_BASE_URL"
+fi
+
+git -C "$lane_dir" fetch origin "$default_branch" --tags
+git -C "$lane_dir" reset --hard "origin/$default_branch"
+git -C "$lane_dir" clean -fdx
+
+while IFS= read -r patch; do
+    [ -n "$patch" ] || continue
+    git -C "$lane_dir" am "$patch"
+done < <(find "$patch_dir" -maxdepth 1 -type f -name '*.patch' | sort)
+
+if [ ! -r "$lane_dir/PKGBUILD" ]; then
+    fail "$RG_KERNEL_LANE has no PKGBUILD at $lane_dir"
+fi
+
+if [ -n "$RG_KERNEL_PACKAGE_BASE" ]; then
+    grep -qE '^pkgbase=' "$lane_dir/PKGBUILD" \
+        || fail "$RG_KERNEL_LANE PKGBUILD has no pkgbase assignment"
+    sed -i -E "s|^pkgbase=.*|pkgbase=$RG_KERNEL_PACKAGE_BASE|" "$lane_dir/PKGBUILD"
+    grep -qE "^pkgbase=$RG_KERNEL_PACKAGE_BASE$" "$lane_dir/PKGBUILD" \
+        || fail "$RG_KERNEL_LANE package-base rewrite failed"
+fi
+
+printf 'prepared %s at %s\n' "$RG_KERNEL_LANE" "$lane_dir"
+grep -E '^(pkgbase|pkgname)=' "$lane_dir/PKGBUILD" | head -n 4
+REMOTE
+}
+
+prepare_lane() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    local base_url package_base
+
+    validate_lane "$lane"
+    refuse_local_build
+    base_url=$(lane_base_url "$lane")
+    [ -n "$base_url" ] || fail "lane '$lane' has no base repository"
+    package_base=$(lane_package_base "$lane")
+
+    sync_patch_queue "$lane"
+    remote_prepare "$lane" "$base_url" "$package_base"
+}
+
 remote_build() {
     local lane=$1
     local base_url=$2
@@ -289,6 +370,11 @@ fail() {
     printf 'remote rg-kernel-build: %s\n' "$*" >&2
     exit 1
 }
+
+case "$RG_KERNEL_REMOTE_ROOT" in
+    /*) ;;
+    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
+esac
 
 select_container_engine() {
     case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
@@ -489,6 +575,9 @@ case "$cmd" in
     package-base)
         validate_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
         lane_package_base "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        ;;
+    prepare)
+        prepare_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
         ;;
     build)
         build_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"

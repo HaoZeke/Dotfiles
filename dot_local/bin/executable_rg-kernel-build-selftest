@@ -16,6 +16,8 @@ test -r "$policy" || fail "missing rg-kernel build lane policy"
 
 rg -q '^RG_KERNEL_REMOTE=rg\.cosmolab$' "$policy" \
     || fail "kernel build policy does not target rg.cosmolab"
+rg -q '^RG_KERNEL_REMOTE_ROOT=\.cache/rg-kernel-build$' "$policy" \
+    || fail "kernel build remote root must be relative to the remote home"
 rg -q '^RG_KERNEL_LANES=.*arch-zen' "$policy" \
     || fail "kernel build policy is missing arch-zen lane"
 rg -q '^RG_KERNEL_LANES=.*sched-ext' "$policy" \
@@ -49,6 +51,10 @@ rg -q 'remote_preflight' "$launcher" \
     || fail "launcher does not expose a remote preflight"
 rg -q 'remote-preflight' "$launcher" \
     || fail "launcher does not route the remote preflight command"
+rg -q 'remote_prepare' "$launcher" \
+    || fail "launcher does not expose a remote prepare step"
+rg -Fq 'prepare)' "$launcher" \
+    || fail "launcher does not route the prepare command"
 rg -q 'select_container_engine' "$launcher" \
     || fail "launcher does not select a container engine"
 rg -q 'run_container_makepkg' "$launcher" \
