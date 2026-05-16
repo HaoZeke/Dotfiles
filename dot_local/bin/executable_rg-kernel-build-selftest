@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+launcher="$repo/dot_local/bin/executable_rg-kernel-build"
+policy="$repo/dot_config/rg-kernel/build-lanes.env"
+
+test -r "$launcher" || fail "missing rg-kernel-build launcher"
+test -r "$policy" || fail "missing rg-kernel build lane policy"
+
+rg -q '^RG_KERNEL_REMOTE=rg\.cosmolab$' "$policy" \
+    || fail "kernel build policy does not target rg.cosmolab"
+rg -q '^RG_KERNEL_LANES=.*arch-zen' "$policy" \
+    || fail "kernel build policy is missing arch-zen lane"
+rg -q '^RG_KERNEL_LANES=.*sched-ext' "$policy" \
+    || fail "kernel build policy is missing sched-ext lane"
+rg -q '^RG_KERNEL_LANES=.*cachy-bore' "$policy" \
+    || fail "kernel build policy is missing cachy-bore lane"
+rg -q '^RG_KERNEL_LANES=.*ck-muqss' "$policy" \
+    || fail "kernel build policy is missing ck-muqss lane"
+rg -q '^RG_KERNEL_REQUIRED_FALLBACKS=.*linux-lts' "$policy" \
+    || fail "kernel build policy does not require linux-lts fallback"
+
+rg -q 'refuse_local_build' "$launcher" \
+    || fail "launcher does not expose a local-build refusal guard"
+rg -q 'rg\.cosmolab' "$launcher" \
+    || fail "launcher does not route work to rg.cosmolab"
+rg -q 'ssh "\$RG_KERNEL_REMOTE"' "$launcher" \
+    || fail "launcher does not execute the build over ssh"
+rg -q 'makepkg --syncdeps --noconfirm' "$launcher" \
+    || fail "launcher does not use makepkg for pacman artifacts"
+rg -q 'rsync -az' "$launcher" \
+    || fail "launcher does not sync artifacts back with rsync"
+rg -q 'pacman -U' "$launcher" \
+    || fail "launcher does not print pacman install guidance"
+
+if rg -n 'makepkg .*--install|-i([^[:alnum:]_-]|$)' "$launcher"; then
+    fail "launcher must not install kernel packages during build"
+fi
+
+printf 'ok\n'
