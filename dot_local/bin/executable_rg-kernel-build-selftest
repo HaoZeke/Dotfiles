@@ -40,6 +40,24 @@ rg -q 'rsync -az' "$launcher" \
 rg -q 'pacman -U' "$launcher" \
     || fail "launcher does not print pacman install guidance"
 
+list_output=$(RG_KERNEL_POLICY="$policy" "$launcher" list)
+case "$list_output" in
+    *'arch-zen -> https://gitlab.archlinux.org/archlinux/packaging/packages/linux-zen.git'*)
+        ;;
+    *)
+        printf '%s\n' "$list_output" >&2
+        fail "launcher list does not resolve arch-zen base repository"
+        ;;
+esac
+case "$list_output" in
+    *'sched-ext -> https://gitlab.archlinux.org/archlinux/packaging/packages/scx-scheds.git'*)
+        ;;
+    *)
+        printf '%s\n' "$list_output" >&2
+        fail "launcher list does not resolve sched-ext tool repository"
+        ;;
+esac
+
 if rg -n 'makepkg .*--install|-i([^[:alnum:]_-]|$)' "$launcher"; then
     fail "launcher must not install kernel packages during build"
 fi

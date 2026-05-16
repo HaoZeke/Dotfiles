@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-kernel-build).
+
+set -euo pipefail
+
+policy_file=${RG_KERNEL_POLICY:-"$HOME/.config/rg-kernel/build-lanes.env"}
+if [ ! -r "$policy_file" ]; then
+    source_dir=${CHEZMOI_SOURCE_DIR:-"$HOME/.local/share/chezmoi"}
+    source_policy="$source_dir/dot_config/rg-kernel/build-lanes.env"
+    if [ -r "$source_policy" ]; then
+        policy_file=$source_policy
+    fi
+fi
+
+if [ ! -r "$policy_file" ]; then
+    printf 'rg-kernel-build: missing policy file: %s\n' "$policy_file" >&2
+    exit 1
+fi
+
+# shellcheck source=/dev/null
+source "$policy_file"
+
+fail() {
+    printf 'rg-kernel-build: %s\n' "$*" >&2
+    exit 1
+}
+
+usage() {
+    cat <<'MSG'
+usage:
+  rg-kernel-build list
+  rg-kernel-build preflight
+  rg-kernel-build build [lane]
+  rg-kernel-build build-all
+  rg-kernel-build install-command [lane]
+
+Build lanes are defined in ~/.config/rg-kernel/build-lanes.env.
+MSG
+}
+
+lane_key() {
+    printf '%s' "$1" | tr -- '-.' '__'
+}
+
+lane_base_url() {
+    local lane=$1
+    local key var
+    key=$(lane_key "$lane")
+    var="RG_KERNEL_BASE_${key}"
+    printf '%s' "${!var:-}"
+}
+
+validate_lane() {
+    local wanted=${1:-}
+    local lane
+    for lane in $RG_KERNEL_LANES; do
+        if [ "$lane" = "$wanted" ]; then
+            return 0
+        fi
+    done
+    fail "unknown lane '$wanted' (known: $RG_KERNEL_LANES)"
+}
+
+refuse_local_build() {
+    local short_host
+    short_host=$(hostname -s 2>/dev/null || hostname)
+    case "$RG_KERNEL_REMOTE" in
+        ""|localhost|127.0.0.1|"$short_host")
+            fail "refusing local kernel build; set RG_KERNEL_REMOTE=rg.cosmolab"
+            ;;
+    esac
+}
+
+list_lanes() {
+    local lane base marker
+    printf 'remote: %s\n' "$RG_KERNEL_REMOTE"
+    printf 'artifacts: %s\n' "$RG_KERNEL_ARTIFACT_DIR"
+    printf 'recommended laptop lane: %s\n\n' "$RG_KERNEL_RECOMMENDED_LAPTOP_LANE"
+    for lane in $RG_KERNEL_LANES; do
+        marker=' '
+        if [ "$lane" = "$RG_KERNEL_RECOMMENDED_LAPTOP_LANE" ]; then
+            marker='*'
+        fi
+        base=$(lane_base_url "$lane")
+        printf '%s %s -> %s\n' "$marker" "$lane" "$base"
+    done
+}
+
+missing_fallbacks() {
+    local pkg missing=0
+    if ! command -v pacman >/dev/null 2>&1; then
+        return 0
+    fi
+    for pkg in $RG_KERNEL_REQUIRED_FALLBACKS; do
+        if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
+            printf '%s\n' "$pkg"
+            missing=1
+        fi
+    done
+    return "$missing"
+}
+
+missing_boot_images() {
+    local pkg image missing=0
+    for pkg in $RG_KERNEL_REQUIRED_FALLBACKS; do
+        case "$pkg" in
+            linux) image=/boot/vmlinuz-linux ;;
+            linux-lts) image=/boot/vmlinuz-linux-lts ;;
+            linux-zen) image=/boot/vmlinuz-linux-zen ;;
+            *) continue ;;
+        esac
+        if [ ! -e "$image" ]; then
+            printf '%s\n' "$image"
+            missing=1
+        fi
+    done
+    return "$missing"
+}
+
+preflight() {
+    local missing_pkg missing_image
+    missing_pkg=$(missing_fallbacks || true)
+    missing_image=$(missing_boot_images || true)
+
+    if [ -n "$missing_pkg" ]; then
+        printf 'missing fallback packages:\n%s\n' "$missing_pkg" >&2
+        printf 'install fallback packages with: sudo pacman -S --needed %s\n' \
+            "$RG_KERNEL_REQUIRED_FALLBACKS" >&2
+    fi
+    if [ -n "$missing_image" ]; then
+        printf 'missing fallback boot images:\n%s\n' "$missing_image" >&2
+    fi
+    if [ -n "$missing_pkg$missing_image" ]; then
+        return 1
+    fi
+    printf 'fallback kernel preflight ok\n'
+}
+
+sync_patch_queue() {
+    local lane=$1
+    local local_patch_dir="$RG_KERNEL_PATCH_ROOT/$lane"
+    local remote_patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$lane"
+
+    ssh "$RG_KERNEL_REMOTE" "mkdir -p '$remote_patch_dir'"
+    if [ -d "$local_patch_dir" ]; then
+        rsync -az "$local_patch_dir/" "$RG_KERNEL_REMOTE:$remote_patch_dir/"
+    fi
+}
+
+remote_build() {
+    local lane=$1
+    local base_url=$2
+
+    ssh "$RG_KERNEL_REMOTE" \
+        RG_KERNEL_LANE="$lane" \
+        RG_KERNEL_BASE_URL="$base_url" \
+        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
+        bash -s <<'REMOTE'
+set -euo pipefail
+
+fail() {
+    printf 'remote rg-kernel-build: %s\n' "$*" >&2
+    exit 1
+}
+
+command -v git >/dev/null 2>&1 || fail "git is not installed"
+command -v makepkg >/dev/null 2>&1 || fail "makepkg is not installed"
+
+src_root="$RG_KERNEL_REMOTE_ROOT/src"
+pkg_root="$RG_KERNEL_REMOTE_ROOT/pkg"
+lane_dir="$src_root/$RG_KERNEL_LANE"
+pkg_dir="$pkg_root/$RG_KERNEL_LANE"
+patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$RG_KERNEL_LANE"
+
+mkdir -p "$src_root" "$pkg_dir" "$patch_dir"
+
+if [ ! -d "$lane_dir/.git" ]; then
+    git clone "$RG_KERNEL_BASE_URL" "$lane_dir"
+fi
+
+default_branch=$(git -C "$lane_dir" remote show origin | awk '/HEAD branch/ {print $NF}')
+if [ -z "$default_branch" ]; then
+    fail "could not determine default branch for $RG_KERNEL_BASE_URL"
+fi
+
+git -C "$lane_dir" fetch origin "$default_branch" --tags
+git -C "$lane_dir" reset --hard "origin/$default_branch"
+git -C "$lane_dir" clean -fdx
+
+while IFS= read -r patch; do
+    [ -n "$patch" ] || continue
+    git -C "$lane_dir" am "$patch"
+done < <(find "$patch_dir" -maxdepth 1 -type f -name '*.patch' | sort)
+
+if [ ! -r "$lane_dir/PKGBUILD" ]; then
+    fail "$RG_KERNEL_LANE has no PKGBUILD at $lane_dir"
+fi
+
+(
+    cd "$lane_dir"
+    makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+)
+
+find "$lane_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -exec cp -f {} "$pkg_dir/" \;
+find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -print
+REMOTE
+}
+
+print_install_command() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    validate_lane "$lane"
+    preflight >/dev/null
+    install_command_text "$lane"
+}
+
+install_command_text() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    local lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
+    printf 'sudo pacman -U %s/*.pkg.tar.zst\n' "$lane_artifacts"
+}
+
+build_lane() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    local base_url
+
+    validate_lane "$lane"
+    refuse_local_build
+    base_url=$(lane_base_url "$lane")
+    [ -n "$base_url" ] || fail "lane '$lane' has no base repository"
+
+    mkdir -p "$RG_KERNEL_ARTIFACT_DIR/$lane"
+    sync_patch_queue "$lane"
+    remote_build "$lane" "$base_url"
+    rsync -az "$RG_KERNEL_REMOTE:$RG_KERNEL_REMOTE_ROOT/pkg/$lane/" \
+        "$RG_KERNEL_ARTIFACT_DIR/$lane/"
+    printf '\nartifacts fetched to %s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$lane"
+    if preflight >/dev/null 2>&1; then
+        printf 'install after fallback preflight: '
+    else
+        printf 'fallback preflight is not green; install fallbacks before: '
+    fi
+    install_command_text "$lane"
+}
+
+cmd=${1:-list}
+case "$cmd" in
+    list)
+        list_lanes
+        ;;
+    preflight)
+        preflight
+        ;;
+    build)
+        build_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        ;;
+    build-all)
+        for lane in $RG_KERNEL_LANES; do
+            build_lane "$lane"
+        done
+        ;;
+    install-command)
+        print_install_command "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        ;;
+    -h|--help|help)
+        usage
+        ;;
+    *)
+        usage >&2
+        fail "unknown command '$cmd'"
+        ;;
+esac

@@ -1,0 +1,31 @@
+#+TITLE: Kernel Build Lanes
+#+FILETAGS: :dotfiles:linux:kernel:
+#+DATE: 2026-05-16
+#+DESCRIPTION: Policy for building custom Linux kernel packages on rg.cosmolab while keeping laptop rollback entries.
+#+STATUS: active
+
+* Laptop policy
+
+The laptop keeps the stock Arch kernel plus =linux-lts= as bootable fallback
+entries. Custom work lands in one experimental slot at a time through package
+artifacts built on =rg.cosmolab=.
+
+The first laptop lane is =arch-zen=. It stays close to maintained Arch
+packaging while giving an interactive desktop baseline. =sched-ext= builds the
+=scx-scheds= scheduler tools and keeps the stock kernel as a fallback-capable
+host for BPF schedulers. =cachy-bore= is useful for performance comparison
+once the package lane is stable. =ck-muqss= is kept as a revival lane because
+the public package state is far behind the laptop's kernel series.
+
+* Commands
+
+#+begin_src shell
+rg-kernel-build list
+rg-kernel-build preflight
+rg-kernel-build build arch-zen
+rg-kernel-build build-all
+rg-kernel-build install-command arch-zen
+#+end_src
+
+Kernel packages are installed manually with the printed =pacman -U= command
+after fallback boot entries are present.
