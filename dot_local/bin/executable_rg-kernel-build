@@ -461,9 +461,28 @@ run_makepkg_command() {
     fi
 }
 
+import_validpgpkeys() {
+    local keys=()
+    local server
+
+    # shellcheck source=/dev/null
+    mapfile -t keys < <(
+        bash -c 'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'
+    )
+    [ "${#keys[@]}" -gt 0 ] || return 0
+
+    for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
+        if gpg --batch --keyserver "$server" --recv-keys "${keys[@]}"; then
+            return 0
+        fi
+    done
+    fail "could not import PKGBUILD signing keys: ${keys[*]}"
+}
+
 run_native_makepkg() {
     (
         cd "$lane_dir"
+        import_validpgpkeys
         run_makepkg_command
     )
 }
@@ -487,7 +506,7 @@ run_container_makepkg() {
         bash -lc '
 set -euo pipefail
 
-pacman -Syu --needed --noconfirm sudo git rsync base-devel
+pacman -Syu --needed --noconfirm sudo git rsync gnupg base-devel
 
 if ! getent group "$HOST_GID" >/dev/null 2>&1; then
     groupadd -g "$HOST_GID" builder
@@ -501,6 +520,28 @@ fi
 printf "builder ALL=(ALL) NOPASSWD: ALL\n" >/etc/sudoers.d/builder
 chmod 0440 /etc/sudoers.d/builder
 chown -R "$HOST_UID:$HOST_GID" "$RG_KERNEL_REMOTE_ROOT"
+
+import_validpgpkeys() {
+    local keys=()
+    local server
+
+    mapfile -t keys < <(
+        sudo -u builder -H bash -c \
+            '"'"'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'"'"'
+    )
+    [ "${#keys[@]}" -gt 0 ] || return 0
+
+    for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
+        if sudo -u builder -H gpg --batch --keyserver "$server" \
+            --recv-keys "${keys[@]}"; then
+            return 0
+        fi
+    done
+    printf "could not import PKGBUILD signing keys: %s\n" "${keys[*]}" >&2
+    return 1
+}
+
+import_validpgpkeys
 
 if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
     read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"

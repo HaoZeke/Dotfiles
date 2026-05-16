@@ -59,6 +59,10 @@ rg -q 'select_container_engine' "$launcher" \
     || fail "launcher does not select a container engine"
 rg -q 'run_container_makepkg' "$launcher" \
     || fail "launcher does not build through an Arch container"
+rg -q 'import_validpgpkeys' "$launcher" \
+    || fail "launcher does not import PKGBUILD signing keys"
+rg -q 'gpg --batch --keyserver' "$launcher" \
+    || fail "launcher does not import signing keys from a keyserver"
 rg -q 'RG_KERNEL_CONTAINER_IMAGE' "$launcher" \
     || fail "launcher does not pass a container image to remote builds"
 rg -q 'command -v "\$cmd"' "$launcher" \
