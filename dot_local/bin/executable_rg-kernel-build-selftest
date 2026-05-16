@@ -28,9 +28,23 @@ rg -q '^RG_KERNEL_REQUIRED_FALLBACKS="linux"$' "$policy" \
     || fail "kernel build policy must require the stock linux fallback"
 rg -q '^RG_KERNEL_RECOMMENDED_FALLBACKS=.*linux-lts' "$policy" \
     || fail "kernel build policy does not recommend linux-lts fallback"
+rg -q '^RG_KERNEL_PACKAGE_PREFIX=linux-rg$' "$policy" \
+    || fail "kernel build policy does not isolate custom package names"
+rg -q '^RG_KERNEL_KERNEL_LANES=.*arch-zen' "$policy" \
+    || fail "kernel build policy does not mark arch-zen as a kernel lane"
+rg -q '^RG_KERNEL_KERNEL_LANES=.*cachy-bore' "$policy" \
+    || fail "kernel build policy does not mark cachy-bore as a kernel lane"
+rg -q '^RG_KERNEL_KERNEL_LANES=.*ck-muqss' "$policy" \
+    || fail "kernel build policy does not mark ck-muqss as a kernel lane"
+rg -q '^RG_KERNEL_MAKEPKG_ENV_cachy_bore=.*_cpusched=bore' "$policy" \
+    || fail "cachy-bore lane does not select the BORE scheduler"
 
 rg -q 'refuse_local_build' "$launcher" \
     || fail "launcher does not expose a local-build refusal guard"
+rg -q 'rewrite_kernel_pkgbase' "$launcher" \
+    || fail "launcher does not isolate kernel package bases"
+rg -q 'RG_KERNEL_PACKAGE_BASE' "$launcher" \
+    || fail "launcher does not pass isolated package base to remote builds"
 rg -q 'rg\.cosmolab' "$launcher" \
     || fail "launcher does not route work to rg.cosmolab"
 rg -q 'ssh "\$RG_KERNEL_REMOTE"' "$launcher" \
@@ -60,8 +74,15 @@ case "$list_output" in
         ;;
 esac
 
-if rg -n 'makepkg .*--install|-i([^[:alnum:]_-]|$)' "$launcher"; then
+if rg -n 'makepkg[[:space:]][^;&|]*--install|makepkg[[:space:]][^;&|]*[[:space:]]-i([^[:alnum:]_-]|$)' "$launcher"; then
     fail "launcher must not install kernel packages during build"
 fi
+
+iso_output=$(RG_KERNEL_POLICY="$policy" "$launcher" package-base arch-zen)
+test "$iso_output" = "linux-rg-arch-zen" \
+    || fail "arch-zen package base is not isolated"
+tool_output=$(RG_KERNEL_POLICY="$policy" "$launcher" package-base sched-ext)
+test -z "$tool_output" \
+    || fail "sched-ext tool lane should not be renamed as a kernel"
 
 printf 'ok\n'

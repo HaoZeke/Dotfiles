@@ -30,6 +30,7 @@ usage() {
 usage:
   rg-kernel-build list
   rg-kernel-build preflight
+  rg-kernel-build package-base [lane]
   rg-kernel-build build [lane]
   rg-kernel-build build-all
   rg-kernel-build install-command [lane]
@@ -48,6 +49,32 @@ lane_base_url() {
     key=$(lane_key "$lane")
     var="RG_KERNEL_BASE_${key}"
     printf '%s' "${!var:-}"
+}
+
+lane_makepkg_env() {
+    local lane=$1
+    local key var
+    key=$(lane_key "$lane")
+    var="RG_KERNEL_MAKEPKG_ENV_${key}"
+    printf '%s' "${!var:-}"
+}
+
+is_kernel_lane() {
+    local wanted=$1
+    local lane
+    for lane in ${RG_KERNEL_KERNEL_LANES:-}; do
+        if [ "$lane" = "$wanted" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+lane_package_base() {
+    local lane=$1
+    if is_kernel_lane "$lane"; then
+        printf '%s-%s\n' "$RG_KERNEL_PACKAGE_PREFIX" "$lane"
+    fi
 }
 
 validate_lane() {
@@ -173,10 +200,14 @@ sync_patch_queue() {
 remote_build() {
     local lane=$1
     local base_url=$2
+    local package_base=$3
+    local makepkg_env=$4
 
     ssh "$RG_KERNEL_REMOTE" \
         RG_KERNEL_LANE="$lane" \
         RG_KERNEL_BASE_URL="$base_url" \
+        RG_KERNEL_PACKAGE_BASE="$package_base" \
+        RG_KERNEL_MAKEPKG_ENV="$makepkg_env" \
         RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
         bash -s <<'REMOTE'
 set -euo pipefail
@@ -219,9 +250,27 @@ if [ ! -r "$lane_dir/PKGBUILD" ]; then
     fail "$RG_KERNEL_LANE has no PKGBUILD at $lane_dir"
 fi
 
+rewrite_kernel_pkgbase() {
+    [ -n "$RG_KERNEL_PACKAGE_BASE" ] || return 0
+    grep -qE '^pkgbase=' "$lane_dir/PKGBUILD" \
+        || fail "$RG_KERNEL_LANE PKGBUILD has no pkgbase assignment"
+    sed -i -E "s|^pkgbase=.*|pkgbase=$RG_KERNEL_PACKAGE_BASE|" "$lane_dir/PKGBUILD"
+    grep -qE "^pkgbase=$RG_KERNEL_PACKAGE_BASE$" "$lane_dir/PKGBUILD" \
+        || fail "$RG_KERNEL_LANE package-base rewrite failed"
+}
+
+rewrite_kernel_pkgbase
+find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -delete
+
 (
     cd "$lane_dir"
-    makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+    if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
+        read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"
+        env "${makepkg_env_args[@]}" \
+            makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+    else
+        makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+    fi
 )
 
 find "$lane_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -exec cp -f {} "$pkg_dir/" \;
@@ -244,16 +293,18 @@ install_command_text() {
 
 build_lane() {
     local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local base_url
+    local base_url package_base makepkg_env
 
     validate_lane "$lane"
     refuse_local_build
     base_url=$(lane_base_url "$lane")
     [ -n "$base_url" ] || fail "lane '$lane' has no base repository"
+    package_base=$(lane_package_base "$lane")
+    makepkg_env=$(lane_makepkg_env "$lane")
 
     mkdir -p "$RG_KERNEL_ARTIFACT_DIR/$lane"
     sync_patch_queue "$lane"
-    remote_build "$lane" "$base_url"
+    remote_build "$lane" "$base_url" "$package_base" "$makepkg_env"
     rsync -az "$RG_KERNEL_REMOTE:$RG_KERNEL_REMOTE_ROOT/pkg/$lane/" \
         "$RG_KERNEL_ARTIFACT_DIR/$lane/"
     printf '\nartifacts fetched to %s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$lane"
@@ -272,6 +323,10 @@ case "$cmd" in
         ;;
     preflight)
         preflight
+        ;;
+    package-base)
+        validate_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        lane_package_base "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
         ;;
     build)
         build_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"

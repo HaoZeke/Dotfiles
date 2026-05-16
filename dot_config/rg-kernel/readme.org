@@ -13,11 +13,14 @@ kernel is the install gate for custom artifacts. Custom work lands in one
 experimental slot at a time through package artifacts built on =rg.cosmolab=.
 
 The first laptop lane is =arch-zen=. It stays close to maintained Arch
-packaging while giving an interactive desktop baseline. =sched-ext= builds the
-=scx-scheds= scheduler tools and keeps the stock kernel as a fallback-capable
-host for BPF schedulers. =cachy-bore= is useful for performance comparison
-once the package lane is stable. =ck-muqss= is kept as a revival lane because
-the public package state is far behind the laptop's kernel series.
+packaging while giving an interactive desktop baseline. Kernel lanes are
+renamed to =linux-rg-<lane>= package bases before =makepkg= runs, so installing
+an artifact cannot replace =linux=, =linux-lts=, =linux-zen=, or CachyOS package
+names. =sched-ext= builds the =scx-scheds= scheduler tools and keeps the stock
+kernel as a fallback-capable host for BPF schedulers. =cachy-bore= is useful
+for performance comparison once the package lane is stable. =ck-muqss= is kept
+as a revival lane because the public package state is far behind the laptop's
+kernel series.
 
 * Commands
 
