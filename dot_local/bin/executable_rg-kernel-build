@@ -512,12 +512,18 @@ run_makepkg_command() {
 
 import_validpgpkeys() {
     local keys=()
+    local filtered_keys=()
+    local key
     local server
 
     # shellcheck source=/dev/null
     mapfile -t keys < <(
         bash -c 'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'
     )
+    for key in "${keys[@]}"; do
+        [ -n "$key" ] && filtered_keys+=("$key")
+    done
+    keys=("${filtered_keys[@]}")
     [ "${#keys[@]}" -gt 0 ] || return 0
 
     for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
@@ -572,12 +578,18 @@ chown -R "$HOST_UID:$HOST_GID" "$RG_KERNEL_REMOTE_ROOT"
 
 import_validpgpkeys() {
     local keys=()
+    local filtered_keys=()
+    local key
     local server
 
     mapfile -t keys < <(
         sudo -u builder -H bash -c \
             '"'"'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'"'"'
     )
+    for key in "${keys[@]}"; do
+        [ -n "$key" ] && filtered_keys+=("$key")
+    done
+    keys=("${filtered_keys[@]}")
     [ "${#keys[@]}" -gt 0 ] || return 0
 
     for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do

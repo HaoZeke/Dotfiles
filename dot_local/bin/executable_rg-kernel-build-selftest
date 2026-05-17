@@ -67,6 +67,8 @@ rg -q 'run_container_makepkg' "$launcher" \
     || fail "launcher does not build through an Arch container"
 rg -q 'import_validpgpkeys' "$launcher" \
     || fail "launcher does not import PKGBUILD signing keys"
+rg -q 'filtered_keys' "$launcher" \
+    || fail "launcher does not ignore empty signing key entries"
 rg -q 'gpg --batch --keyserver' "$launcher" \
     || fail "launcher does not import signing keys from a keyserver"
 rg -q 'RG_KERNEL_CONTAINER_IMAGE' "$launcher" \
