@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Radhakrishnan Goswami <rgoswami@users.noreply.github.com>
+Date: Sun, 17 May 2026 08:16:00 +0000
+Subject: [PATCH] build: relax libbpf qualifier warning
+
+---
+ PKGBUILD | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/PKGBUILD b/PKGBUILD
+index 0000000..0000000 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -142,6 +142,8 @@ prepare() {
+   # in the past will no long work so remove it
+   make LLVM=$_LLVM LLVM_IAS=$_LLVM olddefconfig
+ 
++  sed -i 's/override CFLAGS += -Werror -Wall/& -Wno-error=discarded-qualifiers/' tools/lib/bpf/Makefile
++  grep -q -- '-Wno-error=discarded-qualifiers' tools/lib/bpf/Makefile
++
+   # @@@ this is a sed target for repo-ck build script
+   
+   ### Optionally load needed modules for the make localmodconfig
+-- 
+2.54.0

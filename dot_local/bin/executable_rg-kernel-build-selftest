@@ -10,9 +10,11 @@ fail() {
 
 launcher="$repo/dot_local/bin/executable_rg-kernel-build"
 policy="$repo/dot_config/rg-kernel/build-lanes.env"
+ck_patch="$repo/dot_config/rg-kernel/patches/ck-muqss/0001-relax-libbpf-qualifier-warning.patch"
 
 test -r "$launcher" || fail "missing rg-kernel-build launcher"
 test -r "$policy" || fail "missing rg-kernel build lane policy"
+test -r "$ck_patch" || fail "missing ck-muqss libbpf patch queue entry"
 
 rg -q '^RG_KERNEL_REMOTE=rg\.cosmolab$' "$policy" \
     || fail "kernel build policy does not target rg.cosmolab"
@@ -48,6 +50,8 @@ rg -q '^RG_KERNEL_CONTAINER_IMAGE=docker\.io/archlinux:base-devel$' "$policy" \
     || fail "kernel build policy does not define an Arch base-devel container"
 rg -q '^RG_KERNEL_CONTAINER_ENGINE=auto$' "$policy" \
     || fail "kernel build policy does not auto-detect a container engine"
+rg -q 'Wno-error=discarded-qualifiers' "$ck_patch" \
+    || fail "ck-muqss patch does not relax the libbpf qualifier warning"
 
 rg -q 'refuse_local_build' "$launcher" \
     || fail "launcher does not expose a local-build refusal guard"
