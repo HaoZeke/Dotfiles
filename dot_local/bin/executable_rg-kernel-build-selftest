@@ -16,8 +16,10 @@ test -r "$policy" || fail "missing rg-kernel build lane policy"
 
 rg -q '^RG_KERNEL_REMOTE=rg\.cosmolab$' "$policy" \
     || fail "kernel build policy does not target rg.cosmolab"
-rg -q '^RG_KERNEL_REMOTE_ROOT=\.cache/rg-kernel-build$' "$policy" \
-    || fail "kernel build remote root must be relative to the remote home"
+rg -q '^RG_KERNEL_REMOTE_ROOT=/scratch/goswami/rg-kernel-build$' "$policy" \
+    || fail "kernel build remote root must use cosmolab scratch storage"
+rg -q '^RG_KERNEL_MIN_REMOTE_AVAIL_GIB=40$' "$policy" \
+    || fail "kernel build policy must require enough remote free space"
 rg -q '^RG_KERNEL_LANES=.*arch-zen' "$policy" \
     || fail "kernel build policy is missing arch-zen lane"
 rg -q '^RG_KERNEL_LANES=.*sched-ext' "$policy" \
@@ -51,6 +53,10 @@ rg -q 'remote_preflight' "$launcher" \
     || fail "launcher does not expose a remote preflight"
 rg -q 'remote-preflight' "$launcher" \
     || fail "launcher does not route the remote preflight command"
+rg -q 'check_remote_space' "$launcher" \
+    || fail "launcher does not check remote build space"
+rg -q 'df -Pk' "$launcher" \
+    || fail "launcher does not inspect remote filesystem space"
 rg -q 'remote_prepare' "$launcher" \
     || fail "launcher does not expose a remote prepare step"
 rg -Fq 'prepare)' "$launcher" \

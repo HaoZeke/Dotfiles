@@ -193,8 +193,27 @@ remote_preflight() {
     ssh "$RG_KERNEL_REMOTE" \
         RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
         RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
+        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
+        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
         bash -s <<'REMOTE'
 set -euo pipefail
+
+case "$RG_KERNEL_REMOTE_ROOT" in
+    /*) ;;
+    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
+esac
+
+check_remote_space() {
+    local avail_kib min_kib
+    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
+    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
+    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
+    if [ "$avail_kib" -lt "$min_kib" ]; then
+        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
+            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
+        return 1
+    fi
+}
 
 select_container_engine() {
     case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
@@ -229,6 +248,8 @@ done
 if [ "$missing" -ne 0 ]; then
     exit 1
 fi
+
+check_remote_space
 
 if command -v makepkg >/dev/null 2>&1; then
     if ! command -v sudo >/dev/null 2>&1; then
@@ -279,6 +300,7 @@ remote_prepare() {
         RG_KERNEL_BASE_URL="$base_url" \
         RG_KERNEL_PACKAGE_BASE="$package_base" \
         RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
+        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
         bash -s <<'REMOTE'
 set -euo pipefail
 
@@ -292,7 +314,20 @@ case "$RG_KERNEL_REMOTE_ROOT" in
     *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
 esac
 
+check_remote_space() {
+    local avail_kib min_kib
+    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
+    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
+    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
+    if [ "$avail_kib" -lt "$min_kib" ]; then
+        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
+            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
+        return 1
+    fi
+}
+
 command -v git >/dev/null 2>&1 || fail "git is not installed"
+check_remote_space
 
 src_root="$RG_KERNEL_REMOTE_ROOT/src"
 lane_dir="$src_root/$RG_KERNEL_LANE"
@@ -363,6 +398,7 @@ remote_build() {
         RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
         RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
         RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
+        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
         bash -s <<'REMOTE'
 set -euo pipefail
 
@@ -375,6 +411,18 @@ case "$RG_KERNEL_REMOTE_ROOT" in
     /*) ;;
     *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
 esac
+
+check_remote_space() {
+    local avail_kib min_kib
+    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
+    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
+    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
+    if [ "$avail_kib" -lt "$min_kib" ]; then
+        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
+            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
+        return 1
+    fi
+}
 
 select_container_engine() {
     case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
@@ -404,6 +452,7 @@ select_container_engine() {
 }
 
 command -v git >/dev/null 2>&1 || fail "git is not installed"
+check_remote_space
 if ! command -v makepkg >/dev/null 2>&1; then
     select_container_engine >/dev/null \
         || fail "makepkg is not installed and no usable container engine was found"
