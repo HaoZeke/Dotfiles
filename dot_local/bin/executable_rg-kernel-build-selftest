@@ -40,6 +40,8 @@ rg -q '^RG_KERNEL_KERNEL_LANES=.*cachy-bore' "$policy" \
     || fail "kernel build policy does not mark cachy-bore as a kernel lane"
 rg -q '^RG_KERNEL_KERNEL_LANES=.*ck-muqss' "$policy" \
     || fail "kernel build policy does not mark ck-muqss as a kernel lane"
+rg -q '^RG_KERNEL_SUBDIR_cachy_bore="linux-cachyos-bore"$' "$policy" \
+    || fail "cachy-bore lane does not select the BORE packaging subdir"
 rg -q '^RG_KERNEL_MAKEPKG_ENV_cachy_bore=.*_cpusched=bore' "$policy" \
     || fail "cachy-bore lane does not select the BORE scheduler"
 rg -q '^RG_KERNEL_CONTAINER_IMAGE=docker\.io/archlinux:base-devel$' "$policy" \
@@ -61,6 +63,8 @@ rg -q 'remote_prepare' "$launcher" \
     || fail "launcher does not expose a remote prepare step"
 rg -Fq 'prepare)' "$launcher" \
     || fail "launcher does not route the prepare command"
+rg -q 'lane_subdir' "$launcher" \
+    || fail "launcher does not resolve lane-specific packaging subdirectories"
 rg -q 'select_container_engine' "$launcher" \
     || fail "launcher does not select a container engine"
 rg -q 'run_container_makepkg' "$launcher" \
