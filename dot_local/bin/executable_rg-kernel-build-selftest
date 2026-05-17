@@ -55,6 +55,16 @@ rg -q 'remote_preflight' "$launcher" \
     || fail "launcher does not expose a remote preflight"
 rg -q 'remote-preflight' "$launcher" \
     || fail "launcher does not route the remote preflight command"
+rg -q 'install_preflight' "$launcher" \
+    || fail "launcher does not expose a host install preflight"
+rg -Fq 'install-preflight)' "$launcher" \
+    || fail "launcher does not route the host install preflight command"
+rg -q 'artifact_preflight' "$launcher" \
+    || fail "launcher does not verify local artifacts before install guidance"
+rg -q 'dkms_preflight' "$launcher" \
+    || fail "launcher does not verify DKMS readiness before install guidance"
+rg -q 'initramfs_preflight' "$launcher" \
+    || fail "launcher does not verify initramfs readiness before install guidance"
 rg -q 'check_remote_space' "$launcher" \
     || fail "launcher does not check remote build space"
 rg -q 'df -Pk' "$launcher" \
@@ -93,6 +103,12 @@ rg -q 'rsync -az' "$launcher" \
     || fail "launcher does not sync artifacts back with rsync"
 rg -q 'pacman -U' "$launcher" \
     || fail "launcher does not print pacman install guidance"
+rg -q -- '-headers-\*\.pkg\.tar\.zst' "$launcher" \
+    || fail "launcher does not require headers artifacts for kernel lanes"
+rg -q 'pacman -Qq.*-dkms' "$launcher" \
+    || fail "launcher does not inspect installed DKMS packages"
+rg -q 'mkinitcpio' "$launcher" \
+    || fail "launcher does not check for mkinitcpio"
 
 list_output=$(RG_KERNEL_POLICY="$policy" "$launcher" list)
 case "$list_output" in

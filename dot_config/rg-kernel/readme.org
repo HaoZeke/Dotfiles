@@ -35,8 +35,16 @@ rg-kernel-build remote-preflight
 rg-kernel-build prepare arch-zen
 rg-kernel-build build arch-zen
 rg-kernel-build build-all
+rg-kernel-build install-preflight arch-zen
 rg-kernel-build install-command arch-zen
 #+end_src
 
 Kernel packages are installed manually with the printed =pacman -U= command
 after the required fallback boot entry is present.
+
+Kernel lanes build matching headers packages next to the kernel package. DKMS
+modules are not bundled into the kernel artifact; installed DKMS packages
+rebuild against the matching headers during package installation. The
+=install-preflight= command checks the fallback kernel, local artifacts,
+headers, initramfs tooling, and installed =*-dkms= packages before printing an
+install command.

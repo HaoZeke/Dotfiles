@@ -35,6 +35,7 @@ usage:
   rg-kernel-build prepare [lane]
   rg-kernel-build build [lane]
   rg-kernel-build build-all
+  rg-kernel-build install-preflight [lane]
   rg-kernel-build install-command [lane]
 
 Build lanes are defined in ~/.config/rg-kernel/build-lanes.env.
@@ -194,6 +195,92 @@ preflight() {
     fi
     recommended_fallback_warnings >&2
     printf 'fallback kernel preflight ok\n'
+}
+
+artifact_preflight() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    local package_base lane_artifacts
+
+    validate_lane "$lane"
+    lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
+    package_base=$(lane_package_base "$lane")
+
+    if ! compgen -G "$lane_artifacts/*.pkg.tar.zst" >/dev/null; then
+        fail "no package artifacts found at $lane_artifacts"
+    fi
+
+    if [ -n "$package_base" ]; then
+        if ! compgen -G "$lane_artifacts/$package_base-*.pkg.tar.zst" >/dev/null; then
+            fail "missing kernel artifact for $package_base in $lane_artifacts"
+        fi
+        if ! compgen -G "$lane_artifacts/$package_base-headers-*.pkg.tar.zst" >/dev/null; then
+            fail "missing headers artifact for $package_base in $lane_artifacts"
+        fi
+    fi
+
+    printf 'artifact preflight ok\n'
+}
+
+dkms_packages() {
+    command -v pacman >/dev/null 2>&1 || return 0
+    pacman -Qq 2>/dev/null | awk '/-dkms$/'
+}
+
+dkms_preflight() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+    local package_base lane_artifacts packages
+
+    validate_lane "$lane"
+    package_base=$(lane_package_base "$lane")
+    lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
+    packages=$(dkms_packages || true)
+
+    if [ -z "$packages" ]; then
+        printf 'dkms preflight ok (no dkms packages installed)\n'
+        return 0
+    fi
+
+    command -v dkms >/dev/null 2>&1 \
+        || fail "DKMS packages are installed but the dkms command is missing"
+
+    if [ -n "$package_base" ] \
+        && ! compgen -G "$lane_artifacts/$package_base-headers-*.pkg.tar.zst" >/dev/null; then
+        printf 'installed DKMS packages:\n%s\n' "$packages" >&2
+        fail "DKMS packages need the matching $package_base headers artifact"
+    fi
+
+    printf 'dkms preflight ok\n'
+}
+
+initramfs_preflight() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+
+    validate_lane "$lane"
+    if ! is_kernel_lane "$lane"; then
+        printf 'initramfs preflight ok (tool lane)\n'
+        return 0
+    fi
+
+    if command -v mkinitcpio >/dev/null 2>&1; then
+        printf 'initramfs preflight ok (mkinitcpio)\n'
+        return 0
+    fi
+    if command -v dracut >/dev/null 2>&1; then
+        printf 'initramfs preflight ok (dracut present; verify hooks after install)\n'
+        return 0
+    fi
+
+    fail "no initramfs generator found (expected mkinitcpio or dracut)"
+}
+
+install_preflight() {
+    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
+
+    validate_lane "$lane"
+    preflight
+    artifact_preflight "$lane"
+    initramfs_preflight "$lane"
+    dkms_preflight "$lane"
 }
 
 remote_preflight() {
@@ -651,7 +738,7 @@ REMOTE
 print_install_command() {
     local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
     validate_lane "$lane"
-    preflight >/dev/null
+    install_preflight "$lane" >/dev/null
     install_command_text "$lane"
 }
 
@@ -679,10 +766,11 @@ build_lane() {
     rsync -az "$RG_KERNEL_REMOTE:$RG_KERNEL_REMOTE_ROOT/pkg/$lane/" \
         "$RG_KERNEL_ARTIFACT_DIR/$lane/"
     printf '\nartifacts fetched to %s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$lane"
-    if preflight >/dev/null 2>&1; then
-        printf 'install after fallback preflight: '
+    if install_preflight "$lane" >/dev/null 2>&1; then
+        printf 'install after install preflight: '
     else
-        printf 'fallback preflight is not green; install fallbacks before: '
+        printf 'install preflight is not green; inspect with: rg-kernel-build install-preflight %s\n' "$lane"
+        printf 'install command after fixing preflight: '
     fi
     install_command_text "$lane"
 }
@@ -712,6 +800,9 @@ case "$cmd" in
         for lane in $RG_KERNEL_LANES; do
             build_lane "$lane"
         done
+        ;;
+    install-preflight)
+        install_preflight "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
         ;;
     install-command)
         print_install_command "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
