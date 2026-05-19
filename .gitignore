@@ -240,3 +240,5 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.claude/obsidian-sql.md
 ~/.claude/graphviz-style.md
 ~/.config/vale/styles/realpython/AbstractBusinessRegister.yml
+~/.config/leakguard/config.toml
+~/.config/git/hooks/pre-commit
