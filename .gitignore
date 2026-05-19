@@ -242,3 +242,4 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/vale/styles/realpython/AbstractBusinessRegister.yml
 ~/.config/leakguard/config.toml
 ~/.config/git/hooks/pre-commit
+~/.config/git/hooks/commit-msg
