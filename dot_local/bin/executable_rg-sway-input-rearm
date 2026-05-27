@@ -66,8 +66,15 @@ socket_exists() {
 
 socket_works() {
     local candidate=$1
+    local attempt
     socket_exists "$candidate" || return 1
-    SWAYSOCK="$candidate" "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1
+    for (( attempt = 1; attempt <= 5; attempt++ )); do
+        if SWAYSOCK="$candidate" "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    return 1
 }
 
 find_socket() {
@@ -102,8 +109,15 @@ socket=$(find_socket) || die 'could not find a usable Sway IPC socket'
 log "using $socket"
 
 run_sway() {
+    local attempt
     log "swaymsg $*"
-    SWAYSOCK="$socket" "$swaymsg_bin" -s "$socket" "$@" >/dev/null
+    for (( attempt = 1; attempt <= 5; attempt++ )); do
+        if SWAYSOCK="$socket" "$swaymsg_bin" -s "$socket" "$@" >/dev/null; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    return 1
 }
 
 run_sway_optional() {
