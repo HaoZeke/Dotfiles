@@ -36,6 +36,7 @@ trap 'rm -rf "$tmp_dir"' EXIT
 run "$REPO/dot_local/bin/executable_rg-keyboard-config-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-power-config-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-kernel-build-selftest" "$REPO"
+run "$REPO/dot_local/bin/executable_rg-sway-config-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-lockscreen-selftest"
 run "$REPO/dot_local/bin/executable_rg-vissue-selftest" "$REPO/dot_local/bin/executable_vissue"
 

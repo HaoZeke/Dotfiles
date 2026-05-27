@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-sway-config-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+scratchpads="$repo/dot_config/sway/conf.d/scratchpads"
+
+test -r "$scratchpads" || fail "missing $scratchpads"
+
+rg -q 'set \{.*' "$scratchpads" \
+    || fail "scratchpad settings block is missing"
+rg -q '\$ms_pos fullscreen disable,' "$scratchpads" \
+    || fail "main scratchpad placement does not clear fullscreen"
+rg -q '\$sf_pos fullscreen disable,' "$scratchpads" \
+    || fail "secondary scratchpad placement does not clear fullscreen"
+rg -q 'bindsym F1 .*scratchpad show.*\$ms_pos' "$scratchpads" \
+    || fail "F1 does not reapply main scratchpad placement"
+rg -q 'bindsym F5 .*scratchpad show.*\$sf_pos' "$scratchpads" \
+    || fail "F5 does not reapply secondary scratchpad placement"
+
+printf 'ok\n'
