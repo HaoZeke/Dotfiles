@@ -1,8 +1,8 @@
 # -*- conf -*-
 # Settings
 set {
- $ms_pos border pixel 1, move position 1px 1px, resize set 50 ppt 35 ppt
- $sf_pos border pixel 1, move position center
+ $ms_pos fullscreen disable, border pixel 1, move position 1px 1px, resize set 50 ppt 35 ppt
+ $sf_pos fullscreen disable, border pixel 1, move position center
  $start_ms systemctl --user start foot-ms.service
  $start_sf systemctl --user start foot-subfloat.service
 }

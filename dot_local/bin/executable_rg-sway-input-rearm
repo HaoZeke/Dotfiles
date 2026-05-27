@@ -67,7 +67,7 @@ socket_exists() {
 socket_works() {
     local candidate=$1
     socket_exists "$candidate" || return 1
-    SWAYSOCK="$candidate" "$swaymsg_bin" -t get_version >/dev/null 2>&1
+    SWAYSOCK="$candidate" "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1
 }
 
 find_socket() {
@@ -103,19 +103,22 @@ log "using $socket"
 
 run_sway() {
     log "swaymsg $*"
-    SWAYSOCK="$socket" "$swaymsg_bin" "$@" >/dev/null
+    SWAYSOCK="$socket" "$swaymsg_bin" -s "$socket" "$@" >/dev/null
 }
 
 run_sway_optional() {
     run_sway "$@" || log "ignored failure from: $*"
 }
 
-for class in pointer touchpad keyboard; do
+for class in pointer touchpad touch keyboard; do
     run_sway_optional "input type:$class events disabled"
     run_sway_optional "input type:$class events enabled"
 done
 
 run_sway_optional 'input "1:1:AT_Translated_Set_2_keyboard" events disabled'
+run_sway_optional 'fullscreen disable'
+run_sway_optional 'bar bar-0 mode dock'
+run_sway_optional 'bar bar-1 mode dock'
 run_sway_optional 'seat - cursor_set default'
 run_sway_optional 'seat - cursor move 1 0'
 run_sway_optional 'seat - cursor move -1 0'
