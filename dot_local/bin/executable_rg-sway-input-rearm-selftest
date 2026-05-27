@@ -26,7 +26,7 @@ set -eu
 
 printf '%s|%s\n' "${SWAYSOCK:-}" "$*" >> "$RG_SWAYMSG_LOG"
 
-if [ "$#" -eq 2 ] && [ "$1" = "-t" ] && [ "$2" = "get_version" ]; then
+if [ "$#" -eq 4 ] && [ "$1" = "-s" ] && [ "$2" = "$RG_FAKE_SWAYSOCK" ] && [ "$3" = "-t" ] && [ "$4" = "get_version" ]; then
     printf '{"human_readable":"sway fake"}\n'
 fi
 FAKE_SWAYMSG
@@ -34,24 +34,30 @@ chmod +x "$fake_swaymsg"
 
 RG_SWAYMSG="$fake_swaymsg" \
 RG_SWAYMSG_LOG="$log" \
+RG_FAKE_SWAYSOCK="$fake_socket" \
 RG_SWAY_INPUT_REARM_ALLOW_FAKE_SOCKET=1 \
 SWAYSOCK="$fake_socket" \
     "$script" --dpms >/dev/null
 
 cat > "$tmpdir/expected" <<EOF
-$fake_socket|-t get_version
-$fake_socket|input type:pointer events disabled
-$fake_socket|input type:pointer events enabled
-$fake_socket|input type:touchpad events disabled
-$fake_socket|input type:touchpad events enabled
-$fake_socket|input type:keyboard events disabled
-$fake_socket|input type:keyboard events enabled
-$fake_socket|input "1:1:AT_Translated_Set_2_keyboard" events disabled
-$fake_socket|seat - cursor_set default
-$fake_socket|seat - cursor move 1 0
-$fake_socket|seat - cursor move -1 0
-$fake_socket|output * dpms off
-$fake_socket|output * dpms on
+$fake_socket|-s $fake_socket -t get_version
+$fake_socket|-s $fake_socket input type:pointer events disabled
+$fake_socket|-s $fake_socket input type:pointer events enabled
+$fake_socket|-s $fake_socket input type:touchpad events disabled
+$fake_socket|-s $fake_socket input type:touchpad events enabled
+$fake_socket|-s $fake_socket input type:touch events disabled
+$fake_socket|-s $fake_socket input type:touch events enabled
+$fake_socket|-s $fake_socket input type:keyboard events disabled
+$fake_socket|-s $fake_socket input type:keyboard events enabled
+$fake_socket|-s $fake_socket input "1:1:AT_Translated_Set_2_keyboard" events disabled
+$fake_socket|-s $fake_socket fullscreen disable
+$fake_socket|-s $fake_socket bar bar-0 mode dock
+$fake_socket|-s $fake_socket bar bar-1 mode dock
+$fake_socket|-s $fake_socket seat - cursor_set default
+$fake_socket|-s $fake_socket seat - cursor move 1 0
+$fake_socket|-s $fake_socket seat - cursor move -1 0
+$fake_socket|-s $fake_socket output * dpms off
+$fake_socket|-s $fake_socket output * dpms on
 EOF
 
 diff -u "$tmpdir/expected" "$log"
