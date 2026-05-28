@@ -108,3 +108,51 @@ tokens:
   - accordingly
   - in this regard
   - in this context
+  # Grading- and review-register verdict verbs (R<n> X. constructions)
+  - holds
+  - holds up
+  - holds cleanly
+  - lands
+  - lands cleanly
+  - stands
+  - sticks
+  - checks out
+  - works cleanly
+  - falls short
+  - falls down
+  - misses on
+  - hits all
+  # AI-typical "ship/land/come back" framing
+  - ship at
+  - ships at
+  - shipped at
+  - comes back as
+  - come back as
+  - came back as
+  - lands at
+  - landed at
+  # "X side" / "Y side" wraps
+  - the c\+\+ side
+  - the python side
+  - the lua side
+  - the model side
+  # End-to-end and lock-step corpo
+  - end-to-end
+  - in lock-step
+  - stays in lock-step
+  - lock-step
+  - hourglass design
+  - both halves
+  - both legs
+  - one leg
+  - half the rubric
+  - half of the rubric
+  # Walk-through / talking-about-the-task tells
+  - the trap is
+  - the non-obvious bit
+  - the non-obvious part
+  - the obvious
+  - obvious move
+  - obvious answer
+  - to be fair
+  - all of which
