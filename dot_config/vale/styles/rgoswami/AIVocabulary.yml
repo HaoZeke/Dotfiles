@@ -177,3 +177,20 @@ tokens:
   - comes in at \d+ lines
   - lands at \d+ lines
   - is \d+ lines
+  # "Container has everything" filler.  Prompts should list the venv path,
+  # env-var names, and the test commands; saying "preconfigured" or "ready
+  # to go" adds tokens without adding signal.
+  - has everything (pre-?)?installed
+  - has everything (it )?needs
+  - ships? pre-?configured
+  - ships? ready to go
+  - is pre-?configured
+  - is fully populated
+  - fully populated
+  - ready to go
+  - out of the box
+  - set up for you
+  - comes (already )?pre-?installed
+  - comes pre-?baked
+  - pre-?baked
+  - pre-?installed and ready
