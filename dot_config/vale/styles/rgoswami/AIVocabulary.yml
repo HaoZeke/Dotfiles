@@ -156,3 +156,15 @@ tokens:
   - obvious answer
   - to be fair
   - all of which
+  # "real X" / "do real Y" framing the model uses to claim authentic execution
+  - do real work
+  - does real work
+  - did real work
+  - real work
+  - real C\+\+
+  - real Python
+  - real code
+  - actually run
+  - actually ran
+  - actually does
+  - actually doing
