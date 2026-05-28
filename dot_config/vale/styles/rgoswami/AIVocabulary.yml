@@ -168,3 +168,12 @@ tokens:
   - actually ran
   - actually does
   - actually doing
+  # Size-as-judgement framing in prose ("604 lines of raw Lua C API",
+  # "2200-line diff", "comes in at N lines").  Reviewers count lines
+  # themselves; the form-paste field describes what changed, not how big.
+  - \d+\s*lines of
+  - \d+-line diff
+  - \d+-line patch
+  - comes in at \d+ lines
+  - lands at \d+ lines
+  - is \d+ lines
