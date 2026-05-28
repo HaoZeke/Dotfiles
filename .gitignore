@@ -243,3 +243,4 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/leakguard/config.toml
 ~/.config/git/hooks/pre-commit
 ~/.config/git/hooks/commit-msg
+~/.claude/rules/starfleet.md
