@@ -4,8 +4,11 @@ link: 'https://developers.google.com/style/abbreviations'
 level: suggestion
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
+# 'second' is the definition; the expansion words may be lower- or upper-case
+# and may be space- or hyphen-separated, so "foreign function interface (FFI)"
+# and "Foreign-Function-Interface (FFI)" both count as defining the acronym.
 first: '\b([A-Z]{3,5})\b'
-second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
+second: '(?:\b[A-Za-z][a-z]+[ -])+\(([A-Z]{3,5})\)'
 # ... with the exception of these:
 exceptions:
   - API
@@ -43,8 +46,10 @@ exceptions:
   - POST
   - RAM
   - REPL
+  - PWD
   - RSA
   - SCM
+  - SHA
   - SCSS
   - SDK
   - SQL

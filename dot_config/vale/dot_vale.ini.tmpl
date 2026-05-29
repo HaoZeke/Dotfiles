@@ -7,7 +7,7 @@ MinAlertLevel = suggestion
 Packages = Google, proselint, write-good, alex #, Readability
 
 [*]
-BasedOnStyles = Vale, Google, proselint, write-good, alex #, Readability
+BasedOnStyles = Vale, Google, proselint, write-good, alex, rgoswami #, Readability
 
 # Interferes with org-mode headings
 proselint.Annotations = NO
@@ -31,3 +31,8 @@ alex.ProfanityUnlikely = NO
 Google.Headings = NO
 Google.Acronyms = NO
 Google.Units = NO
+
+# Starfleet form-paste files: the `*` headings mirror the external form field
+# labels verbatim, so they keep Title Case instead of sentence case.
+[**/starfleet_answers.org]
+rgoswami.Headings = NO
