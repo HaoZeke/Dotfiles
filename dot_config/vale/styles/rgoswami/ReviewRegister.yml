@@ -1,0 +1,81 @@
+extends: existence
+message: "'%s' is a review-grading register tell (academic, sports, LinkedIn, or AI-grader). Rewrite plain."
+ignorecase: true
+level: warning
+tokens:
+  # Academic: "axis" used for ranking criteria. Bare words banned outright in review prose.
+  - axis
+  - axes
+  - ranking axis
+  - ranking axes
+  - response-quality axis
+  - response quality axis
+  - code-quality axis
+  - code quality axis
+  - overall axis
+  - the two axes
+  - on this axis
+  - on that axis
+  - on both axes
+  - on these axes
+  - on all three axes
+  - across the axes
+  - across all axes
+  # LinkedIn / marketing-speak verbs
+  - underclaim
+  - underclaiming
+  - underclaimed
+  - overclaim
+  - overclaiming
+  - overclaimed
+  # Workshop framing
+  - the deciding aspect
+  - the deciding aspects
+  - the deciding factor
+  - deciding factors are
+  - the deciding line
+  - the thing that matters most
+  - the things that matter most
+  - the aspects that matter
+  - what matters most
+  # "gate" as editorial verb for a guard (describe the actual condition instead)
+  - ungated
+  - leaves the call ungated
+  - gates the call
+  - gate the call
+  - leaves it ungated
+  # "highest/lowest-risk path" and risk-ranking filler
+  - the highest-risk path
+  - highest-risk path
+  - the lowest-risk path
+  - the riskiest path
+  - highest-risk approach
+  # "the exact X the prompt cares about" pattern
+  - the prompt cares about
+  - exactly what the prompt
+  - the exact properties
+  - the exact behavior
+  - the exact behaviour
+  # trailing vagueness
+  - and stuff
+  - and so on
+  - and the like
+  - and whatnot
+  # Reviewer-confidence boilerplate
+  - i am confident in this comparison
+  - confident in this comparison
+  - based on the model responses' own
+  - based on the responses' own
+  # AI-grader filler that sounds plausible but says nothing
+  - concrete
+  - concretely
+  - tangible
+  - tangibly
+  - real, reproducible
+  # Line-number citation patterns: reviewers describe by name, not by line.
+  - on lines \d+
+  - on line \d+
+  - at lines \d+
+  - at line \d+
+  - lines \d+ to \d+
+  - line \d+ to line \d+
