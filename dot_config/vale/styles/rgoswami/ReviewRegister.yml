@@ -61,6 +61,14 @@ tokens:
   - and so on
   - and the like
   - and whatnot
+  # "clean win" / "keep(s) it from a X win" sportscaster framing
+  - a clean win
+  - keep it from a clean win
+  - keeps it from a clean win
+  - kept it from a clean win
+  - from a clean win
+  - clean sweep
+  - clear win
   # Reviewer-confidence boilerplate
   - i am confident in this comparison
   - confident in this comparison
