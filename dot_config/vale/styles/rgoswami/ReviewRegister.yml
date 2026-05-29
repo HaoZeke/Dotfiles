@@ -61,6 +61,14 @@ tokens:
   - and so on
   - and the like
   - and whatnot
+  # meta-commentary that adds nothing (AI throat-clearing)
+  - worth stating plainly
+  - worth noting
+  - it is worth noting
+  - it is worth stating
+  - and that is worth
+  - to be clear
+  - it bears noting
   # "clean win" / "keep(s) it from a X win" sportscaster framing
   - a clean win
   - keep it from a clean win
