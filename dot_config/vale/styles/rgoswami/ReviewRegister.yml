@@ -115,6 +115,12 @@ tokens:
   - tangible
   - tangibly
   - real, reproducible
+  # AI-tell phrasing: name the scope concretely, not these stock intensifiers.
+  - end to end
+  - end-to-end
+  - weak spot
+  - weak spots
+  - one weak spot
   # Line-number citation patterns: reviewers describe by name, not by line.
   - on lines \d+
   - on line \d+
