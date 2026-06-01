@@ -44,6 +44,18 @@ tokens:
   - gates the call
   - gate the call
   - leaves it ungated
+  # bare "gate"/"gating" for a guard: name the actual condition (checks isatty, only when ...)
+  - gate
+  - gates
+  - gated
+  - gating
+  # "is what X buys" / "X buys" value-framing
+  - buys
+  - is what \w[\w ]* buys
+  - which is what
+  # "on spec" / "feature on spec" filler
+  - on spec
+  - on-spec
   # "highest/lowest-risk path" and risk-ranking filler
   - the highest-risk path
   - highest-risk path
