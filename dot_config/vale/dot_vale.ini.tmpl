@@ -2,6 +2,10 @@
 # need to run vale sync in ~/.config/vale to get these setup
 StylesPath = styles
 
+# Activate the RG accept vocabulary (styles/config/vocabularies/RG/accept.txt)
+# so technical identifiers stop tripping Vale.Spelling.
+Vocab = RG
+
 MinAlertLevel = suggestion
 
 Packages = Google, proselint, write-good, alex #, Readability
