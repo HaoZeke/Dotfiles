@@ -53,6 +53,10 @@ tokens:
   - buys
   - is what \w[\w ]* buys
   - which is what
+  # "is honest" / "honest(ly)" reviewer-praise AIism
+  - honest
+  - honestly
+  - is honest about
   # "on spec" / "feature on spec" filler
   - on spec
   - on-spec
