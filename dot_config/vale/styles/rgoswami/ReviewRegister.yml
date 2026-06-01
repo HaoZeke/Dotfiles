@@ -65,6 +65,9 @@ tokens:
   - ranks it last
   - a response whose
   - a response that
+  # "ship/ships/shipped" marketing-delivery verb (use includes/adds/provides/has);
+  # word-bounded so it never fires inside relationship/membership/township.
+  - \bship(s|ped|ping)?\b
   # "on spec" / "feature on spec" filler
   - on spec
   - on-spec
