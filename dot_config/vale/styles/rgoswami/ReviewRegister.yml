@@ -57,6 +57,14 @@ tokens:
   - honest
   - honestly
   - is honest about
+  # editorial verdict-flourish closers ("A response whose X ... ranks last")
+  - ranks last
+  - ranks first
+  - ranks below
+  - ranks above
+  - ranks it last
+  - a response whose
+  - a response that
   # "on spec" / "feature on spec" filler
   - on spec
   - on-spec
