@@ -38,6 +38,13 @@ tokens:
   - the things that matter most
   - the aspects that matter
   - what matters most
+  # "decisive" grader-adjective: name the requirement, do not label it decisive.
+  - decisive
+  - decisively
+  - decisive miss
+  - decisive misses
+  - decisive feature
+  - decisive features
   # "gate" as editorial verb for a guard (describe the actual condition instead)
   - ungated
   - leaves the call ungated
@@ -121,6 +128,15 @@ tokens:
   - weak spot
   - weak spots
   - one weak spot
+  # "carry/carries the (real) weight" / "real design weight" load-bearing metaphor:
+  # say "decisive", "decides the ranking", or name the requirement plainly.
+  - carry the real weight
+  - carries the real weight
+  - carry the weight
+  - carries the weight
+  - carr(y|ies) (the )?(real )?weight
+  - real design weight
+  - the real weight
   # Line-number citation patterns: reviewers describe by name, not by line.
   - on lines \d+
   - on line \d+
@@ -128,3 +144,12 @@ tokens:
   - at line \d+
   - lines \d+ to \d+
   - line \d+ to line \d+
+  # "pulls in two directions" / "pulls both ways": metaphor filler.
+  # State the two requirements and their trade-off plainly.
+  - pulls? in two directions
+  - pulls? in different directions
+  - pulls? in opposite directions
+  - pulls? two ways
+  - pulls? both ways
+  - pulled in two directions
+  - tension between
