@@ -4,9 +4,8 @@ link: 'https://developers.google.com/style/abbreviations'
 level: suggestion
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
-# 'second' is the definition; the expansion words may be lower- or upper-case
-# and may be space- or hyphen-separated, so "foreign function interface (FFI)"
-# and "Foreign-Function-Interface (FFI)" both count as defining the acronym.
+# 'second' is the definition; allow lower-case and hyphenated expansions,
+# e.g. "foreign function interface (FFI)".
 first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Za-z][a-z]+[ -])+\(([A-Z]{3,5})\)'
 # ... with the exception of these:
@@ -37,6 +36,7 @@ exceptions:
   - LESS
   - LLDB
   - NET
+  - NOT
   - NOTE
   - NVDA
   - OSS
@@ -100,6 +100,31 @@ exceptions:
   - KILL
   # Emacs org-mode clock states
   - CLOCK
+  # Computational chemistry / atomistic-simulation methods (familiar to
+  # the audience of a comp-chem research site; spelling them out adds noise)
+  - NEB
+  - MMF
+  - DFT
+  - MLIP
+  - ONIOM
+  - KMC
+  - AKMC
+  - HTST
+  - MEP
+  - MEPS
+  - EMD
+  - FPS
+  - GPR
+  - MAP
+  - MCMC
+  - RMSD
+  - SOAP
+  - MACE
+  - PET
+  - FEM
+  - FDTD
+  - GPAW
+  - ESL
 
 # References
 # [1]: https://github.com/cashpw/dotfiles/blob/main/config/vale/styles/cashpw/Acronyms.yml
