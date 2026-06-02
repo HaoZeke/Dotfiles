@@ -324,3 +324,17 @@ MACE-MP
 [Aa]KMC
 arXiv
 [Dd]eliverable[s]?
+ROCm
+[Tt]ooltip[s]?
+[Pp]olytechnique
+Ecole
+federale
+Europeen
+Calcul
+Atomique
+Moleculaire
+Scuola
+Internazionale
+Superiore
+Studi
+Avanzati
