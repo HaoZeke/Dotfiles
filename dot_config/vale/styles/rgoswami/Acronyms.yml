@@ -5,9 +5,12 @@ level: suggestion
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
 # 'second' is the definition; allow lower-case and hyphenated expansions,
-# e.g. "foreign function interface (FFI)".
+# e.g. "foreign function interface (FFI)". The trailing `s?` lets a plural
+# definition like "machine-learned interatomic potentials (MLIPs)" count as
+# defining the singular acronym. Only acronyms never defined anywhere in the
+# document are flagged.
 first: '\b([A-Z]{3,5})\b'
-second: '(?:\b[A-Za-z][a-z]+[ -])+\(([A-Z]{3,5})\)'
+second: '(?:\b[A-Za-z][a-z]+[ -]){1,6}\(([A-Z]{3,5})s?\)'
 # ... with the exception of these:
 exceptions:
   - API
@@ -100,31 +103,6 @@ exceptions:
   - KILL
   # Emacs org-mode clock states
   - CLOCK
-  # Computational chemistry / atomistic-simulation methods (familiar to
-  # the audience of a comp-chem research site; spelling them out adds noise)
-  - NEB
-  - MMF
-  - DFT
-  - MLIP
-  - ONIOM
-  - KMC
-  - AKMC
-  - HTST
-  - MEP
-  - MEPS
-  - EMD
-  - FPS
-  - GPR
-  - MAP
-  - MCMC
-  - RMSD
-  - SOAP
-  - MACE
-  - PET
-  - FEM
-  - FDTD
-  - GPAW
-  - ESL
 
 # References
 # [1]: https://github.com/cashpw/dotfiles/blob/main/config/vale/styles/cashpw/Acronyms.yml
