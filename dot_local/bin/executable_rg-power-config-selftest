@@ -10,9 +10,11 @@ fail() {
 
 plymouth_script="$repo/.chezmoiscripts/run_onchange_linux_plymouth_resume.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+swayidle_service="$repo/dot_config/systemd/user/swayidle.service"
 
 test -r "$plymouth_script" || fail "missing $plymouth_script"
 test -r "$laptop_script" || fail "missing $laptop_script"
+test -r "$swayidle_service" || fail "missing $swayidle_service"
 
 python - "$plymouth_script" <<'PY'
 import sys
@@ -37,6 +39,8 @@ rg -q 'for cls in pointer touchpad touch keyboard' "$laptop_script" \
     || fail "resume hook does not re-arm every interactive input class"
 rg -q 'fullscreen disable' "$laptop_script" \
     || fail "resume hook does not clear stale fullscreen grabs"
+rg -q "after-resume '%h/.local/bin/rg-sway-input-rearm --dpms'" "$swayidle_service" \
+    || fail "swayidle does not re-arm input after resume"
 
 if [ -r /etc/mkinitcpio.conf ]; then
     python - /etc/mkinitcpio.conf <<'PY'
