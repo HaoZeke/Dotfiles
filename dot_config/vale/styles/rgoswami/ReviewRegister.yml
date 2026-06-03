@@ -166,3 +166,8 @@ tokens:
   - \bwants? to\b
   - \btries to\b
   - \btrying to\b
+  # "build-verified" reads as an awkward grader tag and, in the public answer,
+  # leaks the internal build step. Say it in plain words: "builds", "the build
+  # shows", "confirmed by building", or state the covariance behaviour directly.
+  - build-verified
+  - build verified
