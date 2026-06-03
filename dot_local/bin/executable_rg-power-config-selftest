@@ -29,6 +29,14 @@ rg -q '99-persistent-storage.conf' "$laptop_script" \
     || fail "managed journald persistent drop-in is missing"
 rg -q 'Storage=persistent' "$laptop_script" \
     || fail "journald persistent storage is not managed"
+rg -q '/usr/bin/timeout 2s /usr/bin/sudo -n' "$laptop_script" \
+    || fail "resume hook swaymsg calls are not timeout-bounded"
+rg -q '/usr/bin/swaymsg -s "\$sock"' "$laptop_script" \
+    || fail "resume hook swaymsg calls do not use the discovered socket"
+rg -q 'for cls in pointer touchpad touch keyboard' "$laptop_script" \
+    || fail "resume hook does not re-arm every interactive input class"
+rg -q 'fullscreen disable' "$laptop_script" \
+    || fail "resume hook does not clear stale fullscreen grabs"
 
 if [ -r /etc/mkinitcpio.conf ]; then
     python - /etc/mkinitcpio.conf <<'PY'

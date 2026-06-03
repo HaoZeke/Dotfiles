@@ -216,13 +216,17 @@ for sock in /run/user/*/sway-ipc.*.sock; do
     [ -S "$sock" ] || continue
     uid=$(stat -c %u "$sock" 2>/dev/null) || continue
     [ -n "$uid" ] || continue
-    run() { sudo -u "#${uid}" SWAYSOCK="$sock" /usr/bin/swaymsg "$@" >/dev/null 2>&1 || true; }
+    run() {
+        /usr/bin/timeout 2s /usr/bin/sudo -n -u "#${uid}" \
+            SWAYSOCK="$sock" \
+            /usr/bin/swaymsg -s "$sock" "$@" >/dev/null 2>&1 || true
+    }
 
     # Toggle each input class disabled->enabled. Plain "enabled" is a
     # no-op when the device is already enabled, so no fresh device
     # event reaches the wl_seat; the disabled hop forces sway to push
     # a new state through libinput.
-    for cls in pointer touchpad keyboard; do
+    for cls in pointer touchpad touch keyboard; do
         run "input type:$cls events disabled"
         run "input type:$cls events enabled"
     done
@@ -230,6 +234,9 @@ for sock in /run/user/*/sway-ipc.*.sock; do
     # raw built-in keyboard disabled in Sway so clients cannot receive
     # untranslated QWERTY events.
     run "input \"1:1:AT_Translated_Set_2_keyboard\" events disabled"
+    run "fullscreen disable"
+    run "bar bar-0 mode dock"
+    run "bar bar-1 mode dock"
     run "seat - cursor_set default"
     # Warp the cursor 1px and back. Xwayland caches the pointer
     # location across the suspend boundary; XInput clients (Chrome,
