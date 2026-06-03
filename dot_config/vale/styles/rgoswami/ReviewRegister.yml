@@ -122,6 +122,11 @@ tokens:
   - tangible
   - tangibly
   - real, reproducible
+  # "which is real" / "that is real" -- empty reassurance filler; state the fact or cut it.
+  - which is real
+  - that is real
+  - which is genuinely
+  - this is real
   # AI-tell phrasing: name the scope concretely, not these stock intensifiers.
   - end to end
   - end-to-end
