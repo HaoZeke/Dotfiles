@@ -153,3 +153,16 @@ tokens:
   - pulls? both ways
   - pulled in two directions
   - tension between
+  # Anthropomorphizing the model's intent: describe what the code DOES (evidence),
+  # never what the model "believes/thinks/assumes". That framing flip-flops and is
+  # not evidence-based; state the observable mapping/value/condition instead.
+  - \bbelieve(s|d)?\b
+  - \bbelieving\b
+  - \bthinks\b
+  - \bis convinced\b
+  - \bassume(s|d)?\b
+  - \bassuming\b
+  - \bintends? to\b
+  - \bwants? to\b
+  - \btries to\b
+  - \btrying to\b
