@@ -176,3 +176,18 @@ tokens:
   # shows", "confirmed by building", or state the covariance behaviour directly.
   - build-verified
   - build verified
+  # Essay-register AI tells in starfleet justifications: state the fact plainly,
+  # do not narrate or intensify. The submitted answers read declarative and
+  # code-dense ("Model B is the best because its scanner ... ; the split is ...").
+  # "genuinely/truly correct" intensifies; "land(s) the feature" and "the moment
+  # it sees" are essay framing; "buy back", "slip/sail past", "backs this up" are
+  # conversational filler. Rewrite to the fact. ("what separates them is" and "the
+  # split is" stay; those are the real voice.)
+  - \bgenuinely\b
+  - \btruly\b
+  - lands? the feature
+  - the moment it (sees|hits)
+  - buys? back
+  - slip past
+  - sail through
+  - backs this up
