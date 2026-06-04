@@ -202,3 +202,13 @@ tokens:
   # "richest of the three / richest-looking" is vague superlative filler; count
   # the concrete thing instead (colors the most node categories, the full 6x6).
   - richest(-looking)?
+  # Grading-essay filler. Say what the code/test DOES, not that it "proves" or
+  # "demonstrates" something: "it builds a real diamond and relinks the binary on
+  # a source edit", not "it proves the whole incremental contract". State the
+  # behaviour; drop the abstraction.
+  - \bproves?\b
+  - \bproof\b
+  - \bdemonstrat(e|es|ed|ing|ion)\b
+  - the (whole |entire )?\w+ contract
+  - to a good standard
+  - point for point
