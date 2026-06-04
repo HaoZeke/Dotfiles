@@ -1,7 +1,7 @@
 extends: conditional
 message: "Spell out '%s', if it's unfamiliar to the audience."
 link: 'https://developers.google.com/style/abbreviations'
-level: suggestion
+level: error
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
 # 'second' is the definition; allow lower-case and hyphenated expansions,
@@ -103,6 +103,13 @@ exceptions:
   - KILL
   # Emacs org-mode clock states
   - CLOCK
+
+  # Math / numerics notation (validated, not expandable as words)
+  - JTJ
+  - LDLT
+  - LLT
+  - SVD
+  - QR
 
 # References
 # [1]: https://github.com/cashpw/dotfiles/blob/main/config/vale/styles/cashpw/Acronyms.yml
