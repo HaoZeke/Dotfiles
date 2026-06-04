@@ -199,3 +199,6 @@ tokens:
   - the one (subtlety|catch|trick|wrinkle)
   - every listed position
   - on every (comment )?position
+  # "richest of the three / richest-looking" is vague superlative filler; count
+  # the concrete thing instead (colors the most node categories, the full 6x6).
+  - richest(-looking)?
