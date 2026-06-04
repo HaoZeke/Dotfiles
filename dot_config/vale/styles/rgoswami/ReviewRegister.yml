@@ -191,3 +191,11 @@ tokens:
   - slip past
   - sail through
   - backs this up
+  # "the one subtlety/catch/trick is" is essay framing; state the fact. "every
+  # listed position" and "the listed cases" are vague hand-waves, name the
+  # positions (before a key, around the colon, before a closing brace) so a cold
+  # reader does not have to re-read the prompt. (NOT banning bare "carry/carries":
+  # the kiss-icp 7-Perfect uses "the adjoint A and C both carry".)
+  - the one (subtlety|catch|trick|wrinkle)
+  - every listed position
+  - on every (comment )?position
