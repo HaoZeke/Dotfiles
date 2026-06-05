@@ -219,3 +219,6 @@ tokens:
   - undemonstrated
   - the propagation is real
   - the \w+ is real
+  # "grounds/grounded" as a verb for "rests on / is based on": AI-tell. Say the
+  # plain relation (rests on, uses, is computed from).
+  - \bground(s|ed)\b
