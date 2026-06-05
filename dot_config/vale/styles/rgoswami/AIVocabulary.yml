@@ -177,6 +177,13 @@ tokens:
   - comes in at \d+ lines
   - lands at \d+ lines
   - is \d+ lines
+  # "X matters here because..." is a textbook AI explainer transition.
+  # Rewrite to state the relationship directly.
+  - matters here because
+  - matters because
+  - is important here because
+  - is what matters
+  - here is why
   # "Container has everything" filler.  Prompts should list the venv path,
   # env-var names, and the test commands; saying "preconfigured" or "ready
   # to go" adds tokens without adding signal.
@@ -194,3 +201,5 @@ tokens:
   - comes pre-?baked
   - pre-?baked
   - pre-?installed and ready
+exceptions:
+  - 'Holistic Fusion'

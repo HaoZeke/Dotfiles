@@ -13,6 +13,12 @@ first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Za-z][a-z]+[ -]){1,6}\(([A-Z]{3,5})s?\)'
 # ... with the exception of these:
 exceptions:
+  - CUDA
+  - ESDF
+  - GTSAM
+  - TSDF
+  - ROS
+  - DOF
   - API
   - ASP
   - CLI
