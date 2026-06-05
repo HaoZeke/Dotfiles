@@ -212,3 +212,10 @@ tokens:
   - the (whole |entire )?\w+ contract
   - to a good standard
   - point for point
+  # "headline" feature/case/relink + "undemonstrated": grader-flourish. Name the
+  # specific behaviour and say plainly the example does not build a case that runs
+  # it, or that no test commits it.
+  - \bheadline\b
+  - undemonstrated
+  - the propagation is real
+  - the \w+ is real
