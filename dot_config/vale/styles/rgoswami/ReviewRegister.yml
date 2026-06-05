@@ -222,3 +222,7 @@ tokens:
   # "grounds/grounded" as a verb for "rests on / is based on": AI-tell. Say the
   # plain relation (rests on, uses, is computed from).
   - \bground(s|ed)\b
+  # "realistic" / "the most realistic topology": grader-adjective. Name the
+  # concrete property (the only example that links a diamond, a real cc link
+  # step) instead of labelling a topology "realistic".
+  - \brealistic\b
