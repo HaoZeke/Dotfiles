@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_wl-copy-selftest).
+
+set -euo pipefail
+
+if [ $# -gt 1 ]; then
+    echo "usage: executable_wl-copy-selftest [/path/to/executable_wl-copy]" >&2
+    exit 2
+fi
+
+script="${1:-}"
+if [ -z "$script" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    script="$here/executable_wl-copy"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *) fail "missing ${label}: ${needle} in ${haystack}" ;;
+    esac
+}
+
+assert_not_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) fail "unexpected ${label}: ${needle} in ${haystack}" ;;
+    esac
+}
+
+test -x "$script" || fail "not executable: $script"
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+fake_real="$tmpdir/wl-copy-real"
+log="$tmpdir/log"
+
+cat >"$fake_real" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+for arg in "$@"; do
+    printf '[%s]' "$arg"
+done >>"$RG_WL_COPY_LOG"
+printf '\n' >>"$RG_WL_COPY_LOG"
+SH
+chmod +x "$fake_real"
+
+run_case() {
+    : >"$log"
+    RG_WL_COPY_REAL="$fake_real" RG_WL_COPY_LOG="$log" "$@"
+    tr -d '\n' <"$log"
+}
+
+out=$(printf 'plain text\n' | run_case "$script")
+assert_contains "$out" '[--type][text/plain;charset=utf-8]' "plain text MIME"
+
+out=$(printf 'a\000b' | run_case "$script")
+assert_not_contains "$out" '[--type][text/plain;charset=utf-8]' "binary MIME override"
+
+out=$(printf 'plain text\n' | run_case "$script" -t image/png)
+assert_contains "$out" '[-t][image/png]' "explicit short MIME"
+assert_not_contains "$out" '[--type][text/plain;charset=utf-8]' "extra MIME override"
+
+out=$(run_case "$script" hello)
+assert_contains "$out" '[--type][text/plain;charset=utf-8][hello]' "argument text MIME"
+
+out=$(run_case "$script" --clear)
+assert_contains "$out" '[--clear]' "clear passthrough"
+assert_not_contains "$out" '[--type][text/plain;charset=utf-8]' "clear MIME override"
+
+printf 'ok\n'
