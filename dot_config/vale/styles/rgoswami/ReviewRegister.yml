@@ -226,3 +226,22 @@ tokens:
   # concrete property (the only example that links a diamond, a real cc link
   # step) instead of labelling a topology "realistic".
   - \brealistic\b
+  # Hedged-failure adverbs: describe the failure explicitly, never as quiet/
+  # silent/subtle. "B drops the relink and the binary keeps the old string",
+  # not "B silently skips the relink". (review feedback 2026-06: quiet/silent
+  # register extension)
+  - \bquietly\b
+  - \bsilently\b
+  - soft-fail(s|ed|ing)?
+  - soft fail(s|ed|ing)?
+  - \bsubtly\b
+  # Marketing-delivery and verdict-flourish verbs: name what the diff adds or
+  # includes. "the math holds" asserts without showing; "delivers" sells.
+  # (review feedback 2026-06: voice extension)
+  - the math holds
+  - \bdeliver(s|ed|ing)?\b
+  - transcribed verbatim
+  - first-class
+  - first class citizen
+  - table-stakes
+  - table stakes
