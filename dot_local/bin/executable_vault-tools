@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VAULT_ROOT="${VAULT_ROOT:-$HOME/Git/Gitlab/obsidian-notes}"
+VAULT_ROOT="${VAULT_ROOT:-/home/rgoswami/Git/Gitlab/obsidian-notes}"
 VT_BIN="$VAULT_ROOT/tools/vault-tools/target/release/vault-tools"
-VT_MANIFEST="$VAULT_ROOT/tools/vault-tools/Cargo.toml"
 
-if [[ -x "$VT_BIN" ]]; then
-    exec "$VT_BIN" --root "$VAULT_ROOT" "$@"
+if [[ ! -x "$VT_BIN" ]]; then
+    printf 'vault-tools release binary is missing: %s\n' "$VT_BIN" >&2
+    printf 'Build on rg.cosmolab and install the release binary before using this wrapper.\n' >&2
+    exit 127
 fi
 
-exec cargo run -q --release --manifest-path "$VT_MANIFEST" -- --root "$VAULT_ROOT" "$@"
+exec "$VT_BIN" --root "$VAULT_ROOT" "$@"
