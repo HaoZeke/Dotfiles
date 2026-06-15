@@ -35,6 +35,12 @@ rg -q '99-wlan0-unmanaged.conf' "$laptop_script" \
     || fail "NetworkManager wlan0 unmanaged drop-in is missing"
 rg -q 'unmanaged-devices=interface-name:wlan0' "$laptop_script" \
     || fail "NetworkManager is not configured to leave wlan0 to iwd"
+rg -q 'iwd.service' "$laptop_script" \
+    || fail "iwd service is not managed"
+rg -q 'disable --now NetworkManager.service NetworkManager-dispatcher.service' "$laptop_script" \
+    || fail "NetworkManager services are not disabled for iwd-owned Wi-Fi"
+! rg -q 'for unit in tlp.service NetworkManager-dispatcher.service' "$laptop_script" \
+    || fail "NetworkManager dispatcher is still enabled"
 rg -q '/usr/bin/timeout 2s /usr/bin/sudo -n' "$laptop_script" \
     || fail "resume hook swaymsg calls are not timeout-bounded"
 rg -q '/usr/bin/swaymsg -s "\$sock"' "$laptop_script" \

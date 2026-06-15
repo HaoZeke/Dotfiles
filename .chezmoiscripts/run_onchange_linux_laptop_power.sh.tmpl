@@ -311,7 +311,7 @@ if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
     for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic \
                nftables smartmontools cpupower rfkill brightnessctl \
-               sccache mold clang; do
+               sccache mold clang iwd; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
@@ -327,7 +327,6 @@ LOGIND_CHANGED=0
 SLEEP_CHANGED=0
 TLP_CHANGED=0
 JOURNALD_CHANGED=0
-NM_WLAN_CHANGED=0
 
 XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
@@ -335,7 +334,7 @@ write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTE
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/systemd/journald.conf.d/99-persistent-storage.conf "$JOURNALD_CONTENT" && JOURNALD_CHANGED=1 || true
-write_if_diff /etc/NetworkManager/conf.d/99-wlan0-unmanaged.conf "$NM_WLAN_UNMANAGED_CONTENT" && NM_WLAN_CHANGED=1 || true
+write_if_diff /etc/NetworkManager/conf.d/99-wlan0-unmanaged.conf "$NM_WLAN_UNMANAGED_CONTENT" || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
 
 # system-sleep hook: runs as root on every suspend/hibernate cycle.
@@ -494,16 +493,6 @@ if [ "$JOURNALD_CHANGED" = "1" ] || [ -z "$(sudo ls -A /var/log/journal 2>/dev/n
     sudo journalctl --flush >/dev/null 2>&1 || true
 fi
 
-if [ "$NM_WLAN_CHANGED" = "1" ] \
-   && sudo systemctl is-active NetworkManager.service >/dev/null 2>&1; then
-    if command -v nmcli >/dev/null 2>&1; then
-        sudo nmcli general reload >/dev/null 2>&1 || true
-        sudo nmcli device set wlan0 managed no >/dev/null 2>&1 || true
-    else
-        sudo systemctl reload NetworkManager.service >/dev/null 2>&1 || true
-    fi
-fi
-
 # Conflicting services first: TLP and power-profiles-daemon cannot both
 # run. Drop PPD before enabling TLP so the enable doesn't trip a
 # same-name conflict.
@@ -512,10 +501,28 @@ if sudo systemctl is-enabled power-profiles-daemon.service >/dev/null 2>&1; then
     sudo systemctl disable --now power-profiles-daemon.service
 fi
 
+# iwd/iwctl owns Wi-Fi and iwd provides IP/DNS through systemd-resolved.
+# NetworkManager's iwd backend registers competing Wi-Fi/netconfig state
+# and prevents iwd from completing connection setup on wlan0.
+if ! sudo systemctl is-enabled iwd.service >/dev/null 2>&1; then
+    echo "chezmoi: enabling iwd.service"
+    sudo systemctl enable --now iwd.service
+elif ! sudo systemctl is-active iwd.service >/dev/null 2>&1; then
+    sudo systemctl start iwd.service
+fi
+
+if sudo systemctl is-enabled NetworkManager.service >/dev/null 2>&1 \
+   || sudo systemctl is-active NetworkManager.service >/dev/null 2>&1 \
+   || sudo systemctl is-enabled NetworkManager-dispatcher.service >/dev/null 2>&1 \
+   || sudo systemctl is-active NetworkManager-dispatcher.service >/dev/null 2>&1; then
+    echo "chezmoi: disabling NetworkManager services; iwd owns Wi-Fi"
+    sudo systemctl disable --now NetworkManager.service NetworkManager-dispatcher.service >/dev/null 2>&1 || true
+fi
+
 # Enable TLP's own units explicitly. tlp-stat checks for tlp.service by
 # name; a bare `systemctl enable tlp` sometimes resolves to a stale
 # symlink target on Arch and leaves it reporting "not enabled".
-for unit in tlp.service NetworkManager-dispatcher.service; do
+for unit in tlp.service; do
     if ! sudo systemctl is-enabled "$unit" >/dev/null 2>&1; then
         echo "chezmoi: enabling $unit"
         sudo systemctl enable "$unit"
