@@ -1,5 +1,5 @@
 extends: occurrence
-message: "Multiple 'That X' sentence openers in one paragraph. Break at least one by leading with the topic or using 'It X'."
+message: "Multiple 'That X' sentence openers in one paragraph. AI stacks 'That makes/result/scales/distinction...'. Break at least one by leading with the topic or using 'It X'."
 level: warning
 scope: paragraph
 token: '(?:^|(?<=\.\s))That [A-Z]?\w+'

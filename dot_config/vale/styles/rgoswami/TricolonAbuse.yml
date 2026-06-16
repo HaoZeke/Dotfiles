@@ -1,5 +1,5 @@
 extends: occurrence
-message: "Three-item list detected (%s). Vary list length or restructure."
+message: "Tricolon detected (%s). AI defaults to lists of three. Vary list length or restructure."
 ignorecase: true
 level: suggestion
 scope: sentence

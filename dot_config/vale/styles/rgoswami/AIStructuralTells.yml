@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is stock structural framing. Restructure the sentence."
+message: "'%s' is a structural AI tell. Restructure the sentence."
 ignorecase: true
 level: error
 tokens:
@@ -26,7 +26,7 @@ tokens:
   - the solution is straightforward
   - perhaps unsurprisingly
   - unsurprisingly
-  # Review-prose clefts and telegraphic frames.
+  # review-prose clefts and telegraphic frames (single-turn 2026-06-08)
   - cuts against
   - the order matches
   - is where it loses ground
@@ -40,7 +40,7 @@ tokens:
   - that is the catch
   - what saves
   - is where it
-  # Anthropomorphizing code or specifications.
+  # anthropomorphizing code / the spec (single-turn 2026-06-08)
   - asks the parse tree
   - the code knows
   - the parser knows

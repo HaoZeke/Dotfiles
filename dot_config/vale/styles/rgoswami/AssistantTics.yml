@@ -1,5 +1,6 @@
 extends: existence
-message: "'%s' is scaffolding. State the fact, action, or result directly."
+message: "'%s' is assistant-style scaffolding. State the fact, action, or result directly."
+link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
 ignorecase: true
 nonword: true
 level: error

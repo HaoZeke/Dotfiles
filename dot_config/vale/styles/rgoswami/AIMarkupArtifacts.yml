@@ -1,5 +1,6 @@
 extends: existence
 message: "'%s' is leaked generation markup or citation scaffolding. Remove it and verify the source manually."
+link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
 ignorecase: true
 nonword: true
 level: error

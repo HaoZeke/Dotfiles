@@ -3,7 +3,7 @@ message: "'%s' may vary terminology for the same referent. Pick one term and sti
 ignorecase: true
 level: suggestion
 tokens:
-  # Common synonym cycling patterns.
+  # Common AI synonym cycling patterns
   - this approach
   - this method
   - this technique
