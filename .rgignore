@@ -1,0 +1,3 @@
+# Keep writing-lint oracle material out of ordinary discovery.
+# Use explicit paths with `rg -u` when editing these rules.
+dot_config/vale/styles/**

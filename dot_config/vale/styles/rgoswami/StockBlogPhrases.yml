@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is a common AI writing pattern. Rephrase in your own voice."
+message: "'%s' is a stock blog phrase. Rephrase in your own voice."
 ignorecase: true
 level: error
 tokens:

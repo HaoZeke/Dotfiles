@@ -18,7 +18,7 @@ tokens:
   - seems to suggest
   - appears to indicate
   - tends to suggest
-  # Single hedges that AI stacks
+  # Single hedges that stack poorly.
   - would seem to
   - would appear to
   - would tend to

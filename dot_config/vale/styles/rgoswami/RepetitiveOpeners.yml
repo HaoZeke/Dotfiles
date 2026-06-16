@@ -5,7 +5,7 @@ level: suggestion
 scope: sentence
 tokens:
   # Can't detect cross-paragraph repetition, but these sentence-level patterns
-  # flag the most mechanical AI opener habits
+  # Flag the most mechanical opener habits.
   - '^The resulting '
   - '^The generated '
   - '^The corresponding '

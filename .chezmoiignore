@@ -114,7 +114,7 @@ dot_omp/agent/terminal-sessions/
 dot_omp/agent/sessions/
 dot_omp/agent/memories/
 dot_omp/puppeteer/
-# Private assistant config (machine-specific state)
+# Private local config (machine-specific state)
 dot_claude/backups/
 dot_claude/cache/
 dot_claude/debug/

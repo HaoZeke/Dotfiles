@@ -1,10 +1,9 @@
 extends: existence
-message: "'%s' is flagged AI/assistant vocabulary. Rephrase."
-link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
+message: "'%s' is inflated or generic diction. Rephrase."
 ignorecase: true
 level: warning
 tokens:
-  # Classic GPT-era words
+  # Overused ornate words.
   - crucial
   - pivotal
   - vibrant
@@ -99,7 +98,7 @@ tokens:
   - ever-evolving
   - increasingly important
   - increasingly vital
-  # 2025-era additions (GPT-4o, Claude patterns)
+  # Common ornate and generic phrases.
   - at its core
   - rich cultural heritage
   - enduring legacy
@@ -165,7 +164,7 @@ tokens:
   - falls down
   - misses on
   - hits all
-  # AI-typical "ship/land/come back" framing
+  # Stock "ship/land/come back" framing.
   - ship at
   - ships at
   - shipped at
@@ -199,7 +198,7 @@ tokens:
   - obvious answer
   - to be fair
   - all of which
-  # "real X" / "do real Y" framing the model uses to claim authentic execution
+  # "real X" / "do real Y" framing that claims authenticity instead of stating evidence.
   - do real work
   - does real work
   - did real work
@@ -220,7 +219,7 @@ tokens:
   - comes in at \d+ lines
   - lands at \d+ lines
   - is \d+ lines
-  # "X matters here because..." is a textbook AI explainer transition.
+  # "X matters here because..." is stock explainer framing.
   # Rewrite to state the relationship directly.
   - matters here because
   - matters because

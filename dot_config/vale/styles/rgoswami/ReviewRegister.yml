@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is a review-grading register tell (academic, sports, LinkedIn, or AI-grader). Rewrite plain."
+message: "'%s' is a review-grading register tell. Rewrite plain."
 ignorecase: true
 level: warning
 tokens:
@@ -60,7 +60,7 @@ tokens:
   - buys
   - is what \w[\w ]* buys
   - which is what
-  # "is honest" / "honest(ly)" reviewer-praise AIism
+  # "is honest" / "honest(ly)" reviewer-praise filler.
   - honest
   - honestly
   - is honest about
@@ -95,7 +95,7 @@ tokens:
   - and so on
   - and the like
   - and whatnot
-  # meta-commentary that adds nothing (AI throat-clearing)
+  # Meta-commentary that adds nothing.
   - worth stating plainly
   - worth noting
   - it is worth noting
@@ -116,7 +116,7 @@ tokens:
   - confident in this comparison
   - based on the model responses' own
   - based on the responses' own
-  # AI-grader filler that sounds plausible but says nothing
+  # Grading filler that sounds plausible but says nothing.
   - concrete
   - concretely
   - tangible
@@ -127,7 +127,7 @@ tokens:
   - that is real
   - which is genuinely
   - this is real
-  # AI-tell phrasing: name the scope concretely, not these stock intensifiers.
+  # Name the scope concretely instead of using stock intensifiers.
   - end to end
   - end-to-end
   - weak spot
@@ -176,7 +176,7 @@ tokens:
   # shows", "confirmed by building", or state the covariance behaviour directly.
   - build-verified
   - build verified
-  # Essay-register AI tells in starfleet justifications: state the fact plainly,
+  # Essay-register tells in review justifications: state the fact plainly,
   # do not narrate or intensify. The submitted answers read declarative and
   # code-dense ("Model B is the best because its scanner ... ; the split is ...").
   # "genuinely/truly correct" intensifies; "land(s) the feature" and "the moment
@@ -219,7 +219,7 @@ tokens:
   - undemonstrated
   - the propagation is real
   - the \w+ is real
-  # "grounds/grounded" as a verb for "rests on / is based on": AI-tell. Say the
+  # "grounds/grounded" as a verb for "rests on / is based on": say the
   # plain relation (rests on, uses, is computed from).
   - \bground(s|ed)\b
   # "realistic" / "the most realistic topology": grader-adjective. Name the
