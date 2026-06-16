@@ -10,15 +10,17 @@ fail() {
 
 sway_config="$repo/dot_config/sway/config.tmpl"
 power_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+kanata_config="$repo/dot_config/kanata/config.kbd"
 
 test -r "$sway_config" || fail "missing $sway_config"
 test -r "$power_script" || fail "missing $power_script"
+test -r "$kanata_config" || fail "missing $kanata_config"
 
-rg -q 'input "1:1:AT_Translated_Set_2_keyboard"' "$sway_config" \
-    || fail "sway does not target the raw built-in keyboard"
-rg -q 'events disabled' "$sway_config" \
-    || fail "sway does not disable raw built-in keyboard events"
-rg -q 'AT_Translated_Set_2_keyboard.*events disabled|events disabled.*AT_Translated_Set_2_keyboard' "$power_script" \
-    || fail "resume hook does not re-disable raw built-in keyboard events"
+rg -q 'linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd' "$kanata_config" \
+    || fail "kanata does not exclusively grab the raw built-in keyboard"
+! rg -q 'input "1:1:AT_Translated_Set_2_keyboard"' "$sway_config" \
+    || fail "sway disables the raw built-in keyboard instead of leaving it as a fallback"
+! rg -q 'AT_Translated_Set_2_keyboard.*events disabled|events disabled.*AT_Translated_Set_2_keyboard' "$power_script" \
+    || fail "resume hook disables the raw built-in keyboard fallback"
 
 printf 'ok\n'

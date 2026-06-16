@@ -49,7 +49,6 @@ $fake_socket|-s $fake_socket input type:touch events disabled
 $fake_socket|-s $fake_socket input type:touch events enabled
 $fake_socket|-s $fake_socket input type:keyboard events disabled
 $fake_socket|-s $fake_socket input type:keyboard events enabled
-$fake_socket|-s $fake_socket input "1:1:AT_Translated_Set_2_keyboard" events disabled
 $fake_socket|-s $fake_socket fullscreen disable
 $fake_socket|-s $fake_socket bar bar-0 mode dock
 $fake_socket|-s $fake_socket bar bar-1 mode dock

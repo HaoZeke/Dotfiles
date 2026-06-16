@@ -388,15 +388,6 @@ input type:keyboard {
     repeat_rate 25
 }
 
-{{- if eq .chezmoi.hostname "rgx1gen11" }}
-input "1:1:AT_Translated_Set_2_keyboard" {
-    # Text input is delivered by kanata's virtual keyboard. The raw
-    # built-in keyboard stays disabled so password prompts cannot see
-    # untranslated QWERTY events.
-    events disabled
-}
-{{- end }}
-
 # swaymsg -t get_inputs
 input type:touchpad {
     natural_scroll enabled

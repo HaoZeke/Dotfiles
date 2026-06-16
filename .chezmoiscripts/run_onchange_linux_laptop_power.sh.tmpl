@@ -407,10 +407,6 @@ for sock in /run/user/*/sway-ipc.*.sock; do
         run "input type:$cls events disabled"
         run "input type:$cls events enabled"
     done
-    # Text input is delivered by the kanata virtual keyboard; keep the
-    # raw built-in keyboard disabled in Sway so clients cannot receive
-    # untranslated QWERTY events.
-    run "input \"1:1:AT_Translated_Set_2_keyboard\" events disabled"
     run "fullscreen disable"
     run "bar bar-0 mode dock"
     run "bar bar-1 mode dock"

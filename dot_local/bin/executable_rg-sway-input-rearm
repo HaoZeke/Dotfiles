@@ -129,7 +129,6 @@ for class in pointer touchpad touch keyboard; do
     run_sway_optional "input type:$class events enabled"
 done
 
-run_sway_optional 'input "1:1:AT_Translated_Set_2_keyboard" events disabled'
 run_sway_optional 'fullscreen disable'
 run_sway_optional 'bar bar-0 mode dock'
 run_sway_optional 'bar bar-1 mode dock'
