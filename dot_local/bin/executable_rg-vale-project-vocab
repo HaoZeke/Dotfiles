@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-vale-project-vocab).
+
+set -euo pipefail
+
+usage() {
+    cat >&2 <<'EOF'
+usage: rg-vale-project-vocab [--root DIR] accept|reject TERM [TERM...]
+
+Add terms to a project-local Vale vocabulary. The helper creates
+styles/config/vocabularies/Project/{accept,reject}.txt and ensures the
+project .vale.ini enables both the global RG vocabulary and Project.
+EOF
+    exit 2
+}
+
+root=
+if [ "${1:-}" = "--root" ]; then
+    [ $# -ge 3 ] || usage
+    root=$2
+    shift 2
+fi
+
+[ $# -ge 2 ] || usage
+mode=$1
+shift
+
+case "$mode" in
+    accept | reject) ;;
+    *) usage ;;
+esac
+
+if [ -z "$root" ]; then
+    if root=$(git rev-parse --show-toplevel 2>/dev/null); then
+        :
+    else
+        root=$PWD
+    fi
+fi
+
+mkdir -p "$root"
+root=$(cd -- "$root" && pwd)
+
+global_config=${RG_VALE_GLOBAL_CONFIG:-"$HOME/.config/vale/.vale.ini"}
+global_styles=${RG_VALE_STYLES_PATH:-"$HOME/.config/vale/styles"}
+project_config="$root/.vale.ini"
+vocab_dir="$root/styles/config/vocabularies/Project"
+target_file="$vocab_dir/$mode.txt"
+
+test -r "$global_config" || {
+    printf 'missing global Vale config: %s\n' "$global_config" >&2
+    exit 1
+}
+test -d "$global_styles" || {
+    printf 'missing global Vale styles: %s\n' "$global_styles" >&2
+    exit 1
+}
+
+mkdir -p "$vocab_dir"
+touch "$vocab_dir/accept.txt" "$vocab_dir/reject.txt"
+
+if [ ! -e "$project_config" ]; then
+    awk -v styles="$global_styles" '
+        /^StylesPath[[:space:]]*=/ {
+            print "StylesPath = " styles
+            next
+        }
+        /^Vocab[[:space:]]*=/ {
+            print "Vocab = RG, Project"
+            saw_vocab = 1
+            next
+        }
+        { print }
+        END {
+            if (!saw_vocab) {
+                print "Vocab = RG, Project"
+            }
+        }
+    ' "$global_config" > "$project_config"
+else
+    tmp=$(mktemp)
+    awk '
+        /^Vocab[[:space:]]*=/ {
+            line = $0
+            if (line !~ /(^|[,[:space:]])Project([,[:space:]]|$)/) {
+                sub(/[[:space:]]*$/, "", line)
+                line = line ", Project"
+            }
+            print line
+            saw_vocab = 1
+            next
+        }
+        { print }
+        END {
+            if (!saw_vocab) {
+                print "Vocab = RG, Project"
+            }
+        }
+    ' "$project_config" > "$tmp"
+    mv "$tmp" "$project_config"
+fi
+
+for term in "$@"; do
+    [ -n "$term" ] || continue
+    printf '%s\n' "$term" >> "$target_file"
+done
+
+tmp=$(mktemp)
+LC_ALL=C sort -u "$target_file" > "$tmp"
+mv "$tmp" "$target_file"
+
+printf 'updated %s\n' "$target_file"

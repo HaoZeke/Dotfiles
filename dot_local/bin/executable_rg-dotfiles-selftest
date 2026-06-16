@@ -41,6 +41,7 @@ run "$REPO/dot_local/bin/executable_rg-sway-input-rearm-selftest" "$REPO/dot_loc
 run "$REPO/dot_local/bin/executable_rg-lockscreen-selftest"
 run "$REPO/dot_local/bin/executable_wl-copy-selftest" "$REPO/dot_local/bin/executable_wl-copy"
 run "$REPO/dot_local/bin/executable_rg-vissue-selftest" "$REPO/dot_local/bin/executable_vissue"
+run "$REPO/dot_local/bin/executable_rg-vale-project-vocab-selftest" "$REPO"
 
 (
     cd "$REPO"
@@ -90,6 +91,8 @@ if command -v shellcheck >/dev/null 2>&1; then
         "$REPO/dot_local/bin/executable_get_patched_font.sh" \
         "$REPO/dot_local/bin/executable_ghcoauthby" \
         "$REPO/dot_local/bin/executable_rg-lockscreen" \
+        "$REPO/dot_local/bin/executable_rg-vale-project-vocab" \
+        "$REPO/dot_local/bin/executable_rg-vale-project-vocab-selftest" \
         "$REPO/dot_local/bin/executable_wl-copy" \
         "$REPO/dot_local/bin/executable_turtleback-push"
 fi

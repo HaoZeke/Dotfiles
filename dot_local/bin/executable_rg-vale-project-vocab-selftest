@@ -12,8 +12,8 @@ fail() {
 }
 
 test -x "$script" || fail "missing executable helper: $script"
-test -r "$repo/dot_config/vale/.vale.ini" || fail "missing managed Vale config"
-test -d "$repo/dot_config/vale/styles" || fail "missing managed Vale styles"
+test -r "$HOME/.config/vale/.vale.ini" || fail "missing live Vale config"
+test -d "$HOME/.config/vale/styles" || fail "missing live Vale styles"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -22,8 +22,8 @@ project="$tmp/project"
 mkdir -p "$project"
 printf 'Use LDX here. Run ldd on the binary.\n' > "$project/test.md"
 
-RG_VALE_GLOBAL_CONFIG="$repo/dot_config/vale/.vale.ini" \
-RG_VALE_STYLES_PATH="$repo/dot_config/vale/styles" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
     "$script" --root "$project" accept LDX ldd
 
 test -r "$project/.vale.ini" || fail "project .vale.ini was not created"
@@ -32,7 +32,7 @@ test -r "$project/styles/config/vocabularies/Project/accept.txt" \
 test -r "$project/styles/config/vocabularies/Project/reject.txt" \
     || fail "project reject vocabulary was not created"
 
-rg -q '^StylesPath = '"$repo"'/dot_config/vale/styles$' "$project/.vale.ini" \
+rg -q '^StylesPath = '"$HOME"'/\.config/vale/styles$' "$project/.vale.ini" \
     || fail "project config does not point at managed global styles"
 rg -q '^Vocab = RG, Project$' "$project/.vale.ini" \
     || fail "project config does not enable RG plus Project vocabularies"
@@ -50,7 +50,7 @@ if ! vale --config="$project/.vale.ini" "$project/test.md" >"$project_out" 2>&1;
 fi
 
 global_out="$tmp/global-vale.out"
-if vale --config="$repo/dot_config/vale/.vale.ini" "$project/test.md" >"$global_out" 2>&1; then
+if vale --config="$HOME/.config/vale/.vale.ini" "$project/test.md" >"$global_out" 2>&1; then
     cat "$global_out" >&2
     fail "global Vale config should still reject project-only vocabulary"
 fi
