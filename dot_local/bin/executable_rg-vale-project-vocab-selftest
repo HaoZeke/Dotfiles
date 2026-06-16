@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-vale-project-vocab-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script=${2:-"$repo/dot_local/bin/executable_rg-vale-project-vocab"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing executable helper: $script"
+test -r "$repo/dot_config/vale/.vale.ini" || fail "missing managed Vale config"
+test -d "$repo/dot_config/vale/styles" || fail "missing managed Vale styles"
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+project="$tmp/project"
+mkdir -p "$project"
+printf 'Use LDX here. Run ldd on the binary.\n' > "$project/test.md"
+
+RG_VALE_GLOBAL_CONFIG="$repo/dot_config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$repo/dot_config/vale/styles" \
+    "$script" --root "$project" accept LDX ldd
+
+test -r "$project/.vale.ini" || fail "project .vale.ini was not created"
+test -r "$project/styles/config/vocabularies/Project/accept.txt" \
+    || fail "project accept vocabulary was not created"
+test -r "$project/styles/config/vocabularies/Project/reject.txt" \
+    || fail "project reject vocabulary was not created"
+
+rg -q '^StylesPath = '"$repo"'/dot_config/vale/styles$' "$project/.vale.ini" \
+    || fail "project config does not point at managed global styles"
+rg -q '^Vocab = RG, Project$' "$project/.vale.ini" \
+    || fail "project config does not enable RG plus Project vocabularies"
+rg -q '^Google\.Acronyms = NO$' "$project/.vale.ini" \
+    || fail "project config did not preserve global rule toggles"
+rg -q '^LDX$' "$project/styles/config/vocabularies/Project/accept.txt" \
+    || fail "LDX was not added to project accept vocabulary"
+rg -q '^ldd$' "$project/styles/config/vocabularies/Project/accept.txt" \
+    || fail "ldd was not added to project accept vocabulary"
+
+project_out="$tmp/project-vale.out"
+if ! vale --config="$project/.vale.ini" "$project/test.md" >"$project_out" 2>&1; then
+    cat "$project_out" >&2
+    fail "project Vale config should accept project vocabulary"
+fi
+
+global_out="$tmp/global-vale.out"
+if vale --config="$repo/dot_config/vale/.vale.ini" "$project/test.md" >"$global_out" 2>&1; then
+    cat "$global_out" >&2
+    fail "global Vale config should still reject project-only vocabulary"
+fi
+rg -q 'rgoswami\.Acronyms' "$global_out" \
+    || fail "global Vale failure was not the acronym rule"
+
+printf 'ok\n'
