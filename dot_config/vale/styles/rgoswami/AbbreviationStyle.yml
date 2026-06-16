@@ -1,0 +1,13 @@
+extends: existence
+message: "'%s' is abbreviation style drift. Use the plain form or spell it out."
+link: "https://developers.google.com/style/abbreviations"
+ignorecase: false
+nonword: true
+level: warning
+tokens:
+  # Google style omits periods in acronyms and initialisms: US, API, HTML.
+  - '(?:\b[A-Z]\.){2,}'
+  # Prefer "10 times faster" over "10x faster" in prose.
+  - '\b\d+(?:\.\d+)?x\b'
+  # Use "Use SSH to log in" rather than treating SSH as a verb.
+  - '\b[Ss][Ss][Hh](?:ed|ing)?\s+into\b'

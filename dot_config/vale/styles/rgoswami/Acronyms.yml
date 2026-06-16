@@ -2,12 +2,13 @@ extends: conditional
 message: "Spell out '%s', if it's unfamiliar to the audience."
 link: 'https://developers.google.com/style/abbreviations'
 level: error
+scope: text
 ignorecase: false
 # Ensures that the existence of 'first' implies the existence of 'second'.
 # 'second' is the definition; allow lower-case and hyphenated expansions,
-# e.g. "foreign function interface (FFI)". The trailing `s?` lets a plural
-# definition like "machine-learned interatomic potentials (MLIPs)" count as
-# defining the singular acronym. Only acronyms never defined anywhere in the
+# for example "foreign function interface (FFI)". The trailing `s?` lets a
+# plural definition like "machine-learned interatomic potentials (MLIPs)" count
+# as defining the singular acronym. Only acronyms never defined anywhere in the
 # document are flagged.
 first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Za-z][a-z]+[ -]){1,6}\(([A-Z]{3,5})s?\)'
@@ -38,6 +39,7 @@ exceptions:
   - GPU
   - GTK
   - GUI
+  - CMAKE
   - HTML
   - HTTP
   - HTTPS
@@ -112,6 +114,20 @@ exceptions:
   - KILL
   # Emacs org-mode clock states
   - CLOCK
+
+  # C / systems programming (standard across all C/Rust/Go docs)
+  - "NULL"
+  - EOF
+  - WASM
+  - ESM
+  - CJS
+
+  # Test result head-tags used in single-turn review org files
+  - PASS
+  - FAIL
+  - FIXED
+  - ERROR
+  - PARTIAL
 
   # Math / numerics notation (validated, not expandable as words)
   - JTJ

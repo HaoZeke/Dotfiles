@@ -1,0 +1,18 @@
+extends: existence
+message: "'%s' is a plural acronym use. Define the singular acronym first, or add it to rgoswami.Acronyms exceptions."
+link: "https://developers.google.com/style/abbreviations"
+ignorecase: false
+nonword: true
+level: warning
+tokens:
+  - '\b[A-Z]{3,5}s\b'
+exceptions:
+  - APIs
+  - GPUs
+  - CPUs
+  - CLIs
+  - PDFs
+  - URLs
+  - SVGs
+  - SDKs
+  - VMs

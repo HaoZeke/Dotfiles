@@ -1,0 +1,17 @@
+extends: existence
+message: "'%s' is leaked generation markup or citation scaffolding. Remove it and verify the source manually."
+link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
+ignorecase: true
+nonword: true
+level: error
+tokens:
+  - 'turn\d+(search|view|fetch|source)\d+'
+  - 'contentReference'
+  - 'oaicite'
+  - 'oai_citation'
+  - 'attributableIndex'
+  - 'grok_card'
+  - ':::writing'
+  - '\[citation needed\]'
+  - 'utm_source=chatgpt'
+  - 'utm_source=perplexity'

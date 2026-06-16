@@ -244,6 +244,8 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/git/hooks/pre-commit
 ~/.config/git/hooks/commit-msg
 ~/.claude/rules/starfleet.md
+~/.claude/agents/xait-single-turn-author.md
+~/.claude/agents/xait-single-turn-grader.md
 ~/.config/davmail/modify_queensu.properties
 ~/.config/davmail/epfl.properties
 ~/.config/davmail/queensu.properties
