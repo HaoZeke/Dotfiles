@@ -57,15 +57,15 @@ speed_json() {
     rx=$(read_counter rx_bytes)
     tx=$(read_counter tx_bytes)
 
-    mkdir -p "$state_dir"
+    mkdir -p "$state_dir" 2>/dev/null || true
     if [ -r "$state_file" ]; then
         read -r prev_now prev_rx prev_tx < "$state_file" || true
     fi
-    printf '%s %s %s\n' "$now" "$rx" "$tx" > "$state_file"
+    { printf '%s %s %s\n' "$now" "$rx" "$tx" > "$state_file"; } 2>/dev/null || true
 
     if [ -z "${prev_now:-}" ] || [ "$now" -le "$prev_now" ] \
        || [ "$rx" -lt "${prev_rx:-0}" ] || [ "$tx" -lt "${prev_tx:-0}" ]; then
-        json Good "WIFI D:-- U:--" WIFI
+        json Good "D:-- U:--" "D/U"
         return
     fi
 
@@ -74,7 +74,7 @@ speed_json() {
     up_bps=$(((tx - prev_tx) / delta_s))
     down=$(format_rate "$down_bps")
     up=$(format_rate "$up_bps")
-    json Good "WIFI D:$down U:$up" WIFI
+    json Good "D:$down U:$up" "D/U"
 }
 
 if [ -x "$airplane" ] && [ "$("$airplane" status 2>/dev/null || printf off)" = "on" ]; then

@@ -64,8 +64,25 @@ speed_out=$(
 )
 printf '%s\n' "$speed_out" | rg -q 'D:[^ ]+/s U:[^ ]+/s' \
     || fail "network status helper does not report download/upload speed"
+! printf '%s\n' "$speed_out" | rg -q 'WIFI' \
+    || fail "network status helper repeats a redundant WiFi label"
 ! printf '%s\n' "$speed_out" | rg -q '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
     || fail "network status helper leaks IP address instead of transfer speed"
+readonly_state="$tmp_net/readonly-state"
+mkdir -p "$readonly_state"
+chmod 500 "$readonly_state"
+readonly_err="$tmp_net/readonly.err"
+readonly_out=$(
+    RG_NETWORK_STATUS_SYSFS="$tmp_net/sys" \
+    RG_NETWORK_STATUS_NOW=106 \
+    XDG_STATE_HOME="$readonly_state" \
+        "$network_json" 2>"$readonly_err"
+)
+chmod 700 "$readonly_state"
+test ! -s "$readonly_err" \
+    || fail "network status helper writes bar-visible errors when state cannot be saved"
+printf '%s\n' "$readonly_out" | rg -q 'D:-- U:--' \
+    || fail "network status helper does not degrade cleanly without writable state"
 rg -q 'status 2>/dev/null' "$weather_json" \
     || fail "weather helper does not suppress output during airplane mode"
 rg -q 'urllib.request' "$weather_json" \
