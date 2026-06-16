@@ -2,9 +2,79 @@
 set -u
 
 airplane="${HOME}/.local/bin/rg-airplane"
+iface="${RG_NETWORK_STATUS_IFACE:-wlan0}"
+sysfs="${RG_NETWORK_STATUS_SYSFS:-/sys/class/net}"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}"
+state_file="$state_dir/rg-network-status-${iface//[^A-Za-z0-9_.-]/_}"
 
 json() {
     printf '{"state":"%s","text":"%s","short_text":"%s"}\n' "$1" "$2" "$3"
+}
+
+now_s() {
+    if [ -n "${RG_NETWORK_STATUS_NOW:-}" ]; then
+        printf '%s\n' "$RG_NETWORK_STATUS_NOW"
+    else
+        date +%s
+    fi
+}
+
+is_iface_up() {
+    if [ -r "$sysfs/$iface/operstate" ]; then
+        [ "$(cat "$sysfs/$iface/operstate" 2>/dev/null)" = "up" ]
+        return
+    fi
+    ip -br link show "$iface" 2>/dev/null | grep -q ' UP '
+}
+
+read_counter() {
+    local name="$1"
+    if [ -r "$sysfs/$iface/statistics/$name" ]; then
+        cat "$sysfs/$iface/statistics/$name" 2>/dev/null
+    else
+        printf '0\n'
+    fi
+}
+
+format_rate() {
+    awk -v bytes="$1" 'BEGIN {
+        if (bytes < 1024) {
+            printf "%dB/s", bytes
+        } else if (bytes < 1048576) {
+            printf "%.1fK/s", bytes / 1024
+        } else if (bytes < 1073741824) {
+            printf "%.1fM/s", bytes / 1048576
+        } else {
+            printf "%.1fG/s", bytes / 1073741824
+        }
+    }'
+}
+
+speed_json() {
+    local now rx tx prev_now prev_rx prev_tx delta_s down_bps up_bps down up
+
+    now=$(now_s)
+    rx=$(read_counter rx_bytes)
+    tx=$(read_counter tx_bytes)
+
+    mkdir -p "$state_dir"
+    if [ -r "$state_file" ]; then
+        read -r prev_now prev_rx prev_tx < "$state_file" || true
+    fi
+    printf '%s %s %s\n' "$now" "$rx" "$tx" > "$state_file"
+
+    if [ -z "${prev_now:-}" ] || [ "$now" -le "$prev_now" ] \
+       || [ "$rx" -lt "${prev_rx:-0}" ] || [ "$tx" -lt "${prev_tx:-0}" ]; then
+        json Good "WIFI D:-- U:--" WIFI
+        return
+    fi
+
+    delta_s=$((now - prev_now))
+    down_bps=$(((rx - prev_rx) / delta_s))
+    up_bps=$(((tx - prev_tx) / delta_s))
+    down=$(format_rate "$down_bps")
+    up=$(format_rate "$up_bps")
+    json Good "WIFI D:$down U:$up" WIFI
 }
 
 if [ -x "$airplane" ] && [ "$("$airplane" status 2>/dev/null || printf off)" = "on" ]; then
@@ -12,21 +82,10 @@ if [ -x "$airplane" ] && [ "$("$airplane" status 2>/dev/null || printf off)" = "
     exit 0
 fi
 
-line=$(ip -br addr show wlan0 2>/dev/null || true)
-case "$line" in
-    *" UP "*)
-        ipv4=$(printf '%s\n' "$line" | tr ' ' '\n' | sed -n '/^[0-9][0-9.]*\/[0-9][0-9]*$/p' | head -n 1)
-        if [ -n "$ipv4" ]; then
-            json Good "WIFI ${ipv4%%/*}" WIFI
-        else
-            json Info "WIFI up" WIFI
-        fi
-        ;;
-    *)
-        if ip -br addr show tailscale0 2>/dev/null | grep -q ' UP '; then
-            json Info TAILSCALE TS
-        else
-            json Idle OFFLINE NET
-        fi
-        ;;
-esac
+if is_iface_up; then
+    speed_json
+elif ip -br link show tailscale0 2>/dev/null | grep -q ' UP '; then
+    json Info TAILSCALE TS
+else
+    json Idle OFFLINE NET
+fi

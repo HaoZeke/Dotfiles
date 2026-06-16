@@ -45,8 +45,27 @@ printf '%s\n' "$out" | rg -q 'systemctl stop tailscaled.service' \
 
 rg -q 'status-json' "$network_json" \
     || fail "network status helper does not respect airplane state"
-rg -q 'ip -br addr show wlan0' "$network_json" \
-    || fail "network status helper does not inspect iwd-owned wlan0"
+tmp_net=$(mktemp -d)
+mkdir -p "$tmp_net/sys/wlan0/statistics" "$tmp_net/state"
+printf 'up\n' > "$tmp_net/sys/wlan0/operstate"
+printf '1000\n' > "$tmp_net/sys/wlan0/statistics/rx_bytes"
+printf '2000\n' > "$tmp_net/sys/wlan0/statistics/tx_bytes"
+RG_NETWORK_STATUS_SYSFS="$tmp_net/sys" \
+RG_NETWORK_STATUS_NOW=100 \
+XDG_STATE_HOME="$tmp_net/state" \
+    "$network_json" >/dev/null
+printf '31000\n' > "$tmp_net/sys/wlan0/statistics/rx_bytes"
+printf '12000\n' > "$tmp_net/sys/wlan0/statistics/tx_bytes"
+speed_out=$(
+    RG_NETWORK_STATUS_SYSFS="$tmp_net/sys" \
+    RG_NETWORK_STATUS_NOW=103 \
+    XDG_STATE_HOME="$tmp_net/state" \
+        "$network_json"
+)
+printf '%s\n' "$speed_out" | rg -q 'D:[^ ]+/s U:[^ ]+/s' \
+    || fail "network status helper does not report download/upload speed"
+! printf '%s\n' "$speed_out" | rg -q '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+    || fail "network status helper leaks IP address instead of transfer speed"
 rg -q 'status 2>/dev/null' "$weather_json" \
     || fail "weather helper does not suppress output during airplane mode"
 rg -q 'urllib.request' "$weather_json" \
