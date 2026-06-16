@@ -5,21 +5,45 @@ set -euo pipefail
 
 usage() {
     cat >&2 <<'EOF'
-usage: rg-vale-project-vocab [--root DIR] accept|reject TERM [TERM...]
+usage: rg-vale-project-vocab [--root DIR] [--name NAME] accept|reject TERM [TERM...]
 
 Add terms to a project-local Vale vocabulary. The helper creates
-styles/config/vocabularies/Project/{accept,reject}.txt and ensures the
-project .vale.ini enables both the global RG vocabulary and Project.
+styles/config/vocabularies/<project-name>/{accept,reject}.txt and ensures
+the project .vale.ini enables both the global RG vocabulary and that
+project-specific vocabulary.
 EOF
     exit 2
 }
 
 root=
-if [ "${1:-}" = "--root" ]; then
-    [ $# -ge 3 ] || usage
-    root=$2
-    shift 2
-fi
+vocab_name=
+while [ $# -gt 0 ]; do
+    case "${1:-}" in
+        --root)
+            [ $# -ge 2 ] || usage
+            root=$2
+            shift 2
+            ;;
+        --name)
+            [ $# -ge 2 ] || usage
+            vocab_name=$2
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 [ $# -ge 2 ] || usage
 mode=$1
@@ -41,10 +65,29 @@ fi
 mkdir -p "$root"
 root=$(cd -- "$root" && pwd)
 
+if [ -z "$vocab_name" ]; then
+    root_name=$(basename "$root")
+    vocab_name=$(
+        printf '%s' "$root_name" \
+            | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9._-]+/-/g; s/^[._-]+//; s/[._-]+$//; s/-+/-/g'
+    )
+fi
+
+[ -n "$vocab_name" ] || vocab_name=local
+case "$vocab_name" in
+    *[!A-Za-z0-9._-]*)
+        printf 'invalid vocabulary name: %s\n' "$vocab_name" >&2
+        printf 'use only letters, numbers, dot, underscore, and hyphen\n' >&2
+        exit 2
+        ;;
+esac
+
 global_config=${RG_VALE_GLOBAL_CONFIG:-"$HOME/.config/vale/.vale.ini"}
 global_styles=${RG_VALE_STYLES_PATH:-"$HOME/.config/vale/styles"}
 project_config="$root/.vale.ini"
-vocab_dir="$root/styles/config/vocabularies/Project"
+vocab_root="$root/styles/config/vocabularies"
+vocab_dir="$vocab_root/$vocab_name"
 target_file="$vocab_dir/$mode.txt"
 
 test -r "$global_config" || {
@@ -59,41 +102,72 @@ test -d "$global_styles" || {
 mkdir -p "$vocab_dir"
 touch "$vocab_dir/accept.txt" "$vocab_dir/reject.txt"
 
+old_project_dir="$vocab_root/Project"
+if [ "$vocab_name" != "Project" ] && [ -d "$old_project_dir" ]; then
+    for list in accept reject; do
+        if [ -r "$old_project_dir/$list.txt" ]; then
+            cat "$old_project_dir/$list.txt" >> "$vocab_dir/$list.txt"
+        fi
+    done
+fi
+
 if [ ! -e "$project_config" ]; then
-    awk -v styles="$global_styles" '
+    awk -v styles="$global_styles" -v vocab="$vocab_name" '
         /^StylesPath[[:space:]]*=/ {
             print "StylesPath = " styles
             next
         }
         /^Vocab[[:space:]]*=/ {
-            print "Vocab = RG, Project"
+            print "Vocab = RG, " vocab
             saw_vocab = 1
             next
         }
         { print }
         END {
             if (!saw_vocab) {
-                print "Vocab = RG, Project"
+                print "Vocab = RG, " vocab
             }
         }
     ' "$global_config" > "$project_config"
 else
     tmp=$(mktemp)
-    awk '
-        /^Vocab[[:space:]]*=/ {
-            line = $0
-            if (line !~ /(^|[,[:space:]])Project([,[:space:]]|$)/) {
-                sub(/[[:space:]]*$/, "", line)
-                line = line ", Project"
+    awk -v vocab="$vocab_name" '
+        function trim(s) {
+            sub(/^[[:space:]]+/, "", s)
+            sub(/[[:space:]]+$/, "", s)
+            return s
+        }
+        function add_vocab(item) {
+            item = trim(item)
+            if (item == "" || item == "Project" || seen[item]) {
+                return
             }
-            print line
+            seen[item] = 1
+            if (list == "") {
+                list = item
+            } else {
+                list = list ", " item
+            }
+        }
+        /^Vocab[[:space:]]*=/ {
+            values = $0
+            sub(/^Vocab[[:space:]]*=[[:space:]]*/, "", values)
+            delete seen
+            list = ""
+            add_vocab("RG")
+            n = split(values, parts, ",")
+            for (i = 1; i <= n; i++) {
+                add_vocab(parts[i])
+            }
+            add_vocab(vocab)
+            print "Vocab = " list
             saw_vocab = 1
             next
         }
         { print }
         END {
             if (!saw_vocab) {
-                print "Vocab = RG, Project"
+                print "Vocab = RG, " vocab
             }
         }
     ' "$project_config" > "$tmp"

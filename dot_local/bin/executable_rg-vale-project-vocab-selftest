@@ -18,7 +18,8 @@ test -d "$HOME/.config/vale/styles" || fail "missing live Vale styles"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-project="$tmp/project"
+project="$tmp/metatensor-docs"
+project_vocab=metatensor-docs
 mkdir -p "$project"
 printf 'Use LDX here. Run ldd on the binary.\n' > "$project/test.md"
 
@@ -27,20 +28,20 @@ RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
     "$script" --root "$project" accept LDX ldd
 
 test -r "$project/.vale.ini" || fail "project .vale.ini was not created"
-test -r "$project/styles/config/vocabularies/Project/accept.txt" \
+test -r "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "project accept vocabulary was not created"
-test -r "$project/styles/config/vocabularies/Project/reject.txt" \
+test -r "$project/styles/config/vocabularies/$project_vocab/reject.txt" \
     || fail "project reject vocabulary was not created"
 
 rg -q '^StylesPath = '"$HOME"'/\.config/vale/styles$' "$project/.vale.ini" \
     || fail "project config does not point at managed global styles"
-rg -q '^Vocab = RG, Project$' "$project/.vale.ini" \
-    || fail "project config does not enable RG plus Project vocabularies"
+rg -q '^Vocab = RG, '"$project_vocab"'$' "$project/.vale.ini" \
+    || fail "project config does not enable RG plus project-named vocabulary"
 rg -q '^Google\.Acronyms = NO$' "$project/.vale.ini" \
     || fail "project config did not preserve global rule toggles"
-rg -q '^LDX$' "$project/styles/config/vocabularies/Project/accept.txt" \
+rg -q '^LDX$' "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "LDX was not added to project accept vocabulary"
-rg -q '^ldd$' "$project/styles/config/vocabularies/Project/accept.txt" \
+rg -q '^ldd$' "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "ldd was not added to project accept vocabulary"
 
 project_out="$tmp/project-vale.out"
@@ -56,5 +57,41 @@ if vale --config="$HOME/.config/vale/.vale.ini" "$project/test.md" >"$global_out
 fi
 rg -q 'rgoswami\.Acronyms' "$global_out" \
     || fail "global Vale failure was not the acronym rule"
+
+legacy_project="$tmp/legacy-system-notes"
+legacy_vocab=legacy-system-notes
+mkdir -p "$legacy_project/styles/config/vocabularies/Project"
+printf 'LDY\n' > "$legacy_project/styles/config/vocabularies/Project/accept.txt"
+printf 'Use LDY here. Use LDZ here.\n' > "$legacy_project/test.md"
+awk -v styles="$HOME/.config/vale/styles" '
+    /^StylesPath[[:space:]]*=/ {
+        print "StylesPath = " styles
+        next
+    }
+    /^Vocab[[:space:]]*=/ {
+        print "Vocab = RG, Project"
+        next
+    }
+    { print }
+' "$HOME/.config/vale/.vale.ini" > "$legacy_project/.vale.ini"
+
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$legacy_project" accept LDZ
+
+rg -q '^Vocab = RG, '"$legacy_vocab"'$' "$legacy_project/.vale.ini" \
+    || fail "legacy config was not migrated to project-named vocabulary"
+! rg -q '^Vocab = .*Project' "$legacy_project/.vale.ini" \
+    || fail "legacy Project vocabulary remains enabled"
+rg -q '^LDY$' "$legacy_project/styles/config/vocabularies/$legacy_vocab/accept.txt" \
+    || fail "legacy Project accept terms were not copied"
+rg -q '^LDZ$' "$legacy_project/styles/config/vocabularies/$legacy_vocab/accept.txt" \
+    || fail "new legacy-project term was not added"
+
+legacy_out="$tmp/legacy-vale.out"
+if ! vale --config="$legacy_project/.vale.ini" "$legacy_project/test.md" >"$legacy_out" 2>&1; then
+    cat "$legacy_out" >&2
+    fail "migrated project Vale config should accept copied and new vocabulary"
+fi
 
 printf 'ok\n'
