@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+airplane="$repo/dot_local/bin/executable_rg-airplane"
+network_json="$repo/dot_local/bin/executable_rg-network-status-json"
+weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
+laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
+bottom_bar="$repo/dot_config/i3rust/i3_bottom.toml.tmpl"
+sway_config="$repo/dot_config/sway/config.tmpl"
+
+test -r "$airplane" || fail "missing rg-airplane helper"
+test -r "$network_json" || fail "missing rg-network-status-json helper"
+test -r "$weather_json" || fail "missing rg-weather-json helper"
+test -r "$laptop_script" || fail "missing laptop power script"
+test -r "$top_bar" || fail "missing top i3status-rs config"
+test -r "$bottom_bar" || fail "missing bottom i3status-rs config"
+test -r "$sway_config" || fail "missing sway config"
+
+rg -q 'rfkill block wlan wwan gps fm nfc uwb wimax' "$airplane" \
+    || fail "airplane mode does not block non-Bluetooth radios"
+rg -q 'bluetoothctl power on' "$airplane" \
+    || fail "airplane mode does not expose an explicit Bluetooth-on path"
+rg -q 'toggle\)' "$airplane" \
+    || fail "airplane mode does not expose a Bluetooth toggle path"
+rg -q 'systemctl stop tailscaled.service' "$airplane" \
+    || fail "airplane mode does not stop the primary tailnet"
+rg -q 'rg-tailnet-power' "$airplane" \
+    || fail "airplane mode does not delegate named tailnet instances"
+rg -q 'RG_AIRPLANE_DRY_RUN' "$airplane" \
+    || fail "airplane helper lacks dry-run test support"
+
+out=$(RG_AIRPLANE_DRY_RUN=1 XDG_STATE_HOME="$(mktemp -d)" "$airplane" on)
+printf '%s\n' "$out" | rg -q 'rfkill block wlan wwan gps fm nfc uwb wimax' \
+    || fail "airplane dry-run does not show radio block command"
+printf '%s\n' "$out" | rg -q 'systemctl stop tailscaled.service' \
+    || fail "airplane dry-run does not show primary tailnet stop"
+
+rg -q 'status-json' "$network_json" \
+    || fail "network status helper does not respect airplane state"
+rg -q 'ip -br addr show wlan0' "$network_json" \
+    || fail "network status helper does not inspect iwd-owned wlan0"
+rg -q 'status 2>/dev/null' "$weather_json" \
+    || fail "weather helper does not suppress output during airplane mode"
+rg -q 'urllib.request' "$weather_json" \
+    || fail "weather helper does not fetch weather without i3status-rs error blocks"
+
+rg -q 'rg-network-status-json' "$top_bar" \
+    || fail "top bar does not use quiet network status wrapper"
+! rg -q '^block = "net"$' "$top_bar" \
+    || fail "top bar still uses the generic net block"
+rg -q 'rg-weather-json reykjavik' "$bottom_bar" \
+    || fail "bottom bar does not use quiet Reykjavik weather wrapper"
+rg -q 'rg-weather-json iitk' "$bottom_bar" \
+    || fail "bottom bar does not use quiet IITK weather wrapper"
+! rg -q '^block = "weather"$' "$bottom_bar" \
+    || fail "bottom bar still uses generic weather blocks"
+
+rg -q 'unbound.service' "$laptop_script" \
+    || fail "local resolver service is not managed"
+rg -q '/etc/unbound/unbound.conf.d/rg-local.conf' "$laptop_script" \
+    || fail "hardened Unbound config is not installed"
+rg -q '/etc/systemd/resolved.conf.d/50-rg-local-dns.conf' "$laptop_script" \
+    || fail "systemd-resolved local resolver drop-in is not installed"
+rg -q 'tailscaled@.service' "$laptop_script" \
+    || fail "multi-tailnet systemd template is not installed"
+rg -q '/usr/local/sbin/rg-tailnet-power' "$laptop_script" \
+    || fail "root-owned tailnet power helper is not installed"
+rg -q '/usr/bin/tailscaled' "$laptop_script" \
+    || fail "tailscaled template does not use the local tailscaled path"
+rg -q '/etc/rg-tailnets' "$laptop_script" \
+    || fail "tailnet instance env directory is not managed"
+rg -q -- '--tun=userspace-networking' "$laptop_script" \
+    || fail "secondary tailnet template does not use userspace networking"
+rg -q -- '--accept-dns=false' "$laptop_script" \
+    || fail "Tailscale DNS ownership is not disabled"
+rg -q 'XF86RFKill.*rg-airplane toggle' "$sway_config" \
+    || fail "Sway does not bind the RFKill key to airplane mode"
+rg -q 'XF86Bluetooth.*rg-airplane bluetooth toggle' "$sway_config" \
+    || fail "Sway does not bind the Bluetooth key to Bluetooth toggle"
+
+printf 'ok\n'

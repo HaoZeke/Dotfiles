@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -u
+
+profile="${1:-reykjavik}"
+airplane="${HOME}/.local/bin/rg-airplane"
+api_key='{{ if ne .encrypted "no" }}{{ pass "services/openweather-api-key" }}{{ end }}'
+
+json() {
+    python3 - "$1" "$2" "$3" <<'PY'
+import json
+import sys
+
+print(json.dumps({"state": sys.argv[1], "text": sys.argv[2], "short_text": sys.argv[3]}))
+PY
+}
+
+case "$profile" in
+    reykjavik)
+        label="RVK"
+        url="https://api.openweathermap.org/data/2.5/weather?id=3413829&units=metric&lang=en&appid=${api_key}"
+        ;;
+    iitk)
+        label="IITK"
+        url="https://api.openweathermap.org/data/2.5/weather?lat=26.512530794602895&lon=80.2330716579492&units=metric&lang=en&appid=${api_key}"
+        ;;
+    *)
+        label="WX"
+        url=""
+        ;;
+esac
+
+if [ -x "$airplane" ] && [ "$("$airplane" status 2>/dev/null || printf off)" = "on" ]; then
+    json Idle "$label weather off" "$label"
+    exit 0
+fi
+
+if [ -z "$api_key" ] || [ -z "$url" ]; then
+    json Idle "$label weather" "$label"
+    exit 0
+fi
+
+python3 - "$label" "$url" <<'PY' || {
+import json
+import sys
+import urllib.request
+
+label, url = sys.argv[1], sys.argv[2]
+try:
+    with urllib.request.urlopen(url, timeout=4) as response:
+        data = json.load(response)
+    temp = round(float(data["main"]["temp"]))
+    condition = data["weather"][0]["main"]
+    wind = round(float(data.get("wind", {}).get("speed", 0)))
+    print(json.dumps({
+        "state": "Idle",
+        "text": f"{label} {condition} {temp}C {wind}m/s",
+        "short_text": f"{label} {temp}C",
+    }))
+except Exception:
+    raise SystemExit(1)
+PY
+    json Idle "$label weather --" "$label"
+}

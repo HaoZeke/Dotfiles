@@ -56,6 +56,8 @@ bindsym --no-repeat XF86AudioMicMute exec pamixer --default-source --toggle-mute
 
 bindsym XF86MonBrightnessDown exec $HOME/.local/bin/brightness_sync.sh 5%- $WOBSOCK
 bindsym XF86MonBrightnessUp   exec $HOME/.local/bin/brightness_sync.sh +5% $WOBSOCK
+bindsym --no-repeat XF86RFKill exec $HOME/.local/bin/rg-airplane toggle
+bindsym --no-repeat XF86Bluetooth exec $HOME/.local/bin/rg-airplane bluetooth toggle
 
 # Media keys: playerctl is installed (see browser-media-watchdog); use
 # it so the same key works for whichever player is active (mpv,

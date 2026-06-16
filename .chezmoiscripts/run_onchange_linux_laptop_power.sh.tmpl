@@ -30,6 +30,21 @@ write_if_diff() {
     return 1
 }
 
+write_executable_if_diff() {
+    local dst="$1" content="$2"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m 0755 -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
 IOSCHED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # BFQ on every rotational and non-rotational block device for better
 # interactive latency under I/O contention. Only ramdisks, loop, and
@@ -98,19 +113,56 @@ DEVICESCAN -a -o on -S on -s (S/../.././02|L/../../6/03) -W 4,45,60
 '
 
 RGPOWER_SUDOERS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Let rgpower (the power-profile CLI) invoke a specific short list of
+# Let local desktop control helpers invoke a specific short list of
 # privileged commands without a password prompt. Scoped to exact
-# arg tuples -- no wildcards in the privileged part.
+# arg tuples -- no broad shell access.
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp start
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp ac
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp bat
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp-stat -s
 rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block all
 rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill unblock all
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block wlan wwan gps fm nfc uwb wimax
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill unblock wlan
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block bluetooth
+rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill unblock bluetooth
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start iwd.service
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start bluetooth.service
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl stop bluetooth.service
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start tailscaled.service
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl stop tailscaled.service
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-tailnet-power start
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-tailnet-power stop
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
+'
+
+RG_TAILNET_POWER_CONTENT='#!/usr/bin/env bash
+set -euo pipefail
+
+cmd="${1:-}"
+case "$cmd" in
+    start|stop) ;;
+    *) printf "usage: rg-tailnet-power [start|stop]\n" >&2; exit 2 ;;
+esac
+
+enabled=/etc/rg-tailnets/enabled
+[ -r "$enabled" ] || exit 0
+
+sed -e "s/#.*//" -e "s/^[[:space:]]*//" -e "s/[[:space:]]*$//" "$enabled" \
+    | sed "/^$/d" \
+    | while IFS= read -r name; do
+        case "$name" in
+            *[!A-Za-z0-9_.-]*)
+                printf "rg-tailnet-power: skipping invalid instance name: %s\n" "$name" >&2
+                continue
+                ;;
+        esac
+        [ -r "/etc/rg-tailnets/$name.env" ] || continue
+        systemctl "$cmd" "tailscaled@$name.service"
+    done
 '
 
 BTRBK_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -181,6 +233,123 @@ NM_WLAN_UNMANAGED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_li
 # profiles in /var/lib/iwd.
 [keyfile]
 unmanaged-devices=interface-name:wlan0
+'
+
+UNBOUND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+server:
+    interface: 127.0.0.1
+    interface: ::1
+    port: 53
+    access-control: 127.0.0.0/8 allow
+    access-control: ::1 allow
+    do-ip4: yes
+    do-ip6: yes
+    do-udp: yes
+    do-tcp: yes
+    hide-identity: yes
+    hide-version: yes
+    harden-glue: yes
+    harden-dnssec-stripped: yes
+    harden-referral-path: yes
+    harden-algo-downgrade: yes
+    qname-minimisation: yes
+    aggressive-nsec: yes
+    prefetch: yes
+    rrset-roundrobin: yes
+    use-caps-for-id: yes
+    private-address: 10.0.0.0/8
+    private-address: 172.16.0.0/12
+    private-address: 192.168.0.0/16
+    private-address: fd00::/8
+    private-address: fe80::/10
+    auto-trust-anchor-file: "/var/lib/unbound/root.key"
+    tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
+
+include: "/etc/unbound/rg-forward-zones.conf"
+
+forward-zone:
+    name: "."
+    forward-tls-upstream: yes
+    forward-addr: 9.9.9.9@853#dns.quad9.net
+    forward-addr: 149.112.112.112@853#dns.quad9.net
+    forward-addr: 1.1.1.1@853#cloudflare-dns.com
+'
+
+UNBOUND_MAIN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+include: "/etc/unbound/unbound.conf.d/*.conf"
+'
+
+UNBOUND_FORWARD_ZONES_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Add explicit tailnet/private split-DNS zones here when they have unique
+# suffixes and a reachable nameserver. Keep Tailscale accept-dns disabled
+# so no tailnet daemon rewrites system DNS.
+#
+# Example:
+# forward-zone:
+#     name: "example-tailnet.ts.net."
+#     forward-addr: 100.100.100.100
+'
+
+RESOLVED_LOCAL_DNS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+[Resolve]
+DNS=127.0.0.1
+FallbackDNS=
+Domains=~.
+DNSSEC=no
+DNSOverTLS=no
+Cache=yes
+DNSStubListener=yes
+'
+
+TAILSCALED_INSTANCE_CONTENT='[Unit]
+Description=Tailscale userspace tailnet instance %i
+Documentation=https://tailscale.com/docs/
+Wants=network-online.target
+After=network-online.target iwd.service systemd-resolved.service
+ConditionPathExists=/etc/rg-tailnets/%i.env
+
+[Service]
+Environment=TS_PORT=0
+Environment=TS_SOCKS5_SERVER=127.0.0.1:0
+Environment=TS_HTTP_PROXY_LISTEN=127.0.0.1:0
+EnvironmentFile=/etc/rg-tailnets/%i.env
+ExecStart=/usr/bin/tailscaled --tun=userspace-networking --state=/var/lib/tailscale-%i/tailscaled.state --socket=/run/tailscale-%i/tailscaled.sock --port=${TS_PORT} --socks5-server=${TS_SOCKS5_SERVER} --outbound-http-proxy-listen=${TS_HTTP_PROXY_LISTEN}
+ExecStopPost=/usr/bin/tailscaled --socket=/run/tailscale-%i/tailscaled.sock --cleanup
+Restart=on-failure
+RuntimeDirectory=tailscale-%i
+RuntimeDirectoryMode=0755
+StateDirectory=tailscale-%i
+StateDirectoryMode=0700
+CacheDirectory=tailscale-%i
+CacheDirectoryMode=0750
+Type=notify
+
+[Install]
+WantedBy=multi-user.target
+'
+
+TAILNETS_README_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# One optional env file per secondary tailnet instance:
+#
+#   /etc/rg-tailnets/work.env
+#
+# Example:
+#
+#   TS_PORT=0
+#   TS_SOCKS5_SERVER=127.0.0.1:1055
+#   TS_HTTP_PROXY_LISTEN=127.0.0.1:1056
+#
+# Start the daemon with:
+#
+#   sudo systemctl start tailscaled@work.service
+#   tailscale --socket=/run/tailscale-work/tailscaled.sock up --accept-dns=false --hostname=rgx1gen11-work
+#
+# Add instance names to /etc/rg-tailnets/enabled, one per line, for
+# rg-airplane to stop/start them with the network profile.
+'
+
+TAILNETS_ENABLED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Add secondary tailnet instance names here, one per line.
 '
 
 # system-sleep hook that kicks the Wayland session awake after a
@@ -311,7 +480,7 @@ if command -v pacman >/dev/null 2>&1; then
     PKGS_NEEDED=()
     for pkg in tlp tlp-rdw acpi fprintd libfprint btrbk restic \
                nftables smartmontools cpupower rfkill brightnessctl \
-               sccache mold clang iwd; do
+               sccache mold clang iwd unbound tailscale bluez-utils; do
         pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
     done
     if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
@@ -327,6 +496,9 @@ LOGIND_CHANGED=0
 SLEEP_CHANGED=0
 TLP_CHANGED=0
 JOURNALD_CHANGED=0
+UNBOUND_CHANGED=0
+RESOLVED_CHANGED=0
+TAILSCALED_TEMPLATE_CHANGED=0
 
 XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
@@ -335,6 +507,16 @@ write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/systemd/journald.conf.d/99-persistent-storage.conf "$JOURNALD_CONTENT" && JOURNALD_CHANGED=1 || true
 write_if_diff /etc/NetworkManager/conf.d/99-wlan0-unmanaged.conf "$NM_WLAN_UNMANAGED_CONTENT" || true
+write_if_diff /etc/unbound/unbound.conf                  "$UNBOUND_MAIN_CONTENT" && UNBOUND_CHANGED=1 || true
+write_if_diff /etc/unbound/unbound.conf.d/rg-local.conf  "$UNBOUND_CONTENT" && UNBOUND_CHANGED=1 || true
+write_if_diff /etc/unbound/rg-forward-zones.conf         "$UNBOUND_FORWARD_ZONES_CONTENT" && UNBOUND_CHANGED=1 || true
+write_if_diff /etc/systemd/resolved.conf.d/50-rg-local-dns.conf "$RESOLVED_LOCAL_DNS_CONTENT" && RESOLVED_CHANGED=1 || true
+write_if_diff /etc/systemd/system/tailscaled@.service    "$TAILSCALED_INSTANCE_CONTENT" && TAILSCALED_TEMPLATE_CHANGED=1 || true
+write_if_diff /etc/rg-tailnets/README                    "$TAILNETS_README_CONTENT" || true
+if ! sudo test -f /etc/rg-tailnets/enabled; then
+    write_if_diff /etc/rg-tailnets/enabled               "$TAILNETS_ENABLED_CONTENT" || true
+fi
+write_executable_if_diff /usr/local/sbin/rg-tailnet-power "$RG_TAILNET_POWER_CONTENT" || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
 
 # system-sleep hook: runs as root on every suspend/hibernate cycle.
@@ -493,6 +675,24 @@ if [ "$JOURNALD_CHANGED" = "1" ] || [ -z "$(sudo ls -A /var/log/journal 2>/dev/n
     sudo journalctl --flush >/dev/null 2>&1 || true
 fi
 
+if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload
+fi
+
+if [ "$UNBOUND_CHANGED" = "1" ] \
+   || [ "$RESOLVED_CHANGED" = "1" ] \
+   || ( ! sudo systemctl is-enabled unbound.service >/dev/null 2>&1 ); then
+    if command -v unbound-checkconf >/dev/null 2>&1 \
+       && sudo unbound-checkconf /etc/unbound/unbound.conf >/dev/null; then
+        sudo systemctl enable unbound.service >/dev/null 2>&1 || true
+        sudo systemctl restart unbound.service
+        sudo systemctl restart systemd-resolved.service
+        echo "chezmoi: local DNS resolver active via unbound + systemd-resolved"
+    else
+        echo "chezmoi: WARN unbound config validation failed; resolver services unchanged" >&2
+    fi
+fi
+
 # Conflicting services first: TLP and power-profiles-daemon cannot both
 # run. Drop PPD before enabling TLP so the enable doesn't trip a
 # same-name conflict.
@@ -517,6 +717,11 @@ if sudo systemctl is-enabled NetworkManager.service >/dev/null 2>&1 \
    || sudo systemctl is-active NetworkManager-dispatcher.service >/dev/null 2>&1; then
     echo "chezmoi: disabling NetworkManager services; iwd owns Wi-Fi"
     sudo systemctl disable --now NetworkManager.service NetworkManager-dispatcher.service >/dev/null 2>&1 || true
+fi
+
+if command -v tailscale >/dev/null 2>&1 \
+   && systemctl is-active tailscaled.service >/dev/null 2>&1; then
+    tailscale set --accept-dns=false >/dev/null 2>&1 || true
 fi
 
 # Enable TLP's own units explicitly. tlp-stat checks for tlp.service by

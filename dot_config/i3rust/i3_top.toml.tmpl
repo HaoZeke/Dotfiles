@@ -32,8 +32,16 @@ interval = 3
 format = "$1m"
 
 [[block]]
-block = "net"
-interval = 3
+block = "custom"
+command = "~/.local/bin/rg-network-status-json"
+json = true
+interval = 10
+[[block.click]]
+button = "left"
+cmd = "~/.local/bin/rg-airplane toggle"
+[[block.click]]
+button = "right"
+cmd = "~/.local/bin/rg-airplane bluetooth on"
 
 [[block]]
 block = "custom"

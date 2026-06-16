@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -u
+
+airplane="${HOME}/.local/bin/rg-airplane"
+
+json() {
+    printf '{"state":"%s","text":"%s","short_text":"%s"}\n' "$1" "$2" "$3"
+}
+
+if [ -x "$airplane" ] && [ "$("$airplane" status 2>/dev/null || printf off)" = "on" ]; then
+    "$airplane" status-json 2>/dev/null || json Info AIRPLANE AIR
+    exit 0
+fi
+
+line=$(ip -br addr show wlan0 2>/dev/null || true)
+case "$line" in
+    *" UP "*)
+        ipv4=$(printf '%s\n' "$line" | tr ' ' '\n' | sed -n '/^[0-9][0-9.]*\/[0-9][0-9]*$/p' | head -n 1)
+        if [ -n "$ipv4" ]; then
+            json Good "WIFI ${ipv4%%/*}" WIFI
+        else
+            json Info "WIFI up" WIFI
+        fi
+        ;;
+    *)
+        if ip -br addr show tailscale0 2>/dev/null | grep -q ' UP '; then
+            json Info TAILSCALE TS
+        else
+            json Idle OFFLINE NET
+        fi
+        ;;
+esac

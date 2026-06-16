@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+set -u
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
+STATE_FILE="$STATE_DIR/rg-airplane"
+BT_STATE_FILE="$STATE_DIR/rg-airplane-bluetooth"
+DRY_RUN="${RG_AIRPLANE_DRY_RUN:-0}"
+
+usage() {
+    cat <<'EOF'
+usage: rg-airplane [on|off|toggle|status|status-json|bluetooth on|bluetooth off|bluetooth toggle|bluetooth status]
+EOF
+}
+
+ensure_state_dir() {
+    mkdir -p "$STATE_DIR"
+}
+
+state() {
+    if [ -r "$STATE_FILE" ]; then
+        read -r value < "$STATE_FILE" || value=off
+        case "$value" in
+            on|off) printf '%s\n' "$value" ;;
+            *) printf 'off\n' ;;
+        esac
+    else
+        printf 'off\n'
+    fi
+}
+
+bt_state() {
+    if [ -r "$BT_STATE_FILE" ]; then
+        read -r value < "$BT_STATE_FILE" || value=off
+        case "$value" in
+            on|off) printf '%s\n' "$value" ;;
+            *) printf 'off\n' ;;
+        esac
+    else
+        printf 'off\n'
+    fi
+}
+
+set_state() {
+    ensure_state_dir
+    printf '%s\n' "$1" > "$STATE_FILE"
+}
+
+set_bt_state() {
+    ensure_state_dir
+    printf '%s\n' "$1" > "$BT_STATE_FILE"
+}
+
+run_privileged() {
+    if [ "$DRY_RUN" = "1" ]; then
+        printf '%s\n' "$*"
+        return 0
+    fi
+    if [ "$(id -u)" = "0" ]; then
+        "$@"
+    else
+        sudo -n "$@"
+    fi
+}
+
+run_optional_privileged() {
+    if [ "$DRY_RUN" = "1" ]; then
+        run_privileged "$@"
+        return 0
+    fi
+    run_privileged "$@" >/dev/null 2>&1 || true
+}
+
+stop_networks() {
+    run_privileged /usr/bin/rfkill block wlan wwan gps fm nfc uwb wimax || return 1
+    run_optional_privileged /usr/bin/systemctl stop tailscaled.service
+    run_optional_privileged /usr/local/sbin/rg-tailnet-power stop
+}
+
+start_networks() {
+    run_privileged /usr/bin/rfkill unblock wlan || return 1
+    run_optional_privileged /usr/bin/systemctl start iwd.service
+    run_optional_privileged /usr/bin/systemctl start tailscaled.service
+    run_optional_privileged /usr/local/sbin/rg-tailnet-power start
+}
+
+bluetooth_on() {
+    set_bt_state on
+    run_optional_privileged /usr/bin/rfkill unblock bluetooth
+    run_optional_privileged /usr/bin/systemctl start bluetooth.service
+    if command -v bluetoothctl >/dev/null 2>&1; then
+        if [ "$DRY_RUN" = "1" ]; then
+            printf '%s\n' "bluetoothctl power on"
+        else
+            bluetoothctl power on >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+bluetooth_off() {
+    set_bt_state off
+    if command -v bluetoothctl >/dev/null 2>&1; then
+        if [ "$DRY_RUN" = "1" ]; then
+            printf '%s\n' "bluetoothctl power off"
+        else
+            bluetoothctl power off >/dev/null 2>&1 || true
+        fi
+    fi
+    run_optional_privileged /usr/bin/systemctl stop bluetooth.service
+    run_optional_privileged /usr/bin/rfkill block bluetooth
+}
+
+airplane_on() {
+    stop_networks || return 1
+    if [ "$(bt_state)" = "on" ]; then
+        bluetooth_on
+    else
+        bluetooth_off
+    fi
+    set_state on
+}
+
+airplane_off() {
+    start_networks || return 1
+    if [ "$(bt_state)" = "on" ]; then
+        bluetooth_on
+    fi
+    set_state off
+}
+
+status_json() {
+    case "$(state)" in
+        on)
+            printf '{"state":"Info","text":"AIRPLANE","short_text":"AIR","airplane":true,"bluetooth":"%s"}\n' "$(bt_state)"
+            ;;
+        *)
+            printf '{"state":"Idle","text":"NET AUTO","short_text":"NET","airplane":false,"bluetooth":"%s"}\n' "$(bt_state)"
+            ;;
+    esac
+}
+
+cmd="${1:-status}"
+case "$cmd" in
+    on)
+        airplane_on
+        ;;
+    off)
+        airplane_off
+        ;;
+    toggle)
+        if [ "$(state)" = "on" ]; then
+            airplane_off
+        else
+            airplane_on
+        fi
+        ;;
+    status)
+        printf '%s\n' "$(state)"
+        ;;
+    status-json)
+        status_json
+        ;;
+    bluetooth)
+        case "${2:-status}" in
+            on) bluetooth_on ;;
+            off) bluetooth_off ;;
+            toggle)
+                if [ "$(bt_state)" = "on" ]; then
+                    bluetooth_off
+                else
+                    bluetooth_on
+                fi
+                ;;
+            status) printf '%s\n' "$(bt_state)" ;;
+            *) usage >&2; exit 2 ;;
+        esac
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
