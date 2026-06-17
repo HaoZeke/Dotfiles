@@ -29,6 +29,13 @@ run() {
 }
 
 test -r "$REPO/.chezmoi.toml.tmpl" || fail "missing chezmoi source at $REPO"
+test -r "$REPO/.project-ctx.toml" || fail "missing source-checkout project context"
+rg -q '^name = "chezmoi"$' "$REPO/.project-ctx.toml" \
+    || fail "project context does not declare the chezmoi project name"
+rg -q '^vault_issue_project = "chezmoi"$' "$REPO/.project-ctx.toml" \
+    || fail "project context does not declare the chezmoi vault issue slug"
+rg -q '^\.project-ctx\.toml$' "$REPO/.chezmoiignore" \
+    || fail "project context is not excluded from chezmoi target application"
 
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
