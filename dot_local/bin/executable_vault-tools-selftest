@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_vault-tools-selftest).
+
+set -euo pipefail
+
+SCRIPT="${1:-}"
+if [ -z "$SCRIPT" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT="$here/executable_vault-tools"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$SCRIPT" || fail "missing $SCRIPT"
+
+tmp_home=$(mktemp -d)
+trap 'rm -rf "$tmp_home"' EXIT
+
+fake_bin="$tmp_home/bin"
+fake_vault="$tmp_home/Git/Gitlab/obsidian-notes"
+fake_manifest="$fake_vault/tools/vault-tools/Cargo.toml"
+mkdir -p "$fake_bin" "$(dirname "$fake_manifest")"
+printf '[package]\nname = "vault-tools"\n' > "$fake_manifest"
+
+cat > "$fake_bin/cargo" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "$*" > "$RG_VAULT_TOOLS_ARG_LOG"
+printf '%s\n' "${CARGO_TARGET_DIR:-}" > "$RG_VAULT_TOOLS_TARGET_LOG"
+EOF
+chmod +x "$fake_bin/cargo"
+
+arg_log="$tmp_home/args"
+target_log="$tmp_home/target"
+HOME="$tmp_home" \
+PATH="$fake_bin:$PATH" \
+VAULT_ROOT="$fake_vault" \
+XDG_CACHE_HOME="$tmp_home/cache" \
+RG_VAULT_TOOLS_ARG_LOG="$arg_log" \
+RG_VAULT_TOOLS_TARGET_LOG="$target_log" \
+    bash "$SCRIPT" issue list --project chezmoi
+
+expected="run --manifest-path $fake_manifest -- --root $fake_vault issue list --project chezmoi"
+actual=$(cat "$arg_log")
+[ "$actual" = "$expected" ] || fail "expected '$expected', got '$actual'"
+
+expected_target="$tmp_home/cache/vault-tools-target"
+actual_target=$(cat "$target_log")
+[ "$actual_target" = "$expected_target" ] \
+    || fail "expected CARGO_TARGET_DIR '$expected_target', got '$actual_target'"
+
+printf 'ok\n'
