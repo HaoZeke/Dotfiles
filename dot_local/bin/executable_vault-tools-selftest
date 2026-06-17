@@ -31,6 +31,7 @@ cat > "$fake_bin/cargo" <<'EOF'
 set -euo pipefail
 
 printf '%s\n' "$*" > "$RG_VAULT_TOOLS_ARG_LOG"
+printf 'cargo\n' >> "$RG_VAULT_TOOLS_CALL_LOG"
 printf '%s\n' "${CARGO_TARGET_DIR:-}" > "$RG_VAULT_TOOLS_TARGET_LOG"
 if [ "${1:-}" != "install" ]; then
     printf 'expected cargo install, got: %s\n' "$*" >&2
@@ -47,6 +48,7 @@ EOF
 chmod +x "$fake_bin/cargo"
 
 arg_log="$tmp_home/args"
+call_log="$tmp_home/calls"
 target_log="$tmp_home/target"
 exec_log="$tmp_home/exec"
 install_root="$tmp_home/cache/vault-tools-install"
@@ -56,6 +58,7 @@ VAULT_ROOT="$fake_vault" \
 XDG_CACHE_HOME="$tmp_home/cache" \
 VAULT_TOOLS_INSTALL_ROOT="$install_root" \
 RG_VAULT_TOOLS_ARG_LOG="$arg_log" \
+RG_VAULT_TOOLS_CALL_LOG="$call_log" \
 RG_VAULT_TOOLS_TARGET_LOG="$target_log" \
 RG_VAULT_TOOLS_EXEC_LOG="$exec_log" \
 RG_VAULT_TOOLS_INSTALL_ROOT="$install_root" \
@@ -73,5 +76,24 @@ actual_target=$(cat "$target_log")
 expected_exec="--root $fake_vault issue list --project chezmoi"
 actual_exec=$(cat "$exec_log")
 [ "$actual_exec" = "$expected_exec" ] || fail "expected exec '$expected_exec', got '$actual_exec'"
+
+HOME="$tmp_home" \
+PATH="$fake_bin:$PATH" \
+VAULT_ROOT="$fake_vault" \
+XDG_CACHE_HOME="$tmp_home/cache" \
+VAULT_TOOLS_INSTALL_ROOT="$install_root" \
+RG_VAULT_TOOLS_ARG_LOG="$arg_log" \
+RG_VAULT_TOOLS_CALL_LOG="$call_log" \
+RG_VAULT_TOOLS_TARGET_LOG="$target_log" \
+RG_VAULT_TOOLS_EXEC_LOG="$exec_log" \
+RG_VAULT_TOOLS_INSTALL_ROOT="$install_root" \
+    bash "$SCRIPT" issue ready --project chezmoi
+
+cargo_calls=$(wc -l < "$call_log")
+[ "$cargo_calls" = "1" ] || fail "expected cargo to run once, got $cargo_calls calls"
+
+expected_exec="--root $fake_vault issue ready --project chezmoi"
+actual_exec=$(cat "$exec_log")
+[ "$actual_exec" = "$expected_exec" ] || fail "expected cached exec '$expected_exec', got '$actual_exec'"
 
 printf 'ok\n'
