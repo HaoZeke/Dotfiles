@@ -13,3 +13,9 @@ tokens:
   - is left as an exercise
   - speaks for itself
   - goes without saying
+  # verdict-flourish closers: end on the concrete discriminator, not a flourish
+  - settle(s|d)? it
+  - that decides it
+  - that is what decides
+  - the diffs? settle
+  - tips? the balance

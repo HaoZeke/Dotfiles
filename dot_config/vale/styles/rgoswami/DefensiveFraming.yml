@@ -14,3 +14,10 @@ tokens:
   - one might argue
   - some might say
   - critics might point out
+  # copula-negation hedges: state what it IS, not what it isn't
+  - is not perfect
+  - is not ideal
+  - not a real \w+
+  - not the early \w+
+  # "X, not Y" defensive negation tail (", not the/a/its/because/from ...")
+  - \w+, not (the|a|an|its|because|from) \w+

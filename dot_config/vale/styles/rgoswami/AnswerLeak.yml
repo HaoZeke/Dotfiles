@@ -1,0 +1,41 @@
+extends: existence
+message: "'%s' leaks build/internal evidence into the starfleet answer (answers ground in the diff + repo only). Move it to repro.org / the reviews / sync-review.org."
+ignorecase: true
+level: error
+tokens:
+  # build / test-run outcomes (the answer never reports these)
+  - all three build
+  - it builds
+  - builds cleanly
+  - builds and runs
+  - make check
+  - passes the test suite
+  - the test suite passes
+  - test suite is green
+  - i built
+  - i ran
+  - when i built
+  - after building
+  - build-grade
+  - build-graded
+  - build host
+  - builder host
+  - strace
+  - execve
+  - distinct SGR
+  # internal harness / infra
+  - cosmolab
+  - cosmopc
+  - rg\.cosmolab
+  - /testbed
+  - branch-manifest
+  - materializ
+  - worktree
+  - ST_<repo>
+  # grading-process internals (the answer is built from the submitted diff + summary only)
+  - early trace
+  - trace state
+  - the early \w+ version
+  - trace-distill
+  - distilled trace
+  - regrade

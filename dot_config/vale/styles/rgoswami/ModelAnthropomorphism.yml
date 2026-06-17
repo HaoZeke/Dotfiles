@@ -1,0 +1,9 @@
+extends: existence
+message: "'%s' anthropomorphizes a code artifact or model. Use a mechanical verb (covers, checks, verifies, asserts, omits)."
+ignorecase: true
+level: warning
+# A test/diff/backend does not speak, know, or want. The accepted review idiom
+# for the model's prose is "A's summary describes/claims/overstates" -- those
+# stay; this rule targets cognition/speech verbs on inanimate artifacts.
+tokens:
+  - (test|tests|code|backend|diff|stub|function|method|loop|parser|implementation|patch|harness) (say|says|said|tell|tells|know|knows|want|wants|think|thinks|believe|believes|feel|feels|see|sees|decide|decides|understand|understands|realise|realises|realize|realizes|argue|argues|admit|admits|insist|insists)
