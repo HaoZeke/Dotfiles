@@ -1,0 +1,71 @@
+[project]
+name = "chezmoi"
+description = "Chezmoi-managed dotfiles and local helper scripts for workstation configuration."
+languages = ["Shell", "TOML", "Org", "Rust"]
+build_system = "chezmoi templates plus focused shell selftests"
+test_command = "bash dot_local/bin/executable_rg-dotfiles-selftest /home/rgoswami/.local/share/chezmoi"
+ci = "local only"
+vault_issue_project = "chezmoi"
+
+[conventions]
+commit_style = "conventional"
+branch_strategy = "chezmoi branch; commit and push each logical change"
+code_style = "small shell helpers with focused selftests"
+test_patterns = ["dot_local/bin/executable_*selftest"]
+rules = [
+  "Use vissue with project chezmoi for follow-up tracking.",
+  "Keep source-checkout-only metadata out of chezmoi target application via .chezmoiignore.",
+  "Use local builds and tests with bounded resource use.",
+  "Do not add remote-builder workflows while remote buildbot access is unavailable.",
+  "Apply changed helpers with chezmoi apply before validating live behavior.",
+]
+
+[architecture]
+summary = "Chezmoi source tree for shell, desktop, network, Vale, vault, and workstation helper configuration."
+data_flow = "Source templates and helper scripts -> chezmoi apply -> live files under home and system-managed paths; focused selftests verify source behavior before apply."
+
+[[architecture.modules]]
+name = "Local helper scripts"
+path = "dot_local/bin/"
+description = "Managed command-line helpers and selftests, including rg-vale-project-vocab, vissue, vault-tools, and desktop helpers."
+
+[[architecture.modules]]
+name = "Chezmoi scripts"
+path = ".chezmoiscripts/"
+description = "Run-once and run-onchange installers for system/user configuration."
+
+[[architecture.modules]]
+name = "Vale configuration"
+path = "dot_config/vale/"
+description = "Global Vale config, writing style rules, and project vocabulary helper integration."
+
+[[commands]]
+name = "selftest"
+cmd = "bash dot_local/bin/executable_rg-dotfiles-selftest /home/rgoswami/.local/share/chezmoi"
+description = "Run the focused dotfiles selftest suite."
+
+[[commands]]
+name = "list chezmoi issues"
+cmd = "vissue list --project chezmoi"
+description = "List vault issues for this dotfiles checkout."
+
+[[commands]]
+name = "Vale project vocab"
+cmd = "rg-vale-project-vocab id"
+description = "Inspect deterministic project vocabulary identity for the active project."
+
+[[key_files]]
+path = "dot_local/bin/executable_rg-dotfiles-selftest"
+description = "Aggregate source-tree selftest."
+
+[[key_files]]
+path = "dot_local/bin/executable_rg-vale-project-vocab"
+description = "SQLite-backed project-local Vale vocabulary registry and materializer."
+
+[[key_files]]
+path = "dot_local/bin/executable_vault-tools"
+description = "Wrapper that runs vault-tools from an installed binary or local source fallback."
+
+[[key_files]]
+path = ".chezmoiignore"
+description = "Prevents source-only project metadata and optional local state from being applied as target files."
