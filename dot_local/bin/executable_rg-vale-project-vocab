@@ -6,7 +6,7 @@ set -euo pipefail
 usage() {
     cat >&2 <<'EOF'
 usage: rg-vale-project-vocab [--root DIR] [--name NAME] accept|reject TERM [TERM...]
-       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync
+       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync|import-existing
 
 Maintain project-local Vale vocabulary overlays backed by a SQLite registry.
 The materialized vocabulary name is <project-slug>-<project-hash>, where the
@@ -69,7 +69,7 @@ case "$command_name" in
     accept | reject)
         [ $# -ge 1 ] || usage
         ;;
-    id | list | sync)
+    id | list | sync | import-existing)
         [ $# -eq 0 ] || usage
         ;;
     *)
@@ -199,6 +199,15 @@ import_legacy_terms() {
         import_terms_file accept "$legacy_dir/accept.txt"
         import_terms_file reject "$legacy_dir/reject.txt"
     done
+}
+
+import_existing_terms() {
+    local existing_dir
+    [ -d "$vocab_root" ] || return 0
+    while IFS= read -r -d '' existing_dir; do
+        import_terms_file accept "$existing_dir/accept.txt"
+        import_terms_file reject "$existing_dir/reject.txt"
+    done < <(find "$vocab_root" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 }
 
 rewrite_config() {
@@ -340,5 +349,10 @@ case "$command_name" in
     sync)
         materialize_project
         printf 'synced %s\n' "$vocab_dir"
+        ;;
+    import-existing)
+        import_existing_terms
+        materialize_project
+        printf 'imported %s\n' "$vocab_dir"
         ;;
 esac
