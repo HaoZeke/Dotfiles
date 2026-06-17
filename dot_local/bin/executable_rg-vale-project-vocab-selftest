@@ -104,6 +104,38 @@ printf '%s\n' "$report_out" | rg -q '^hash\tslug\tvocab\troot_state\taccept_term
 printf '%s\n' "$report_out" | rg -q "^$project_hash"$'\t'"metatensor-docs"$'\t'"$project_vocab"$'\t'"ok"$'\t'"2"$'\t'"0"$'\t'"$project$" \
     || fail "report command does not print project row"
 
+export_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" --root "$project" export
+)
+printf '%s\n' "$export_out" | rg -q "^project_hash=$project_hash$" \
+    || fail "export command does not report project hash"
+printf '%s\n' "$export_out" | rg -q "^project_vocab=$project_vocab$" \
+    || fail "export command does not report project vocabulary"
+printf '%s\n' "$export_out" | rg -q '^\[accept\]$' \
+    || fail "export command does not print accept section"
+printf '%s\n' "$export_out" | rg -q '^LDX$' \
+    || fail "export command does not print uppercase accept term"
+printf '%s\n' "$export_out" | rg -q '^ldd$' \
+    || fail "export command does not print lowercase accept term"
+printf '%s\n' "$export_out" | rg -q '^\[reject\]$' \
+    || fail "export command does not print reject section"
+
+completion_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" completion bash
+)
+printf '%s\n' "$completion_out" | rg -q '_rg_vale_project_vocab_complete' \
+    || fail "completion command does not print bash completion function"
+printf '%s\n' "$completion_out" | rg -q 'import-existing' \
+    || fail "completion command omits import-existing"
+printf '%s\n' "$completion_out" | rg -q 'export' \
+    || fail "completion command omits export"
+
 project_out="$tmp/project-vale.out"
 if ! vale --config="$project/.vale.ini" "$project/test.md" >"$project_out" 2>&1; then
     cat "$project_out" >&2
