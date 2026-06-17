@@ -64,7 +64,7 @@ RG_VAULT_TOOLS_EXEC_LOG="$exec_log" \
 RG_VAULT_TOOLS_INSTALL_ROOT="$install_root" \
     bash "$SCRIPT" issue list --project chezmoi
 
-expected="install --path $fake_source --root $install_root --locked"
+expected="install --path $fake_source --root $install_root --locked --force"
 actual=$(cat "$arg_log")
 [ "$actual" = "$expected" ] || fail "expected '$expected', got '$actual'"
 
@@ -95,5 +95,25 @@ cargo_calls=$(wc -l < "$call_log")
 expected_exec="--root $fake_vault issue ready --project chezmoi"
 actual_exec=$(cat "$exec_log")
 [ "$actual_exec" = "$expected_exec" ] || fail "expected cached exec '$expected_exec', got '$actual_exec'"
+
+printf '\n[dependencies]\n' >> "$fake_manifest"
+HOME="$tmp_home" \
+PATH="$fake_bin:$PATH" \
+VAULT_ROOT="$fake_vault" \
+XDG_CACHE_HOME="$tmp_home/cache" \
+VAULT_TOOLS_INSTALL_ROOT="$install_root" \
+RG_VAULT_TOOLS_ARG_LOG="$arg_log" \
+RG_VAULT_TOOLS_CALL_LOG="$call_log" \
+RG_VAULT_TOOLS_TARGET_LOG="$target_log" \
+RG_VAULT_TOOLS_EXEC_LOG="$exec_log" \
+RG_VAULT_TOOLS_INSTALL_ROOT="$install_root" \
+    bash "$SCRIPT" issue list --project chezmoi
+
+cargo_calls=$(wc -l < "$call_log")
+[ "$cargo_calls" = "2" ] || fail "expected source change to reinstall once, got $cargo_calls cargo calls"
+
+expected_exec="--root $fake_vault issue list --project chezmoi"
+actual_exec=$(cat "$exec_log")
+[ "$actual_exec" = "$expected_exec" ] || fail "expected refreshed exec '$expected_exec', got '$actual_exec'"
 
 printf 'ok\n'
