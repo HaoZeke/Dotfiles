@@ -178,4 +178,48 @@ RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
 rg -q '^BadTerm$' "$manual_project/styles/config/vocabularies/$manual_vocab/reject.txt" \
     || fail "sync did not rematerialize project files from registry"
 
+rename_project="$tmp/rename-project"
+mkdir -p "$rename_project"
+rename_hash=$(printf '%s' "$rename_project" | sha256sum | awk '{print substr($1, 1, 12)}')
+rename_old_vocab="rename-project-$rename_hash"
+rename_new_vocab="renamed-docs-$rename_hash"
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$rename_project" accept KeepTerm
+rg -q '^Vocab = RG, '"$rename_old_vocab"'$' "$rename_project/.vale.ini" \
+    || fail "rename fixture did not start with the default vocabulary name"
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$rename_project" rename renamed-docs
+rg -q '^Vocab = RG, '"$rename_new_vocab"'$' "$rename_project/.vale.ini" \
+    || fail "rename did not rewrite project config to the new vocabulary name"
+! rg -q "$rename_old_vocab" "$rename_project/.vale.ini" \
+    || fail "rename left the old vocabulary enabled"
+rg -q '^KeepTerm$' "$rename_project/styles/config/vocabularies/$rename_new_vocab/accept.txt" \
+    || fail "rename did not rematerialize existing terms under the new vocabulary name"
+sqlite3 "$db" "select slug || ':' || vocab from projects where hash = '$rename_hash';" \
+    | rg -q "^renamed-docs:$rename_new_vocab$" \
+    || fail "rename did not update the registry project entry"
+
+stale_project="$tmp/stale-project"
+mkdir -p "$stale_project"
+stale_hash=$(printf '%s' "$stale_project" | sha256sum | awk '{print substr($1, 1, 12)}')
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$stale_project" accept StaleTerm
+rm -rf "$stale_project"
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$project" prune
+sqlite3 "$db" "select count(*) from projects where hash = '$stale_hash';" \
+    | rg -q '^0$' \
+    || fail "prune did not remove stale project registry entry"
+sqlite3 "$db" "select count(*) from terms where project_hash = '$stale_hash';" \
+    | rg -q '^0$' \
+    || fail "prune did not remove stale project terms"
+
 printf 'ok\n'
