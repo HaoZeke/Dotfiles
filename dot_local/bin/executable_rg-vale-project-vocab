@@ -7,7 +7,7 @@ usage() {
     cat >&2 <<'EOF'
 usage: rg-vale-project-vocab [--root DIR] [--name NAME] accept|reject TERM [TERM...]
        rg-vale-project-vocab [--root DIR] [--name NAME] rename NAME
-       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync|import-existing|prune
+       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync|import-existing|prune|audit|report
 
 Maintain project-local Vale vocabulary overlays backed by a SQLite registry.
 The materialized vocabulary name is <project-slug>-<project-hash>, where the
@@ -75,7 +75,7 @@ case "$command_name" in
         [ $# -eq 1 ] || usage
         rename_target=$1
         ;;
-    id | list | sync | import-existing | prune)
+    id | list | sync | import-existing | prune | audit | report)
         [ $# -eq 0 ] || usage
         ;;
     *)
@@ -326,6 +326,81 @@ list_terms() {
     "
 }
 
+term_count() {
+    local mode=$1
+    sqlite3 "$registry_db" "
+        SELECT COUNT(*)
+        FROM terms
+        WHERE project_hash = $(sql_literal "$project_hash")
+          AND mode = $(sql_literal "$mode");
+    "
+}
+
+dir_state() {
+    if [ -d "$1" ]; then
+        printf 'ok\n'
+    else
+        printf 'missing\n'
+    fi
+}
+
+file_state() {
+    if [ -r "$1" ]; then
+        printf 'ok\n'
+    else
+        printf 'missing\n'
+    fi
+}
+
+audit_project() {
+    printf 'hash=%s\n' "$project_hash"
+    printf 'slug=%s\n' "$project_slug"
+    printf 'vocab=%s\n' "$vocab_name"
+    printf 'root=%s\n' "$root"
+    printf 'root_state=%s\n' "$(dir_state "$root")"
+    printf 'config_state=%s\n' "$(file_state "$project_config")"
+    printf 'accept_file_state=%s\n' "$(file_state "$vocab_dir/accept.txt")"
+    printf 'reject_file_state=%s\n' "$(file_state "$vocab_dir/reject.txt")"
+    printf 'accept_terms=%s\n' "$(term_count accept)"
+    printf 'reject_terms=%s\n' "$(term_count reject)"
+}
+
+report_projects() {
+    local entry_hash
+    local entry_slug
+    local entry_vocab
+    local entry_root
+    local accept_count
+    local reject_count
+    local root_state
+
+    printf 'hash\tslug\tvocab\troot_state\taccept_terms\treject_terms\troot\n'
+    while IFS=$'\t' read -r entry_hash entry_slug entry_vocab entry_root accept_count reject_count; do
+        [ -n "$entry_hash" ] || continue
+        root_state=$(dir_state "$entry_root")
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$entry_hash" \
+            "$entry_slug" \
+            "$entry_vocab" \
+            "$root_state" \
+            "$accept_count" \
+            "$reject_count" \
+            "$entry_root"
+    done < <(
+        sqlite3 -separator $'\t' "$registry_db" "
+            SELECT
+                p.hash,
+                p.slug,
+                p.vocab,
+                p.root,
+                (SELECT COUNT(*) FROM terms t WHERE t.project_hash = p.hash AND t.mode = 'accept'),
+                (SELECT COUNT(*) FROM terms t WHERE t.project_hash = p.hash AND t.mode = 'reject')
+            FROM projects p
+            ORDER BY lower(p.slug), p.root, p.hash;
+        "
+    )
+}
+
 prune_missing_projects() {
     local entry_hash
     local entry_root
@@ -391,6 +466,12 @@ case "$command_name" in
         import_existing_terms
         materialize_project
         printf 'imported %s\n' "$vocab_dir"
+        ;;
+    audit)
+        audit_project
+        ;;
+    report)
+        report_projects
         ;;
     rename)
         import_existing_terms
