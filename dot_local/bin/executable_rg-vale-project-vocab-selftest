@@ -14,19 +14,25 @@ fail() {
 test -x "$script" || fail "missing executable helper: $script"
 test -r "$HOME/.config/vale/.vale.ini" || fail "missing live Vale config"
 test -d "$HOME/.config/vale/styles" || fail "missing live Vale styles"
+command -v sqlite3 >/dev/null 2>&1 || fail "sqlite3 is required"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 project="$tmp/metatensor-docs"
-project_vocab=metatensor-docs
 mkdir -p "$project"
 printf 'Use LDX here. Run ldd on the binary.\n' > "$project/test.md"
+project_hash=$(printf '%s' "$project" | sha256sum | awk '{print substr($1, 1, 12)}')
+project_vocab="metatensor-docs-$project_hash"
+state_home="$tmp/state"
+db="$state_home/rg-vale-vocab/registry.sqlite"
 
+XDG_STATE_HOME="$state_home" \
 RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
 RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
     "$script" --root "$project" accept LDX ldd
 
+test -r "$db" || fail "registry database was not created"
 test -r "$project/.vale.ini" || fail "project .vale.ini was not created"
 test -r "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "project accept vocabulary was not created"
@@ -43,6 +49,32 @@ rg -q '^LDX$' "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "LDX was not added to project accept vocabulary"
 rg -q '^ldd$' "$project/styles/config/vocabularies/$project_vocab/accept.txt" \
     || fail "ldd was not added to project accept vocabulary"
+sqlite3 "$db" "select slug || ':' || hash || ':' || root from projects where hash = '$project_hash';" \
+    | rg -q "^metatensor-docs:$project_hash:$project$" \
+    || fail "project identity was not stored in registry"
+sqlite3 "$db" "select mode || ':' || term from terms where project_hash = '$project_hash' order by mode, term;" \
+    | diff -u <(printf 'accept:LDX\naccept:ldd\n') - \
+    || fail "project terms were not stored in registry"
+
+id_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" --root "$project" id
+)
+printf '%s\n' "$id_out" | rg -q "^hash=$project_hash$" \
+    || fail "id command does not report project hash"
+printf '%s\n' "$id_out" | rg -q "^vocab=$project_vocab$" \
+    || fail "id command does not report materialized vocabulary name"
+
+list_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" --root "$project" list
+)
+printf '%s\n' "$list_out" | diff -u <(printf 'accept\tLDX\naccept\tldd\n') - \
+    || fail "list command does not print registry terms"
 
 project_out="$tmp/project-vale.out"
 if ! vale --config="$project/.vale.ini" "$project/test.md" >"$project_out" 2>&1; then
@@ -59,10 +91,11 @@ rg -q 'rgoswami\.Acronyms' "$global_out" \
     || fail "global Vale failure was not the acronym rule"
 
 legacy_project="$tmp/legacy-system-notes"
-legacy_vocab=legacy-system-notes
 mkdir -p "$legacy_project/styles/config/vocabularies/Project"
 printf 'LDY\n' > "$legacy_project/styles/config/vocabularies/Project/accept.txt"
 printf 'Use LDY here. Use LDZ here.\n' > "$legacy_project/test.md"
+legacy_hash=$(printf '%s' "$legacy_project" | sha256sum | awk '{print substr($1, 1, 12)}')
+legacy_vocab="legacy-system-notes-$legacy_hash"
 awk -v styles="$HOME/.config/vale/styles" '
     /^StylesPath[[:space:]]*=/ {
         print "StylesPath = " styles
@@ -75,6 +108,7 @@ awk -v styles="$HOME/.config/vale/styles" '
     { print }
 ' "$HOME/.config/vale/.vale.ini" > "$legacy_project/.vale.ini"
 
+XDG_STATE_HOME="$state_home" \
 RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
 RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
     "$script" --root "$legacy_project" accept LDZ
@@ -93,5 +127,26 @@ if ! vale --config="$legacy_project/.vale.ini" "$legacy_project/test.md" >"$lega
     cat "$legacy_out" >&2
     fail "migrated project Vale config should accept copied and new vocabulary"
 fi
+
+manual_project="$tmp/manual-name-project"
+mkdir -p "$manual_project"
+manual_hash=$(printf '%s' "$manual_project" | sha256sum | awk '{print substr($1, 1, 12)}')
+manual_vocab="manual-docs-$manual_hash"
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$manual_project" --name manual-docs reject BadTerm
+rg -q '^Vocab = RG, '"$manual_vocab"'$' "$manual_project/.vale.ini" \
+    || fail "explicit name did not derive hash-qualified vocabulary"
+rg -q '^BadTerm$' "$manual_project/styles/config/vocabularies/$manual_vocab/reject.txt" \
+    || fail "explicit-name reject term was not materialized"
+
+rm -f "$manual_project/styles/config/vocabularies/$manual_vocab/reject.txt"
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$manual_project" sync
+rg -q '^BadTerm$' "$manual_project/styles/config/vocabularies/$manual_vocab/reject.txt" \
+    || fail "sync did not rematerialize project files from registry"
 
 printf 'ok\n'
