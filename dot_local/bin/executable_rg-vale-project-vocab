@@ -6,17 +6,33 @@ set -euo pipefail
 usage() {
     cat >&2 <<'EOF'
 usage: rg-vale-project-vocab [--root DIR] [--name NAME] accept|reject TERM [TERM...]
+       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync
 
-Add terms to a project-local Vale vocabulary. The helper creates
-styles/config/vocabularies/<project-name>/{accept,reject}.txt and ensures
-the project .vale.ini enables both the global RG vocabulary and that
-project-specific vocabulary.
+Maintain project-local Vale vocabulary overlays backed by a SQLite registry.
+The materialized vocabulary name is <project-slug>-<project-hash>, where the
+hash is derived from remote.origin.url when available, otherwise the root path.
 EOF
     exit 2
 }
 
+slugify() {
+    local value=${1:-}
+    value=$(
+        printf '%s' "$value" \
+            | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9._-]+/-/g; s/^[._-]+//; s/[._-]+$//; s/-+/-/g'
+    )
+    [ -n "$value" ] || value=local
+    printf '%s\n' "$value"
+}
+
+sql_literal() {
+    local value=${1//\'/\'\'}
+    printf "'%s'" "$value"
+}
+
 root=
-vocab_name=
+slug_override=
 while [ $# -gt 0 ]; do
     case "${1:-}" in
         --root)
@@ -26,7 +42,7 @@ while [ $# -gt 0 ]; do
             ;;
         --name)
             [ $# -ge 2 ] || usage
-            vocab_name=$2
+            slug_override=$2
             shift 2
             ;;
         -h | --help)
@@ -45,13 +61,20 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ $# -ge 2 ] || usage
-mode=$1
+[ $# -ge 1 ] || usage
+command_name=$1
 shift
 
-case "$mode" in
-    accept | reject) ;;
-    *) usage ;;
+case "$command_name" in
+    accept | reject)
+        [ $# -ge 1 ] || usage
+        ;;
+    id | list | sync)
+        [ $# -eq 0 ] || usage
+        ;;
+    *)
+        usage
+        ;;
 esac
 
 if [ -z "$root" ]; then
@@ -65,30 +88,19 @@ fi
 mkdir -p "$root"
 root=$(cd -- "$root" && pwd)
 
-if [ -z "$vocab_name" ]; then
-    root_name=$(basename "$root")
-    vocab_name=$(
-        printf '%s' "$root_name" \
-            | LC_ALL=C tr '[:upper:]' '[:lower:]' \
-            | sed -E 's/[^a-z0-9._-]+/-/g; s/^[._-]+//; s/[._-]+$//; s/-+/-/g'
-    )
-fi
-
-[ -n "$vocab_name" ] || vocab_name=local
-case "$vocab_name" in
-    *[!A-Za-z0-9._-]*)
-        printf 'invalid vocabulary name: %s\n' "$vocab_name" >&2
-        printf 'use only letters, numbers, dot, underscore, and hyphen\n' >&2
-        exit 2
-        ;;
-esac
+remote=$(git -C "$root" config --get remote.origin.url 2>/dev/null || true)
+hash_source=${remote:-$root}
+project_hash=$(printf '%s' "$hash_source" | sha256sum | awk '{print substr($1, 1, 12)}')
+project_slug=$(slugify "${slug_override:-$(basename "$root")}")
+vocab_name="$project_slug-$project_hash"
 
 global_config=${RG_VALE_GLOBAL_CONFIG:-"$HOME/.config/vale/.vale.ini"}
 global_styles=${RG_VALE_STYLES_PATH:-"$HOME/.config/vale/styles"}
+state_home=${XDG_STATE_HOME:-"$HOME/.local/state"}
+registry_db=${RG_VALE_REGISTRY_DB:-"$state_home/rg-vale-vocab/registry.sqlite"}
 project_config="$root/.vale.ini"
 vocab_root="$root/styles/config/vocabularies"
 vocab_dir="$vocab_root/$vocab_name"
-target_file="$vocab_dir/$mode.txt"
 
 test -r "$global_config" || {
     printf 'missing global Vale config: %s\n' "$global_config" >&2
@@ -98,40 +110,107 @@ test -d "$global_styles" || {
     printf 'missing global Vale styles: %s\n' "$global_styles" >&2
     exit 1
 }
+command -v sqlite3 >/dev/null 2>&1 || {
+    printf 'missing sqlite3\n' >&2
+    exit 1
+}
 
-mkdir -p "$vocab_dir"
-touch "$vocab_dir/accept.txt" "$vocab_dir/reject.txt"
+init_db() {
+    mkdir -p "$(dirname "$registry_db")"
+    sqlite3 "$registry_db" <<'SQL'
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS projects (
+    hash TEXT PRIMARY KEY,
+    slug TEXT NOT NULL,
+    vocab TEXT NOT NULL,
+    root TEXT NOT NULL,
+    remote TEXT,
+    hash_source TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS terms (
+    project_hash TEXT NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('accept', 'reject')),
+    term TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_hash, mode, term),
+    FOREIGN KEY (project_hash) REFERENCES projects(hash) ON DELETE CASCADE
+);
+SQL
+}
 
-old_project_dir="$vocab_root/Project"
-if [ "$vocab_name" != "Project" ] && [ -d "$old_project_dir" ]; then
-    for list in accept reject; do
-        if [ -r "$old_project_dir/$list.txt" ]; then
-            cat "$old_project_dir/$list.txt" >> "$vocab_dir/$list.txt"
-        fi
+ensure_project() {
+    sqlite3 "$registry_db" "
+        INSERT INTO projects (hash, slug, vocab, root, remote, hash_source, created_at, updated_at)
+        VALUES (
+            $(sql_literal "$project_hash"),
+            $(sql_literal "$project_slug"),
+            $(sql_literal "$vocab_name"),
+            $(sql_literal "$root"),
+            $(sql_literal "$remote"),
+            $(sql_literal "$hash_source"),
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        ON CONFLICT(hash) DO UPDATE SET
+            slug = excluded.slug,
+            vocab = excluded.vocab,
+            root = excluded.root,
+            remote = excluded.remote,
+            hash_source = excluded.hash_source,
+            updated_at = CURRENT_TIMESTAMP;
+    "
+}
+
+insert_term() {
+    local mode=$1
+    local term=$2
+    [ -n "$term" ] || return 0
+    sqlite3 "$registry_db" "
+        INSERT INTO terms (project_hash, mode, term, created_at, updated_at)
+        VALUES (
+            $(sql_literal "$project_hash"),
+            $(sql_literal "$mode"),
+            $(sql_literal "$term"),
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        ON CONFLICT(project_hash, mode, term) DO UPDATE SET
+            updated_at = CURRENT_TIMESTAMP;
+    "
+}
+
+import_terms_file() {
+    local mode=$1
+    local file=$2
+    [ -r "$file" ] || return 0
+    while IFS= read -r term || [ -n "$term" ]; do
+        [ -n "$term" ] || continue
+        insert_term "$mode" "$term"
+    done < "$file"
+}
+
+import_legacy_terms() {
+    local legacy_dir
+    for legacy_dir in "$vocab_root/Project" "$vocab_root/$project_slug" "$vocab_dir"; do
+        [ -d "$legacy_dir" ] || continue
+        import_terms_file accept "$legacy_dir/accept.txt"
+        import_terms_file reject "$legacy_dir/reject.txt"
     done
-fi
+}
 
-if [ ! -e "$project_config" ]; then
-    awk -v styles="$global_styles" -v vocab="$vocab_name" '
-        /^StylesPath[[:space:]]*=/ {
-            print "StylesPath = " styles
-            next
-        }
-        /^Vocab[[:space:]]*=/ {
-            print "Vocab = RG, " vocab
-            saw_vocab = 1
-            next
-        }
-        { print }
-        END {
-            if (!saw_vocab) {
-                print "Vocab = RG, " vocab
-            }
-        }
-    ' "$global_config" > "$project_config"
-else
+rewrite_config() {
+    local source_config=$project_config
+    local tmp
+
+    if [ ! -e "$source_config" ]; then
+        source_config=$global_config
+    fi
+
     tmp=$(mktemp)
-    awk -v vocab="$vocab_name" '
+    awk -v styles="$global_styles" -v vocab="$vocab_name" -v oldslug="$project_slug" '
         function trim(s) {
             sub(/^[[:space:]]+/, "", s)
             sub(/[[:space:]]+$/, "", s)
@@ -139,7 +218,7 @@ else
         }
         function add_vocab(item) {
             item = trim(item)
-            if (item == "" || item == "Project" || seen[item]) {
+            if (item == "" || item == "Project" || item == oldslug || item == vocab || seen[item]) {
                 return
             }
             seen[item] = 1
@@ -148,6 +227,11 @@ else
             } else {
                 list = list ", " item
             }
+        }
+        /^StylesPath[[:space:]]*=/ {
+            print "StylesPath = " styles
+            saw_styles = 1
+            next
         }
         /^Vocab[[:space:]]*=/ {
             values = $0
@@ -159,28 +243,102 @@ else
             for (i = 1; i <= n; i++) {
                 add_vocab(parts[i])
             }
-            add_vocab(vocab)
-            print "Vocab = " list
+            if (list == "") {
+                list = "RG"
+            }
+            print "Vocab = " list ", " vocab
             saw_vocab = 1
             next
         }
         { print }
         END {
+            if (!saw_styles) {
+                print "StylesPath = " styles
+            }
             if (!saw_vocab) {
                 print "Vocab = RG, " vocab
             }
         }
-    ' "$project_config" > "$tmp"
+    ' "$source_config" > "$tmp"
     mv "$tmp" "$project_config"
-fi
+}
 
-for term in "$@"; do
-    [ -n "$term" ] || continue
-    printf '%s\n' "$term" >> "$target_file"
-done
+materialize_terms() {
+    local mode=$1
+    local target=$2
+    sqlite3 "$registry_db" "
+        SELECT term
+        FROM terms
+        WHERE project_hash = $(sql_literal "$project_hash")
+          AND mode = $(sql_literal "$mode")
+        ORDER BY lower(term), term;
+    " > "$target"
+}
 
-tmp=$(mktemp)
-LC_ALL=C sort -u "$target_file" > "$tmp"
-mv "$tmp" "$target_file"
+materialize_project() {
+    mkdir -p "$vocab_dir"
+    rewrite_config
+    materialize_terms accept "$vocab_dir/accept.txt"
+    materialize_terms reject "$vocab_dir/reject.txt"
+}
 
-printf 'updated %s\n' "$target_file"
+print_identity() {
+    printf 'hash=%s\n' "$project_hash"
+    printf 'slug=%s\n' "$project_slug"
+    printf 'vocab=%s\n' "$vocab_name"
+    printf 'root=%s\n' "$root"
+    printf 'remote=%s\n' "$remote"
+    printf 'hash_source=%s\n' "$hash_source"
+    printf 'db=%s\n' "$registry_db"
+}
+
+list_terms() {
+    sqlite3 -separator $'\t' "$registry_db" "
+        SELECT mode, term
+        FROM terms
+        WHERE project_hash = $(sql_literal "$project_hash")
+        ORDER BY mode, lower(term), term;
+    "
+}
+
+load_registered_slug() {
+    local registered_slug
+    [ -z "$slug_override" ] || return 0
+    registered_slug=$(
+        sqlite3 "$registry_db" "
+            SELECT slug
+            FROM projects
+            WHERE hash = $(sql_literal "$project_hash")
+            LIMIT 1;
+        "
+    )
+    [ -n "$registered_slug" ] || return 0
+    project_slug=$registered_slug
+    vocab_name="$project_slug-$project_hash"
+    vocab_dir="$vocab_root/$vocab_name"
+}
+
+init_db
+load_registered_slug
+ensure_project
+import_legacy_terms
+
+case "$command_name" in
+    accept | reject)
+        for term in "$@"; do
+            insert_term "$command_name" "$term"
+        done
+        materialize_project
+        printf 'updated %s\n' "$vocab_dir/$command_name.txt"
+        ;;
+    id)
+        print_identity
+        ;;
+    list)
+        list_terms
+        ;;
+    sync)
+        materialize_project
+        printf 'synced %s\n' "$vocab_dir"
+        ;;
+esac

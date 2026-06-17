@@ -73,7 +73,7 @@ list_out=$(
     RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
         "$script" --root "$project" list
 )
-printf '%s\n' "$list_out" | diff -u <(printf 'accept\tLDX\naccept\tldd\n') - \
+printf '%s\n' "$list_out" | diff -u <(printf 'accept\tldd\naccept\tLDX\n') - \
     || fail "list command does not print registry terms"
 
 project_out="$tmp/project-vale.out"
