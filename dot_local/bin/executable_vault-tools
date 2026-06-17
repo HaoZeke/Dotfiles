@@ -5,6 +5,7 @@ VAULT_ROOT="${VAULT_ROOT:-${HOME}/Git/Gitlab/obsidian-notes}"
 VT_MANIFEST="${VAULT_TOOLS_MANIFEST:-$VAULT_ROOT/tools/vault-tools/Cargo.toml}"
 VT_INSTALL_ROOT="${VAULT_TOOLS_INSTALL_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/vault-tools-install}"
 VT_INSTALL_BIN="$VT_INSTALL_ROOT/bin/vault-tools"
+VT_INSTALL_STAMP="$VT_INSTALL_ROOT/.vault-tools-source.sha256"
 
 if [[ -n "${VAULT_TOOLS_BIN:-}" ]]; then
     if [[ ! -x "$VAULT_TOOLS_BIN" ]]; then
@@ -16,8 +17,7 @@ fi
 
 for vt_bin in \
     "$VAULT_ROOT/tools/vault-tools/target/release/vault-tools" \
-    "$VAULT_ROOT/tools/vault-tools/target/debug/vault-tools" \
-    "$VT_INSTALL_BIN"; do
+    "$VAULT_ROOT/tools/vault-tools/target/debug/vault-tools"; do
     if [[ -x "$vt_bin" ]]; then
         exec "$vt_bin" --root "$VAULT_ROOT" "$@"
     fi
@@ -29,12 +29,29 @@ if [[ -r "$VT_MANIFEST" ]]; then
         exit 127
     fi
     VT_SOURCE_DIR="$(cd -- "$(dirname -- "$VT_MANIFEST")" && pwd)"
+    VT_SOURCE_HASH=$(
+        {
+            find "$VT_SOURCE_DIR" -maxdepth 1 \( -name Cargo.toml -o -name Cargo.lock \) -type f -print0
+            if [[ -d "$VT_SOURCE_DIR/src" ]]; then
+                find "$VT_SOURCE_DIR/src" -type f -print0
+            fi
+        } | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+    )
+    if [[ -x "$VT_INSTALL_BIN" && -r "$VT_INSTALL_STAMP" ]] \
+       && [[ "$(cat "$VT_INSTALL_STAMP")" == "$VT_SOURCE_HASH" ]]; then
+        exec "$VT_INSTALL_BIN" --root "$VAULT_ROOT" "$@"
+    fi
     export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/vault-tools-target}"
-    cargo install --path "$VT_SOURCE_DIR" --root "$VT_INSTALL_ROOT" --locked
+    cargo install --path "$VT_SOURCE_DIR" --root "$VT_INSTALL_ROOT" --locked --force
     if [[ ! -x "$VT_INSTALL_BIN" ]]; then
         printf 'vault-tools install did not create executable: %s\n' "$VT_INSTALL_BIN" >&2
         exit 127
     fi
+    printf '%s\n' "$VT_SOURCE_HASH" > "$VT_INSTALL_STAMP"
+    exec "$VT_INSTALL_BIN" --root "$VAULT_ROOT" "$@"
+fi
+
+if [[ -x "$VT_INSTALL_BIN" ]]; then
     exec "$VT_INSTALL_BIN" --root "$VAULT_ROOT" "$@"
 fi
 
