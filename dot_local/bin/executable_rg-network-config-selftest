@@ -87,6 +87,32 @@ rg -q 'status 2>/dev/null' "$weather_json" \
     || fail "weather helper does not suppress output during airplane mode"
 rg -q 'urllib.request' "$weather_json" \
     || fail "weather helper does not fetch weather without i3status-rs error blocks"
+! rg -q '\{\{[[:space:]]*pass' "$weather_json" \
+    || fail "weather helper reads OpenWeather key at template-render time"
+rg -q 'OPENWEATHER_API_KEY' "$weather_json" \
+    || fail "weather helper does not support environment-provided OpenWeather key"
+rg -q 'pass show services/openweather-api-key 2>/dev/null' "$weather_json" \
+    || fail "weather helper does not tolerate a missing pass entry at runtime"
+rendered_weather="$tmp_net/rg-weather-json"
+chezmoi --source "$repo" --no-tty --refresh-externals=never execute-template < "$weather_json" > "$rendered_weather"
+bash -n "$rendered_weather"
+mkdir -p "$tmp_net/bin"
+cat >"$tmp_net/bin/pass" <<'SH'
+#!/usr/bin/env sh
+exit 1
+SH
+chmod +x "$tmp_net/bin/pass"
+missing_pass_err="$tmp_net/weather-missing-pass.err"
+missing_pass_out=$(
+    PATH="$tmp_net/bin:$PATH" \
+    HOME="$tmp_net/home" \
+    OPENWEATHER_API_KEY= \
+        bash "$rendered_weather" reykjavik 2>"$missing_pass_err"
+)
+test ! -s "$missing_pass_err" \
+    || fail "weather helper writes errors when pass lacks the OpenWeather key"
+printf '%s\n' "$missing_pass_out" | rg -q '"state": "Idle"' \
+    || fail "weather helper does not degrade to an idle JSON block without an OpenWeather key"
 
 rg -q 'rg-network-status-json' "$top_bar" \
     || fail "top bar does not use quiet network status wrapper"
