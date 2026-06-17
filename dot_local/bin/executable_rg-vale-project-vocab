@@ -7,7 +7,8 @@ usage() {
     cat >&2 <<'EOF'
 usage: rg-vale-project-vocab [--root DIR] [--name NAME] accept|reject TERM [TERM...]
        rg-vale-project-vocab [--root DIR] [--name NAME] rename NAME
-       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync|import-existing|prune|audit|report
+       rg-vale-project-vocab [--root DIR] [--name NAME] id|list|sync|import-existing|prune|audit|report|export
+       rg-vale-project-vocab completion bash|zsh|fish
 
 Maintain project-local Vale vocabulary overlays backed by a SQLite registry.
 The materialized vocabulary name is <project-slug>-<project-hash>, where the
@@ -67,6 +68,7 @@ command_name=$1
 shift
 
 rename_target=
+completion_shell=
 case "$command_name" in
     accept | reject)
         [ $# -ge 1 ] || usage
@@ -75,7 +77,11 @@ case "$command_name" in
         [ $# -eq 1 ] || usage
         rename_target=$1
         ;;
-    id | list | sync | import-existing | prune | audit | report)
+    completion)
+        [ $# -eq 1 ] || usage
+        completion_shell=$1
+        ;;
+    id | list | sync | import-existing | prune | audit | report | export)
         [ $# -eq 0 ] || usage
         ;;
     *)
@@ -108,6 +114,50 @@ registry_db=${RG_VALE_REGISTRY_DB:-"$state_home/rg-vale-vocab/registry.sqlite"}
 project_config="$root/.vale.ini"
 vocab_root="$root/styles/config/vocabularies"
 vocab_dir="$vocab_root/$vocab_name"
+
+emit_completion() {
+    case "$1" in
+        bash)
+            cat <<'EOF'
+_rg_vale_project_vocab_complete() {
+    local cur words
+    cur=${COMP_WORDS[COMP_CWORD]}
+    words="--root --name accept reject id list sync import-existing rename prune audit report export completion"
+    COMPREPLY=( $(compgen -W "$words" -- "$cur") )
+}
+complete -F _rg_vale_project_vocab_complete rg-vale-project-vocab
+EOF
+            ;;
+        zsh)
+            cat <<'EOF'
+#compdef rg-vale-project-vocab
+_rg_vale_project_vocab() {
+    _arguments \
+        '--root[project root]:root:_files -/' \
+        '--name[project name]:name:' \
+        '1:command:(accept reject id list sync import-existing rename prune audit report export completion)' \
+        '*::term:_default'
+}
+_rg_vale_project_vocab "$@"
+EOF
+            ;;
+        fish)
+            cat <<'EOF'
+complete -c rg-vale-project-vocab -f -a 'accept reject id list sync import-existing rename prune audit report export completion'
+complete -c rg-vale-project-vocab -l root -r -d 'Project root'
+complete -c rg-vale-project-vocab -l name -r -d 'Project name'
+EOF
+            ;;
+        *)
+            usage
+            ;;
+    esac
+}
+
+if [ "$command_name" = completion ]; then
+    emit_completion "$completion_shell"
+    exit 0
+fi
 
 test -r "$global_config" || {
     printf 'missing global Vale config: %s\n' "$global_config" >&2
@@ -401,6 +451,29 @@ report_projects() {
     )
 }
 
+export_project() {
+    printf 'project_hash=%s\n' "$project_hash"
+    printf 'project_slug=%s\n' "$project_slug"
+    printf 'project_vocab=%s\n' "$vocab_name"
+    printf 'project_root=%s\n' "$root"
+    printf '[accept]\n'
+    sqlite3 "$registry_db" "
+        SELECT term
+        FROM terms
+        WHERE project_hash = $(sql_literal "$project_hash")
+          AND mode = 'accept'
+        ORDER BY lower(term), term;
+    "
+    printf '[reject]\n'
+    sqlite3 "$registry_db" "
+        SELECT term
+        FROM terms
+        WHERE project_hash = $(sql_literal "$project_hash")
+          AND mode = 'reject'
+        ORDER BY lower(term), term;
+    "
+}
+
 prune_missing_projects() {
     local entry_hash
     local entry_root
@@ -472,6 +545,9 @@ case "$command_name" in
         ;;
     report)
         report_projects
+        ;;
+    export)
+        export_project
         ;;
     rename)
         import_existing_terms
