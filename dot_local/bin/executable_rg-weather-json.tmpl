@@ -3,7 +3,10 @@ set -u
 
 profile="${1:-reykjavik}"
 airplane="${HOME}/.local/bin/rg-airplane"
-api_key='{{ if ne .encrypted "no" }}{{ pass "services/openweather-api-key" }}{{ end }}'
+api_key="${OPENWEATHER_API_KEY:-}"
+if [ -z "$api_key" ] && command -v pass >/dev/null 2>&1; then
+    api_key=$(pass show services/openweather-api-key 2>/dev/null | sed -n '1p') || api_key=
+fi
 
 json() {
     python3 - "$1" "$2" "$3" <<'PY'
