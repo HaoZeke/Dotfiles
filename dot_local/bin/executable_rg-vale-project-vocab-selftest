@@ -76,6 +76,34 @@ list_out=$(
 printf '%s\n' "$list_out" | diff -u <(printf 'accept\tldd\naccept\tLDX\n') - \
     || fail "list command does not print registry terms"
 
+audit_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" --root "$project" audit
+)
+printf '%s\n' "$audit_out" | rg -q "^hash=$project_hash$" \
+    || fail "audit command does not report project hash"
+printf '%s\n' "$audit_out" | rg -q "^root_state=ok$" \
+    || fail "audit command does not report root state"
+printf '%s\n' "$audit_out" | rg -q "^config_state=ok$" \
+    || fail "audit command does not report config state"
+printf '%s\n' "$audit_out" | rg -q '^accept_terms=2$' \
+    || fail "audit command does not report accept term count"
+printf '%s\n' "$audit_out" | rg -q '^reject_terms=0$' \
+    || fail "audit command does not report reject term count"
+
+report_out=$(
+    XDG_STATE_HOME="$state_home" \
+    RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+    RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+        "$script" --root "$project" report
+)
+printf '%s\n' "$report_out" | rg -q '^hash\tslug\tvocab\troot_state\taccept_terms\treject_terms\troot$' \
+    || fail "report command does not print header"
+printf '%s\n' "$report_out" | rg -q "^$project_hash"$'\t'"metatensor-docs"$'\t'"$project_vocab"$'\t'"ok"$'\t'"2"$'\t'"0"$'\t'"$project$" \
+    || fail "report command does not print project row"
+
 project_out="$tmp/project-vale.out"
 if ! vale --config="$project/.vale.ini" "$project/test.md" >"$project_out" 2>&1; then
     cat "$project_out" >&2
