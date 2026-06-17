@@ -128,6 +128,35 @@ if ! vale --config="$legacy_project/.vale.ini" "$legacy_project/test.md" >"$lega
     fail "migrated project Vale config should accept copied and new vocabulary"
 fi
 
+sweep_project="$tmp/sweep-docs"
+mkdir -p "$sweep_project/styles/config/vocabularies/Project"
+mkdir -p "$sweep_project/styles/config/vocabularies/old-project"
+mkdir -p "$sweep_project/styles/config/vocabularies/old-review"
+printf 'LDA\n' > "$sweep_project/styles/config/vocabularies/Project/accept.txt"
+printf 'LDB\n' > "$sweep_project/styles/config/vocabularies/old-project/accept.txt"
+printf 'BadSweep\n' > "$sweep_project/styles/config/vocabularies/old-review/reject.txt"
+sweep_hash=$(printf '%s' "$sweep_project" | sha256sum | awk '{print substr($1, 1, 12)}')
+sweep_vocab="sweep-docs-$sweep_hash"
+
+XDG_STATE_HOME="$state_home" \
+RG_VALE_GLOBAL_CONFIG="$HOME/.config/vale/.vale.ini" \
+RG_VALE_STYLES_PATH="$HOME/.config/vale/styles" \
+    "$script" --root "$sweep_project" import-existing
+
+test -r "$sweep_project/styles/config/vocabularies/$sweep_vocab/accept.txt" \
+    || fail "import-existing did not materialize accept vocabulary"
+test -r "$sweep_project/styles/config/vocabularies/$sweep_vocab/reject.txt" \
+    || fail "import-existing did not materialize reject vocabulary"
+cat "$sweep_project/styles/config/vocabularies/$sweep_vocab/accept.txt" \
+    | diff -u <(printf 'LDA\nLDB\n') - \
+    || fail "import-existing did not collect accept terms from all vocabulary directories"
+cat "$sweep_project/styles/config/vocabularies/$sweep_vocab/reject.txt" \
+    | diff -u <(printf 'BadSweep\n') - \
+    || fail "import-existing did not collect reject terms from all vocabulary directories"
+sqlite3 "$db" "select mode || ':' || term from terms where project_hash = '$sweep_hash' order by mode, term;" \
+    | diff -u <(printf 'accept:LDA\naccept:LDB\nreject:BadSweep\n') - \
+    || fail "import-existing did not store imported terms in registry"
+
 manual_project="$tmp/manual-name-project"
 mkdir -p "$manual_project"
 manual_hash=$(printf '%s' "$manual_project" | sha256sum | awk '{print substr($1, 1, 12)}')
