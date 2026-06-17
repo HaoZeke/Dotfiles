@@ -1,13 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VAULT_ROOT="${VAULT_ROOT:-/home/rgoswami/Git/Gitlab/obsidian-notes}"
-VT_BIN="$VAULT_ROOT/tools/vault-tools/target/release/vault-tools"
+VAULT_ROOT="${VAULT_ROOT:-${HOME}/Git/Gitlab/obsidian-notes}"
+VT_MANIFEST="${VAULT_TOOLS_MANIFEST:-$VAULT_ROOT/tools/vault-tools/Cargo.toml}"
 
-if [[ ! -x "$VT_BIN" ]]; then
-    printf 'vault-tools release binary is missing: %s\n' "$VT_BIN" >&2
-    printf 'Build on rg.cosmolab and install the release binary before using this wrapper.\n' >&2
-    exit 127
+if [[ -n "${VAULT_TOOLS_BIN:-}" ]]; then
+    if [[ ! -x "$VAULT_TOOLS_BIN" ]]; then
+        printf 'vault-tools binary is not executable: %s\n' "$VAULT_TOOLS_BIN" >&2
+        exit 127
+    fi
+    exec "$VAULT_TOOLS_BIN" --root "$VAULT_ROOT" "$@"
 fi
 
-exec "$VT_BIN" --root "$VAULT_ROOT" "$@"
+for vt_bin in \
+    "$VAULT_ROOT/tools/vault-tools/target/release/vault-tools" \
+    "$VAULT_ROOT/tools/vault-tools/target/debug/vault-tools"; do
+    if [[ -x "$vt_bin" ]]; then
+        exec "$vt_bin" --root "$VAULT_ROOT" "$@"
+    fi
+done
+
+if [[ -r "$VT_MANIFEST" ]]; then
+    if ! command -v cargo >/dev/null 2>&1; then
+        printf 'vault-tools source exists, but cargo is not available: %s\n' "$VT_MANIFEST" >&2
+        exit 127
+    fi
+    export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/vault-tools-target}"
+    exec cargo run --manifest-path "$VT_MANIFEST" -- --root "$VAULT_ROOT" "$@"
+fi
+
+printf 'vault-tools binary is missing and source manifest was not found under: %s\n' "$VAULT_ROOT" >&2
+exit 127
