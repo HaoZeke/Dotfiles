@@ -10,101 +10,90 @@ fail() {
 
 launcher="$repo/dot_local/bin/executable_rg-kernel-build"
 policy="$repo/dot_config/rg-kernel/build-lanes.env"
+readme="$repo/dot_config/rg-kernel/readme.org"
 ck_patch="$repo/dot_config/rg-kernel/patches/ck-muqss/0001-relax-libbpf-qualifier-warning.patch"
 
 test -r "$launcher" || fail "missing rg-kernel-build launcher"
 test -r "$policy" || fail "missing rg-kernel build lane policy"
+test -r "$readme" || fail "missing rg-kernel readme"
 test -r "$ck_patch" || fail "missing ck-muqss libbpf patch queue entry"
 
-rg -q '^RG_KERNEL_REMOTE=rg\.cosmolab$' "$policy" \
-    || fail "kernel build policy does not target rg.cosmolab"
-rg -q '^RG_KERNEL_REMOTE_ROOT=/scratch/goswami/rg-kernel-build$' "$policy" \
-    || fail "kernel build remote root must use cosmolab scratch storage"
-rg -q '^RG_KERNEL_MIN_REMOTE_AVAIL_GIB=40$' "$policy" \
-    || fail "kernel build policy must require enough remote free space"
-rg -q '^RG_KERNEL_LANES=.*arch-zen' "$policy" \
-    || fail "kernel build policy is missing arch-zen lane"
-rg -q '^RG_KERNEL_LANES=.*sched-ext' "$policy" \
-    || fail "kernel build policy is missing sched-ext lane"
-rg -q '^RG_KERNEL_LANES=.*cachy-bore' "$policy" \
-    || fail "kernel build policy is missing cachy-bore lane"
-rg -q '^RG_KERNEL_LANES=.*ck-muqss' "$policy" \
-    || fail "kernel build policy is missing ck-muqss lane"
+if rg -n 'rg\.cosmolab|RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
+    "$launcher" "$policy" "$readme"; then
+    fail "kernel build policy must be local-only while remote buildbot access is unavailable"
+fi
+
+rg -q '^RG_KERNEL_MACHINE_ID=rgx1gen11$' "$policy" \
+    || fail "kernel build policy does not pin this host"
+rg -q '^RG_KERNEL_MACHINE_MODEL="ThinkPad X1 Carbon Gen 11 21HM002GUS"$' "$policy" \
+    || fail "kernel build policy does not record this laptop model"
+rg -q '^RG_KERNEL_BUILD_ROOT="\$HOME/\.local/share/rg-kernel/build"$' "$policy" \
+    || fail "kernel build policy does not define the local build root"
+rg -q '^RG_KERNEL_MIN_LOCAL_AVAIL_GIB=45$' "$policy" \
+    || fail "kernel build policy should fit the current local free-space budget"
+rg -q '^RG_KERNEL_LOCAL_CPU_PERCENT=80$' "$policy" \
+    || fail "kernel build policy must cap local CPU use"
+rg -q '^RG_KERNEL_MAX_JOBS=9$' "$policy" \
+    || fail "kernel build policy should cap this 12-thread laptop at 9 jobs"
+rg -q '^RG_KERNEL_LANES="arch-zen liquorix sched-ext cachy-bore ck-muqss"$' "$policy" \
+    || fail "kernel build policy does not list the expected lane order"
+rg -q '^RG_KERNEL_RECOMMENDED_LAPTOP_LANE=arch-zen$' "$policy" \
+    || fail "safe daily laptop lane should remain arch-zen"
 rg -q '^RG_KERNEL_REQUIRED_FALLBACKS="linux"$' "$policy" \
     || fail "kernel build policy must require the stock linux fallback"
 rg -q '^RG_KERNEL_RECOMMENDED_FALLBACKS=.*linux-lts' "$policy" \
     || fail "kernel build policy does not recommend linux-lts fallback"
 rg -q '^RG_KERNEL_PACKAGE_PREFIX=linux-rg$' "$policy" \
     || fail "kernel build policy does not isolate custom package names"
-rg -q '^RG_KERNEL_KERNEL_LANES=.*arch-zen' "$policy" \
-    || fail "kernel build policy does not mark arch-zen as a kernel lane"
-rg -q '^RG_KERNEL_KERNEL_LANES=.*cachy-bore' "$policy" \
-    || fail "kernel build policy does not mark cachy-bore as a kernel lane"
-rg -q '^RG_KERNEL_KERNEL_LANES=.*ck-muqss' "$policy" \
-    || fail "kernel build policy does not mark ck-muqss as a kernel lane"
+rg -q '^RG_KERNEL_KERNEL_LANES="arch-zen liquorix cachy-bore ck-muqss"$' "$policy" \
+    || fail "kernel build policy does not separate kernel and tool lanes"
+rg -q '^RG_KERNEL_BASE_liquorix="https://aur\.archlinux\.org/linux-lqx\.git"$' "$policy" \
+    || fail "liquorix lane does not use the Arch AUR package source"
+rg -q '^RG_KERNEL_BASE_sched_ext="https://gitlab\.archlinux\.org/archlinux/packaging/packages/scx-scheds\.git"$' "$policy" \
+    || fail "sched-ext lane does not use Arch scx-scheds packaging"
+rg -q '^RG_KERNEL_BASE_cachy_bore="https://github\.com/CachyOS/linux-cachyos\.git"$' "$policy" \
+    || fail "cachy-bore lane does not use CachyOS kernel packaging"
 rg -q '^RG_KERNEL_SUBDIR_cachy_bore="linux-cachyos-bore"$' "$policy" \
     || fail "cachy-bore lane does not select the BORE packaging subdir"
 rg -q '^RG_KERNEL_MAKEPKG_ENV_cachy_bore=.*_cpusched=bore' "$policy" \
     || fail "cachy-bore lane does not select the BORE scheduler"
-rg -q '^RG_KERNEL_CONTAINER_IMAGE=docker\.io/archlinux:base-devel$' "$policy" \
-    || fail "kernel build policy does not define an Arch base-devel container"
-rg -q '^RG_KERNEL_CONTAINER_ENGINE=auto$' "$policy" \
-    || fail "kernel build policy does not auto-detect a container engine"
 rg -q 'Wno-error=discarded-qualifiers' "$ck_patch" \
     || fail "ck-muqss patch does not relax the libbpf qualifier warning"
 
-rg -q 'refuse_local_build' "$launcher" \
-    || fail "launcher does not expose a local-build refusal guard"
-rg -q 'remote_preflight' "$launcher" \
-    || fail "launcher does not expose a remote preflight"
-rg -q 'remote-preflight' "$launcher" \
-    || fail "launcher does not route the remote preflight command"
-rg -q 'install_preflight' "$launcher" \
-    || fail "launcher does not expose a host install preflight"
-rg -Fq 'install-preflight)' "$launcher" \
-    || fail "launcher does not route the host install preflight command"
-rg -q 'artifact_preflight' "$launcher" \
-    || fail "launcher does not verify local artifacts before install guidance"
-rg -q 'dkms_preflight' "$launcher" \
-    || fail "launcher does not verify DKMS readiness before install guidance"
-rg -q 'initramfs_preflight' "$launcher" \
-    || fail "launcher does not verify initramfs readiness before install guidance"
-rg -q 'check_remote_space' "$launcher" \
-    || fail "launcher does not check remote build space"
+rg -q 'local_preflight' "$launcher" \
+    || fail "launcher does not expose a local build preflight"
+rg -q 'local_build_root' "$launcher" \
+    || fail "launcher does not normalize the local build root"
+rg -q 'bounded_jobs' "$launcher" \
+    || fail "launcher does not compute bounded build jobs"
+rg -q 'MAKEFLAGS="-j\$jobs' "$launcher" \
+    || fail "launcher does not bound makepkg jobs"
+rg -q 'CMAKE_BUILD_PARALLEL_LEVEL="\$jobs"' "$launcher" \
+    || fail "launcher does not bound CMake jobs for tool lanes"
+rg -q 'NINJAFLAGS="-j\$jobs"' "$launcher" \
+    || fail "launcher does not bound Ninja jobs for tool lanes"
+rg -q 'check_local_space' "$launcher" \
+    || fail "launcher does not check local build space"
 rg -q 'df -Pk' "$launcher" \
-    || fail "launcher does not inspect remote filesystem space"
-rg -q 'remote_prepare' "$launcher" \
-    || fail "launcher does not expose a remote prepare step"
+    || fail "launcher does not inspect local filesystem space"
+rg -q 'prepare_lane' "$launcher" \
+    || fail "launcher does not expose a prepare step"
+rg -Fq 'update)' "$launcher" \
+    || fail "launcher does not route the update command"
 rg -Fq 'prepare)' "$launcher" \
     || fail "launcher does not route the prepare command"
 rg -q 'lane_subdir' "$launcher" \
     || fail "launcher does not resolve lane-specific packaging subdirectories"
-rg -q 'select_container_engine' "$launcher" \
-    || fail "launcher does not select a container engine"
-rg -q 'run_container_makepkg' "$launcher" \
-    || fail "launcher does not build through an Arch container"
 rg -q 'import_validpgpkeys' "$launcher" \
     || fail "launcher does not import PKGBUILD signing keys"
 rg -q 'filtered_keys' "$launcher" \
     || fail "launcher does not ignore empty signing key entries"
-rg -q 'gpg --batch --keyserver' "$launcher" \
-    || fail "launcher does not import signing keys from a keyserver"
-rg -q 'RG_KERNEL_CONTAINER_IMAGE' "$launcher" \
-    || fail "launcher does not pass a container image to remote builds"
-rg -q 'command -v "\$cmd"' "$launcher" \
-    || fail "remote preflight does not check required commands"
 rg -q 'rewrite_kernel_pkgbase' "$launcher" \
     || fail "launcher does not isolate kernel package bases"
 rg -q 'RG_KERNEL_PACKAGE_BASE' "$launcher" \
-    || fail "launcher does not pass isolated package base to remote builds"
-rg -q 'rg\.cosmolab' "$launcher" \
-    || fail "launcher does not route work to rg.cosmolab"
-rg -q 'ssh "\$RG_KERNEL_REMOTE"' "$launcher" \
-    || fail "launcher does not execute the build over ssh"
+    || fail "launcher does not pass isolated package base to builds"
 rg -q 'makepkg --syncdeps --noconfirm' "$launcher" \
     || fail "launcher does not use makepkg for pacman artifacts"
-rg -q 'rsync -az' "$launcher" \
-    || fail "launcher does not sync artifacts back with rsync"
 rg -q 'pacman -U' "$launcher" \
     || fail "launcher does not print pacman install guidance"
 rg -q -- '-headers-\*\.pkg\.tar\.zst' "$launcher" \
@@ -116,16 +105,28 @@ rg -q 'mkinitcpio' "$launcher" \
 
 list_output=$(RG_KERNEL_POLICY="$policy" "$launcher" list)
 case "$list_output" in
-    *'arch-zen -> https://gitlab.archlinux.org/archlinux/packaging/packages/linux-zen.git'*)
-        ;;
+    *'host: rgx1gen11 (ThinkPad X1 Carbon Gen 11 21HM002GUS)'*) ;;
     *)
         printf '%s\n' "$list_output" >&2
-        fail "launcher list does not resolve arch-zen base repository"
+        fail "launcher list does not report the host profile"
         ;;
 esac
 case "$list_output" in
-    *'sched-ext -> https://gitlab.archlinux.org/archlinux/packaging/packages/scx-scheds.git'*)
+    *'jobs: 9 (80% local CPU cap)'*) ;;
+    *)
+        printf '%s\n' "$list_output" >&2
+        fail "launcher list does not report bounded jobs"
         ;;
+esac
+case "$list_output" in
+    *'liquorix -> https://aur.archlinux.org/linux-lqx.git'*) ;;
+    *)
+        printf '%s\n' "$list_output" >&2
+        fail "launcher list does not resolve liquorix base repository"
+        ;;
+esac
+case "$list_output" in
+    *'sched-ext -> https://gitlab.archlinux.org/archlinux/packaging/packages/scx-scheds.git'*) ;;
     *)
         printf '%s\n' "$list_output" >&2
         fail "launcher list does not resolve sched-ext tool repository"
@@ -139,8 +140,23 @@ fi
 iso_output=$(RG_KERNEL_POLICY="$policy" "$launcher" package-base arch-zen)
 test "$iso_output" = "linux-rg-arch-zen" \
     || fail "arch-zen package base is not isolated"
+liq_output=$(RG_KERNEL_POLICY="$policy" "$launcher" package-base liquorix)
+test "$liq_output" = "linux-rg-liquorix" \
+    || fail "liquorix package base is not isolated"
 tool_output=$(RG_KERNEL_POLICY="$policy" "$launcher" package-base sched-ext)
 test -z "$tool_output" \
     || fail "sched-ext tool lane should not be renamed as a kernel"
+
+case "$(RG_KERNEL_POLICY="$policy" "$launcher" jobs)" in
+    9) ;;
+    *) fail "bounded job calculation did not return 9" ;;
+esac
+
+rg -q 'Liquorix.*cost of throughput and power usage' "$readme" \
+    || fail "readme does not record Liquorix power tradeoff"
+rg -q 'sched_ext.*reverts.*fair-class scheduler' "$readme" \
+    || fail "readme does not record sched_ext fallback behavior"
+rg -q 'EEVDF.*Linux 6.6' "$readme" \
+    || fail "readme does not record the EEVDF baseline"
 
 printf 'ok\n'
