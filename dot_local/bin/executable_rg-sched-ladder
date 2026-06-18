@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-sched-ladder).
+#
+# Scheduler control plane for rgx1gen11. EEVDF+BORE is the boot baseline and
+# rollback — not the performance ceiling. sched_ext BPF experts and the ASA
+# router are the production-style layer above fair class.
+
+set -euo pipefail
+
+STATE_DIR="${RG_SCHED_STATE_DIR:-$HOME/.config/rg-x1gen11}"
+STATE_FILE="$STATE_DIR/active-scheduler"
+LADDER_JSON="${RG_SCHED_LADDER:-$HOME/.config/rg-x1gen11/sched-ladder.json}"
+CHEZMOI_LADDER="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/sched-ladder.json"
+ASA_MAPPING="${RG_ASA_MAPPING:-$HOME/.config/rg-x1gen11/asa-mapping.conf}"
+CHEZMOI_ASA="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/asa-mapping.conf"
+SCX_LOADER=(scx_loader)
+ASA_ROUTER=(asa-router)
+
+if [ ! -r "$LADDER_JSON" ] && [ -r "$CHEZMOI_LADDER" ]; then
+    LADDER_JSON="$CHEZMOI_LADDER"
+fi
+if [ ! -r "$ASA_MAPPING" ] && [ -r "$CHEZMOI_ASA" ]; then
+    ASA_MAPPING="$CHEZMOI_ASA"
+fi
+
+usage() {
+    cat <<'USAGE'
+usage: rg-sched-ladder COMMAND [ARGS...]
+
+Commands:
+  ladder               Print the full scheduler ladder (EEVDF baseline -> scx -> ASA).
+  list                 One scheduler id per line (all tiers).
+  describe ID          Show metadata for scheduler ID (off, lavd, rusty, asa, ...).
+  current              Print active scheduler id.
+  switch ID            Switch to ID (off = EEVDF+BORE kernel fair; asa = ASA router).
+  unload               Alias for: switch off
+  bench ID SECONDS     Sample PSI for SECONDS while ID is active; restore prior scheduler.
+  packages             Print required Arch packages for sched_ext use.
+  -h, --help
+
+EEVDF is rollback. BORE is a fair-class patch. sched_ext replaces the active
+scheduler at runtime — that is where laptop latency work continues in 2026.
+USAGE
+}
+
+die() {
+    printf 'rg-sched-ladder: %s\n' "$*" >&2
+    exit 2
+}
+
+require_python() {
+    command -v python3 >/dev/null 2>&1 || die "python3 is required"
+}
+
+require_sched_ext() {
+    [ -d /sys/kernel/sched_ext ] || die "sched_ext sysfs missing; boot linux-rg"
+}
+
+scheduler_scx_name() {
+    local sched_id="$1"
+    require_python
+    python3 - "$LADDER_JSON" "$sched_id" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+target = sys.argv[2]
+for tier in data["tiers"]:
+    for sched in tier["schedulers"]:
+        if sched["id"] == target:
+            print(sched.get("scx_name") or "")
+            raise SystemExit(0)
+raise SystemExit(f"unknown scheduler id: {target}")
+PY
+}
+
+cmd_ladder() {
+    require_python
+    python3 - "$LADDER_JSON" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print(data.get("baseline_note", ""))
+print()
+for tier in data["tiers"]:
+    print(f"[{tier['id']}] {tier['label']}")
+    for sched in tier["schedulers"]:
+        scx = sched.get("scx_name") or "(kernel fair)"
+        print(f"  {sched['id']:12} {sched['label']} -> {scx}")
+        print(f"               {sched['use_when']}")
+    print()
+PY
+}
+
+cmd_list() {
+    require_python
+    python3 - "$LADDER_JSON" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+for tier in data["tiers"]:
+    for sched in tier["schedulers"]:
+        print(sched["id"])
+PY
+}
+
+cmd_describe() {
+    local sched_id=${1:-}
+    [ -n "$sched_id" ] || die "describe requires ID"
+    require_python
+    python3 - "$LADDER_JSON" "$sched_id" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+target = sys.argv[2]
+for tier in data["tiers"]:
+    for sched in tier["schedulers"]:
+        if sched["id"] == target:
+            print(f"id: {sched['id']}")
+            print(f"tier: {tier['id']} ({tier['label']})")
+            print(f"label: {sched['label']}")
+            print(f"scx_name: {sched.get('scx_name') or 'kernel fair (EEVDF+BORE)'}")
+            print(f"use_when: {sched['use_when']}")
+            print(f"hybrid_note: {sched['hybrid_note']}")
+            raise SystemExit(0)
+raise SystemExit(f"unknown scheduler id: {target}")
+PY
+}
+
+record_scheduler() {
+    local sched_id="$1"
+    mkdir -p "$STATE_DIR"
+    printf '%s\n' "$sched_id" >"$STATE_FILE"
+}
+
+cmd_current() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+        return 0
+    fi
+    if [ -r /sys/kernel/sched_ext/current ]; then
+        local cur
+        cur=$(cat /sys/kernel/sched_ext/current 2>/dev/null || true)
+        if [ -z "$cur" ] || [ "$cur" = none ]; then
+            printf 'off\n'
+        else
+            printf '%s\n' "${cur#scx_}"
+        fi
+        return 0
+    fi
+    printf 'off\n'
+}
+
+stop_asa() {
+    systemctl --user stop rg-scx-asa-router.service >/dev/null 2>&1 || true
+}
+
+load_asa() {
+    require_sched_ext
+    [ -d /sys/kernel/sched_ext/asa ] || die "ASA sysfs missing (CONFIG_SCHED_ASA?)"
+    command -v asa-router >/dev/null 2>&1 || die "asa-router not installed"
+    if [ -r "$ASA_MAPPING" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            case "$line" in
+            '' | \#*) continue ;;
+            esac
+            printf '%s\n' "$line" >"/sys/kernel/sched_ext/asa/mapping"
+        done <"$ASA_MAPPING"
+    fi
+    systemctl --user enable --now rg-scx-asa-router.service >/dev/null 2>&1 \
+        || exec "${ASA_ROUTER[@]}" --enable --mapping "$ASA_MAPPING"
+}
+
+unload_scx() {
+    stop_asa
+    if command -v scx_loader >/dev/null 2>&1; then
+        scx_loader unload 2>/dev/null || true
+    fi
+}
+
+switch_scheduler() {
+    local sched_id="$1"
+    local scx_name
+
+    case "$sched_id" in
+    off | none | bore | eevdf | eevdf-bore)
+        unload_scx
+        record_scheduler off
+        printf 'active: EEVDF + BORE (kernel fair class)\n'
+        return 0
+        ;;
+    asa)
+        require_sched_ext
+        command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed"
+        load_asa
+        record_scheduler asa
+        printf 'active: ASA router (experts: lavd/rusty/bpfland/p2dq)\n'
+        return 0
+        ;;
+    esac
+
+    scx_name=$(scheduler_scx_name "$sched_id")
+    [ -n "$scx_name" ] || die "scheduler $sched_id has no scx_name"
+    require_sched_ext
+    command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed (pacman -S scx_loader scx-scheds)"
+    stop_asa
+    printf 'loading %s\n' "$scx_name"
+    "${SCX_LOADER[@]}" switch "$scx_name"
+    record_scheduler "$sched_id"
+}
+
+cmd_switch() {
+    local sched_id=${1:-}
+    [ -n "$sched_id" ] || die "switch requires ID"
+    switch_scheduler "$sched_id"
+    if [ -r /sys/kernel/sched_ext/current ]; then
+        printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+    fi
+}
+
+cmd_bench() {
+    local sched_id=${1:-} seconds=${2:-30}
+    [ -n "$sched_id" ] && [ -n "$seconds" ] || die "bench requires ID SECONDS"
+    local prior out
+    prior=$(cmd_current)
+    out="$STATE_DIR/bench-${sched_id}-$(date -u +%Y%m%dT%H%M%SZ).csv"
+    switch_scheduler "$sched_id"
+    if [ -x "$HOME/.local/bin/rg-psi-snapshot" ]; then
+        "$HOME/.local/bin/rg-psi-snapshot" bench "$out" "$seconds"
+    else
+        die "rg-psi-snapshot missing"
+    fi
+    switch_scheduler "$prior"
+    printf 'restored: %s\n' "$prior"
+    printf 'results: %s\n' "$out"
+}
+
+cmd_packages() {
+    cat <<'PKG'
+# sched_ext userspace stack (Arch):
+sudo pacman -S --needed scx_loader scx-scheds
+
+# linux-rg kernel (local build):
+rg-kernel-build install-command
+
+# Optional ASA router ships in linux-rg package (/usr/bin/asa-router)
+PKG
+}
+
+main() {
+    local cmd=${1:-}
+    shift || true
+    case "$cmd" in
+    ladder) cmd_ladder ;;
+    list) cmd_list ;;
+    describe) cmd_describe "${1:-}" ;;
+    current) cmd_current ;;
+    switch) cmd_switch "${1:-}" ;;
+    unload) cmd_switch off ;;
+    bench) cmd_bench "${1:-}" "${2:-}" ;;
+    packages) cmd_packages ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

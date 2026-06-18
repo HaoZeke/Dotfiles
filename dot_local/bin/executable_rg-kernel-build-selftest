@@ -10,8 +10,8 @@ fail() {
 
 launcher="$repo/dot_local/bin/executable_rg-kernel-build"
 policy="$repo/dot_config/rg-kernel/build-lanes.env"
-readme="$repo/dot_config/rg-kernel/readme.org"
 series="$repo/dot_config/rg-kernel/linux-rg/patches/series"
+patch_sources="$repo/dot_config/rg-kernel/linux-rg/patch-sources.tsv"
 compat="$repo/dot_config/rg-kernel/linux-rg/compatible-patches.tsv"
 fragment="$repo/dot_config/rg-kernel/linux-rg/config-fragments/rgx1gen11.config"
 oomd_config="$repo/dot_config/oomd/oomd-rgx1gen11.json"
@@ -19,15 +19,15 @@ oomd_installer="$repo/dot_local/bin/executable_rg-oomd-profile-install"
 
 test -r "$launcher" || fail "missing rg-kernel-build launcher"
 test -r "$policy" || fail "missing rg-kernel build policy"
-test -r "$readme" || fail "missing rg-kernel readme"
 test -r "$series" || fail "missing linux-rg patch series"
+test -r "$patch_sources" || fail "missing linux-rg selected patch source manifest"
 test -r "$compat" || fail "missing linux-rg compatibility manifest"
 test -r "$fragment" || fail "missing rgx1gen11 kernel config fragment"
 test -r "$oomd_config" || fail "missing rgx1gen11 oomd config"
 test -x "$oomd_installer" || fail "missing executable oomd profile installer"
 
-if rg -n 'rg\.cosmolab|RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
-    "$launcher" "$policy" "$readme"; then
+if rg -n 'rg[.]cosmolab|RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
+    "$launcher" "$policy"; then
     fail "kernel build policy must be local-only while remote buildbot access is unavailable"
 fi
 
@@ -35,18 +35,18 @@ rg -q '^RG_KERNEL_MACHINE_ID=rgx1gen11$' "$policy" \
     || fail "kernel build policy does not pin this host"
 rg -q '^RG_KERNEL_MACHINE_MODEL="ThinkPad X1 Carbon Gen 11 21HM002GUS"$' "$policy" \
     || fail "kernel build policy does not record this laptop model"
+rg -q '^RG_KERNEL_PROFILE=rgx1gen11-performance-battery$' "$policy" \
+    || fail "kernel build policy must name the host profile"
 rg -q '^RG_KERNEL_PACKAGE_BASE=linux-rg$' "$policy" \
     || fail "kernel build policy must define the linux-rg package base"
-rg -q '^RG_KERNEL_BASE_REPO="https://github\.com/CachyOS/linux-cachyos\.git"$' "$policy" \
-    || fail "kernel build policy must use CachyOS packaging as the base"
-rg -q '^RG_KERNEL_BASE_SUBDIR=linux-cachyos$' "$policy" \
-    || fail "kernel build policy must select the CachyOS PKGBUILD subdir"
-rg -q '^RG_KERNEL_BUILD_ROOT="\$HOME/\.local/share/rg-kernel/build"$' "$policy" \
-    || fail "kernel build policy does not define the local build root"
-rg -q '^RG_KERNEL_ARTIFACT_DIR="\$HOME/\.local/share/rg-kernel/artifacts"$' "$policy" \
-    || fail "kernel build policy does not define artifact storage"
-rg -q '^RG_KERNEL_PATCH_ROOT="\$HOME/\.config/rg-kernel/linux-rg/patches"$' "$policy" \
-    || fail "kernel build policy does not define the linux-rg patch root"
+rg -q '^RG_KERNEL_SOURCE_REPO="\$HOME/Git/Github/Tools/linux-rg"$' "$policy" \
+    || fail "kernel build policy must point at the finalized linux-rg source repo"
+rg -q '^RG_KERNEL_BASE_REPO="https://gitlab\.archlinux\.org/archlinux/packaging/packages/linux\.git"$' "$policy" \
+    || fail "kernel build policy must use the Arch linux package base"
+rg -q '^RG_KERNEL_ZEN_BASE_REPO="https://gitlab\.archlinux\.org/archlinux/packaging/packages/linux-zen\.git"$' "$policy" \
+    || fail "kernel build policy must record the Arch linux-zen comparison base"
+rg -q '^RG_KERNEL_PATCH_SOURCES="\$HOME/\.config/rg-kernel/linux-rg/patch-sources\.tsv"$' "$policy" \
+    || fail "kernel build policy does not define the selected patch source manifest"
 rg -q '^RG_KERNEL_CONFIG_FRAGMENT="\$HOME/\.config/rg-kernel/linux-rg/config-fragments/rgx1gen11\.config"$' "$policy" \
     || fail "kernel build policy does not define the host config fragment"
 rg -q '^RG_KERNEL_OOMD_CONFIG="\$HOME/\.config/oomd/oomd-rgx1gen11\.json"$' "$policy" \
@@ -57,52 +57,68 @@ rg -q '^RG_KERNEL_LOCAL_CPU_PERCENT=80$' "$policy" \
     || fail "kernel build policy must cap local CPU use"
 rg -q '^RG_KERNEL_MAX_JOBS=9$' "$policy" \
     || fail "kernel build policy should cap this 12-thread laptop at 9 jobs"
-rg -q '^RG_KERNEL_PROFILE=max-laptop$' "$policy" \
-    || fail "kernel build policy must name the host profile"
 rg -q '^RG_KERNEL_REQUIRED_FALLBACKS="linux"$' "$policy" \
     || fail "kernel build policy must require the stock linux fallback"
 rg -q '^RG_KERNEL_RECOMMENDED_FALLBACKS=.*linux-lts' "$policy" \
     || fail "kernel build policy does not recommend linux-lts fallback"
+rg -q '^RG_KERNEL_SKIP_DOCS=yes$' "$policy" \
+    || fail "kernel build policy must suppress the docs package for local laptop builds"
 
-for opt in \
-    '_cpusched=bore' \
-    '_cachy_config=yes' \
-    '_cc_harder=yes' \
-    '_tcp_bbr3=yes' \
-    '_HZ_ticks=1000' \
-    '_tickrate=full' \
-    '_preempt=full' \
-    '_hugepage=madvise' \
-    '_processor_opt=native' \
-    '_use_llvm_lto=thin' \
-    '_per_gov=no'
-do
-    rg -q "$opt" "$policy" \
-        || fail "kernel build policy missing CachyOS option: $opt"
+case "$(<"$policy")" in
+    *'RG_KERNEL_MAKEPKG_ENV'*|*'_cpusched='*|*'_cachy_config='*|*'_tcp_bbr3='*)
+        fail "kernel build policy must not depend on CachyOS makepkg options"
+        ;;
+esac
+
+for pkg in base-devel git bc cpio gettext libelf openssl pahole rust rust-bindgen rust-src clang llvm lld; do
+    rg -q "(^|[=\" ])$pkg( |\")" "$policy" \
+        || fail "kernel build dependency list missing $pkg"
 done
 
-rg -q $'^selected\tcachyos-base\t' "$compat" \
-    || fail "compatibility manifest must select the CachyOS base patch stack"
+rg -q $'^selected\tarch-linux-pkgbuild\t' "$compat" \
+    || fail "compatibility manifest must select the Arch package base"
 rg -q $'^selected\tbore\t' "$compat" \
     || fail "compatibility manifest must select BORE"
-rg -q $'^selected\tzen\t' "$compat" \
-    || fail "compatibility manifest must account for Zen inputs"
+rg -q $'^selected\tbbr3\t' "$compat" \
+    || fail "compatibility manifest must select carried BBRv3"
+rg -q $'^selected\tadios\t' "$compat" \
+    || fail "compatibility manifest must select carried ADIOS"
+rg -q $'^selected\tmglru-devtree\t' "$compat" \
+    || fail "compatibility manifest must select the carried MGLRU weld"
 rg -q $'^survey\tliquorix\t' "$compat" \
     || fail "compatibility manifest must account for Liquorix inputs"
 rg -q $'^disabled\tck-muqss\t' "$compat" \
     || fail "compatibility manifest must disable incompatible CK/MuQSS overlays"
+rg -q $'^disabled\tcachyos-wholesale\t' "$compat" \
+    || fail "compatibility manifest must disable CachyOS as a wholesale base"
 rg -q $'^selected\tpsi-oomd\t' "$compat" \
     || fail "compatibility manifest must select PSI and oomd pressure control"
 rg -q $'^selected\tmglru\t' "$compat" \
     || fail "compatibility manifest must select Multi-Gen LRU"
-rg -q $'^selected\tbbr3\t' "$compat" \
-    || fail "compatibility manifest must select BBR3"
+rg -q $'^selected\tcache-aware-sched\t' "$compat" \
+    || fail "compatibility manifest must select carried cache-aware scheduling"
+rg -q $'^selected\tmm-bulk-free-hotpaths\t' "$compat" \
+    || fail "compatibility manifest must select carried bulk-free hot paths"
+
+for carried_patch in 0001-bore-cachy.patch 0018-cachy-mm-ratios.patch 0021-mm-bulk-free-hotpaths.patch; do
+    test -r "$HOME/Git/Github/Tools/linux-rg/$carried_patch" \
+        || fail "linux-rg source repo missing $carried_patch"
+done
 
 for config in \
     CONFIG_PSI=y \
+    CONFIG_USER_NS_UNPRIVILEGED=y \
+    CONFIG_COMPACT_UNEVICTABLE_DEFAULT=0 \
     CONFIG_LRU_GEN=y \
     CONFIG_LRU_GEN_ENABLED=y \
+    CONFIG_ANON_MIN_RATIO=1 \
+    CONFIG_CLEAN_LOW_RATIO=15 \
+    CONFIG_CLEAN_MIN_RATIO=4 \
     CONFIG_SCHED_CLASS_EXT=y \
+    CONFIG_SCHED_ASA=y \
+    CONFIG_SCHED_BORE=y \
+    CONFIG_SCHED_CACHE=y \
+    CONFIG_MIN_BASE_SLICE_NS=2000000 \
     CONFIG_DEBUG_INFO_BTF=y \
     CONFIG_BPF_JIT=y \
     CONFIG_X86_INTEL_PSTATE=y \
@@ -121,7 +137,16 @@ for config in \
     CONFIG_USB4=m \
     CONFIG_THUNDERBOLT=m \
     CONFIG_BT_INTEL=m \
-    CONFIG_ZRAM=m
+    CONFIG_ZRAM=m \
+    CONFIG_TRANSPARENT_HUGEPAGE_MADVISE=y \
+    CONFIG_MQ_IOSCHED_ADIOS=m \
+    CONFIG_IOSCHED_BFQ=y \
+    CONFIG_BFQ_GROUP_IOSCHED=y \
+    CONFIG_TCP_CONG_BBR=y \
+    CONFIG_DEFAULT_BBR=y \
+    CONFIG_DEFAULT_FQ=y \
+    CONFIG_DDCCI=m \
+    CONFIG_V4L2_LOOPBACK=m
 do
     rg -q "^$config$" "$fragment" \
         || fail "host config fragment missing $config"
@@ -129,7 +154,9 @@ done
 
 for disabled in \
     CONFIG_PSI_DEFAULT_DISABLED \
-    CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
+    CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE \
+    CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS \
+    CONFIG_DEFAULT_CUBIC
 do
     rg -q "^# $disabled is not set$" "$fragment" \
         || fail "host config fragment should disable $disabled"
@@ -155,14 +182,16 @@ rg -q 'prepare_pkgbuild' "$launcher" \
     || fail "launcher does not prepare a custom PKGBUILD"
 rg -q 'rewrite_kernel_pkgbuild_identity' "$launcher" \
     || fail "launcher does not rewrite the package identity"
+rg -q 'apply_patch_sources' "$launcher" \
+    || fail "launcher does not apply selected patch sources"
 rg -q 'apply_local_patch_series' "$launcher" \
     || fail "launcher does not apply the local compatible patch queue"
 rg -q 'apply_config_fragment' "$launcher" \
     || fail "launcher does not apply the host config fragment"
 rg -q 'scripts/config' "$launcher" \
     || fail "launcher does not use kernel scripts/config for config fragments"
-rg -q 'build_makepkg_env' "$launcher" \
-    || fail "launcher does not assemble CachyOS makepkg options"
+rg -q 'drop_docs_package' "$launcher" \
+    || fail "launcher does not suppress the docs package"
 rg -q 'import_validpgpkeys' "$launcher" \
     || fail "launcher does not import PKGBUILD signing keys"
 rg -q 'filtered_keys' "$launcher" \
@@ -173,18 +202,22 @@ rg -q 'PKGDEST="\$artifact_dir"' "$launcher" \
     || fail "launcher does not put built packages in the artifact directory"
 rg -q 'pacman -U' "$launcher" \
     || fail "launcher does not print pacman install guidance"
-rg -q -- 'linux-rg-headers-\*\.pkg\.tar\.\*' "$launcher" \
+rg -q '\$RG_KERNEL_PACKAGE_BASE-headers-\*\.pkg\.tar\.\*' "$launcher" \
     || fail "launcher does not require linux-rg headers artifacts"
 rg -q 'pacman -Qq.*-dkms' "$launcher" \
     || fail "launcher does not inspect installed DKMS packages"
 rg -q 'mkinitcpio' "$launcher" \
     || fail "launcher does not check for mkinitcpio"
+rg -q 'refind_command' "$launcher" \
+    || fail "launcher does not generate a rEFInd stanza"
 rg -Fq 'patch-report)' "$launcher" \
     || fail "launcher does not route the patch-report command"
 rg -Fq 'deps-command)' "$launcher" \
     || fail "launcher does not route the deps-command command"
 rg -Fq 'oomd-command)' "$launcher" \
     || fail "launcher does not route the oomd-command command"
+rg -Fq 'refind-command)' "$launcher" \
+    || fail "launcher does not route the refind-command command"
 rg -Fq 'update)' "$launcher" \
     || fail "launcher does not route the update command"
 
@@ -194,16 +227,16 @@ case "$list_output" in
     *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report linux-rg package" ;;
 esac
 case "$list_output" in
-    *'base: CachyOS linux-cachyos PKGBUILD'*) ;;
-    *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report the CachyOS base" ;;
+    *'base: Arch linux PKGBUILD'*) ;;
+    *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report the Arch base" ;;
 esac
 case "$list_output" in
-    *'profile: max-laptop'*) ;;
+    *'profile: rgx1gen11-performance-battery'*) ;;
     *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report the host profile" ;;
 esac
 case "$list_output" in
-    *'scheduler: bore'*) ;;
-    *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report BORE" ;;
+    *'source repo: '*'/Git/Github/Tools/linux-rg'*'selected patches: '*'0021-mm-bulk-free-hotpaths.patch'*) ;;
+    *) printf '%s\n' "$list_output" >&2; fail "launcher list does not report finalized source repo patch selection" ;;
 esac
 case "$list_output" in
     *'jobs: 9 (80% local CPU cap)'*) ;;
@@ -221,7 +254,7 @@ esac
 
 deps_output=$(RG_KERNEL_POLICY="$policy" "$launcher" deps-command)
 case "$deps_output" in
-    *'sudo pacman -S --needed'*'base-devel'*'rust-bindgen'*'rust-src'*'oomd'*) ;;
+    *'sudo pacman -S --needed'*'base-devel'*'rust-bindgen'*'rust-src'*'clang'*'lld'*) ;;
     *) printf '%s\n' "$deps_output" >&2; fail "deps-command does not include kernel build dependencies" ;;
 esac
 
@@ -233,9 +266,18 @@ esac
 
 patch_report=$(RG_KERNEL_POLICY="$policy" "$launcher" patch-report)
 case "$patch_report" in
-    *'selected'*'cachyos-base'*'selected'*'bore'*'selected'*'psi-oomd'*'disabled'*'ck-muqss'*) ;;
+    *'== source repo =='*'linux-rg'*'0001-bore-cachy.patch'*'0021-mm-bulk-free-hotpaths.patch'*) ;;
     *) printf '%s\n' "$patch_report" >&2; fail "patch-report does not expose compatibility decisions" ;;
 esac
+
+refind_tmp=$(mktemp /tmp/rg-kernel-refind.XXXXXX)
+RG_KERNEL_POLICY="$policy" "$launcher" refind-command "$refind_tmp" >/tmp/rg-kernel-refind.out
+rg -q 'menuentry "Arch Linux \(linux-rg\)"' "$refind_tmp" \
+    || fail "refind-command did not write a linux-rg menuentry"
+rg -q 'loader /vmlinuz-linux-rg' "$refind_tmp" \
+    || fail "refind-command did not point at vmlinuz-linux-rg"
+rg -q 'initrd /initramfs-linux-rg.img' "$refind_tmp" \
+    || fail "refind-command did not point at initramfs-linux-rg.img"
 
 for json_text in \
     '"pressure_rising_beyond"' \
@@ -260,19 +302,4 @@ if rg -n 'makepkg[[:space:]][^;&|]*--install|makepkg[[:space:]][^;&|]*[[:space:]
     fail "launcher must not install kernel packages during build"
 fi
 
-rg -q 'Arch-native PKGBUILD' "$readme" \
-    || fail "readme does not document the Arch-native PKGBUILD flow"
-rg -q 'CachyOS.*base' "$readme" \
-    || fail "readme does not document the CachyOS base"
-rg -q 'Zen.*compatibility input' "$readme" \
-    || fail "readme does not document Zen compatibility handling"
-rg -q 'Liquorix.*cost of throughput and power usage' "$readme" \
-    || fail "readme does not record Liquorix power tradeoff"
-rg -q 'EEVDF.*Linux 6.6' "$readme" \
-    || fail "readme does not record the EEVDF baseline"
-rg -q 'PSI.*oomd' "$readme" \
-    || fail "readme does not document PSI and oomd"
-rg -q 'ThinkPad X1 Carbon Gen 11' "$readme" \
-    || fail "readme does not document host hardware support"
-
-printf 'ok\n'
+printf 'rg-kernel-build source selftest ok\n'

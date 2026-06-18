@@ -1,0 +1,2 @@
+status	name	source	reason
+selected	linux-rg-source-repo	~/Git/Github/Tools/linux-rg	Finalized package source; contains the adapted 0001-0021 patch queue, PKGBUILD, config, and source hashes.

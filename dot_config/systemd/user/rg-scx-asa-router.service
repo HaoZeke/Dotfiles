@@ -1,0 +1,20 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-scx-asa-router.service).
+#
+# Optional sched_ext ASA router for build-heavy / hybrid experiments. Start
+# manually or via: rg-x1gen11-profile apply build-heavy (when scx_mode=asa).
+[Unit]
+Description=ASA sched_ext router (linux-rg)
+After=sway-session.target
+ConditionPathExists=/sys/kernel/sched_ext/asa/enabled
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/rg-sched-ladder switch asa
+ExecStop=%h/.local/bin/rg-sched-ladder switch off
+Restart=on-failure
+RestartSec=15
+OOMScoreAdjust=-400
+ManagedOOMPreference=avoid
+
+[Install]
+WantedBy=sway-session.target

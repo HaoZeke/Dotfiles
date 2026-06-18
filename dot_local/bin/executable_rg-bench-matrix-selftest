@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-bench-matrix-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-bench-matrix"
+tmpdir=$(mktemp -d)
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$script" || fail "missing rg-bench-matrix"
+chmod +x "$script" 2>/dev/null || true
+
+"$script" list | rg '^sched' >/dev/null || fail "list missing sched bench"
+"$script" list | rg '^thermal' >/dev/null || fail "list missing thermal bench"
+"$script" list | rg '^collect' >/dev/null || fail "list missing collect bench"
+"$script" list | rg '^wifi' >/dev/null || fail "list missing wifi bench"
+
+out=$(RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run new)
+test -d "$out" || fail "new did not create run dir"
+RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run run smoke "$out" >/dev/null
+RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run --quick run-all "$out" >/dev/null
+RG_BENCH_DIR="$tmpdir/bench-runs" "$script" report "$out" >/dev/null
+
+rm -rf "$tmpdir"
+
+printf 'ok\n'

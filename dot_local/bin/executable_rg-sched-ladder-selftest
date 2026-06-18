@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-sched-ladder-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-sched-ladder"
+ladder="$repo/dot_config/rg-x1gen11/sched-ladder.json"
+asa="$repo/dot_config/rg-x1gen11/asa-mapping.conf"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$script" || fail "missing sched-ladder"
+test -r "$ladder" || fail "missing sched-ladder.json"
+test -r "$asa" || fail "missing asa-mapping.conf"
+
+chmod +x "$script" 2>/dev/null || true
+
+RG_SCHED_LADDER="$ladder" "$script" list | rg '^lavd$' >/dev/null \
+    || fail "ladder missing lavd"
+RG_SCHED_LADDER="$ladder" "$script" list | rg '^rusty$' >/dev/null \
+    || fail "ladder missing rusty"
+RG_SCHED_LADDER="$ladder" "$script" list | rg '^asa$' >/dev/null \
+    || fail "ladder missing asa"
+RG_SCHED_LADDER="$ladder" "$script" list | rg '^off$' >/dev/null \
+    || fail "ladder missing off (EEVDF+BORE baseline)"
+
+RG_SCHED_LADDER="$ladder" "$script" describe lavd | rg 'scx_lavd' >/dev/null \
+    || fail "lavd must map to scx_lavd"
+
+rg -q 'interactive=scx_lavd' "$asa" || fail "ASA mapping missing interactive expert"
+rg -q 'EEVDF is mainline' "$ladder" || fail "ladder must document EEVDF as baseline not ceiling"
+
+printf 'ok\n'

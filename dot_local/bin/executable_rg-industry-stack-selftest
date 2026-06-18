@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-industry-stack-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+for path in \
+    "$repo/dot_config/oomd/oomd-rgx1gen11.json" \
+    "$repo/dot_config/rg-x1gen11/profiles.json" \
+    "$repo/dot_config/rg-x1gen11/sched-ladder.json" \
+    "$repo/dot_config/rg-x1gen11/asa-mapping.conf" \
+    "$repo/dot_config/systemd/user/browser.slice" \
+    "$repo/dot_config/systemd/user/build.slice" \
+    "$repo/dot_config/systemd/user/browser-media-watchdog.service" \
+    "$repo/dot_config/systemd/user/rg-scx-asa-router.service" \
+    "$repo/dot_local/bin/executable_rg-oomd-profile-install" \
+    "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
+    "$repo/dot_local/bin/executable_rg-sched-ladder" \
+    "$repo/dot_local/bin/executable_rg-scx-loader" \
+    "$repo/dot_local/bin/executable_rg-psi-top" \
+    "$repo/dot_local/bin/executable_rg-zswap-tune" \
+    "$repo/dot_local/bin/executable_rg-bench-matrix" \
+    "$repo/dot_local/bin/executable_rg-wide-net-collect" \
+    "$repo/dot_local/bin/executable_rg-nvme-apst" \
+    "$repo/dot_local/bin/executable_rg-hfi-status" \
+    "$repo/dot_config/systemd/user/rg-sched@.service" \
+    "$repo/dot_local/bin/executable_rg-psi-snapshot" \
+    "$repo/dot_local/bin/executable_rg-damon-reclaim" \
+    "$repo/dot_local/bin/executable_browser-media-watchdog" \
+    "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl"; do
+    test -r "$path" || fail "missing $path"
+done
+
+rg -q 'kill_by_memory_size_or_growth' "$repo/dot_config/oomd/oomd-rgx1gen11.json" \
+    || fail "facebook oomd profile missing memory kill action"
+rg -q 'undocked-mixed' "$repo/dot_config/rg-x1gen11/profiles.json" \
+    || fail "profiles.json missing undocked-mixed"
+rg -q 'memory-pressure' "$repo/dot_config/rg-x1gen11/profiles.json" \
+    || fail "profiles.json missing memory-pressure"
+rg -q 'ManagedOOMMemoryPressure=kill' \
+    "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl" \
+    || fail "memory tuning missing systemd-oomd slice policy"
+rg -q 'facebookincubator/oomd' "$repo/dot_local/bin/executable_rg-oomd-profile-install" \
+    || fail "oomd installer must document facebook oomd"
+rg -q 'rg-psi-snapshot' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
+    || fail "profile doctor must sample PSI"
+rg -q 'build.slice' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
+    || fail "profile switcher must tune build.slice"
+rg -q 'scx_lavd' "$repo/dot_config/rg-x1gen11/sched-ladder.json" \
+    || fail "sched ladder must include scx_lavd"
+rg -q '"scx_mode": "lavd"' "$repo/dot_config/rg-x1gen11/profiles.json" \
+    || fail "undocked-mixed must default to lavd not bare EEVDF"
+rg -q 'rg-sched-ladder' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
+    || fail "profile switcher must use sched ladder"
+rg -q 'EEVDF' "$repo/dot_config/rg-kernel/linux-rg/internal-design.org" \
+    || fail "internal design must document EEVDF vs sched_ext layering"
+rg -q 'bench_sched' "$repo/dot_local/bin/executable_rg-bench-matrix" \
+    || fail "bench matrix must include scheduler benches"
+rg -q 'bench_collect' "$repo/dot_local/bin/executable_rg-bench-matrix" \
+    || fail "bench matrix must include wide-net collect"
+rg -q 'cpu_capacity' "$repo/dot_local/bin/executable_rg-hfi-status" \
+    || fail "hfi status must read cpu_capacity"
+rg -q 'nvme id-ctrl' "$repo/dot_local/bin/executable_rg-nvme-apst" \
+    || fail "nvme apst helper must use nvme-cli"
+rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
+    || fail "bench matrix must include thermal snapshot"
+rg -q 'damon_reclaim/parameters/enabled' "$repo/dot_local/bin/executable_rg-damon-reclaim" \
+    || fail "damon reclaim helper must target module parameter"
+
+printf 'ok\n'

@@ -1,0 +1,162 @@
+{
+  "baseline_note": "EEVDF is mainline fair-class rollback. BORE is a fair.c latency patch on top. sched_ext BPF schedulers replace the active scheduler at runtime — they are not 'more EEVDF tweaks'.",
+  "tiers": [
+    {
+      "id": "fair",
+      "label": "Fair class (boot default)",
+      "schedulers": [
+        {
+          "id": "off",
+          "scx_name": null,
+          "label": "EEVDF + BORE (linux-rg kernel patches)",
+          "use_when": "Rollback path, debugging sched_ext, memory-pressure stability",
+          "hybrid_note": "detach_tasks + migration_cost 300us + SMT idle (0012) active in kernel"
+        }
+      ]
+    },
+    {
+      "id": "interactive",
+      "label": "sched_ext — desktop latency",
+      "schedulers": [
+        {
+          "id": "lavd",
+          "scx_name": "scx_lavd",
+          "label": "Landlock Adaptive Virtual Deadline",
+          "use_when": "Undocked mixed desktop: Sway, browser, terminals",
+          "hybrid_note": "Primary laptop pick for 1365U P/E; try before declaring EEVDF 'enough'"
+        },
+        {
+          "id": "flash",
+          "scx_name": "scx_flash",
+          "label": "Flash",
+          "use_when": "Minimum UI latency; travel mode with plugged-in bias",
+          "hybrid_note": "Higher power; pair with powersave platform_profile on battery"
+        },
+        {
+          "id": "bpfland",
+          "scx_name": "scx_bpfland",
+          "label": "bpfland",
+          "use_when": "Desktop IO latency under NVMe + browser pressure",
+          "hybrid_note": "ASA io-class expert; good docked-office candidate"
+        }
+      ]
+    },
+    {
+      "id": "throughput",
+      "label": "sched_ext — CPU / build",
+      "schedulers": [
+        {
+          "id": "rusty",
+          "scx_name": "scx_rusty",
+          "label": "rusty",
+          "use_when": "make -j9, cargo, containers under desktop",
+          "hybrid_note": "ASA cpu-class expert; build-heavy profile default"
+        },
+        {
+          "id": "rustland",
+          "scx_name": "scx_rustland",
+          "label": "rustland",
+          "use_when": "Alternative throughput scheduler; A/B vs rusty",
+          "hybrid_note": "Experimental tier-2 on hybrid CPUs"
+        },
+        {
+          "id": "layered",
+          "scx_name": "scx_layered",
+          "label": "layered",
+          "use_when": "Layered cgroup scheduling experiments",
+          "hybrid_note": "Hold behind lavd/rusty A/B"
+        }
+      ]
+    },
+    {
+      "id": "mixed",
+      "label": "sched_ext — hybrid workloads",
+      "schedulers": [
+        {
+          "id": "p2dq",
+          "scx_name": "scx_p2dq",
+          "label": "p2dq",
+          "use_when": "Browser + build + IO concurrently",
+          "hybrid_note": "ASA mixed-class default in 0009 patch"
+        },
+        {
+          "id": "cosmos",
+          "scx_name": "scx_cosmos",
+          "label": "cosmos",
+          "use_when": "Multi-class workload experiments",
+          "hybrid_note": "Community scheduler; bench before daily driver"
+        },
+        {
+          "id": "flow",
+          "scx_name": "scx_flow",
+          "label": "flow",
+          "use_when": "Flow-style desktop scheduling trials",
+          "hybrid_note": "Lower priority than lavd/bpfland on ultrabook"
+        }
+      ]
+    },
+    {
+      "id": "auto",
+      "label": "Adaptive (Meta MoS / ASA)",
+      "schedulers": [
+        {
+          "id": "asa",
+          "scx_name": null,
+          "label": "ASA router (Mixture-of-Schedulers)",
+          "use_when": "Let kernel heuristic pick lavd/rusty/bpfland/p2dq",
+          "hybrid_note": "Requires CONFIG_SCHED_ASA + asa-router + scx_loader"
+        }
+      ]
+    },
+    {
+      "id": "experimental",
+      "label": "sched_ext — bench only",
+      "schedulers": [
+        {
+          "id": "beerland",
+          "scx_name": "scx_beerland",
+          "label": "beerland",
+          "use_when": "Community experiments only",
+          "hybrid_note": "Not a daily-driver candidate until local A/B wins"
+        },
+        {
+          "id": "cake",
+          "scx_name": "scx_cake",
+          "label": "cake",
+          "use_when": "Community experiments only",
+          "hybrid_note": "Bench track"
+        },
+        {
+          "id": "chaos",
+          "scx_name": "scx_chaos",
+          "label": "chaos",
+          "use_when": "Stress / regression testing",
+          "hybrid_note": "Never default"
+        },
+        {
+          "id": "pandemonium",
+          "scx_name": "scx_pandemonium",
+          "label": "pandemonium",
+          "use_when": "Stress / regression testing",
+          "hybrid_note": "Never default"
+        },
+        {
+          "id": "tickless",
+          "scx_name": "scx_tickless",
+          "label": "tickless",
+          "use_when": "Idle power experiments with sched_ext loaded",
+          "hybrid_note": "Pair with linux-rg-bench-idle"
+        }
+      ]
+    }
+  ],
+  "profile_defaults": {
+    "undocked-mixed": "lavd",
+    "build-heavy": "rusty",
+    "memory-pressure": "off",
+    "travel": "lavd",
+    "docked-office": "asa",
+    "bench-interactive": "flash",
+    "bench-throughput": "rusty"
+  }
+}

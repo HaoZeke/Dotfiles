@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-oomd-profile-install).
+
+set -euo pipefail
+
+profile=${1:-"$HOME/.config/oomd/oomd-rgx1gen11.json"}
+root_script=${RG_OOMD_ROOT_SCRIPT:-/tmp/rg-oomd-profile-install-root.sh}
+
+if [ ! -r "$profile" ]; then
+    printf 'rg-oomd-profile-install: missing profile: %s\n' "$profile" >&2
+    exit 1
+fi
+
+cat >"$root_script" <<ROOT
+#!/usr/bin/env bash
+set -euo pipefail
+
+# facebookincubator/oomd requires unified cgroup v2. The equivalent kernel
+# command-line requirement is systemd.unified_cgroup_hierarchy=1 on systems
+# where unified cgroups are not already the default.
+
+install -Dm0644 "$profile" /etc/oomd/oomd.json
+
+install -d -m0755 /etc/systemd/system.conf.d
+cat >/etc/systemd/system.conf.d/20-rg-resource-accounting.conf <<'EOF'
+[Manager]
+DefaultCPUAccounting=true
+DefaultIOAccounting=true
+DefaultMemoryAccounting=true
+DefaultTasksAccounting=true
+EOF
+
+install -d -m0755 /etc/systemd/system/hostcritical.slice.d
+cat >/etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf <<'EOF'
+[Slice]
+MemoryMin=256M
+MemoryLow=256M
+CPUWeight=200
+IOWeight=200
+EOF
+
+install -d -m0755 /etc/systemd/system/oomd.service.d
+cat >/etc/systemd/system/oomd.service.d/10-rg-protection.conf <<'EOF'
+[Service]
+Slice=hostcritical.slice
+MemoryMin=64M
+MemoryLow=64M
+CPUWeight=200
+IOWeight=200
+EOF
+
+if command -v oomd >/dev/null 2>&1; then
+    systemctl daemon-reload
+    systemctl enable --now oomd.service
+else
+    systemctl daemon-reload
+    cat >&2 <<'EOF'
+oomd is not installed. Build facebookincubator/oomd or install a trusted Arch
+package for it, then rerun:
+  systemctl enable --now oomd.service
+EOF
+fi
+ROOT
+
+chmod 0755 "$root_script"
+printf 'wrote %s\n' "$root_script"
+printf 'run: sudo bash %s\n' "$root_script"

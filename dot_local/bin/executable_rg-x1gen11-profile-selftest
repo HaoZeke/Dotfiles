@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-x1gen11-profile-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-x1gen11-profile"
+profiles="$repo/dot_config/rg-x1gen11/profiles.json"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$script" || fail "missing profile switcher"
+test -r "$profiles" || fail "missing profiles.json"
+
+output=$(RG_X1GEN11_PROFILES="$profiles" "$script" list)
+printf '%s\n' "$output" | rg -q 'undocked-mixed' || fail "list missing undocked-mixed"
+printf '%s\n' "$output" | rg -q 'build-heavy' || fail "list missing build-heavy"
+printf '%s\n' "$output" | rg -q 'memory-pressure' || fail "list missing memory-pressure"
+
+RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'scaling_governor: powersave' >/dev/null \
+    || fail "travel profile must use powersave governor"
+RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'damon_reclaim: true' >/dev/null \
+    || fail "memory-pressure must enable DAMON reclaim"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: lavd' >/dev/null \
+    || fail "undocked-mixed must select scx_lavd via sched ladder"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scx_mode: rusty' >/dev/null \
+    || fail "build-heavy must select scx_rusty"
+
+printf 'ok\n'

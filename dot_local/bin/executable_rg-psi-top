@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-psi-top).
+#
+# Live PSI dashboard (Meta/systemd-oomd signal). Complements rg-psi-snapshot
+# CSV output with a readable top-style view.
+
+set -euo pipefail
+
+INTERVAL=${1:-2}
+
+psi_line() {
+    local resource="$1" label="$2"
+    local path="/proc/pressure/$resource"
+    if [ ! -r "$path" ]; then
+        printf '%-8s n/a\n' "$label"
+        return 0
+    fi
+    awk -v label="$label" '
+        /some/ {
+            avg10 = avg60 = avg300 = "n/a"
+            for (i = 1; i <= NF; i++) {
+                if ($i ~ /^avg10=/) { sub(/^avg10=/, "", $i); avg10 = $i }
+                if ($i ~ /^avg60=/) { sub(/^avg60=/, "", $i); avg60 = $i }
+                if ($i ~ /^avg300=/) { sub(/^avg300=/, "", $i); avg300 = $i }
+            }
+            printf "%-8s some 10=%6s 60=%6s 300=%6s\n", label, avg10, avg60, avg300
+        }
+    ' "$path"
+}
+
+sched_line() {
+    if [ -r /sys/kernel/sched_ext/current ]; then
+        local cur asa
+        cur=$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)
+        printf 'sched    %s' "$cur"
+        if [ -d /sys/kernel/sched_ext/asa ] && [ -r /sys/kernel/sched_ext/asa/recommended_scheduler ]; then
+            asa=$(cat /sys/kernel/sched_ext/asa/recommended_scheduler 2>/dev/null || true)
+            [ -n "$asa" ] && printf ' (ASA -> %s)' "$asa"
+        fi
+        printf '\n'
+    elif [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
+        printf 'sched    EEVDF+BORE (%s)\n' "$("$HOME/.local/bin/rg-sched-ladder" current 2>/dev/null || echo off)"
+    else
+        printf 'sched    EEVDF+BORE (kernel fair)\n'
+    fi
+}
+
+while :; do
+    clear 2>/dev/null || printf '\033[2J\033[H'
+    printf 'rg-psi-top  interval=%ss  %s\n' "$INTERVAL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '%s\n' '----------------------------------------'
+    sched_line
+    psi_line cpu CPU
+    psi_line memory MEM
+    psi_line io IO
+    printf '%s\n' '----------------------------------------'
+    printf 'Ctrl-C to exit. oomd reacts to memory/io some pressure.\n'
+    sleep "$INTERVAL"
+done

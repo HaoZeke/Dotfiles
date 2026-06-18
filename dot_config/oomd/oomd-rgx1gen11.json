@@ -1,0 +1,113 @@
+{
+  "rulesets": [
+    {
+      "name": "desktop memory pressure guard",
+      "post_action_delay": "20",
+      "detectors": [
+        [
+          "user slices and host memory are under pressure",
+          {
+            "name": "pressure_rising_beyond",
+            "args": {
+              "cgroup": "user.slice",
+              "resource": "memory",
+              "threshold": "8",
+              "duration": "20"
+            }
+          },
+          {
+            "name": "pressure_rising_beyond",
+            "args": {
+              "cgroup": "/",
+              "resource": "memory",
+              "threshold": "35",
+              "duration": "20"
+            }
+          }
+        ],
+        [
+          "host memory pressure is severe",
+          {
+            "name": "pressure_above",
+            "args": {
+              "cgroup": "/",
+              "resource": "memory",
+              "threshold": "70",
+              "duration": "15"
+            }
+          }
+        ]
+      ],
+      "actions": [
+        {
+          "name": "kill_by_memory_size_or_growth",
+          "args": {
+            "cgroup": "user.slice/*",
+            "recursive": "true",
+            "size_threshold": "35",
+            "min_growth_ratio": "1.20",
+            "post_action_delay": "20",
+            "reap_memory": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap pressure guard",
+      "post_action_delay": "30",
+      "detectors": [
+        [
+          "swap is low",
+          {
+            "name": "swap_free",
+            "args": {
+              "threshold_pct": "15"
+            }
+          }
+        ]
+      ],
+      "actions": [
+        {
+          "name": "kill_by_swap_usage",
+          "args": {
+            "cgroup": "user.slice/*",
+            "recursive": "true",
+            "threshold": "256M",
+            "post_action_delay": "30",
+            "reap_memory": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "io pressure guard",
+      "post_action_delay": "20",
+      "detectors": [
+        [
+          "host io pressure is severe",
+          {
+            "name": "pressure_rising_beyond",
+            "args": {
+              "cgroup": "/",
+              "resource": "io",
+              "threshold": "45",
+              "duration": "20"
+            }
+          }
+        ]
+      ],
+      "actions": [
+        {
+          "name": "kill_by_pressure",
+          "args": {
+            "cgroup": "user.slice/*",
+            "resource": "io",
+            "recursive": "true",
+            "post_action_delay": "20",
+            "reap_memory": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

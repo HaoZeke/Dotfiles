@@ -1,0 +1,60 @@
+{
+  "default": "undocked-mixed",
+  "profiles": {
+    "undocked-mixed": {
+      "description": "Daily Sway + browser + occasional make -j9",
+      "platform_profile": "balanced",
+      "scaling_governor": "schedutil",
+      "iwlwifi_power_save": "Y",
+      "zram_size": "ram / 2",
+      "damon_reclaim": false,
+      "scx_mode": "lavd",
+      "browser_memory_high": "6G",
+      "build_memory_high": "12G"
+    },
+    "build-heavy": {
+      "description": "make -j9, containers, scientific builds under desktop",
+      "platform_profile": "performance",
+      "scaling_governor": "performance",
+      "iwlwifi_power_save": "N",
+      "zram_size": "ram * 3 / 8",
+      "damon_reclaim": false,
+      "scx_mode": "rusty",
+      "browser_memory_high": "4G",
+      "build_memory_high": "18G"
+    },
+    "memory-pressure": {
+      "description": "Browser + VM + build concurrently; PSI and reclaim tuning",
+      "platform_profile": "balanced",
+      "scaling_governor": "schedutil",
+      "iwlwifi_power_save": "Y",
+      "zram_size": "ram / 2",
+      "damon_reclaim": true,
+      "scx_mode": "off",
+      "browser_memory_high": "5G",
+      "build_memory_high": "10G"
+    },
+    "travel": {
+      "description": "Wi-Fi roaming, VPN, suspend in bag",
+      "platform_profile": "low-power",
+      "scaling_governor": "powersave",
+      "iwlwifi_power_save": "Y",
+      "zram_size": "ram / 4",
+      "damon_reclaim": false,
+      "scx_mode": "lavd",
+      "browser_memory_high": "5G",
+      "build_memory_high": "8G"
+    },
+    "docked-office": {
+      "description": "TB4 dock, external 4K, Ethernet",
+      "platform_profile": "balanced",
+      "scaling_governor": "schedutil",
+      "iwlwifi_power_save": "N",
+      "zram_size": "ram / 2",
+      "damon_reclaim": false,
+      "scx_mode": "asa",
+      "browser_memory_high": "8G",
+      "build_memory_high": "14G"
+    }
+  }
+}

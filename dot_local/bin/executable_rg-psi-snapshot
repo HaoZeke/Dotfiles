@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-psi-snapshot).
+#
+# Sample /proc/pressure/{cpu,memory,io} for linux-rg benchmark evidence.
+# PSI is the kernel signal Meta OOMD and systemd-oomd both consume.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-psi-snapshot COMMAND [ARGS...]
+
+Commands:
+  once                 Print one CSV line: ts,cpu_some,memory_some,io_some.
+  watch [INTERVAL]     Poll every INTERVAL seconds (default 5).
+  bench FILE SECONDS   Sample every 1s for SECONDS into FILE (CSV header included).
+  -h, --help           Show this help.
+USAGE
+}
+
+die() {
+    printf 'rg-psi-snapshot: %s\n' "$*" >&2
+    exit 2
+}
+
+psi_some_avg10() {
+    local resource="$1"
+    local path="/proc/pressure/$resource"
+    if [ ! -r "$path" ]; then
+        printf 'na'
+        return 0
+    fi
+    awk '
+        /some/ {
+            for (i = 1; i <= NF; i++) {
+                if ($i ~ /^avg10=/) {
+                    sub(/^avg10=/, "", $i)
+                    print $i
+                    exit
+                }
+            }
+        }
+    ' "$path"
+}
+
+snapshot_line() {
+    local ts
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    printf '%s,%s,%s,%s\n' \
+        "$ts" \
+        "$(psi_some_avg10 cpu)" \
+        "$(psi_some_avg10 memory)" \
+        "$(psi_some_avg10 io)"
+}
+
+cmd_once() {
+    snapshot_line
+}
+
+cmd_watch() {
+    local interval=${1:-5}
+    while :; do
+        snapshot_line
+        sleep "$interval"
+    done
+}
+
+cmd_bench() {
+    local file=${1:-} seconds=${2:-}
+    [ -n "$file" ] && [ -n "$seconds" ] || die "bench requires FILE SECONDS"
+    printf 'timestamp,cpu_some_avg10,memory_some_avg10,io_some_avg10\n' >"$file"
+    local end=$((SECONDS + seconds))
+    while [ "$SECONDS" -lt "$end" ]; do
+        snapshot_line >>"$file"
+        sleep 1
+    done
+    printf 'wrote %s (%ss)\n' "$file" "$seconds"
+}
+
+main() {
+    local cmd=${1:-}
+    shift || true
+    case "$cmd" in
+    once) cmd_once ;;
+    watch) cmd_watch "${1:-5}" ;;
+    bench) cmd_bench "${1:-}" "${2:-}" ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

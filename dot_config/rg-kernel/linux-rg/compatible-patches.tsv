@@ -1,0 +1,20 @@
+status	name	source	reason
+selected	arch-linux-pkgbuild	https://gitlab.archlinux.org/archlinux/packaging/packages/linux	Selected as the base so linux-rg stays close to Arch package hooks, pacman ownership, mkinitcpio behavior, DKMS headers, and rEFInd expectations on this machine.
+selected	bore	https://raw.githubusercontent.com/CachyOS/kernel-patches/master/7.0/sched/0001-bore-cachy.patch	Selected as the single fair-class scheduler patch because it is a focused 7.0 scheduler patch and fits the desktop-latency goal without importing the full CachyOS kernel.
+selected	bbr3	https://github.com/CachyOS/kernel-patches	Selected as the carried TCP lane in linux-rg through the adapted 0003/0004/0017 patch set.
+selected	adios	https://github.com/firelzrd/adios	Selected as a non-default mq scheduler module for local NVMe A/B tests.
+selected	cachy-memory-ratios	https://github.com/CachyOS/kernel-patches	Selected as the carried anon/clean working-set protection knobs in 0018.
+selected	mglru-devtree	https://github.com/sirlucjan/kernel-patches	Selected as the carried MGLRU dev-tree weld in 0019.
+selected	cache-aware-sched	https://github.com/sirlucjan/kernel-patches	Selected as the carried CONFIG_SCHED_CACHE placement experiment in 0020.
+selected	mm-bulk-free-hotpaths	https://github.com/sirlucjan/kernel-patches	Selected as the carried cachyos-fixes #16-17 bulk-free pair in 0021.
+survey	linux-zen-release-patch	https://github.com/zen-kernel/zen-kernel	Surveyed as an alternate downstream release patch. It is not overlaid with the Arch release patch because both patch the same kernel release integration layer.
+survey	liquorix	https://liquorix.net/	Surveyed for desktop latency defaults. Not imported wholesale because its published tuning explicitly trades throughput and power usage for responsiveness, which is not the default laptop battery target.
+selected	psi-oomd	https://github.com/facebookincubator/oomd	Selected as kernel PSI plus a host oomd profile so userspace pressure recovery can act before the kernel OOM path dominates the laptop.
+selected	mglru	https://docs.kernel.org/admin-guide/mm/multigen_lru.html	Selected because upstream documents Multi-Gen LRU as improving reclaim and memory-pressure behavior; this fits the 30 GiB mobile workstation profile.
+selected	sched-ext	https://docs.kernel.org/scheduler/sched-ext.html	Selected as a runtime scheduler experimentation surface with upstream fallback semantics when a BPF scheduler errors or stalls.
+selected	eevdf	https://docs.kernel.org/scheduler/sched-eevdf.html	Selected as the mainline fair-class baseline used for comparison and fallback; it remains present under the BORE patch path.
+selected	bfq	https://gitlab.archlinux.org/archlinux/packaging/packages/linux	Selected as an available I/O scheduler for cgroup-aware desktop workloads. It is not forced as the NVMe default because mq-deadline/none remain better baselines for this PCIe SSD.
+disabled	ck-muqss	https://aur.archlinux.org/linux-ck.git	Disabled because CK/MuQSS is not maintained against this kernel series and conflicts with the current fair-class, EEVDF, and BORE scheduler path.
+disabled	bmq-pds-prjc	https://github.com/CachyOS/kernel-patches/tree/master/7.0/sched	Disabled because Project C schedulers are mutually exclusive with BORE. A separate experimental package can test them, but linux-rg selects one scheduler patch.
+disabled	liquorix-wholesale	https://liquorix.net/	Disabled because the host profile needs battery-aware defaults, not an unconditional low-latency desktop stack.
+disabled	cachyos-wholesale	https://github.com/CachyOS/linux-cachyos	Disabled because linux-rg should be hardware-specific instead of a renamed CachyOS package. CachyOS remains a patch source where individual patches apply.

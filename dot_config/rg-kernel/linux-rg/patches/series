@@ -1,0 +1,4 @@
+# Local patch files are applied in this order after remote selected patch
+# sources and before the host config fragment reaches olddefconfig.
+#
+# Keep this empty unless a patch has been adapted for the Arch linux-rg base.

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-scx-loader).
+#
+# Back-compat wrapper — prefer rg-sched-ladder for scheduler control.
+
+set -euo pipefail
+
+LADDER="$HOME/.local/bin/rg-sched-ladder"
+
+die() {
+    printf 'rg-scx-loader: %s\n' "$*" >&2
+    exit 2
+}
+
+usage() {
+    cat <<'USAGE'
+usage: rg-scx-loader COMMAND [ARGS...]
+
+Thin wrapper around rg-sched-ladder. See: rg-sched-ladder ladder
+
+Commands:
+  status, list, switch, unload, asa-start, asa-dry-run
+USAGE
+}
+
+[ -x "$LADDER" ] || die "rg-sched-ladder missing"
+
+main() {
+    local cmd=${1:-}
+    shift || true
+    case "$cmd" in
+    status)
+        "$LADDER" current
+        [ -r /sys/kernel/sched_ext/current ] \
+            && printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+        ;;
+    list) "$LADDER" list ;;
+    switch) "$LADDER" switch "${1:-}" ;;
+    unload) "$LADDER" switch off ;;
+    asa-start) "$LADDER" switch asa ;;
+    asa-dry-run)
+        command -v asa-router >/dev/null 2>&1 || die "asa-router not installed"
+        exec asa-router --dry-run --enable
+        ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

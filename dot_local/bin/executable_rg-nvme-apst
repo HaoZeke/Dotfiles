@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-nvme-apst).
+#
+# Collect NVMe APST / autopm state for KIOXIA XG8 on rgx1gen11.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-nvme-apst [DEVICE]
+
+DEVICE defaults to /dev/nvme0 (namespace nvme0n1 for block sysfs).
+
+Prints nvme-cli id-ctrl APST table when available, plus block queue sysfs.
+USAGE
+}
+
+die() {
+    printf 'rg-nvme-apst: %s\n' "$*" >&2
+    exit 2
+}
+
+main() {
+    local dev=${1:-/dev/nvme0}
+    local ns="${dev}n1"
+    if [[ "$dev" == *n1 ]]; then
+        ns="$dev"
+        dev="${dev%n1}"
+    fi
+    local block
+    block="/sys/block/$(basename "$ns")"
+
+    printf '== NVMe device %s ==\n' "$dev"
+    if command -v nvme >/dev/null 2>&1; then
+        nvme id-ctrl "$dev" -H 2>/dev/null | rg -i 'apst|ps[0-9]' || nvme id-ctrl "$dev" 2>/dev/null | head -40 || true
+        nvme get-feature "$dev" -f 0x0c -H 2>/dev/null || true
+    else
+        printf 'nvme-cli: not installed\n'
+    fi
+
+    if [ -d "$block/queue" ]; then
+        printf '\n== block queue %s ==\n' "$block"
+        for f in scheduler nr_requests read_ahead_kb; do
+            [ -r "$block/queue/$f" ] && printf '%s: %s\n' "$f" "$(cat "$block/queue/$f")"
+        done
+        if [ -r "$block/device/power/control" ]; then
+            printf 'device power/control: %s\n' "$(cat "$block/device/power/control")"
+        fi
+    else
+        die "block sysfs missing for $ns"
+    fi
+
+    local ctrl
+    ctrl="/sys/class/nvme/$(basename "$dev")"
+    if [ -r "$ctrl/apst" ]; then
+        printf 'apst: %s\n' "$(cat "$ctrl/apst")"
+    fi
+}
+
+main "$@"

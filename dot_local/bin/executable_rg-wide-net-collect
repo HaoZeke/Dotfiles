@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-wide-net-collect).
+#
+# One-shot platform snapshot for linux-rg wide-net survey and bench evidence.
+
+set -euo pipefail
+
+OUT=""
+usage() {
+    cat <<'USAGE'
+usage: rg-wide-net-collect [-o FILE]
+
+Capture thermals, PSI, HFI, NVMe APST, TB4, iwlwifi, cpuidle, irqbalance.
+Default: stdout. Use -o FILE for bench run artifacts.
+USAGE
+}
+
+log_section() {
+    printf '\n== %s ==\n' "$1"
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -o)
+        OUT="$2"
+        shift 2
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        printf 'rg-wide-net-collect: unknown arg: %s\n' "$1" >&2
+        usage
+        exit 2
+        ;;
+    esac
+done
+
+run_collect() {
+    log_section "identity"
+    uname -a
+    [ -r /etc/os-release ] && rg '^PRETTY_NAME=' /etc/os-release || true
+
+    log_section "platform_profile / cpufreq / cpuidle"
+    for path in \
+        /sys/firmware/acpi/platform_profile \
+        /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
+        /sys/devices/system/cpu/cpuidle/current_governor; do
+        [ -r "$path" ] && printf '%s: %s\n' "$path" "$(cat "$path")"
+    done
+    if [ -r /sys/devices/system/cpu/intel_pstate/status ]; then
+        printf 'intel_pstate: %s\n' "$(cat /sys/devices/system/cpu/intel_pstate/status)"
+    fi
+
+    log_section "memory pressure"
+    if [ -r /proc/pressure/memory ]; then
+        sed -n '1,3p' /proc/pressure/memory
+    fi
+    for path in /proc/sys/vm/swappiness /proc/sys/vm/lru_gen /proc/sys/kernel/ksm/run; do
+        [ -r "$path" ] && printf '%s: %s\n' "$path" "$(cat "$path")"
+    done
+    if [ -r /sys/kernel/mm/lru_gen/min_ttl_ms ]; then
+        printf 'min_ttl_ms: %s\n' "$(cat /sys/kernel/mm/lru_gen/min_ttl_ms)"
+    fi
+
+    log_section "iwlwifi"
+    for path in /sys/module/iwlwifi/parameters/power_save /sys/module/iwlwifi/parameters/bt_coex_active; do
+        [ -r "$path" ] && printf '%s: %s\n' "$path" "$(cat "$path")"
+    done
+
+    log_section "irqbalance"
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl is-active irqbalance 2>/dev/null || printf 'irqbalance: inactive\n'
+    fi
+
+    log_section "hfi"
+    if [ -x "${HOME}/.local/bin/rg-hfi-status" ]; then
+        "${HOME}/.local/bin/rg-hfi-status"
+    fi
+
+    log_section "nvme"
+    if [ -x "${HOME}/.local/bin/rg-nvme-apst" ]; then
+        "${HOME}/.local/bin/rg-nvme-apst" /dev/nvme0 2>/dev/null || true
+    fi
+
+    log_section "thunderbolt"
+    if [ -d /sys/bus/thunderbolt/devices ]; then
+        ls -1 /sys/bus/thunderbolt/devices 2>/dev/null || true
+        for d in /sys/bus/thunderbolt/devices/*; do
+            [ -d "$d" ] || continue
+            printf '%s: authorized=%s unique_id=%s\n' "$(basename "$d")" \
+                "$(cat "$d/authorized" 2>/dev/null || echo ?)" \
+                "$(cat "$d/unique_id" 2>/dev/null || echo ?)"
+        done
+    else
+        printf 'thunderbolt sysfs: missing\n'
+    fi
+
+    log_section "sched_ext"
+    if [ -d /sys/kernel/sched_ext ]; then
+        [ -r /sys/kernel/sched_ext/current ] && printf 'current: %s\n' "$(cat /sys/kernel/sched_ext/current)"
+    else
+        printf 'sched_ext: not present\n'
+    fi
+
+    log_section "thermal"
+    if command -v sensors >/dev/null 2>&1; then
+        sensors 2>/dev/null || true
+    fi
+}
+
+if [ -n "$OUT" ]; then
+    mkdir -p "$(dirname "$OUT")"
+    run_collect >"$OUT"
+    printf 'rg-wide-net-collect: wrote %s\n' "$OUT" >&2
+else
+    run_collect
+fi

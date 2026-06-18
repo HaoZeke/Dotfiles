@@ -1,52 +1,68 @@
-#+TITLE: Kernel Build Lanes
+#+TITLE: linux-rg Kernel Package
 #+FILETAGS: :dotfiles:linux:kernel:
-#+DATE: 2026-05-16
-#+DESCRIPTION: Policy for building custom Linux kernel packages on rg.cosmolab while keeping laptop rollback entries.
+#+DATE: 2026-06-18
+#+DESCRIPTION: Arch-native PKGBUILD entry point for the rgx1gen11 custom laptop kernel.
 #+STATUS: active
 
-* Laptop policy
+* Host policy
 
-The laptop keeps the stock Arch =linux= kernel as the required bootable
-fallback. =linux-lts= is recommended as an extra rollback branch because it
-does not track the same fast-moving kernel series, but the working stock
-kernel is the install gate for custom artifacts. Custom work lands in one
-experimental slot at a time through package artifacts built on =rg.cosmolab=.
+=linux-rg= is the custom kernel package for the ThinkPad X1 Carbon Gen 11
+(=21HM002GUS=, host =rgx1gen11=). It is built as an Arch-native PKGBUILD with
+=makepkg= and installed with =pacman -U=, so pacman owns the kernel package,
+the headers package is tracked, DKMS sees the matching headers, and initramfs
+hooks run through normal Arch package semantics.
 
-The first laptop lane is =arch-zen=. It stays close to maintained Arch
-packaging while giving an interactive desktop baseline. Kernel lanes are
-renamed to =linux-rg-<lane>= package bases before =makepkg= runs, so installing
-an artifact cannot replace =linux=, =linux-lts=, =linux-zen=, or CachyOS package
-names. =rg.cosmolab= is Ubuntu, so native =makepkg= is optional: the launcher
-uses an Arch =base-devel= container through Docker or Podman when the remote
-does not provide Arch packaging tools. The remote build root lives on
-=/scratch/goswami/rg-kernel-build= because the home directory is on the nearly
-full root filesystem. =sched-ext= builds the =scx-scheds= scheduler tools and
-keeps the stock kernel as a fallback-capable host for BPF schedulers.
-=cachy-bore= is useful for performance comparison once the package lane is
-stable. =ck-muqss= is kept as a revival lane because the public package state
-is far behind the laptop's kernel series. The =ck-muqss= lane carries a package
-patch queue entry for Linux 6.11 libbpf tool builds so Arch compiler warnings
-do not stop the kernel package before artifact generation.
+The package source of truth is the local =~/Git/Github/Tools/linux-rg= checkout,
+which carries the adapted =0001= through =0021= patch queue, PKGBUILD, source
+hashes, and host config. External kernels are not used as wholesale bases unless
+they replace the base. CachyOS, Zen, Liquorix, CK, and Project C scheduler
+material are tracked as patch and configuration sources in the linux-rg
+manifests.
+
+The stock Arch =linux= package is the required bootable fallback. =linux-lts=
+is the recommended second rollback kernel because it does not follow the same
+fast-moving series.
 
 * Commands
 
 #+begin_src shell
 rg-kernel-build list
+rg-kernel-build deps-command
 rg-kernel-build preflight
-rg-kernel-build remote-preflight
-rg-kernel-build prepare arch-zen
-rg-kernel-build build arch-zen
-rg-kernel-build build-all
-rg-kernel-build install-preflight arch-zen
-rg-kernel-build install-command arch-zen
+rg-kernel-build patch-report
+rg-kernel-build prepare
+rg-kernel-build build
+rg-kernel-build install-preflight
+rg-kernel-build install-command
+rg-kernel-build refind-command
+rg-kernel-build oomd-command
+rg-industry-stack-selftest
+rg-x1gen11-profile doctor
 #+end_src
 
-Kernel packages are installed manually with the printed =pacman -U= command
-after the required fallback boot entry is present.
+Industry userspace (chezmoi, rgx1gen11 only):
 
-Kernel lanes build matching headers packages next to the kernel package. DKMS
-modules are not bundled into the kernel artifact; installed DKMS packages
-rebuild against the matching headers during package installation. The
-=install-preflight= command checks the fallback kernel, local artifacts,
-headers, initramfs tooling, and installed =*-dkms= packages before printing an
-install command.
+#+begin_src shell
+rg-x1gen11-profile apply undocked-mixed
+rg-oomd-profile-install && sudo bash /tmp/rg-oomd-profile-install-root.sh
+rg-psi-snapshot bench /tmp/psi.csv 60
+rg-scx-loader switch lavd
+#+end_src
+
+=rg-kernel-build build= writes packages under
+=~/.local/share/rg-kernel/artifacts/linux-rg=. The printed install command is
+the privileged package install step:
+
+#+begin_src shell
+sudo pacman -U ~/.local/share/rg-kernel/artifacts/linux-rg/*.pkg.tar.*
+#+end_src
+
+=rg-kernel-build refind-command= writes a rEFInd stanza to =/tmp= using the
+current kernel command line with the initramfs changed to =linux-rg=.
+
+* Design record
+
+The internal design record is
+=~/.config/rg-kernel/linux-rg/internal-design.org=. It describes the patch
+sources, rejection decisions, hardware fit, and acceptance checks for this
+specific laptop profile.

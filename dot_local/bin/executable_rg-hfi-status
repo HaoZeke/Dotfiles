@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-hfi-status).
+#
+# Print Intel HFI / hybrid cpu_capacity snapshot for rgx1gen11 (1365U).
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-hfi-status [-h]
+
+Print cpu_capacity and cpufreq governor per CPU (HFI / Thread Director hints).
+USAGE
+}
+
+main() {
+    case "${1:-}" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    esac
+
+    printf '== hybrid cpu_capacity (intel_hfi) ==\n'
+    local cpu cap gov
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        cap=n/a
+        gov=n/a
+        [ -r "$cpu/cpu_capacity" ] && cap=$(cat "$cpu/cpu_capacity")
+        [ -r "$cpu/cpufreq/scaling_governor" ] && gov=$(cat "$cpu/cpufreq/scaling_governor")
+        printf '%s capacity=%s governor=%s\n' "$(basename "$cpu")" "$cap" "$gov"
+    done
+
+    if [ -r /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost ]; then
+        printf '\nhwp_dynamic_boost: %s\n' "$(cat /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost)"
+    fi
+    if [ -r /sys/devices/system/cpu/intel_pstate/status ]; then
+        printf 'intel_pstate: %s\n' "$(cat /sys/devices/system/cpu/intel_pstate/status)"
+    fi
+}
+
+main "$@"

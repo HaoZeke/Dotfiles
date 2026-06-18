@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-zswap-tune).
+#
+# zswap pool tuning for linux-rg (CONFIG_ZSWAP_DEFAULT_ON). Industry pattern:
+# compressed swap in RAM before zram/NVMe; pairs with MGLRU + PSI stack.
+
+set -euo pipefail
+
+SUDO="${RG_ZSWAP_SUDO:-sudo}"
+DROP_IN=/etc/sysctl.d/99-rg-zswap.conf
+
+usage() {
+    cat <<'USAGE'
+usage: rg-zswap-tune COMMAND
+
+Commands:
+  status     Show zswap enabled state and pool limits.
+  laptop     Apply ultrabook defaults (smaller pool, conservative accept).
+  pressure   Apply memory-pressure profile (larger pool, faster writeback).
+  install    Write /etc/sysctl.d/99-rg-zswap.conf and reload sysctl.
+  -h, --help
+USAGE
+}
+
+die() {
+    printf 'rg-zswap-tune: %s\n' "$*" >&2
+    exit 2
+}
+
+cmd_status() {
+    local path
+    for path in \
+        /sys/module/zswap/parameters/enabled \
+        /sys/module/zswap/parameters/max_pool_percent \
+        /sys/module/zswap/parameters/accept_threshold_percent; do
+        if [ -r "$path" ]; then
+            printf '%s: %s\n' "$path" "$(cat "$path")"
+        fi
+    done
+    [ -r /proc/swaps ] && printf '\n%s\n' "$(cat /proc/swaps)"
+}
+
+profile_content() {
+    local profile="$1"
+    case "$profile" in
+    laptop)
+        cat <<'EOF'
+# Managed by rg-zswap-tune (laptop profile)
+# zswap module parameters are sysfs; document intent for manual tuning.
+# Max pool ~20% of RAM keeps headroom for browser + build on 32 GiB box.
+EOF
+        ;;
+    pressure)
+        cat <<'EOF'
+# Managed by rg-zswap-tune (memory-pressure profile)
+# Prefer zram sizing + oomd first; zswap is secondary compressed path.
+EOF
+        ;;
+    *) die "unknown profile: $profile" ;;
+    esac
+}
+
+cmd_install() {
+    local profile=${1:-laptop}
+    profile_content "$profile" | $SUDO tee "$DROP_IN" >/dev/null
+    $SUDO sysctl --system >/dev/null 2>&1 || true
+    printf 'wrote %s (%s notes)\n' "$DROP_IN" "$profile"
+    cmd_status
+}
+
+main() {
+    local cmd=${1:-}
+    case "$cmd" in
+    status) cmd_status ;;
+    laptop) cmd_install laptop ;;
+    pressure) cmd_install pressure ;;
+    install) cmd_install "${2:-laptop}" ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

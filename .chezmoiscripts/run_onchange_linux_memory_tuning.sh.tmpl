@@ -25,9 +25,14 @@ write_if_diff() {
 
 SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
 #
-# Tuned for a zram-equipped Rust/Linux workstation. Anchored on:
+# Tuned for a zram-equipped Rust/Linux workstation on rgx1gen11. Anchored on:
 #   * /dev/zram0 at prio 100, zstd compression (see zram-generator.conf)
 #   * systemd-oomd managing user-.slice via PSI (see oomd.conf.d + user-.slice.d)
+#   * Meta facebookincubator/oomd host rules via ~/.config/oomd/oomd-rgx1gen11.json
+#     and rg-oomd-profile-install (complements, does not replace, systemd-oomd)
+#   * Per-workload caps via browser.slice, build.slice, rust-analyzer.slice
+#   * Profile sizing overrides in zram-generator.conf.d/10-rg-profile.conf from
+#     rg-x1gen11-profile apply
 #
 # High swappiness is correct here: swap runs at RAM-latency through zram,
 # so idle anon memory should page freely while page cache stays resident
@@ -94,6 +99,7 @@ ZRAM_CHANGED=0
 OOMD_CHANGED=0
 write_if_diff /etc/sysctl.d/99-memory.conf                     "$SYSCTL_CONTENT"         && SYSCTL_CHANGED=1 || true
 write_if_diff /etc/systemd/zram-generator.conf                 "$ZRAM_CONTENT"           && ZRAM_CHANGED=1   || true
+sudo install -d -m 0755 /etc/systemd/zram-generator.conf.d 2>/dev/null || true
 write_if_diff /etc/systemd/oomd.conf.d/aggressive.conf         "$OOMD_CONF_CONTENT"      && OOMD_CHANGED=1   || true
 write_if_diff /etc/systemd/system/user-.slice.d/50-oomd.conf   "$USER_SLICE_OOMD_CONTENT" && OOMD_CHANGED=1   || true
 

@@ -1,0 +1,11 @@
+# Managed by chezmoi (dot_config/systemd/user/build.slice).
+#
+# Collective cap for make -j9, cargo, and container builds launched under
+# systemd-run --slice=build.slice. rg-x1gen11-profile raises MemoryHigh in
+# build-heavy mode; systemd-oomd and facebook oomd remain the kill layer.
+[Slice]
+MemoryHigh=12G
+MemoryMax=20G
+MemorySwapMax=10G
+CPUWeight=150
+IOWeight=150

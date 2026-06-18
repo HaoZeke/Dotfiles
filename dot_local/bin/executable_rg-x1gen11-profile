@@ -1,0 +1,355 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-x1gen11-profile).
+#
+# Workload profile switcher for ThinkPad X1 Carbon Gen 11 (rgx1gen11).
+# Applies industry-style userspace policy: ACPI platform_profile, intel_pstate
+# governor, iwlwifi power_save, zram-generator sizing, DAMON reclaim, and
+# per-slice MemoryHigh caps. Pairs with Meta facebookincubator/oomd,
+# systemd-oomd PSI kills, browser.slice, and build.slice.
+
+set -euo pipefail
+
+STATE_DIR="${RG_X1GEN11_STATE_DIR:-$HOME/.config/rg-x1gen11}"
+STATE_FILE="$STATE_DIR/active-profile"
+PROFILES_JSON="${RG_X1GEN11_PROFILES:-$HOME/.config/rg-x1gen11/profiles.json}"
+CHEZMOI_PROFILES="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/profiles.json"
+SUDO="${RG_X1GEN11_SUDO:-sudo}"
+
+if [ ! -r "$PROFILES_JSON" ] && [ -r "$CHEZMOI_PROFILES" ]; then
+    PROFILES_JSON="$CHEZMOI_PROFILES"
+fi
+
+usage() {
+    cat <<'USAGE'
+usage: rg-x1gen11-profile COMMAND [ARGS...]
+
+Commands:
+  list                 List profile names and descriptions.
+  show [PROFILE]       Print resolved knobs for PROFILE or the active profile.
+  apply PROFILE        Apply PROFILE (root for sysfs/zram; user for slices).
+  current              Print the active profile name.
+  doctor               Print live sysfs, PSI, and OOMD stack status.
+  -h, --help           Show this help.
+
+Profiles are defined in ~/.config/rg-x1gen11/profiles.json.
+USAGE
+}
+
+die() {
+    printf 'rg-x1gen11-profile: %s\n' "$*" >&2
+    exit 2
+}
+
+require_python() {
+    command -v python3 >/dev/null 2>&1 || die "python3 is required"
+}
+
+profile_field() {
+    local profile="$1" field="$2"
+    require_python
+    python3 - "$PROFILES_JSON" "$profile" "$field" <<'PY'
+import json
+import sys
+
+path, profile, field = sys.argv[1:4]
+data = json.load(open(path, encoding="utf-8"))
+profiles = data["profiles"]
+if profile not in profiles:
+    raise SystemExit(f"unknown profile: {profile}")
+value = profiles[profile][field]
+if isinstance(value, bool):
+    print("true" if value else "false")
+else:
+    print(value)
+PY
+}
+
+list_profiles() {
+    require_python
+    python3 - "$PROFILES_JSON" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+default = data.get("default", "")
+for name, spec in data["profiles"].items():
+    marker = " (default)" if name == default else ""
+    print(f"{name}{marker}\t{spec.get('description', '')}")
+PY
+}
+
+platform_profile_path() {
+    for path in \
+        /sys/firmware/acpi/platform_profile \
+        /sys/devices/platform/thinkpad_acpi/platform_profile; do
+        if [ -r "$path" ]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    done
+    return 1
+}
+
+write_scaling_governor() {
+    local governor="$1"
+    local cpu path avail
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        path="$cpu/cpufreq/scaling_governor"
+        avail="$cpu/cpufreq/scaling_available_governors"
+        [ -w "$path" ] || continue
+        if [ -r "$avail" ] && ! grep -qw "$governor" "$avail"; then
+            printf 'skip %s: governor %s unavailable\n' "$path" "$governor" >&2
+            continue
+        fi
+        echo "$governor" | $SUDO tee "$path" >/dev/null
+    done
+}
+
+write_platform_profile() {
+    local profile="$1"
+    local path choices
+    path=$(platform_profile_path) || {
+        printf 'platform_profile sysfs missing; skip\n' >&2
+        return 0
+    }
+    choices="${path}_choices"
+    if [ -r "$choices" ] && ! grep -qw "$profile" "$choices"; then
+        die "platform profile $profile not in $choices"
+    fi
+    echo "$profile" | $SUDO tee "$path" >/dev/null
+}
+
+write_iwl_power_save() {
+    local value="$1"
+    local path=/sys/module/iwlwifi/parameters/power_save
+    if [ ! -w "$path" ] && [ ! -r "$path" ]; then
+        printf 'iwlwifi power_save sysfs missing; skip\n' >&2
+        return 0
+    fi
+    echo "$value" | $SUDO tee "$path" >/dev/null
+}
+
+write_zram_size() {
+    local expr="$1"
+    local drop_in=/etc/systemd/zram-generator.conf.d/10-rg-profile.conf
+    local content
+    content="# Managed by rg-x1gen11-profile
+[zram0]
+zram-size = ${expr}
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+"
+    printf '%s' "$content" | $SUDO tee "$drop_in" >/dev/null
+    $SUDO systemctl daemon-reload
+    $SUDO systemctl restart systemd-zram-setup@zram0.service 2>/dev/null || true
+}
+
+apply_slice_caps() {
+    local browser_high="$1" build_high="$2"
+    systemctl --user set-property browser.slice "MemoryHigh=$browser_high" \
+        >/dev/null 2>&1 || true
+    systemctl --user set-property build.slice "MemoryHigh=$build_high" \
+        >/dev/null 2>&1 || true
+}
+
+apply_damon() {
+    local enabled="$1"
+    if [ -x "$HOME/.local/bin/rg-damon-reclaim" ]; then
+        if [ "$enabled" = "true" ]; then
+            "$HOME/.local/bin/rg-damon-reclaim" enable
+        else
+            "$HOME/.local/bin/rg-damon-reclaim" disable
+        fi
+        return 0
+    fi
+    local path=/sys/module/damon_reclaim/parameters/enabled
+    if [ ! -f "$path" ]; then
+        printf 'damon_reclaim module missing; skip\n' >&2
+        return 0
+    fi
+    if [ "$enabled" = "true" ]; then
+        echo Y | $SUDO tee "$path" >/dev/null
+    else
+        echo N | $SUDO tee "$path" >/dev/null
+    fi
+}
+
+apply_scx_mode() {
+    local mode="$1"
+    if [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
+        "$HOME/.local/bin/rg-sched-ladder" switch "$mode" >/dev/null 2>&1 \
+            || printf 'rg-sched-ladder: could not switch to %s (boot linux-rg?)\n' "$mode" >&2
+        return 0
+    fi
+    if [ -x "$HOME/.local/bin/rg-scx-loader" ]; then
+        if [ "$mode" = "off" ]; then
+            "$HOME/.local/bin/rg-scx-loader" unload >/dev/null 2>&1 || true
+        else
+            "$HOME/.local/bin/rg-scx-loader" switch "$mode" >/dev/null 2>&1 || true
+        fi
+    else
+        printf 'rg-sched-ladder missing; skip scx mode %s\n' "$mode" >&2
+    fi
+}
+
+apply_profile() {
+    local profile="$1"
+    local platform governor iwl zram damon scx browser_high build_high
+
+    platform=$(profile_field "$profile" platform_profile)
+    governor=$(profile_field "$profile" scaling_governor)
+    iwl=$(profile_field "$profile" iwlwifi_power_save)
+    zram=$(profile_field "$profile" zram_size)
+    damon=$(profile_field "$profile" damon_reclaim)
+    scx=$(profile_field "$profile" scx_mode)
+    browser_high=$(profile_field "$profile" browser_memory_high)
+    build_high=$(profile_field "$profile" build_memory_high)
+
+    mkdir -p "$STATE_DIR"
+    write_platform_profile "$platform"
+    write_scaling_governor "$governor"
+    write_iwl_power_save "$iwl"
+    write_zram_size "$zram"
+    apply_slice_caps "$browser_high" "$build_high"
+    apply_damon "$damon"
+    apply_scx_mode "$scx"
+    printf '%s\n' "$profile" >"$STATE_FILE"
+    printf 'applied profile: %s\n' "$profile"
+}
+
+show_profile() {
+    local profile="$1"
+    printf 'profile: %s\n' "$profile"
+    printf '  description: %s\n' "$(profile_field "$profile" description)"
+    printf '  platform_profile: %s\n' "$(profile_field "$profile" platform_profile)"
+    printf '  scaling_governor: %s\n' "$(profile_field "$profile" scaling_governor)"
+    printf '  iwlwifi_power_save: %s\n' "$(profile_field "$profile" iwlwifi_power_save)"
+    printf '  zram_size: %s\n' "$(profile_field "$profile" zram_size)"
+    printf '  damon_reclaim: %s\n' "$(profile_field "$profile" damon_reclaim)"
+    printf '  scx_mode: %s\n' "$(profile_field "$profile" scx_mode)"
+    printf '  browser_memory_high: %s\n' "$(profile_field "$profile" browser_memory_high)"
+    printf '  build_memory_high: %s\n' "$(profile_field "$profile" build_memory_high)"
+}
+
+doctor() {
+    local path
+    printf '== workload profile ==\n'
+    if [ -f "$STATE_FILE" ]; then
+        printf 'active: %s\n' "$(cat "$STATE_FILE")"
+    else
+        printf 'active: (none recorded)\n'
+    fi
+
+    printf '\n== platform / cpufreq ==\n'
+    if path=$(platform_profile_path 2>/dev/null); then
+        printf 'platform_profile: %s\n' "$(cat "$path")"
+        [ -r "${path}_choices" ] && printf 'choices: %s\n' "$(tr '\n' ' ' <"${path}_choices")"
+    else
+        printf 'platform_profile: unavailable\n'
+    fi
+    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
+        printf 'cpu0 governor: %s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)"
+    fi
+
+    printf '\n== iwlwifi ==\n'
+    if [ -r /sys/module/iwlwifi/parameters/power_save ]; then
+        printf 'power_save: %s\n' "$(cat /sys/module/iwlwifi/parameters/power_save)"
+    else
+        printf 'power_save: unavailable\n'
+    fi
+
+    printf '\n== zram ==\n'
+    if [ -b /dev/zram0 ]; then
+        printf 'zram0 size: %s bytes\n' "$(blockdev --getsize64 /dev/zram0 2>/dev/null || echo unknown)"
+    else
+        printf 'zram0: not present\n'
+    fi
+
+    printf '\n== PSI (some avg10) ==\n'
+    if [ -r /proc/pressure/memory ] && [ -x "$HOME/.local/bin/rg-psi-snapshot" ]; then
+        "$HOME/.local/bin/rg-psi-snapshot" once 2>/dev/null || true
+    elif [ ! -r /proc/pressure/memory ]; then
+        printf 'PSI: unavailable\n'
+    fi
+
+    printf '\n== OOMD stack ==\n'
+    systemctl is-active systemd-oomd >/dev/null 2>&1 \
+        && printf 'systemd-oomd: active\n' \
+        || printf 'systemd-oomd: inactive\n'
+    systemctl is-active oomd >/dev/null 2>&1 \
+        && printf 'facebook oomd: active\n' \
+        || printf 'facebook oomd: inactive (install via rg-oomd-profile-install)\n'
+
+    printf '\n== scheduler ladder ==\n'
+    if [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
+        printf 'active id: %s\n' "$("$HOME/.local/bin/rg-sched-ladder" current 2>/dev/null || echo unknown)"
+    fi
+    if [ -d /sys/kernel/sched_ext ]; then
+        if [ -r /sys/kernel/sched_ext/current ]; then
+            printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+        fi
+        if [ -d /sys/kernel/sched_ext/asa ]; then
+            printf 'ASA enabled: %s\n' "$(cat /sys/kernel/sched_ext/asa/enabled 2>/dev/null || echo n/a)"
+            printf 'ASA recommended: %s\n' "$(cat /sys/kernel/sched_ext/asa/recommended_scheduler 2>/dev/null || echo n/a)"
+        fi
+    else
+        printf 'sched_ext: sysfs missing — EEVDF+BORE only (stock kernel?)\n'
+    fi
+
+    printf '\n== DAMON reclaim ==\n'
+    if [ -r /sys/module/damon_reclaim/parameters/enabled ]; then
+        printf 'damon_reclaim: %s\n' "$(cat /sys/module/damon_reclaim/parameters/enabled)"
+    else
+        printf 'damon_reclaim: module missing\n'
+    fi
+
+    if [ -x "$HOME/.local/bin/rg-hfi-status" ]; then
+        printf '\n'
+        "$HOME/.local/bin/rg-hfi-status"
+    fi
+}
+
+main() {
+    local cmd=${1:-}
+    case "$cmd" in
+    list) list_profiles ;;
+    show)
+        local profile=${2:-}
+        if [ -z "$profile" ]; then
+            if [ -f "$STATE_FILE" ]; then
+                profile=$(cat "$STATE_FILE")
+            else
+                require_python
+                profile=$(python3 - "$PROFILES_JSON" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("default", "undocked-mixed"))
+PY
+)
+            fi
+        fi
+        show_profile "$profile"
+        ;;
+    apply)
+        [ -n "${2:-}" ] || die "apply requires PROFILE"
+        apply_profile "$2"
+        ;;
+    current)
+        if [ -f "$STATE_FILE" ]; then
+            cat "$STATE_FILE"
+        else
+            require_python
+            python3 - "$PROFILES_JSON" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("default", "undocked-mixed"))
+PY
+        fi
+        ;;
+    doctor) doctor ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

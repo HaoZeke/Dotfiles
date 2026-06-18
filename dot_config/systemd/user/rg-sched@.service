@@ -1,0 +1,19 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-sched@.service).
+#
+# Load a sched_ext expert at session start. Example:
+#   systemctl --user enable rg-sched@lavd.service
+#   systemctl --user enable rg-sched@rusty.service
+# EEVDF+BORE remains the kernel rollback when the unit is stopped.
+[Unit]
+Description=sched_ext scheduler %i (rg-sched-ladder)
+After=sway-session.target
+ConditionPathExists=/sys/kernel/sched_ext/current
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/rg-sched-ladder switch %i
+ExecStop=%h/.local/bin/rg-sched-ladder switch off
+
+[Install]
+WantedBy=sway-session.target

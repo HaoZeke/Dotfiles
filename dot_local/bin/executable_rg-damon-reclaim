@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-damon-reclaim).
+#
+# Toggle upstream DAMON_RECLAIM for memory-pressure profile work. The linux-rg
+# kernel enables CONFIG_DAMON_RECLAIM; policy stays off until this helper or
+# rg-x1gen11-profile memory-pressure mode turns it on.
+
+set -euo pipefail
+
+ENABLED_PATH=/sys/module/damon_reclaim/parameters/enabled
+SUDO="${RG_DAMON_SUDO:-sudo}"
+
+usage() {
+    cat <<'USAGE'
+usage: rg-damon-reclaim COMMAND
+
+Commands:
+  status    Print whether DAMON reclaim is enabled and kdamond process count.
+  enable    Turn DAMON reclaim on (requires linux-rg or DAMON_RECLAIM kernel).
+  disable   Turn DAMON reclaim off.
+  -h, --help
+USAGE
+}
+
+die() {
+    printf 'rg-damon-reclaim: %s\n' "$*" >&2
+    exit 2
+}
+
+require_enabled_file() {
+    if [ ! -f "$ENABLED_PATH" ]; then
+        die "DAMON_RECLAIM not available ($ENABLED_PATH missing)"
+    fi
+}
+
+write_enabled() {
+    local value="$1"
+    require_enabled_file
+    echo "$value" | $SUDO tee "$ENABLED_PATH" >/dev/null
+}
+
+cmd_status() {
+    if [ ! -f "$ENABLED_PATH" ]; then
+        printf 'damon_reclaim: unavailable\n'
+        return 0
+    fi
+    printf 'damon_reclaim enabled: %s\n' "$(cat "$ENABLED_PATH")"
+    printf 'kdamond processes: %s\n' "$(pgrep -c kdamond 2>/dev/null || echo 0)"
+}
+
+main() {
+    local cmd=${1:-}
+    case "$cmd" in
+    status) cmd_status ;;
+    enable) write_enabled Y; cmd_status ;;
+    disable) write_enabled N; cmd_status ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

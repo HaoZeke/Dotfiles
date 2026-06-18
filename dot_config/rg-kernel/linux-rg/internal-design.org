@@ -1,0 +1,379 @@
+#+TITLE: linux-rg rgx1gen11 Kernel Design
+#+FILETAGS: :dotfiles:linux:kernel:thinkpad:
+#+DATE: 2026-06-18
+#+DESCRIPTION: Internal rationale for the rgx1gen11 ThinkPad X1 Carbon Gen 11 linux-rg kernel profile.
+#+STATUS: active
+
+* Scope
+
+=linux-rg= is a host-specific Arch kernel package for =rgx1gen11=, a Lenovo
+ThinkPad X1 Carbon Gen 11 model =21HM002GUS=. The goal is a reproducible local
+package that can be installed with =pacman -U=, selected from rEFInd, and rolled
+back to stock Arch =linux= or =linux-lts= without changing the rest of the
+system.
+
+This profile is not a renamed CachyOS, Zen, Liquorix, or CK package. Those
+projects are inputs. Each input is either selected as an isolated patch or
+configuration source, surveyed as an alternate base, or disabled because it
+conflicts with the chosen base.
+
+* Current Hardware
+
+The target machine is the =rgx1gen11= ThinkPad X1 Carbon Gen 11:
+
+| Item | Value |
+| Host | =rgx1gen11= |
+| Model | =21HM002GUS= |
+| BIOS | =N3XET64W (1.39 )= |
+| CPU | 13th Gen Intel Core i7-1365U |
+| CPU shape | 10 cores, 12 hardware threads, Intel hybrid mobile CPU |
+| Memory | 30 GiB class |
+| GPU | Intel Raptor Lake-P Iris Xe |
+| Wi-Fi | Intel Raptor Lake PCH CNVi, =iwlwifi= |
+| Audio | Intel Raptor Lake cAVS, SOF/HDA path |
+| Disk | KIOXIA XG8 NVMe behind LUKS plus btrfs subvolumes |
+| Boot | rEFInd on the EFI system partition |
+| Current base kernel | Arch =linux= 7.0.12 series |
+
+The build policy caps local kernel builds at 9 jobs. That is 80 percent of the
+12 logical CPUs and matches the local-build rule while leaving the Wayland
+session, browser, shell, and IO pressure controls responsive.
+
+* Build Base
+
+The selected base is the Arch =linux= PKGBUILD from
+=https://gitlab.archlinux.org/archlinux/packaging/packages/linux=. This keeps
+the package close to the running system's packaging rules:
+
+- =pkgbase= changes to =linux-rg=.
+- =makepkg= produces =linux-rg= and =linux-rg-headers= packages.
+- =pacman -U= owns the installed files.
+- DKMS sees matching headers through normal Arch package paths.
+- mkinitcpio hooks can create =/boot/vmlinuz-linux-rg= and
+  =/boot/initramfs-linux-rg.img=.
+- rEFInd can select the kernel through a normal menu stanza.
+
+The documentation package is suppressed for this host build. Kernel HTML
+documentation is not part of the bootable kernel, headers, scheduler, memory,
+or laptop-support surface, and it pulls a large TeX/Sphinx dependency set onto
+a btrfs laptop volume with limited free space.
+
+* Patch And Feature Matrix
+
+** Arch linux PKGBUILD
+
+Status: selected.
+
+Wherefrom: Arch packaging repository for =linux=.
+
+Why: this is the lowest-risk base for an Arch laptop. It preserves pacman,
+mkinitcpio, DKMS, and rEFInd behavior instead of replacing the whole kernel
+maintenance model.
+
+How it fits this hardware: the stock Arch config already covers the critical
+ThinkPad X1 Gen 11 devices: =intel_pstate=, =intel_idle=, =i915=, =xe=,
+=iwlwifi=, Intel Bluetooth, SOF audio, NVMe, USB4/Thunderbolt, ACPI suspend,
+and hibernation.
+
+** BORE
+
+Status: selected.
+
+Wherefrom: CachyOS kernel-patches
+=7.0/sched/0001-bore-cachy.patch=.
+
+Why: BORE is a focused fair-class scheduler patch. It is suitable for a single
+experimental scheduler lane because it modifies the desktop latency path
+directly while leaving the package base Arch-native.
+
+How it fits this hardware: the i7-1365U is a hybrid mobile CPU used
+interactively under Sway. The workload is more sensitive to foreground latency
+under compile, browser, and IO pressure than to server-style throughput. BORE
+is selected as the only fair-class scheduler patch so the behavior can be
+benchmarked against the EEVDF baseline.
+
+** EEVDF
+
+Status: selected as baseline.
+
+Wherefrom: upstream Linux scheduler path documented in
+=docs.kernel.org/scheduler/sched-eevdf.html=.
+
+Why: EEVDF is the mainline fair-class scheduler baseline. The kernel docs tie
+it to the original EEVDF work and describe the Linux transition beginning in
+6.6.
+
+How it fits this hardware: EEVDF remains the reference behavior for rollback
+and comparison. Any BORE result has to beat this baseline on interactivity,
+battery, or pressure behavior to justify staying selected.
+
+** Zen
+
+Status: surveyed as a full alternate base; selected only through narrow
+Liquorix/Zen cherry-picks carried in the =linux-rg= repo.
+
+Wherefrom: Arch =linux-zen= packaging and the Zen kernel release patch.
+
+Why: the whole Zen release patch is not stacked over the Arch release patch.
+Both patches integrate broad downstream kernel changes for the same source
+series, so blindly applying both creates an unclear conflict boundary. The
+current package carries only the reviewed pieces that fit this laptop profile:
+=0014-zen-kswapd-waiters.patch= and =0015-zen-schedutil-limits.patch=.
+
+How it fits this hardware: the carried pieces target memory-pressure stalls and
+schedutil limit handling without importing an entire second downstream kernel.
+
+** Liquorix
+
+Status: surveyed, not imported wholesale.
+
+Wherefrom: =https://liquorix.net/=.
+
+Why: Liquorix documents Zen interactive tuning as a responsiveness trade that
+can cost throughput and power usage. That makes it evidence for latency
+priorities, not an unconditional battery profile.
+
+How it fits this hardware: an unplugged X1 Carbon needs foreground latency and
+battery discipline. Liquorix-style settings are considered individually rather
+than imported as one desktop-first stack.
+
+** CK and MuQSS
+
+Status: disabled.
+
+Wherefrom: CK/MuQSS packages and AUR history.
+
+Why: CK/MuQSS is not maintained against this kernel series and conflicts with
+the current fair-class scheduler path. It is not compatible with the selected
+BORE lane.
+
+How it fits this hardware: it does not fit this package because linux-rg uses
+one fair-class scheduler experiment at a time.
+
+** Project C schedulers
+
+Status: disabled for linux-rg.
+
+Wherefrom: CachyOS =7.0/sched= and =7.0/sched-dev= patch queues.
+
+Why: PRJC/BMQ/PDS/LFBMQ variants are scheduler alternatives, not additive
+features. They conflict with BORE as the selected fair-class patch.
+
+How it fits this hardware: these belong in a separate experimental package if
+they are tested. They are not mixed into linux-rg.
+
+** sched_ext
+
+Status: selected as a config surface.
+
+Wherefrom: upstream =docs.kernel.org/scheduler/sched-ext.html=.
+
+Why: sched_ext allows BPF scheduler experiments to be loaded and unloaded at
+runtime. Upstream documents fallback behavior on scheduler errors or stalls.
+
+How it fits this hardware: it lets the laptop test scx schedulers without
+making them the boot-time scheduler. This is useful for interactive tuning while
+keeping a normal kernel fallback path.
+
+** PSI and oomd
+
+Status: selected.
+
+Wherefrom: upstream PSI docs and =facebookincubator/oomd=.
+
+Why: PSI exposes CPU, memory, and IO stall pressure. oomd uses PSI and cgroup
+v2 to take userspace action before global OOM behavior dominates the host.
+
+How it fits this hardware: 30 GiB is enough for daily work but not enough to
+make browser, kernel build, container, TeX, and VM pressure impossible. The
+checked-in oomd profile protects the host and targets user slices under memory,
+swap, or IO pressure.
+
+Two OOMD layers are intentional on this host:
+
+- =systemd-oomd=: per-session =ManagedOOMMemoryPressure= kills inside
+  =user-UID.slice= (deployed by the memory-tuning chezmoi script).
+- Meta =facebookincubator/oomd=: host-level PSI rules in
+  =~/.config/oomd/oomd-rgx1gen11.json=, installed with
+  =rg-oomd-profile-install=.
+
+** Scheduler ladder (EEVDF is not the last word)
+
+Status: selected.
+
+EEVDF is the **mainline fair-class baseline** and rollback path. It is not the
+performance ceiling for this laptop:
+
+| Layer | What runs | When |
+| Kernel fair + BORE | EEVDF with burst-scoring patch (0001-0002) | Boot default; =rg-sched-ladder switch off= |
+| Fair tweaks | 0010-0013 hot paths, detach_tasks, SMT idle, migration_cost | Always in linux-rg kernel |
+| sched_ext experts | =scx_lavd=, =scx_bpfland=, =scx_rusty=, =scx_p2dq=, ... | Runtime via =scx_loader= |
+| ASA router | Heuristic expert switching (0009, arXiv:2511.11628) | =docked-office= profile; =rg-sched-ladder switch asa= |
+
+Rejected wholesale replacements: Liquorix PDS, Kolivas MUQSS, CONFIG_CACHY fair
+(all conflict with BORE or are unmaintained on 7.0). The modern answer to
+"desktop scheduler beyond EEVDF" is **sched_ext + ASA**, not another fair.c fork.
+
+Ladder catalog: =~/.config/rg-x1gen11/sched-ladder.json= (14 scx-scheds binaries).
+
+#+begin_src shell
+rg-sched-ladder ladder
+rg-sched-ladder switch lavd
+rg-sched-ladder bench rusty 60
+rg-sched-ladder switch asa
+systemctl --user enable rg-sched@lavd.service
+#+end_src
+
+** Industry userspace stack (chezmoi)
+
+Status: selected.
+
+Wherefrom: Meta PSI/OOMD, systemd cgroup memory caps, sched_ext/scx_loader,
+upstream DAMON reclaim, and the workload profiles in =docs/rgx1gen11-targets.org=.
+
+Commands on =rgx1gen11=:
+
+#+begin_src shell
+rg-x1gen11-profile list
+rg-x1gen11-profile apply undocked-mixed
+rg-x1gen11-profile doctor
+rg-oomd-profile-install
+rg-psi-snapshot bench /tmp/psi.csv 120
+rg-psi-top 2
+rg-damon-reclaim enable
+rg-sched-ladder ladder
+systemd-run --user --slice=build.slice make -j9
+#+end_src
+
+Slice policy:
+
+- =browser.slice=: soft MemoryHigh; browser-media-watchdog raises cap during
+  MPRIS playback.
+- =build.slice=: compile and container workloads under =build-heavy= profile.
+- =rust-analyzer.slice=: LSP ceiling via the =rust-analyzer= PATH shim.
+
+** Multi-Gen LRU
+
+Status: selected.
+
+Wherefrom: upstream =docs.kernel.org/admin-guide/mm/multigen_lru.html=.
+
+Why: upstream documents Multi-Gen LRU as an improvement for page reclaim and
+memory-pressure behavior.
+
+How it fits this hardware: the laptop is SSD-backed and memory-constrained
+relative to build/browser workloads. Better reclaim behavior is more useful
+than waiting for a kernel OOM.
+
+** BBR
+
+Status: BBRv3 selected and carried.
+
+Wherefrom: CachyOS BBRv3 patch source plus linux-rg Arch 7.0 adaptations in
+=0003=, =0004=, and =0017=.
+
+Why: travel, VPN, and high-latency links are common on this machine. BBRv3 is
+carried as the default congestion-control lane with =fq= as the default qdisc,
+while captive-portal and fairness regressions stay on the benchmark checklist.
+
+How it fits this hardware: this laptop moves between home, airports,
+universities, hotels, and Tailscale networks. The benchmark matrix keeps a
+CUBIC fallback lane for hostile or fairness-sensitive networks.
+
+** BFQ
+
+Status: selected as available, not forced.
+
+Wherefrom: Arch kernel config.
+
+Why: BFQ is useful for cgroup-aware desktop IO control, but NVMe defaults such
+as =none= or =mq-deadline= are often better baselines for a PCIe SSD.
+
+How it fits this hardware: the KIOXIA NVMe should keep its default scheduler
+unless a workload-specific benchmark proves BFQ improves interactivity under
+pressure.
+
+** THP
+
+Status: laptop-tuned to =madvise=.
+
+Wherefrom: Arch and Zen both enable transparent huge pages; linux-rg changes
+the default policy.
+
+Why: =always= can improve some throughput workloads but can also add memory and
+latency surprises. =madvise= lets workloads opt in.
+
+How it fits this hardware: this is a mixed-use mobile workstation. Explicit
+opt-in is the better default for battery, pressure control, and suspend/resume
+predictability.
+
+* Hardware Fit
+
+The host fragment keeps modules for:
+
+- Intel P-state and Intel idle.
+- ACPI sleep, hibernation, platform profile, battery, thermal, and ThinkPad
+  ACPI hotkeys.
+- i915 and xe for the Iris Xe graphics path used by this Raptor Lake-P system.
+- Intel CNVi Wi-Fi through =iwlwifi= and =iwlmvm=.
+- Intel Bluetooth through =btusb= and =btintel=.
+- SOF and HDA audio for the Raptor Lake cAVS device.
+- NVMe, USB4, Thunderbolt, Type-C, UCSI, HID multitouch, and I2C HID.
+
+The fragment avoids forcing the performance governor. =schedutil= remains the
+default governor, PCIe ASPM powersave and power-supersave stay available, and
+the kernel keeps hibernation support for the existing encrypted btrfs system.
+
+* Build And Install Path
+
+The build helper uses =RG_KERNEL_SOURCE_REPO= to copy the committed
+=~/Git/Github/Tools/linux-rg= package source with =git archive=. That repo is
+the source of truth for the adapted =0001= through =0021= patch queue, PKGBUILD,
+checksums, and host config. The Arch-from-scratch path remains in the launcher
+as a fallback for rebuilding a package layout from the Arch base.
+
+The build helper performs these steps:
+
+#+begin_src shell
+rg-kernel-build deps-command
+rg-kernel-build preflight
+rg-kernel-build prepare
+rg-kernel-build build
+rg-kernel-build install-preflight
+rg-kernel-build install-command
+rg-kernel-build refind-command
+#+end_src
+
+The build runs locally and caps jobs at 9. It writes artifacts under
+=~/.local/share/rg-kernel/artifacts/linux-rg=.
+
+rEFInd selection is handled by a generated stanza using the current kernel
+command line with the initramfs changed to =initramfs-linux-rg.img=.
+
+* Acceptance Checks
+
+- =rg-kernel-build preflight= must find required tools, packages, fallback
+  kernel, config fragment, compatibility manifest, selected patch manifest, and
+  a clean =RG_KERNEL_SOURCE_REPO= checkout containing =0021=.
+- =rg-kernel-build prepare= must copy the committed =linux-rg= package source
+  with the finalized patch queue.
+- =makepkg --verifysource= must validate the source hashes in that package
+  source.
+- =rg-kernel-build build= must produce =linux-rg= and =linux-rg-headers=
+  packages.
+- =rg-kernel-build install-preflight= must find the stock fallback kernel and
+  the linux-rg artifacts before printing a privileged install command.
+- rEFInd must keep the stock =linux= entry selectable next to =linux-rg=.
+
+* Sources
+
+- Arch kernel packaging: =https://gitlab.archlinux.org/archlinux/packaging/packages/linux=
+- Arch Zen packaging: =https://gitlab.archlinux.org/archlinux/packaging/packages/linux-zen=
+- Zen kernel: =https://github.com/zen-kernel/zen-kernel=
+- CachyOS kernel patches: =https://github.com/CachyOS/kernel-patches=
+- Liquorix: =https://liquorix.net/=
+- EEVDF docs: =https://docs.kernel.org/scheduler/sched-eevdf.html=
+- sched_ext docs: =https://docs.kernel.org/scheduler/sched-ext.html=
+- PSI docs: =https://docs.kernel.org/accounting/psi.html=
+- Multi-Gen LRU docs: =https://docs.kernel.org/admin-guide/mm/multigen_lru.html=
+- oomd: =https://github.com/facebookincubator/oomd=

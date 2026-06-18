@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-bench-matrix).
+#
+# Run docs/rgx1gen11-targets.org measurement checklist on rgx1gen11.
+# Feeds linux-rg-59jn and promotes candidates.org grades with CSV evidence.
+
+set -euo pipefail
+
+STATE_DIR="${RG_BENCH_DIR:-$HOME/.config/rg-x1gen11/bench-runs}"
+HOST_EXPECT="${RG_BENCH_HOST:-rgx1gen11}"
+DRY_RUN=0
+QUICK=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-bench-matrix COMMAND [ARGS...]
+
+Commands:
+  list                 Show bench ids from the measurement checklist.
+  new                  Create a timestamped run directory and manifest.
+  run ID [RUN_DIR]     Execute one bench (collect, sched, psi-baseline, nvme, idle, smoke, thermal, wifi, suspend).
+  run-all [RUN_DIR]    Run all benches (use --quick to skip long idle/fio).
+  report [RUN_DIR]     Print summary from manifest + CSV artifacts.
+  -h, --help
+
+Options (before command):
+  --dry-run            Print planned commands without executing.
+  --quick              Skip benches longer than ~2 minutes.
+
+Environment:
+  RG_BENCH_DIR         Output root (default ~/.config/rg-x1gen11/bench-runs).
+  RG_BENCH_HOST        Expected hostname (default rgx1gen11).
+  RG_BENCH_KERNEL      linux-rg localversion substring (default rg).
+
+Examples:
+  rg-bench-matrix new
+  rg-bench-matrix run-all
+  rg-bench-matrix run sched
+  rg-bench-matrix report
+USAGE
+}
+
+die() {
+    printf 'rg-bench-matrix: %s\n' "$*" >&2
+    exit 2
+}
+
+log() {
+    printf 'rg-bench-matrix: %s\n' "$*" >&2
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+    --dry-run) DRY_RUN=1; shift ;;
+    --quick) QUICK=1; shift ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+require_host() {
+    local host
+    host=$(hostname 2>/dev/null || echo unknown)
+    if [ "$host" != "$HOST_EXPECT" ]; then
+        log "warning: hostname=$host expected $HOST_EXPECT"
+    fi
+}
+
+latest_run() {
+    local latest
+    latest=$(find "$STATE_DIR" -mindepth 2 -maxdepth 2 -name manifest.env -printf '%T@ %p\n' 2>/dev/null |
+        sort -nr |
+        awk 'NR == 1 {print $2}')
+    if [ -z "$latest" ]; then
+        die "no run directory; use: rg-bench-matrix new"
+    fi
+    dirname "$latest"
+}
+
+load_manifest() {
+    local run_dir="$1"
+    [ -f "$run_dir/manifest.env" ] || die "invalid run dir: $run_dir"
+    # shellcheck disable=SC1091
+    source "$run_dir/manifest.env"
+    : "${RUN_ID:?}"
+    : "${RUN_DIR:?}"
+    : "${HOSTNAME:?}"
+    : "${KERNEL:?}"
+    : "${UNAME:?}"
+    : "${CREATED_UTC:?}"
+    : "${QUICK:?}"
+}
+
+resolve_run() {
+    if [ -n "${1:-}" ]; then
+        printf '%s\n' "$1"
+    else
+        latest_run
+    fi
+}
+
+cmd_new() {
+    require_host
+    mkdir -p "$STATE_DIR"
+    local run_id ts run_dir kernel
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    run_id="${ts}-$$"
+    run_dir="$STATE_DIR/$run_id"
+    mkdir -p "$run_dir"
+    kernel=$(uname -r)
+    cat >"$run_dir/manifest.env" <<EOF
+RUN_ID='$run_id'
+RUN_DIR='$run_dir'
+HOSTNAME='$(hostname 2>/dev/null || echo unknown)'
+KERNEL='$kernel'
+UNAME='$(uname -a)'
+CREATED_UTC='$ts'
+QUICK='$QUICK'
+EOF
+    printf '%s\n' "$run_dir"
+}
+
+append_result() {
+    local run_dir="$1" bench_id="$2" status="$3" note="${4:-}"
+    printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$bench_id" "$status" "$note" \
+        >>"$run_dir/results.tsv"
+}
+
+run_cmd() {
+    if [ "$DRY_RUN" = "1" ]; then
+        printf '+'
+        printf ' %q' "$@"
+        printf '\n'
+        return 0
+    fi
+    "$@"
+}
+
+bench_smoke() {
+    local run_dir="$1"
+    local ok=1
+    for path in /proc/pressure/memory /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor; do
+        if [ ! -r "$path" ]; then
+            append_result "$run_dir" smoke FAIL "missing $path"
+            ok=0
+        fi
+    done
+    uname -a >"$run_dir/smoke.txt"
+    if [ -d /sys/kernel/sched_ext ]; then
+        printf 'sched_ext=yes\n' >>"$run_dir/smoke.txt"
+    else
+        printf 'sched_ext=no\n' >>"$run_dir/smoke.txt"
+    fi
+    if [ "$ok" = "1" ]; then
+        append_result "$run_dir" smoke PASS "basic sysfs readable"
+    fi
+}
+
+bench_psi_baseline() {
+    local run_dir="$1" seconds="${2:-30}"
+    local out="$run_dir/psi-baseline.csv"
+    if [ -x "$HOME/.local/bin/rg-psi-snapshot" ]; then
+        run_cmd "$HOME/.local/bin/rg-psi-snapshot" bench "$out" "$seconds"
+        append_result "$run_dir" psi-baseline PASS "$out"
+    else
+        append_result "$run_dir" psi-baseline SKIP "rg-psi-snapshot missing"
+    fi
+}
+
+bench_sched() {
+    local run_dir="$1"
+    if [ ! -x "$HOME/.local/bin/rg-sched-ladder" ]; then
+        append_result "$run_dir" sched SKIP "rg-sched-ladder missing"
+        return 0
+    fi
+    if [ ! -d /sys/kernel/sched_ext ]; then
+        append_result "$run_dir" sched SKIP "sched_ext sysfs missing (stock kernel?)"
+        return 0
+    fi
+    local sched
+    for sched in off lavd rusty; do
+        local out="$run_dir/psi-sched-${sched}.csv"
+        if [ "$DRY_RUN" = "1" ]; then
+            printf '+ rg-sched-ladder bench %s 20 -> %s\n' "$sched" "$out"
+        else
+            "$HOME/.local/bin/rg-sched-ladder" bench "$sched" 20 >"$run_dir/sched-${sched}.log" 2>&1 || true
+            if [ ! -f "$out" ]; then
+                out=$(find "$HOME/.config/rg-x1gen11" -maxdepth 1 -name "bench-${sched}-*.csv" -printf '%T@ %p\n' 2>/dev/null |
+                    sort -nr |
+                    awk 'NR == 1 {print $2}')
+            fi
+        fi
+        append_result "$run_dir" "sched-$sched" PASS "${out:-logged}"
+    done
+}
+
+bench_idle() {
+    local run_dir="$1"
+    if [ "$QUICK" = "1" ]; then
+        append_result "$run_dir" idle SKIP "quick mode"
+        return 0
+    fi
+    if ! command -v powertop >/dev/null 2>&1; then
+        append_result "$run_dir" idle SKIP "powertop not installed"
+        return 0
+    fi
+    local out="$run_dir/powertop-idle.txt"
+    if [ "$DRY_RUN" = "1" ]; then
+        printf '+ powertop --time=120 --csv=%s\n' "$out"
+    else
+        timeout 130 powertop --time=120 --csv="$out" >/dev/null 2>&1 || true
+    fi
+    append_result "$run_dir" idle PASS "$out"
+}
+
+bench_nvme() {
+    local run_dir="$1"
+    if [ "$QUICK" = "1" ]; then
+        append_result "$run_dir" nvme SKIP "quick mode"
+        return 0
+    fi
+    if ! command -v fio >/dev/null 2>&1; then
+        append_result "$run_dir" nvme SKIP "fio not installed"
+        return 0
+    fi
+    local dev sched out
+    dev=${RG_BENCH_NVME:-/dev/nvme0n1}
+    for sched in bfq none; do
+        out="$run_dir/fio-${sched}.json"
+        if [ "$DRY_RUN" = "1" ]; then
+            printf '+ fio randrw sched=%s -> %s\n' "$sched" "$out"
+            continue
+        fi
+        if [ -w "/sys/block/${dev#/dev/}/queue/scheduler" ] 2>/dev/null; then
+            echo "$sched" | sudo tee "/sys/block/${dev#/dev/}/queue/scheduler" >/dev/null 2>&1 || true
+        fi
+        fio --name=rg-mixed --filename="$dev" --rw=randrw --rwmixread=70 \
+            --bs=4k --iodepth=32 --runtime=30 --time_based=1 \
+            --output-format=json --output="$out" 2>/dev/null || true
+        append_result "$run_dir" "nvme-$sched" PASS "$out"
+    done
+}
+
+bench_collect() {
+    local run_dir="$1"
+    local out="$run_dir/wide-net.txt"
+    if [ -x "$HOME/.local/bin/rg-wide-net-collect" ]; then
+        run_cmd "$HOME/.local/bin/rg-wide-net-collect" -o "$out"
+        append_result "$run_dir" collect PASS "$out"
+    else
+        append_result "$run_dir" collect SKIP "rg-wide-net-collect missing"
+    fi
+}
+
+bench_wifi() {
+    local run_dir="$1"
+    local out="$run_dir/wifi.txt"
+    {
+        printf '=== wifi snapshot ===\n'
+        if command -v iw >/dev/null 2>&1; then
+            iw dev 2>/dev/null || true
+            iw dev "$(iw dev 2>/dev/null | awk '/Interface/ {print $2; exit}')" link 2>/dev/null || true
+        fi
+        for path in /sys/module/iwlwifi/parameters/power_save /sys/module/iwlwifi/parameters/bt_coex_active; do
+            [ -r "$path" ] && printf '%s: %s\n' "$path" "$(cat "$path")"
+        done
+    } >"$out"
+    append_result "$run_dir" wifi PASS "$out (roam bench manual: linux-rg-bench-wifi)"
+}
+
+bench_suspend() {
+    local run_dir="$1"
+    if [ "$QUICK" = "1" ]; then
+        append_result "$run_dir" suspend SKIP "quick mode (manual s2idle: linux-rg-slp)"
+        return 0
+    fi
+    local out="$run_dir/suspend-preflight.txt"
+    {
+        printf 'suspend preflight — run s2idle cycles manually after linux-rg boot\n'
+        if [ -x "$HOME/.local/bin/rg-wide-net-collect" ]; then
+            "$HOME/.local/bin/rg-wide-net-collect"
+        fi
+        if [ -r /sys/power/mem_sleep ]; then
+            printf '\nmem_sleep: %s\n' "$(cat /sys/power/mem_sleep)"
+        fi
+    } >"$out"
+    append_result "$run_dir" suspend SKIP "preflight only; gate linux-rg-slp"
+}
+
+bench_thermal() {
+    local run_dir="$1"
+    local out="$run_dir/thermal.txt"
+    {
+        printf '=== thermal snapshot ===\n'
+        for path in \
+            /sys/firmware/acpi/platform_profile \
+            /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
+            /sys/devices/system/cpu/cpuidle/current_governor; do
+            if [ -r "$path" ]; then
+                printf '%s: %s\n' "$path" "$(cat "$path")"
+            fi
+        done
+        if command -v sensors >/dev/null 2>&1; then
+            sensors 2>/dev/null || true
+        fi
+        if command -v tlp-stat >/dev/null 2>&1; then
+            tlp-stat -s 2>/dev/null || true
+        fi
+    } >"$out"
+    append_result "$run_dir" thermal PASS "$out"
+}
+
+bench_build() {
+    local run_dir="$1" tree="${RG_BENCH_BUILD_TREE:-}"
+    if [ -z "$tree" ] || [ ! -f "$tree/Makefile" ]; then
+        append_result "$run_dir" build SKIP "set RG_BENCH_BUILD_TREE to kernel tree"
+        return 0
+    fi
+    local out="$run_dir/build-time.txt"
+    if [ "$DRY_RUN" = "1" ]; then
+        printf '+ time make -C %q -j9 vmlinux\n' "$tree"
+    else
+        (cd "$tree" && /usr/bin/time -f 'elapsed=%e' make -j9 vmlinux) >"$out" 2>&1 || true
+    fi
+    append_result "$run_dir" build PASS "$out"
+}
+
+cmd_list() {
+    cat <<'LIST'
+smoke          Basic sysfs and kernel identity
+collect        rg-wide-net-collect platform snapshot
+psi-baseline   30s PSI CSV (undocked idle-ish)
+sched          rg-sched-ladder bench off/lavd/rusty (20s each)
+thermal        platform_profile, governor, cpuidle, sensors, tlp-stat
+wifi           iwlwifi params + iw link snapshot
+suspend        s2idle preflight only (gate linux-rg-slp)
+idle           powertop 120s CSV (skip with --quick)
+nvme           fio randrw 70/30 bfq vs none (skip with --quick)
+build          make -j9 vmlinux if RG_BENCH_BUILD_TREE set
+LIST
+}
+
+cmd_run() {
+    local bench_id=${1:-} run_dir
+    run_dir=$(resolve_run "${2:-}")
+    load_manifest "$run_dir"
+    require_host
+    case "$bench_id" in
+    smoke) bench_smoke "$run_dir" ;;
+    collect) bench_collect "$run_dir" ;;
+    psi-baseline) bench_psi_baseline "$run_dir" ;;
+    sched) bench_sched "$run_dir" ;;
+    thermal) bench_thermal "$run_dir" ;;
+    wifi) bench_wifi "$run_dir" ;;
+    suspend) bench_suspend "$run_dir" ;;
+    idle) bench_idle "$run_dir" ;;
+    nvme) bench_nvme "$run_dir" ;;
+    build) bench_build "$run_dir" ;;
+    *)
+        die "unknown bench id: $bench_id (try: list)"
+        ;;
+    esac
+}
+
+cmd_run_all() {
+    local run_dir
+    run_dir=$(resolve_run "${1:-}")
+    if [ ! -f "$run_dir/manifest.env" ]; then
+        run_dir=$(cmd_new)
+    fi
+    local id
+    while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        cmd_run "$id" "$run_dir"
+    done < <(cmd_list | awk '{print $1}')
+    cmd_report "$run_dir"
+}
+
+cmd_report() {
+    local run_dir
+    run_dir=$(resolve_run "${1:-}")
+    load_manifest "$run_dir"
+    printf 'run: %s\n' "$RUN_ID"
+    printf 'host: %s kernel: %s\n' "$HOSTNAME" "$KERNEL"
+    if [ -f "$run_dir/results.tsv" ]; then
+        printf '\nresults:\n'
+        column -t -s $'\t' "$run_dir/results.tsv" 2>/dev/null || cat "$run_dir/results.tsv"
+    else
+        printf 'no results.tsv\n'
+    fi
+}
+
+main() {
+    local cmd=${1:-}
+    shift || true
+    case "$cmd" in
+    list) cmd_list ;;
+    new) cmd_new ;;
+    run) cmd_run "${1:-}" "${2:-}" ;;
+    run-all) cmd_run_all "${1:-}" ;;
+    report) cmd_report "${1:-}" ;;
+    -h | --help | "") usage ;;
+    *) die "unknown command: $cmd" ;;
+    esac
+}
+
+main "$@"

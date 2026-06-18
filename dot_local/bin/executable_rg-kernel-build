@@ -3,9 +3,27 @@
 
 set -euo pipefail
 
-policy_file=${RG_KERNEL_POLICY:-"$HOME/.config/rg-kernel/build-lanes.env"}
+script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+source_dir=${CHEZMOI_SOURCE_DIR:-}
+case "$script_dir" in
+    */dot_local/bin)
+        candidate_source_dir=${script_dir%/dot_local/bin}
+        if [ -r "$candidate_source_dir/dot_config/rg-kernel/build-lanes.env" ]; then
+            source_dir=$candidate_source_dir
+        fi
+        ;;
+esac
+
+policy_file=${RG_KERNEL_POLICY:-}
+if [ -z "$policy_file" ]; then
+    if [ -n "$source_dir" ] && [ -r "$source_dir/dot_config/rg-kernel/build-lanes.env" ]; then
+        policy_file="$source_dir/dot_config/rg-kernel/build-lanes.env"
+    else
+        policy_file="$HOME/.config/rg-kernel/build-lanes.env"
+    fi
+fi
 if [ ! -r "$policy_file" ]; then
-    source_dir=${CHEZMOI_SOURCE_DIR:-"$HOME/.local/share/chezmoi"}
+    source_dir=${source_dir:-"$HOME/.local/share/chezmoi"}
     source_policy="$source_dir/dot_config/rg-kernel/build-lanes.env"
     if [ -r "$source_policy" ]; then
         policy_file=$source_policy
@@ -20,6 +38,13 @@ fi
 # shellcheck source=/dev/null
 source "$policy_file"
 
+chezmoi_source_dir=$source_dir
+case "$policy_file" in
+    */dot_config/rg-kernel/build-lanes.env)
+        chezmoi_source_dir=${policy_file%/dot_config/rg-kernel/build-lanes.env}
+        ;;
+esac
+
 fail() {
     printf 'rg-kernel-build: %s\n' "$*" >&2
     exit 1
@@ -29,106 +54,198 @@ usage() {
     cat <<'MSG'
 usage:
   rg-kernel-build list
+  rg-kernel-build jobs
+  rg-kernel-build deps-command
+  rg-kernel-build oomd-command
+  rg-kernel-build refind-command [output]
+  rg-kernel-build patch-report
   rg-kernel-build preflight
-  rg-kernel-build remote-preflight
-  rg-kernel-build package-base [lane]
-  rg-kernel-build prepare [lane]
-  rg-kernel-build build [lane]
-  rg-kernel-build build-all
-  rg-kernel-build install-preflight [lane]
-  rg-kernel-build install-command [lane]
+  rg-kernel-build update
+  rg-kernel-build prepare
+  rg-kernel-build build
+  rg-kernel-build package-base
+  rg-kernel-build install-preflight
+  rg-kernel-build install-command
 
-Build lanes are defined in ~/.config/rg-kernel/build-lanes.env.
+Build policy is read from ~/.config/rg-kernel/build-lanes.env.
 MSG
 }
 
-lane_key() {
-    printf '%s' "$1" | tr -- '-.' '__'
+local_build_root() {
+    printf '%s\n' "$RG_KERNEL_BUILD_ROOT"
 }
 
-lane_base_url() {
-    local lane=$1
-    local key var
-    key=$(lane_key "$lane")
-    var="RG_KERNEL_BASE_${key}"
-    printf '%s' "${!var:-}"
+bounded_jobs() {
+    local cpus cap jobs pct
+    cpus=$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc)
+    pct=${RG_KERNEL_LOCAL_CPU_PERCENT:-80}
+    cap=$((cpus * pct / 100))
+    [ "$cap" -ge 1 ] || cap=1
+    jobs=${RG_KERNEL_MAX_JOBS:-$cap}
+    if [ "$jobs" -gt "$cap" ]; then
+        jobs=$cap
+    fi
+    [ "$jobs" -ge 1 ] || jobs=1
+    printf '%s\n' "$jobs"
 }
 
-lane_makepkg_env() {
-    local lane=$1
-    local key var
-    key=$(lane_key "$lane")
-    var="RG_KERNEL_MAKEPKG_ENV_${key}"
-    printf '%s' "${!var:-}"
+build_dir() {
+    printf '%s/work/%s\n' "$(local_build_root)" "$RG_KERNEL_PACKAGE_BASE"
 }
 
-lane_subdir() {
-    local lane=$1
-    local key var
-    key=$(lane_key "$lane")
-    var="RG_KERNEL_SUBDIR_${key}"
-    printf '%s' "${!var:-}"
+artifact_dir() {
+    printf '%s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$RG_KERNEL_PACKAGE_BASE"
 }
 
-is_kernel_lane() {
-    local wanted=$1
-    local lane
-    for lane in ${RG_KERNEL_KERNEL_LANES:-}; do
-        if [ "$lane" = "$wanted" ]; then
-            return 0
-        fi
-    done
-    return 1
+managed_path() {
+    local path=$1
+    if [ -e "$path" ]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    if [ -n "$chezmoi_source_dir" ]; then
+        case "$path" in
+            "$HOME/.config/rg-kernel/"*)
+                printf '%s/dot_config/rg-kernel/%s\n' \
+                    "$chezmoi_source_dir" "${path#"$HOME/.config/rg-kernel/"}"
+                return 0
+                ;;
+            "$HOME/.config/oomd/"*)
+                printf '%s/dot_config/oomd/%s\n' \
+                    "$chezmoi_source_dir" "${path#"$HOME/.config/oomd/"}"
+                return 0
+                ;;
+        esac
+    fi
+    printf '%s\n' "$path"
 }
 
-lane_package_base() {
-    local lane=$1
-    if is_kernel_lane "$lane"; then
-        printf '%s-%s\n' "$RG_KERNEL_PACKAGE_PREFIX" "$lane"
+package_base() {
+    printf '%s\n' "$RG_KERNEL_PACKAGE_BASE"
+}
+
+selected_patch_names() {
+    local manifest
+    if [ -n "${RG_KERNEL_SOURCE_REPO:-}" ] && [ -d "$RG_KERNEL_SOURCE_REPO" ]; then
+        find "$RG_KERNEL_SOURCE_REPO" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-*.patch' \
+            -printf '%f\n' | sort
+        return 0
+    fi
+    manifest=$(managed_path "$RG_KERNEL_PATCH_SOURCES")
+    [ -r "$manifest" ] || return 0
+    awk -F '\t' 'NR > 1 && $1 == "selected" {print $2}' "$manifest"
+}
+
+selected_patch_line() {
+    local names
+    names=$(selected_patch_names | paste -sd, -)
+    if [ -n "$names" ]; then
+        printf '%s\n' "$names"
+    else
+        printf 'none\n'
     fi
 }
 
-validate_lane() {
-    local wanted=${1:-}
-    local lane
-    for lane in $RG_KERNEL_LANES; do
-        if [ "$lane" = "$wanted" ]; then
-            return 0
-        fi
-    done
-    fail "unknown lane '$wanted' (known: $RG_KERNEL_LANES)"
+list_policy() {
+    local jobs
+    jobs=$(bounded_jobs)
+    cat <<MSG
+package: $RG_KERNEL_PACKAGE_BASE
+host: $RG_KERNEL_MACHINE_ID ($RG_KERNEL_MACHINE_MODEL)
+profile: $RG_KERNEL_PROFILE
+base: Arch linux PKGBUILD
+source repo: ${RG_KERNEL_SOURCE_REPO:-fallback-from-arch}
+base repo: $RG_KERNEL_BASE_REPO
+build root: $RG_KERNEL_BUILD_ROOT
+artifacts: $(artifact_dir)
+selected patches: $(selected_patch_line)
+jobs: $jobs ($RG_KERNEL_LOCAL_CPU_PERCENT% local CPU cap)
+docs package: ${RG_KERNEL_SKIP_DOCS:-no}
+MSG
 }
 
-refuse_local_build() {
-    local short_host
-    short_host=$(hostname -s 2>/dev/null || hostname)
-    case "$RG_KERNEL_REMOTE" in
-        ""|localhost|127.0.0.1|"$short_host")
-            fail "refusing local kernel build; set RG_KERNEL_REMOTE=rg.cosmolab"
-            ;;
-    esac
+deps_command() {
+    printf 'sudo pacman -S --needed %s\n' "$RG_KERNEL_BUILD_DEPS"
 }
 
-list_lanes() {
-    local lane base marker
-    printf 'remote: %s\n' "$RG_KERNEL_REMOTE"
-    printf 'artifacts: %s\n' "$RG_KERNEL_ARTIFACT_DIR"
-    printf 'recommended laptop lane: %s\n\n' "$RG_KERNEL_RECOMMENDED_LAPTOP_LANE"
-    for lane in $RG_KERNEL_LANES; do
-        marker=' '
-        if [ "$lane" = "$RG_KERNEL_RECOMMENDED_LAPTOP_LANE" ]; then
-            marker='*'
+oomd_command() {
+    printf 'rg-oomd-profile-install %s\n' "$RG_KERNEL_OOMD_CONFIG"
+}
+
+refind_options() {
+    tr ' ' '\n' </proc/cmdline \
+        | awk '
+            $0 == "" {next}
+            /^BOOT_IMAGE=/ {next}
+            /^initrd=/ {next}
+            {print}
+        ' \
+        | paste -sd' ' -
+}
+
+refind_command() {
+    local out options
+    out=${1:-/tmp/refind_linux-rg.conf}
+    options=$(refind_options)
+    cat >"$out" <<EOF
+menuentry "Arch Linux (linux-rg)" {
+    icon /EFI/refind/icons/os_arch.png
+    loader /vmlinuz-linux-rg
+    initrd /intel-ucode.img
+    initrd /initramfs-linux-rg.img
+    options "$options"
+}
+EOF
+    printf 'wrote %s\n' "$out"
+    printf 'include or paste this stanza into the active rEFInd configuration after installing linux-rg packages.\n'
+}
+
+patch_report() {
+    local manifest patch_sources
+    if [ -n "${RG_KERNEL_SOURCE_REPO:-}" ] && [ -d "$RG_KERNEL_SOURCE_REPO" ]; then
+        printf '== source repo ==\n%s\n\n' "$RG_KERNEL_SOURCE_REPO"
+        printf '== carried patch files ==\n'
+        find "$RG_KERNEL_SOURCE_REPO" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-*.patch' \
+            -printf '%f\n' | sort
+        return 0
+    fi
+    manifest=$(managed_path "$RG_KERNEL_COMPAT_MANIFEST")
+    patch_sources=$(managed_path "$RG_KERNEL_PATCH_SOURCES")
+    [ -r "$manifest" ] || fail "missing compatibility manifest: $manifest"
+    [ -r "$patch_sources" ] || fail "missing selected patch source manifest: $patch_sources"
+
+    printf '== compatibility decisions ==\n'
+    column -t -s $'\t' "$manifest" 2>/dev/null || cat "$manifest"
+    printf '\n== selected patch sources ==\n'
+    column -t -s $'\t' "$patch_sources" 2>/dev/null || cat "$patch_sources"
+}
+
+missing_commands() {
+    local cmd missing=0
+    for cmd in git makepkg patch sed awk find sort gpg column paste tr; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            printf '%s\n' "$cmd"
+            missing=1
         fi
-        base=$(lane_base_url "$lane")
-        printf '%s %s -> %s\n' "$marker" "$lane" "$base"
     done
+    return "$missing"
+}
+
+missing_packages() {
+    local pkg missing=0
+    command -v pacman >/dev/null 2>&1 || return 0
+    for pkg in $RG_KERNEL_BUILD_DEPS; do
+        if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
+            printf '%s\n' "$pkg"
+            missing=1
+        fi
+    done
+    return "$missing"
 }
 
 missing_fallbacks() {
     local pkg missing=0
-    if ! command -v pacman >/dev/null 2>&1; then
-        return 0
-    fi
+    command -v pacman >/dev/null 2>&1 || return 0
     for pkg in $RG_KERNEL_REQUIRED_FALLBACKS; do
         if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
             printf '%s\n' "$pkg"
@@ -157,9 +274,7 @@ missing_boot_images() {
 
 recommended_fallback_warnings() {
     local pkg image
-    if ! command -v pacman >/dev/null 2>&1; then
-        return 0
-    fi
+    command -v pacman >/dev/null 2>&1 || return 0
     for pkg in ${RG_KERNEL_RECOMMENDED_FALLBACKS:-}; do
         if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
             printf 'recommended fallback package is not installed: %s\n' "$pkg"
@@ -177,7 +292,18 @@ recommended_fallback_warnings() {
     done
 }
 
-preflight() {
+check_local_space() {
+    local build_root avail_kib min_kib
+    build_root=$(local_build_root)
+    mkdir -p "$build_root"
+    avail_kib=$(df -Pk "$build_root" | awk 'NR == 2 {print $4}')
+    min_kib=$((RG_KERNEL_MIN_LOCAL_AVAIL_GIB * 1024 * 1024))
+    if [ "$avail_kib" -lt "$min_kib" ]; then
+        fail "local build root has insufficient free space: ${avail_kib} KiB available, ${RG_KERNEL_MIN_LOCAL_AVAIL_GIB} GiB required at $build_root"
+    fi
+}
+
+fallback_preflight() {
     local missing_pkg missing_image
     missing_pkg=$(missing_fallbacks || true)
     missing_image=$(missing_boot_images || true)
@@ -194,439 +320,267 @@ preflight() {
         return 1
     fi
     recommended_fallback_warnings >&2
-    printf 'fallback kernel preflight ok\n'
 }
 
-artifact_preflight() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local package_base lane_artifacts
+local_preflight() {
+    local missing_cmd missing_pkg
+    missing_cmd=$(missing_commands || true)
+    missing_pkg=$(missing_packages || true)
 
-    validate_lane "$lane"
-    lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
-    package_base=$(lane_package_base "$lane")
+    check_local_space
+    fallback_preflight
 
-    if ! compgen -G "$lane_artifacts/*.pkg.tar.zst" >/dev/null; then
-        fail "no package artifacts found at $lane_artifacts"
+    if [ -n "$missing_cmd" ]; then
+        printf 'missing build commands:\n%s\n' "$missing_cmd" >&2
+    fi
+    if [ -n "$missing_pkg" ]; then
+        printf 'missing build packages:\n%s\n' "$missing_pkg" >&2
+        deps_command >&2
+    fi
+    if [ -n "$missing_cmd$missing_pkg" ]; then
+        return 1
     fi
 
-    if [ -n "$package_base" ]; then
-        if ! compgen -G "$lane_artifacts/$package_base-*.pkg.tar.zst" >/dev/null; then
-            fail "missing kernel artifact for $package_base in $lane_artifacts"
+    [ -r "$(managed_path "$RG_KERNEL_CONFIG_FRAGMENT")" ] \
+        || fail "missing host config fragment: $(managed_path "$RG_KERNEL_CONFIG_FRAGMENT")"
+    if [ -n "${RG_KERNEL_SOURCE_REPO:-}" ]; then
+        [ -d "$RG_KERNEL_SOURCE_REPO/.git" ] \
+            || fail "source repo is not a git checkout: $RG_KERNEL_SOURCE_REPO"
+        [ -r "$RG_KERNEL_SOURCE_REPO/PKGBUILD" ] \
+            || fail "source repo has no PKGBUILD: $RG_KERNEL_SOURCE_REPO"
+        [ -r "$RG_KERNEL_SOURCE_REPO/.SRCINFO" ] \
+            || fail "source repo has no .SRCINFO: $RG_KERNEL_SOURCE_REPO"
+        [ -r "$RG_KERNEL_SOURCE_REPO/0021-mm-bulk-free-hotpaths.patch" ] \
+            || fail "source repo does not include the finalized 0021 patch queue"
+        if [ -n "$(git -C "$RG_KERNEL_SOURCE_REPO" status --porcelain)" ]; then
+            fail "source repo has uncommitted changes: $RG_KERNEL_SOURCE_REPO"
         fi
-        if ! compgen -G "$lane_artifacts/$package_base-headers-*.pkg.tar.zst" >/dev/null; then
-            fail "missing headers artifact for $package_base in $lane_artifacts"
-        fi
-    fi
-
-    printf 'artifact preflight ok\n'
-}
-
-dkms_packages() {
-    command -v pacman >/dev/null 2>&1 || return 0
-    pacman -Qq 2>/dev/null | awk '/-dkms$/'
-}
-
-dkms_preflight() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local package_base lane_artifacts packages
-
-    validate_lane "$lane"
-    package_base=$(lane_package_base "$lane")
-    lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
-    packages=$(dkms_packages || true)
-
-    if [ -z "$packages" ]; then
-        printf 'dkms preflight ok (no dkms packages installed)\n'
+        printf 'local kernel build preflight ok\n'
         return 0
     fi
+    [ -r "$(managed_path "$RG_KERNEL_COMPAT_MANIFEST")" ] \
+        || fail "missing compatibility manifest: $(managed_path "$RG_KERNEL_COMPAT_MANIFEST")"
+    [ -r "$(managed_path "$RG_KERNEL_PATCH_SOURCES")" ] \
+        || fail "missing selected patch source manifest: $(managed_path "$RG_KERNEL_PATCH_SOURCES")"
 
-    command -v dkms >/dev/null 2>&1 \
-        || fail "DKMS packages are installed but the dkms command is missing"
+    printf 'local kernel build preflight ok\n'
+}
 
-    if [ -n "$package_base" ] \
-        && ! compgen -G "$lane_artifacts/$package_base-headers-*.pkg.tar.zst" >/dev/null; then
-        printf 'installed DKMS packages:\n%s\n' "$packages" >&2
-        fail "DKMS packages need the matching $package_base headers artifact"
+copy_source_pkgbuild() {
+    local src build stale_parent stale
+    src=$RG_KERNEL_SOURCE_REPO
+    build=$(build_dir)
+    [ -r "$src/PKGBUILD" ] || fail "source PKGBUILD not found at $src"
+
+    if [ -e "$build" ]; then
+        stale_parent="$(dirname "$build")/old"
+        stale="$stale_parent/$(basename "$build").$(date +%Y%m%d-%H%M%S)"
+        mkdir -p "$stale_parent"
+        mv "$build" "$stale"
+    fi
+    mkdir -p "$build"
+    git -C "$src" archive --format=tar HEAD | tar -xf - -C "$build"
+    printf '%s\n' "$build"
+}
+
+default_branch_for() {
+    local repo=$1
+    git -C "$repo" remote show origin | awk '/HEAD branch/ {print $NF}'
+}
+
+clone_or_update_base() {
+    local build_root src_root repo_dir branch
+    build_root=$(local_build_root)
+    src_root="$build_root/src"
+    repo_dir="$src_root/arch-linux-pkg"
+    mkdir -p "$src_root"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        git clone "$RG_KERNEL_BASE_REPO" "$repo_dir"
     fi
 
-    printf 'dkms preflight ok\n'
+    git -C "$repo_dir" remote set-url origin "$RG_KERNEL_BASE_REPO"
+    branch=$(default_branch_for "$repo_dir")
+    [ -n "$branch" ] || fail "could not determine default branch for $RG_KERNEL_BASE_REPO"
+    git -C "$repo_dir" fetch origin "$branch" --tags
+    git -C "$repo_dir" reset --hard "origin/$branch"
+    git -C "$repo_dir" clean -fdx
+    printf '%s\n' "$repo_dir"
 }
 
-initramfs_preflight() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-
-    validate_lane "$lane"
-    if ! is_kernel_lane "$lane"; then
-        printf 'initramfs preflight ok (tool lane)\n'
-        return 0
-    fi
-
-    if command -v mkinitcpio >/dev/null 2>&1; then
-        printf 'initramfs preflight ok (mkinitcpio)\n'
-        return 0
-    fi
-    if command -v dracut >/dev/null 2>&1; then
-        printf 'initramfs preflight ok (dracut present; verify hooks after install)\n'
-        return 0
-    fi
-
-    fail "no initramfs generator found (expected mkinitcpio or dracut)"
-}
-
-install_preflight() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-
-    validate_lane "$lane"
-    preflight
-    artifact_preflight "$lane"
-    initramfs_preflight "$lane"
-    dkms_preflight "$lane"
-}
-
-remote_preflight() {
-    refuse_local_build
-    ssh "$RG_KERNEL_REMOTE" \
-        RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
-        RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
-        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
-        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
-        bash -s <<'REMOTE'
-set -euo pipefail
-
-case "$RG_KERNEL_REMOTE_ROOT" in
-    /*) ;;
-    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
-esac
-
-check_remote_space() {
-    local avail_kib min_kib
-    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
-    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
-    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
-    if [ "$avail_kib" -lt "$min_kib" ]; then
-        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
-            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
-        return 1
-    fi
-}
-
-select_container_engine() {
-    case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
-        auto)
-            for candidate in docker podman; do
-                if command -v "$candidate" >/dev/null 2>&1 \
-                    && "$candidate" info >/dev/null 2>&1; then
-                    printf '%s\n' "$candidate"
-                    return 0
-                fi
-            done
-            ;;
-        docker|podman)
-            if command -v "$RG_KERNEL_CONTAINER_ENGINE" >/dev/null 2>&1 \
-                && "$RG_KERNEL_CONTAINER_ENGINE" info >/dev/null 2>&1; then
-                printf '%s\n' "$RG_KERNEL_CONTAINER_ENGINE"
-                return 0
-            fi
-            ;;
-    esac
-    return 1
-}
-
-missing=0
-for cmd in bash git rsync sed find awk; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-        printf 'missing remote command: %s\n' "$cmd" >&2
-        missing=1
-    fi
-done
-
-if [ "$missing" -ne 0 ]; then
-    exit 1
-fi
-
-check_remote_space
-
-if command -v makepkg >/dev/null 2>&1; then
-    if ! command -v sudo >/dev/null 2>&1; then
-        printf 'missing remote command: sudo\n' >&2
-        exit 1
-    fi
-    if ! sudo -n true >/dev/null 2>&1; then
-        cat >&2 <<'MSG'
-remote sudo is not noninteractive; native makepkg --syncdeps may fail if build
-dependencies are missing. Install dependencies on the remote or allow
-noninteractive sudo for pacman dependency installation.
-MSG
-    fi
-    printf 'remote kernel build preflight ok (native makepkg)\n'
-    exit 0
-fi
-
-engine=$(select_container_engine) || {
-    cat >&2 <<'MSG'
-remote makepkg is missing and no usable Docker/Podman engine is available.
-MSG
-    exit 1
-}
-
-printf 'remote kernel build preflight ok (container: %s, image: %s)\n' \
-    "$engine" "$RG_KERNEL_CONTAINER_IMAGE"
-REMOTE
-}
-
-sync_patch_queue() {
-    local lane=$1
-    local local_patch_dir="$RG_KERNEL_PATCH_ROOT/$lane"
-    local remote_patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$lane"
-
-    ssh "$RG_KERNEL_REMOTE" "mkdir -p '$remote_patch_dir'"
-    if [ -d "$local_patch_dir" ]; then
-        rsync -az "$local_patch_dir/" "$RG_KERNEL_REMOTE:$remote_patch_dir/"
-    fi
-}
-
-remote_prepare() {
-    local lane=$1
-    local base_url=$2
-    local package_base=$3
-    local subdir=$4
-
-    ssh "$RG_KERNEL_REMOTE" \
-        RG_KERNEL_LANE="$lane" \
-        RG_KERNEL_BASE_URL="$base_url" \
-        RG_KERNEL_PACKAGE_BASE="$package_base" \
-        RG_KERNEL_SUBDIR="$subdir" \
-        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
-        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
-        bash -s <<'REMOTE'
-set -euo pipefail
-
-fail() {
-    printf 'remote rg-kernel-build: %s\n' "$*" >&2
-    exit 1
-}
-
-case "$RG_KERNEL_REMOTE_ROOT" in
-    /*) ;;
-    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
-esac
-
-check_remote_space() {
-    local avail_kib min_kib
-    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
-    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
-    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
-    if [ "$avail_kib" -lt "$min_kib" ]; then
-        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
-            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
-        return 1
-    fi
-}
-
-command -v git >/dev/null 2>&1 || fail "git is not installed"
-check_remote_space
-
-src_root="$RG_KERNEL_REMOTE_ROOT/src"
-lane_dir="$src_root/$RG_KERNEL_LANE"
-build_dir="$lane_dir"
-patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$RG_KERNEL_LANE"
-
-mkdir -p "$src_root" "$patch_dir"
-
-if [ ! -d "$lane_dir/.git" ]; then
-    git clone "$RG_KERNEL_BASE_URL" "$lane_dir"
-fi
-
-default_branch=$(git -C "$lane_dir" remote show origin | awk '/HEAD branch/ {print $NF}')
-if [ -z "$default_branch" ]; then
-    fail "could not determine default branch for $RG_KERNEL_BASE_URL"
-fi
-
-git -C "$lane_dir" fetch origin "$default_branch" --tags
-git -C "$lane_dir" reset --hard "origin/$default_branch"
-git -C "$lane_dir" clean -fdx
-
-while IFS= read -r patch; do
-    [ -n "$patch" ] || continue
-    git -C "$lane_dir" am "$patch"
-done < <(find "$patch_dir" -maxdepth 1 -type f -name '*.patch' | sort)
-
-if [ -n "$RG_KERNEL_SUBDIR" ]; then
-    build_dir="$lane_dir/$RG_KERNEL_SUBDIR"
-fi
-
-if [ ! -r "$build_dir/PKGBUILD" ]; then
-    fail "$RG_KERNEL_LANE has no PKGBUILD at $build_dir"
-fi
-
-if [ -n "$RG_KERNEL_PACKAGE_BASE" ]; then
-    grep -qE '^pkgbase=' "$build_dir/PKGBUILD" \
-        || fail "$RG_KERNEL_LANE PKGBUILD has no pkgbase assignment"
-    sed -i -E "s|^pkgbase=.*|pkgbase=$RG_KERNEL_PACKAGE_BASE|" "$build_dir/PKGBUILD"
-    grep -qE "^pkgbase=$RG_KERNEL_PACKAGE_BASE$" "$build_dir/PKGBUILD" \
-        || fail "$RG_KERNEL_LANE package-base rewrite failed"
-fi
-
-printf 'prepared %s at %s\n' "$RG_KERNEL_LANE" "$build_dir"
-grep -E '^(pkgbase|pkgname)=' "$build_dir/PKGBUILD" | head -n 4
-REMOTE
-}
-
-prepare_lane() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local base_url package_base subdir
-
-    validate_lane "$lane"
-    refuse_local_build
-    base_url=$(lane_base_url "$lane")
-    [ -n "$base_url" ] || fail "lane '$lane' has no base repository"
-    package_base=$(lane_package_base "$lane")
-    subdir=$(lane_subdir "$lane")
-
-    sync_patch_queue "$lane"
-    remote_prepare "$lane" "$base_url" "$package_base" "$subdir"
-}
-
-remote_build() {
-    local lane=$1
-    local base_url=$2
-    local package_base=$3
-    local makepkg_env=$4
-    local subdir=$5
-
-    ssh "$RG_KERNEL_REMOTE" \
-        RG_KERNEL_LANE="$lane" \
-        RG_KERNEL_BASE_URL="$base_url" \
-        RG_KERNEL_PACKAGE_BASE="$package_base" \
-        RG_KERNEL_MAKEPKG_ENV="$makepkg_env" \
-        RG_KERNEL_SUBDIR="$subdir" \
-        RG_KERNEL_CONTAINER_ENGINE="$RG_KERNEL_CONTAINER_ENGINE" \
-        RG_KERNEL_CONTAINER_IMAGE="$RG_KERNEL_CONTAINER_IMAGE" \
-        RG_KERNEL_REMOTE_ROOT="$RG_KERNEL_REMOTE_ROOT" \
-        RG_KERNEL_MIN_REMOTE_AVAIL_GIB="$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" \
-        bash -s <<'REMOTE'
-set -euo pipefail
-
-fail() {
-    printf 'remote rg-kernel-build: %s\n' "$*" >&2
-    exit 1
-}
-
-case "$RG_KERNEL_REMOTE_ROOT" in
-    /*) ;;
-    *) RG_KERNEL_REMOTE_ROOT="$HOME/$RG_KERNEL_REMOTE_ROOT" ;;
-esac
-
-check_remote_space() {
-    local avail_kib min_kib
-    mkdir -p "$RG_KERNEL_REMOTE_ROOT"
-    avail_kib=$(df -Pk "$RG_KERNEL_REMOTE_ROOT" | awk 'NR == 2 {print $4}')
-    min_kib=$((RG_KERNEL_MIN_REMOTE_AVAIL_GIB * 1024 * 1024))
-    if [ "$avail_kib" -lt "$min_kib" ]; then
-        printf 'remote build root has insufficient free space: %s KiB available, %s GiB required at %s\n' \
-            "$avail_kib" "$RG_KERNEL_MIN_REMOTE_AVAIL_GIB" "$RG_KERNEL_REMOTE_ROOT" >&2
-        return 1
-    fi
-}
-
-select_container_engine() {
-    case "${RG_KERNEL_CONTAINER_ENGINE:-auto}" in
-        auto)
-            for candidate in docker podman; do
-                if command -v "$candidate" >/dev/null 2>&1 \
-                    && "$candidate" info >/dev/null 2>&1; then
-                    printf '%s\n' "$candidate"
-                    return 0
-                fi
-            done
-            ;;
-        docker|podman)
-            if command -v "$RG_KERNEL_CONTAINER_ENGINE" >/dev/null 2>&1 \
-                && "$RG_KERNEL_CONTAINER_ENGINE" info >/dev/null 2>&1; then
-                printf '%s\n' "$RG_KERNEL_CONTAINER_ENGINE"
-                return 0
-            fi
-            ;;
-        "")
-            ;;
-        *)
-            fail "unknown container engine '$RG_KERNEL_CONTAINER_ENGINE'"
-            ;;
-    esac
-    return 1
-}
-
-command -v git >/dev/null 2>&1 || fail "git is not installed"
-check_remote_space
-if ! command -v makepkg >/dev/null 2>&1; then
-    select_container_engine >/dev/null \
-        || fail "makepkg is not installed and no usable container engine was found"
-fi
-
-src_root="$RG_KERNEL_REMOTE_ROOT/src"
-pkg_root="$RG_KERNEL_REMOTE_ROOT/pkg"
-lane_dir="$src_root/$RG_KERNEL_LANE"
-build_dir="$lane_dir"
-pkg_dir="$pkg_root/$RG_KERNEL_LANE"
-patch_dir="$RG_KERNEL_REMOTE_ROOT/patches/$RG_KERNEL_LANE"
-
-mkdir -p "$src_root" "$pkg_dir" "$patch_dir"
-
-if [ ! -d "$lane_dir/.git" ]; then
-    git clone "$RG_KERNEL_BASE_URL" "$lane_dir"
-fi
-
-default_branch=$(git -C "$lane_dir" remote show origin | awk '/HEAD branch/ {print $NF}')
-if [ -z "$default_branch" ]; then
-    fail "could not determine default branch for $RG_KERNEL_BASE_URL"
-fi
-
-git -C "$lane_dir" fetch origin "$default_branch" --tags
-git -C "$lane_dir" reset --hard "origin/$default_branch"
-git -C "$lane_dir" clean -fdx
-
-while IFS= read -r patch; do
-    [ -n "$patch" ] || continue
-    git -C "$lane_dir" am "$patch"
-done < <(find "$patch_dir" -maxdepth 1 -type f -name '*.patch' | sort)
-
-if [ -n "$RG_KERNEL_SUBDIR" ]; then
-    build_dir="$lane_dir/$RG_KERNEL_SUBDIR"
-fi
-
-if [ ! -r "$build_dir/PKGBUILD" ]; then
-    fail "$RG_KERNEL_LANE has no PKGBUILD at $build_dir"
-fi
-
-rewrite_kernel_pkgbase() {
-    [ -n "$RG_KERNEL_PACKAGE_BASE" ] || return 0
-    grep -qE '^pkgbase=' "$build_dir/PKGBUILD" \
-        || fail "$RG_KERNEL_LANE PKGBUILD has no pkgbase assignment"
-    sed -i -E "s|^pkgbase=.*|pkgbase=$RG_KERNEL_PACKAGE_BASE|" "$build_dir/PKGBUILD"
-    grep -qE "^pkgbase=$RG_KERNEL_PACKAGE_BASE$" "$build_dir/PKGBUILD" \
-        || fail "$RG_KERNEL_LANE package-base rewrite failed"
-}
-
-rewrite_kernel_pkgbase
-find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -delete
-
-run_makepkg_command() {
-    if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
-        read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"
-        env "${makepkg_env_args[@]}" \
-            makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+copy_base_pkgbuild() {
+    local repo_dir src build stale_parent stale
+    repo_dir=$1
+    build=$(build_dir)
+    if [ -n "${RG_KERNEL_BASE_SUBDIR:-}" ]; then
+        src="$repo_dir/$RG_KERNEL_BASE_SUBDIR"
     else
-        makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+        src="$repo_dir"
     fi
+    [ -r "$src/PKGBUILD" ] || fail "base PKGBUILD not found at $src"
+
+    if [ -e "$build" ]; then
+        stale_parent="$(dirname "$build")/old"
+        stale="$stale_parent/$(basename "$build").$(date +%Y%m%d-%H%M%S)"
+        mkdir -p "$stale_parent"
+        mv "$build" "$stale"
+    fi
+    mkdir -p "$build"
+    (
+        cd "$src"
+        tar -cf - .
+    ) | (
+        cd "$build"
+        tar -xf -
+    )
+    printf '%s\n' "$build"
+}
+
+append_source_skip() {
+    local pkgbuild=$1
+    local item=$2
+    local arrays=()
+    mapfile -t arrays < <(
+        awk -F= '/^(sha256sums|b2sums|sha512sums)=\(/ {print $1}' "$pkgbuild" | sort -u
+    )
+    [ "${#arrays[@]}" -gt 0 ] || fail "could not find checksum arrays in $pkgbuild"
+    {
+        printf '\nsource+=("%s")\n' "$item"
+        local sum_array
+        for sum_array in "${arrays[@]}"; do
+            printf '%s+=("SKIP")\n' "$sum_array"
+        done
+    } >>"$pkgbuild"
+}
+
+rewrite_kernel_pkgbuild_identity() {
+    local dir pkgbuild
+    dir=$1
+    pkgbuild="$dir/PKGBUILD"
+    sed -i -E "s/^pkgbase=.*/pkgbase=$RG_KERNEL_PACKAGE_BASE/" "$pkgbuild"
+    sed -i -E "s/^pkgdesc=.*/pkgdesc='Linux kernel for rgx1gen11 ThinkPad X1 Carbon Gen 11'/" "$pkgbuild"
+}
+
+drop_docs_package() {
+    local dir pkgbuild
+    dir=$1
+    pkgbuild="$dir/PKGBUILD"
+    [ "${RG_KERNEL_SKIP_DOCS:-no}" = yes ] || return 0
+    sed -i -E '/^[[:space:]]*# htmldocs$/d' "$pkgbuild"
+    sed -i -E '/^[[:space:]]*(graphviz|imagemagick|python-sphinx|python-yaml|texlive-latexextra)$/d' "$pkgbuild"
+    sed -i -E '/^[[:space:]]*make htmldocs /d' "$pkgbuild"
+    # shellcheck disable=SC2016
+    sed -i -E '/^[[:space:]]*"\$pkgbase-docs"$/d' "$pkgbuild"
+}
+
+apply_patch_sources() {
+    local dir pkgbuild manifest status name source _reason
+    dir=$1
+    pkgbuild="$dir/PKGBUILD"
+    manifest=$(managed_path "$RG_KERNEL_PATCH_SOURCES")
+    [ -r "$manifest" ] || fail "missing selected patch source manifest: $manifest"
+
+    while IFS=$'\t' read -r status name source _reason; do
+        case "$status" in
+            selected) ;;
+            ""|\#*|status) continue ;;
+            *) continue ;;
+        esac
+        [ -n "$name" ] || fail "selected patch row has no name in $manifest"
+        [ -n "$source" ] || fail "selected patch row has no source in $manifest"
+        case "$source" in
+            http://*|https://*)
+                append_source_skip "$pkgbuild" "$name::$source"
+                ;;
+            *)
+                fail "selected patch source must be an http(s) URL: $source"
+                ;;
+        esac
+    done <"$manifest"
+}
+
+apply_local_patch_series() {
+    local dir pkgbuild series patch rel
+    dir=$1
+    pkgbuild="$dir/PKGBUILD"
+    series="$(managed_path "$RG_KERNEL_PATCH_ROOT")/series"
+    [ -r "$series" ] || return 0
+
+    while IFS= read -r rel; do
+        case "$rel" in
+            ""|\#*) continue ;;
+        esac
+        patch="$(managed_path "$RG_KERNEL_PATCH_ROOT")/$rel"
+        [ -r "$patch" ] || fail "listed patch is missing: $patch"
+        cp "$patch" "$dir/$(basename "$patch")"
+        append_source_skip "$pkgbuild" "$(basename "$patch")"
+    done <"$series"
+}
+
+apply_config_fragment() {
+    local dir pkgbuild fragment_name tmp fragment_path
+    dir=$1
+    pkgbuild="$dir/PKGBUILD"
+    fragment_path=$(managed_path "$RG_KERNEL_CONFIG_FRAGMENT")
+    fragment_name=$(basename "$fragment_path")
+    cp "$fragment_path" "$dir/$fragment_name"
+    append_source_skip "$pkgbuild" "$fragment_name"
+
+    tmp="$pkgbuild.rg"
+    awk '
+        {
+            print
+            if (index($0, "cp ../config.$CARCH .config") && !done) {
+                print "  echo \"Applying linux-rg host config fragment...\""
+                print "  while IFS= read -r rg_cfg; do"
+                print "    case \"$rg_cfg\" in \"\"|\\#*) continue ;; esac"
+                print "    if [[ \"$rg_cfg\" =~ ^CONFIG_([A-Za-z0-9_]+)=(y|m)$ ]]; then"
+                print "      if [[ \"${BASH_REMATCH[2]}\" == y ]]; then"
+                print "        scripts/config --enable \"${BASH_REMATCH[1]}\""
+                print "      else"
+                print "        scripts/config --module \"${BASH_REMATCH[1]}\""
+                print "      fi"
+                print "    elif [[ \"$rg_cfg\" =~ ^\\#\\ CONFIG_([A-Za-z0-9_]+)\\ is\\ not\\ set$ ]]; then"
+                print "      scripts/config --disable \"${BASH_REMATCH[1]}\""
+                print "    elif [[ \"$rg_cfg\" =~ ^CONFIG_([A-Za-z0-9_]+)=\\\"(.*)\\\"$ ]]; then"
+                print "      scripts/config --set-str \"${BASH_REMATCH[1]}\" \"${BASH_REMATCH[2]}\""
+                print "    elif [[ \"$rg_cfg\" =~ ^CONFIG_([A-Za-z0-9_]+)=([0-9]+)$ ]]; then"
+                print "      scripts/config --set-val \"${BASH_REMATCH[1]}\" \"${BASH_REMATCH[2]}\""
+                print "    else"
+                print "      echo \"unsupported linux-rg config line: $rg_cfg\" >&2"
+                print "      exit 1"
+                print "    fi"
+                print "  done < ../" fragment
+                done=1
+            }
+        }
+    ' fragment="$fragment_name" "$pkgbuild" >"$tmp"
+    mv -f "$tmp" "$pkgbuild"
+}
+
+prepare_pkgbuild() {
+    local repo_dir dir
+    check_local_space
+    if [ -n "${RG_KERNEL_SOURCE_REPO:-}" ]; then
+        dir=$(copy_source_pkgbuild)
+    else
+        repo_dir=$(clone_or_update_base)
+        dir=$(copy_base_pkgbuild "$repo_dir")
+        rewrite_kernel_pkgbuild_identity "$dir"
+        drop_docs_package "$dir"
+        apply_patch_sources "$dir"
+        apply_local_patch_series "$dir"
+        apply_config_fragment "$dir"
+    fi
+    printf 'prepared %s at %s\n' "$RG_KERNEL_PACKAGE_BASE" "$dir"
+    grep -E '^(pkgbase|pkgname|pkgver|pkgrel)=' "$dir/PKGBUILD" | head -n 8
 }
 
 import_validpgpkeys() {
     local keys=()
     local filtered_keys=()
-    local key
-    local server
+    local key server
 
-    # shellcheck source=/dev/null
     mapfile -t keys < <(
         bash -c 'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'
     )
@@ -644,168 +598,137 @@ import_validpgpkeys() {
     fail "could not import PKGBUILD signing keys: ${keys[*]}"
 }
 
-run_native_makepkg() {
+build_kernel() {
+    local dir artifact_dir jobs
+
+    local_preflight
+    prepare_pkgbuild >/dev/null
+
+    dir=$(build_dir)
+    artifact_dir=$(artifact_dir)
+    jobs=$(bounded_jobs)
+    mkdir -p "$artifact_dir" "$(local_build_root)/srcdest"
+
     (
-        cd "$build_dir"
+        cd "$dir"
         import_validpgpkeys
-        run_makepkg_command
+        MAKEFLAGS="-j$jobs ${MAKEFLAGS:-}" \
+            CMAKE_BUILD_PARALLEL_LEVEL="$jobs" \
+            NINJAFLAGS="-j$jobs" \
+            PKGDEST="$artifact_dir" \
+            SRCDEST="$(local_build_root)/srcdest" \
+            makepkg --syncdeps --noconfirm --cleanbuild --clean --log
     )
+
+    printf 'artifacts written to %s\n' "$artifact_dir"
+    if install_preflight >/dev/null 2>&1; then
+        printf 'install after install preflight: '
+    else
+        printf 'install preflight is not green; inspect with: rg-kernel-build install-preflight\n'
+        printf 'install command after fixing preflight: '
+    fi
+    install_command_text
 }
 
-run_container_makepkg() {
-    local engine uid gid
-    engine=$(select_container_engine) \
-        || fail "makepkg is not installed and no usable container engine was found"
-    uid=$(id -u)
-    gid=$(id -g)
-
-    "$engine" run --rm \
-        -e "HOST_UID=$uid" \
-        -e "HOST_GID=$gid" \
-        -e "RG_KERNEL_REMOTE_ROOT=$RG_KERNEL_REMOTE_ROOT" \
-        -e "RG_KERNEL_LANE=$RG_KERNEL_LANE" \
-        -e "RG_KERNEL_MAKEPKG_ENV=$RG_KERNEL_MAKEPKG_ENV" \
-        -v "$RG_KERNEL_REMOTE_ROOT:$RG_KERNEL_REMOTE_ROOT" \
-        -w "$build_dir" \
-        "$RG_KERNEL_CONTAINER_IMAGE" \
-        bash -lc '
-set -euo pipefail
-
-pacman -Syu --needed --noconfirm sudo git rsync gnupg base-devel
-
-if ! getent group "$HOST_GID" >/dev/null 2>&1; then
-    groupadd -g "$HOST_GID" builder
-fi
-group_name=$(getent group "$HOST_GID" | cut -d: -f1)
-
-if ! id -u builder >/dev/null 2>&1; then
-    useradd -m -u "$HOST_UID" -g "$group_name" builder
-fi
-
-printf "builder ALL=(ALL) NOPASSWD: ALL\n" >/etc/sudoers.d/builder
-chmod 0440 /etc/sudoers.d/builder
-chown -R "$HOST_UID:$HOST_GID" "$RG_KERNEL_REMOTE_ROOT"
-
-import_validpgpkeys() {
-    local keys=()
-    local filtered_keys=()
-    local key
-    local server
-
-    mapfile -t keys < <(
-        sudo -u builder -H bash -c \
-            '"'"'source PKGBUILD; printf "%s\n" "${validpgpkeys[@]-}"'"'"'
-    )
-    for key in "${keys[@]}"; do
-        [ -n "$key" ] && filtered_keys+=("$key")
-    done
-    keys=("${filtered_keys[@]}")
-    [ "${#keys[@]}" -gt 0 ] || return 0
-
-    for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
-        if sudo -u builder -H gpg --batch --keyserver "$server" \
-            --recv-keys "${keys[@]}"; then
-            return 0
-        fi
-    done
-    printf "could not import PKGBUILD signing keys: %s\n" "${keys[*]}" >&2
-    return 1
+artifact_preflight() {
+    local dir base
+    dir=$(artifact_dir)
+    base=$RG_KERNEL_PACKAGE_BASE
+    compgen -G "$dir/$base-*.pkg.tar.*" >/dev/null \
+        || fail "missing $base kernel artifact in $dir"
+    compgen -G "$dir/$base-headers-*.pkg.tar.*" >/dev/null \
+        || fail "missing $base headers artifact in $dir"
+    printf 'artifact preflight ok\n'
 }
 
-import_validpgpkeys
-
-if [ -n "$RG_KERNEL_MAKEPKG_ENV" ]; then
-    read -r -a makepkg_env_args <<< "$RG_KERNEL_MAKEPKG_ENV"
-    sudo -u builder -H env "${makepkg_env_args[@]}" \
-        makepkg --syncdeps --noconfirm --cleanbuild --clean --log
-else
-    sudo -u builder -H makepkg --syncdeps --noconfirm --cleanbuild --clean --log
-fi
-'
+dkms_packages() {
+    command -v pacman >/dev/null 2>&1 || return 0
+    pacman -Qq 2>/dev/null | awk '/-dkms$/'
 }
 
-if command -v makepkg >/dev/null 2>&1; then
-    run_native_makepkg
-else
-    run_container_makepkg
-fi
+dkms_preflight() {
+    local packages
+    packages=$(dkms_packages || true)
+    if [ -z "$packages" ]; then
+        printf 'dkms preflight ok (no dkms packages installed)\n'
+        return 0
+    fi
 
-find "$build_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -exec cp -f {} "$pkg_dir/" \;
-find "$pkg_dir" -maxdepth 1 -type f -name '*.pkg.tar.*' -print
-REMOTE
+    command -v dkms >/dev/null 2>&1 \
+        || fail "DKMS packages are installed but the dkms command is missing"
+    compgen -G "$(artifact_dir)/$RG_KERNEL_PACKAGE_BASE-headers-*.pkg.tar.*" >/dev/null \
+        || fail "DKMS packages need the matching $RG_KERNEL_PACKAGE_BASE headers artifact"
+    printf 'dkms preflight ok\n'
 }
 
-print_install_command() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    validate_lane "$lane"
-    install_preflight "$lane" >/dev/null
-    install_command_text "$lane"
+initramfs_preflight() {
+    if command -v mkinitcpio >/dev/null 2>&1; then
+        printf 'initramfs preflight ok (mkinitcpio)\n'
+        return 0
+    fi
+    if command -v dracut >/dev/null 2>&1; then
+        printf 'initramfs preflight ok (dracut present; verify hooks after install)\n'
+        return 0
+    fi
+    fail "no initramfs generator found (expected mkinitcpio or dracut)"
+}
+
+install_preflight() {
+    fallback_preflight
+    artifact_preflight
+    initramfs_preflight
+    dkms_preflight
 }
 
 install_command_text() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local lane_artifacts="$RG_KERNEL_ARTIFACT_DIR/$lane"
-    printf 'sudo pacman -U %s/*.pkg.tar.zst\n' "$lane_artifacts"
+    printf 'sudo pacman -U %s/*.pkg.tar.*\n' "$(artifact_dir)"
 }
 
-build_lane() {
-    local lane=${1:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}
-    local base_url package_base makepkg_env subdir
-
-    validate_lane "$lane"
-    refuse_local_build
-    base_url=$(lane_base_url "$lane")
-    [ -n "$base_url" ] || fail "lane '$lane' has no base repository"
-    package_base=$(lane_package_base "$lane")
-    makepkg_env=$(lane_makepkg_env "$lane")
-    subdir=$(lane_subdir "$lane")
-
-    mkdir -p "$RG_KERNEL_ARTIFACT_DIR/$lane"
-    sync_patch_queue "$lane"
-    remote_build "$lane" "$base_url" "$package_base" "$makepkg_env" "$subdir"
-    rsync -az "$RG_KERNEL_REMOTE:$RG_KERNEL_REMOTE_ROOT/pkg/$lane/" \
-        "$RG_KERNEL_ARTIFACT_DIR/$lane/"
-    printf '\nartifacts fetched to %s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$lane"
-    if install_preflight "$lane" >/dev/null 2>&1; then
-        printf 'install after install preflight: '
-    else
-        printf 'install preflight is not green; inspect with: rg-kernel-build install-preflight %s\n' "$lane"
-        printf 'install command after fixing preflight: '
-    fi
-    install_command_text "$lane"
+print_install_command() {
+    install_preflight >/dev/null
+    install_command_text
 }
 
 cmd=${1:-list}
 case "$cmd" in
     list)
-        list_lanes
+        list_policy
+        ;;
+    jobs)
+        bounded_jobs
+        ;;
+    deps-command)
+        deps_command
+        ;;
+    oomd-command)
+        oomd_command
+        ;;
+    refind-command)
+        refind_command "${2:-}"
+        ;;
+    patch-report)
+        patch_report
         ;;
     preflight)
-        preflight
+        local_preflight
         ;;
-    remote-preflight)
-        remote_preflight
-        ;;
-    package-base)
-        validate_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
-        lane_package_base "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+    update)
+        prepare_pkgbuild
         ;;
     prepare)
-        prepare_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        prepare_pkgbuild
         ;;
     build)
-        build_lane "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        build_kernel
         ;;
-    build-all)
-        for lane in $RG_KERNEL_LANES; do
-            build_lane "$lane"
-        done
+    package-base)
+        package_base
         ;;
     install-preflight)
-        install_preflight "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        install_preflight
         ;;
     install-command)
-        print_install_command "${2:-$RG_KERNEL_RECOMMENDED_LAPTOP_LANE}"
+        print_install_command
         ;;
     -h|--help|help)
         usage
