@@ -29,4 +29,95 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: la
 RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scx_mode: rusty' >/dev/null \
     || fail "build-heavy must select scx_rusty"
 
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+mkdir -p "$tmpdir/bin" "$tmpdir/home/.local/bin" "$tmpdir/root"
+
+cat >"$tmpdir/bin/fake-sudo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=${RG_X1GEN11_FAKE_ROOT:?}
+
+map_path() {
+    case "$1" in
+    /etc/* | /sys/*) printf '%s%s\n' "$root" "$1" ;;
+    *) printf '%s\n' "$1" ;;
+    esac
+}
+
+cmd=${1:?}
+shift || true
+case "$cmd" in
+mkdir)
+    if [ "${1:-}" = "-p" ]; then
+        shift
+        for path in "$@"; do
+            mkdir -p "$(map_path "$path")"
+        done
+    else
+        printf 'fake-sudo: unsupported mkdir args: %s\n' "$*" >&2
+        exit 2
+    fi
+    ;;
+tee)
+    target=${1:?}
+    mapped=$(map_path "$target")
+    mkdir -p "$(dirname "$mapped")"
+    cat >"$mapped"
+    ;;
+systemctl)
+    printf 'sudo systemctl %s\n' "$*" >>"$root/commands.log"
+    ;;
+*)
+    printf 'fake-sudo: unsupported command: %s\n' "$cmd" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$tmpdir/bin/fake-sudo"
+
+cat >"$tmpdir/bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'systemctl %s\n' "$*" >>"${RG_X1GEN11_FAKE_ROOT:?}/commands.log"
+SH
+chmod +x "$tmpdir/bin/systemctl"
+
+cat >"$tmpdir/home/.local/bin/rg-sched-ladder" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'rg-sched-ladder %s\n' "$*" >>"${RG_X1GEN11_FAKE_ROOT:?}/commands.log"
+SH
+chmod +x "$tmpdir/home/.local/bin/rg-sched-ladder"
+
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$tmpdir/state" \
+    RG_X1GEN11_SUDO="$tmpdir/bin/fake-sudo" \
+    RG_X1GEN11_FAKE_ROOT="$tmpdir/root" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" apply travel >/dev/null
+
+test "$(cat "$tmpdir/state/active-profile")" = travel \
+    || fail "apply must record the active profile"
+test -r "$tmpdir/root/etc/systemd/zram-generator.conf.d/10-rg-profile.conf" \
+    || fail "apply must create the zram-generator drop-in"
+rg -q 'zram-size = ram / 4' "$tmpdir/root/etc/systemd/zram-generator.conf.d/10-rg-profile.conf" \
+    || fail "travel apply must write the travel zram size"
+rg -q 'sudo systemctl daemon-reload' "$tmpdir/root/commands.log" \
+    || fail "apply must reload systemd for zram-generator"
+rg -q 'sudo systemctl restart systemd-zram-setup@zram0.service' "$tmpdir/root/commands.log" \
+    || fail "apply must restart the zram setup unit"
+rg -q 'systemctl --user set-property browser.slice MemoryHigh=5G' "$tmpdir/root/commands.log" \
+    || fail "apply must set the browser slice cap"
+rg -q 'systemctl --user set-property build.slice MemoryHigh=8G' "$tmpdir/root/commands.log" \
+    || fail "apply must set the build slice cap"
+rg -q 'rg-sched-ladder switch lavd' "$tmpdir/root/commands.log" \
+    || fail "apply must switch the scheduler ladder"
+if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
+    rg -q '^powersave$' "$tmpdir/root/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor" \
+        || fail "apply must write CPU governors through sudo"
+fi
+
 printf 'ok\n'

@@ -97,7 +97,7 @@ write_scaling_governor() {
         [ -d "$cpu" ] || continue
         path="$cpu/cpufreq/scaling_governor"
         avail="$cpu/cpufreq/scaling_available_governors"
-        [ -w "$path" ] || continue
+        [ -e "$path" ] || continue
         if [ -r "$avail" ] && ! grep -qw "$governor" "$avail"; then
             printf 'skip %s: governor %s unavailable\n' "$path" "$governor" >&2
             continue
@@ -132,7 +132,8 @@ write_iwl_power_save() {
 
 write_zram_size() {
     local expr="$1"
-    local drop_in=/etc/systemd/zram-generator.conf.d/10-rg-profile.conf
+    local drop_in_dir=/etc/systemd/zram-generator.conf.d
+    local drop_in="$drop_in_dir/10-rg-profile.conf"
     local content
     content="# Managed by rg-x1gen11-profile
 [zram0]
@@ -141,6 +142,7 @@ compression-algorithm = zstd
 swap-priority = 100
 fs-type = swap
 "
+    $SUDO mkdir -p "$drop_in_dir"
     printf '%s' "$content" | $SUDO tee "$drop_in" >/dev/null
     $SUDO systemctl daemon-reload
     $SUDO systemctl restart systemd-zram-setup@zram0.service 2>/dev/null || true
