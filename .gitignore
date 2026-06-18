@@ -76,6 +76,7 @@ Temporary Items
 
 # Build/staging directory
 src/
+.kernel-build/
 
 # Private config (sealed in vault, never commit)
 private_dot_codex/
