@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-damon-reclaim-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-damon-reclaim"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$script" || fail "missing DAMON reclaim helper"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+missing="$tmpdir/missing/enabled"
+enabled="$tmpdir/enabled"
+fake_sudo="$tmpdir/fake-sudo"
+
+cat >"$fake_sudo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+cmd=${1:?}
+shift || true
+case "$cmd" in
+tee)
+    target=${1:?}
+    mkdir -p "$(dirname "$target")"
+    cat >"$target"
+    ;;
+*)
+    printf 'fake-sudo: unsupported command: %s\n' "$cmd" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$fake_sudo"
+
+RG_DAMON_ENABLED_PATH="$missing" "$script" status | rg -q 'damon_reclaim: unavailable' \
+    || fail "status should report unavailable when DAMON_RECLAIM is absent"
+RG_DAMON_ENABLED_PATH="$missing" "$script" disable | rg -q 'damon_reclaim: unavailable' \
+    || fail "disable should be a no-op when DAMON_RECLAIM is absent"
+if RG_DAMON_ENABLED_PATH="$missing" "$script" enable >/tmp/rg-damon-enable.out 2>&1; then
+    fail "enable should fail when DAMON_RECLAIM is absent"
+fi
+rg -q 'DAMON_RECLAIM not available' /tmp/rg-damon-enable.out \
+    || fail "enable failure should explain missing DAMON_RECLAIM"
+
+printf 'N\n' >"$enabled"
+RG_DAMON_ENABLED_PATH="$enabled" RG_DAMON_SUDO="$fake_sudo" "$script" enable >/dev/null
+test "$(cat "$enabled")" = Y || fail "enable should write Y"
+RG_DAMON_ENABLED_PATH="$enabled" RG_DAMON_SUDO="$fake_sudo" "$script" disable >/dev/null
+test "$(cat "$enabled")" = N || fail "disable should write N"
+
+printf 'ok\n'

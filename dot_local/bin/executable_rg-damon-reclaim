@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-ENABLED_PATH=/sys/module/damon_reclaim/parameters/enabled
+ENABLED_PATH=${RG_DAMON_ENABLED_PATH:-/sys/module/damon_reclaim/parameters/enabled}
 SUDO="${RG_DAMON_SUDO:-sudo}"
 
 usage() {
@@ -39,6 +39,15 @@ write_enabled() {
     echo "$value" | $SUDO tee "$ENABLED_PATH" >/dev/null
 }
 
+cmd_disable() {
+    if [ ! -f "$ENABLED_PATH" ]; then
+        cmd_status
+        return 0
+    fi
+    write_enabled N
+    cmd_status
+}
+
 cmd_status() {
     if [ ! -f "$ENABLED_PATH" ]; then
         printf 'damon_reclaim: unavailable\n'
@@ -53,7 +62,7 @@ main() {
     case "$cmd" in
     status) cmd_status ;;
     enable) write_enabled Y; cmd_status ;;
-    disable) write_enabled N; cmd_status ;;
+    disable) cmd_disable ;;
     -h | --help | "") usage ;;
     *) die "unknown command: $cmd" ;;
     esac
