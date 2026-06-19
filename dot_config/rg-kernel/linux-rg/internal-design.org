@@ -321,8 +321,8 @@ The host fragment keeps modules for:
 - NVMe, USB4, Thunderbolt, Type-C, UCSI, HID multitouch, and I2C HID.
 
 The fragment avoids forcing the performance governor. =schedutil= remains the
-default governor, PCIe ASPM powersave and power-supersave stay available, and
-the kernel keeps hibernation support for the existing encrypted btrfs system.
+default governor, PCIe ASPM power-supersave is selected, and the kernel keeps
+hibernation support for the existing encrypted btrfs system.
 
 * Build And Install Path
 
