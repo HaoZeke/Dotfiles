@@ -58,6 +58,8 @@ usage:
   rg-kernel-build deps-command
   rg-kernel-build oomd-command
   rg-kernel-build refind-command [output]
+  rg-kernel-build refind-status
+  rg-kernel-build refind-install-script [output]
   rg-kernel-build patch-report
   rg-kernel-build preflight
   rg-kernel-build update
@@ -172,6 +174,21 @@ oomd_command() {
     printf 'rg-oomd-profile-install %s\n' "$RG_KERNEL_OOMD_CONFIG"
 }
 
+boot_dir() {
+    printf '%s\n' "${RG_KERNEL_BOOT_DIR:-/boot}"
+}
+
+shell_quote() {
+    printf '%q' "$1"
+}
+
+refind_options_escape() {
+    local value=$1
+    value=${value//\\/\\\\}
+    value=${value//\"/\\\"}
+    printf '%s\n' "$value"
+}
+
 refind_options() {
     tr ' ' '\n' </proc/cmdline \
         | awk '
@@ -181,6 +198,31 @@ refind_options() {
             {print}
         ' \
         | paste -sd' ' -
+}
+
+refind_conf_candidates() {
+    local bd
+    bd=$(boot_dir)
+    if [ -n "${RG_KERNEL_REFIND_CONF:-}" ]; then
+        printf '%s\n' "$RG_KERNEL_REFIND_CONF"
+    fi
+    printf '%s\n' \
+        "$bd/EFI/refind/refind.conf" \
+        "$bd/efi/EFI/refind/refind.conf" \
+        "/boot/efi/EFI/refind/refind.conf" \
+        "/efi/EFI/refind/refind.conf"
+}
+
+detect_refind_conf() {
+    local conf
+    while IFS= read -r conf; do
+        [ -n "$conf" ] || continue
+        if [ -f "$conf" ]; then
+            printf '%s\n' "$conf"
+            return 0
+        fi
+    done < <(refind_conf_candidates)
+    return 1
 }
 
 refind_command() {
@@ -198,6 +240,118 @@ menuentry "Arch Linux (linux-rg)" {
 EOF
     printf 'wrote %s\n' "$out"
     printf 'include or paste this stanza into the active rEFInd configuration after installing linux-rg packages.\n'
+}
+
+refind_status() {
+    local bd conf file path state
+    bd=$(boot_dir)
+    printf 'boot dir: %s\n' "$bd"
+    if conf=$(detect_refind_conf); then
+        printf 'rEFInd config: %s\n' "$conf"
+    else
+        printf 'rEFInd config: missing\n'
+        printf 'searched:\n'
+        refind_conf_candidates | sed 's/^/  /'
+    fi
+    printf '\nboot images:\n'
+    for file in \
+        vmlinuz-linux \
+        initramfs-linux.img \
+        vmlinuz-linux-rg \
+        initramfs-linux-rg.img \
+        intel-ucode.img; do
+        path="$bd/$file"
+        if [ -e "$path" ]; then
+            state=present
+        else
+            state=missing
+        fi
+        printf '  %-28s %s\n' "$file" "$state"
+    done
+    printf '\nartifacts: %s\n' "$(artifact_dir)"
+    if compgen -G "$(artifact_dir)/$RG_KERNEL_PACKAGE_BASE-*.pkg.tar.*" >/dev/null; then
+        printf 'package artifacts: present\n'
+    else
+        printf 'package artifacts: missing\n'
+    fi
+}
+
+refind_install_script() {
+    local out bd conf options escaped_options bd_q conf_q
+    out=${1:-/tmp/rg-linux-rg-refind-install.sh}
+    bd=$(boot_dir)
+    conf=${RG_KERNEL_REFIND_CONF:-}
+    if [ -z "$conf" ]; then
+        conf=$(detect_refind_conf || true)
+    fi
+    if [ -z "$conf" ]; then
+        conf="$bd/EFI/refind/refind.conf"
+    fi
+    options=$(refind_options)
+    escaped_options=$(refind_options_escape "$options")
+    bd_q=$(shell_quote "$bd")
+    conf_q=$(shell_quote "$conf")
+
+    cat >"$out" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "\$(id -u)" -ne 0 ]; then
+    printf 'run as root: sudo bash %s\n' "\$0" >&2
+    exit 2
+fi
+
+boot_dir=$bd_q
+refind_conf=$conf_q
+marker_begin="# BEGIN linux-rg managed entry"
+
+require_file() {
+    local path=\$1
+    if [ ! -e "\$path" ]; then
+        printf 'missing required boot file: %s\n' "\$path" >&2
+        exit 1
+    fi
+}
+
+require_file "\$boot_dir/vmlinuz-linux"
+require_file "\$boot_dir/initramfs-linux.img"
+require_file "\$boot_dir/vmlinuz-linux-rg"
+require_file "\$boot_dir/initramfs-linux-rg.img"
+require_file "\$boot_dir/intel-ucode.img"
+
+if [ ! -f "\$refind_conf" ]; then
+    printf 'missing rEFInd config: %s\n' "\$refind_conf" >&2
+    exit 1
+fi
+
+backup="\$refind_conf.rg-linux-rg-\$(date +%Y%m%d-%H%M%S).bak"
+cp -a "\$refind_conf" "\$backup"
+printf 'backup: %s\n' "\$backup"
+
+if grep -Fq "\$marker_begin" "\$refind_conf"; then
+    printf 'linux-rg rEFInd entry already present in %s\n' "\$refind_conf"
+    exit 0
+fi
+
+cat >>"\$refind_conf" <<'STANZA'
+
+# BEGIN linux-rg managed entry
+menuentry "Arch Linux (linux-rg)" {
+    icon /EFI/refind/icons/os_arch.png
+    loader /vmlinuz-linux-rg
+    initrd /intel-ucode.img
+    initrd /initramfs-linux-rg.img
+    options "$escaped_options"
+}
+# END linux-rg managed entry
+STANZA
+
+printf 'added linux-rg rEFInd entry to %s\n' "\$refind_conf"
+printf 'stock kernel remains available via existing rEFInd entries; do not change the default until suspend/resume validation passes.\n'
+EOF
+    chmod 0755 "$out"
+    printf 'wrote %s\n' "$out"
+    printf 'run after installing linux-rg packages: sudo bash %s\n' "$out"
 }
 
 patch_report() {
@@ -256,12 +410,13 @@ missing_fallbacks() {
 }
 
 missing_boot_images() {
-    local pkg image missing=0
+    local pkg image missing=0 bd
+    bd=$(boot_dir)
     for pkg in $RG_KERNEL_REQUIRED_FALLBACKS; do
         case "$pkg" in
-            linux) image=/boot/vmlinuz-linux ;;
-            linux-lts) image=/boot/vmlinuz-linux-lts ;;
-            linux-zen) image=/boot/vmlinuz-linux-zen ;;
+            linux) image="$bd/vmlinuz-linux" ;;
+            linux-lts) image="$bd/vmlinuz-linux-lts" ;;
+            linux-zen) image="$bd/vmlinuz-linux-zen" ;;
             *) continue ;;
         esac
         if [ ! -e "$image" ]; then
@@ -273,7 +428,8 @@ missing_boot_images() {
 }
 
 recommended_fallback_warnings() {
-    local pkg image
+    local pkg image bd
+    bd=$(boot_dir)
     command -v pacman >/dev/null 2>&1 || return 0
     for pkg in ${RG_KERNEL_RECOMMENDED_FALLBACKS:-}; do
         if ! pacman -Qi "$pkg" >/dev/null 2>&1; then
@@ -281,9 +437,9 @@ recommended_fallback_warnings() {
             continue
         fi
         case "$pkg" in
-            linux) image=/boot/vmlinuz-linux ;;
-            linux-lts) image=/boot/vmlinuz-linux-lts ;;
-            linux-zen) image=/boot/vmlinuz-linux-zen ;;
+            linux) image="$bd/vmlinuz-linux" ;;
+            linux-lts) image="$bd/vmlinuz-linux-lts" ;;
+            linux-zen) image="$bd/vmlinuz-linux-zen" ;;
             *) continue ;;
         esac
         if [ ! -e "$image" ]; then
@@ -705,6 +861,12 @@ case "$cmd" in
         ;;
     refind-command)
         refind_command "${2:-}"
+        ;;
+    refind-status)
+        refind_status
+        ;;
+    refind-install-script)
+        refind_install_script "${2:-}"
         ;;
     patch-report)
         patch_report

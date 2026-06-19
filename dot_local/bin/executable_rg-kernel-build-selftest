@@ -218,6 +218,10 @@ rg -Fq 'oomd-command)' "$launcher" \
     || fail "launcher does not route the oomd-command command"
 rg -Fq 'refind-command)' "$launcher" \
     || fail "launcher does not route the refind-command command"
+rg -Fq 'refind-status)' "$launcher" \
+    || fail "launcher does not route the refind-status command"
+rg -Fq 'refind-install-script)' "$launcher" \
+    || fail "launcher does not route the refind-install-script command"
 rg -Fq 'update)' "$launcher" \
     || fail "launcher does not route the update command"
 
@@ -278,6 +282,44 @@ rg -q 'loader /vmlinuz-linux-rg' "$refind_tmp" \
     || fail "refind-command did not point at vmlinuz-linux-rg"
 rg -q 'initrd /initramfs-linux-rg.img' "$refind_tmp" \
     || fail "refind-command did not point at initramfs-linux-rg.img"
+
+boot_tmp=$(mktemp -d /tmp/rg-kernel-boot.XXXXXX)
+mkdir -p "$boot_tmp/EFI/refind"
+printf '# refind test config\n' >"$boot_tmp/EFI/refind/refind.conf"
+for boot_file in \
+    vmlinuz-linux \
+    initramfs-linux.img \
+    vmlinuz-linux-rg \
+    initramfs-linux-rg.img \
+    intel-ucode.img; do
+    : >"$boot_tmp/$boot_file"
+done
+
+refind_status=$(
+    RG_KERNEL_POLICY="$policy" \
+        RG_KERNEL_BOOT_DIR="$boot_tmp" \
+        RG_KERNEL_REFIND_CONF="$boot_tmp/EFI/refind/refind.conf" \
+        "$launcher" refind-status
+)
+case "$refind_status" in
+    *"boot dir: $boot_tmp"*'rEFInd config: '*'vmlinuz-linux-rg'*'present'*) ;;
+    *) printf '%s\n' "$refind_status" >&2; fail "refind-status does not report fake boot tree" ;;
+esac
+
+refind_script=$(mktemp /tmp/rg-kernel-refind-install.XXXXXX)
+RG_KERNEL_POLICY="$policy" \
+    RG_KERNEL_BOOT_DIR="$boot_tmp" \
+    RG_KERNEL_REFIND_CONF="$boot_tmp/EFI/refind/refind.conf" \
+    "$launcher" refind-install-script "$refind_script" >/tmp/rg-kernel-refind-install.out
+test -x "$refind_script" || fail "refind-install-script did not create an executable script"
+bash -n "$refind_script" || fail "generated refind install script is not valid bash"
+shellcheck "$refind_script" || fail "generated refind install script fails shellcheck"
+rg -q 'BEGIN linux-rg managed entry' "$refind_script" \
+    || fail "generated refind install script lacks managed entry marker"
+rg -Fq 'require_file "$boot_dir/vmlinuz-linux"' "$refind_script" \
+    || fail "generated refind install script must require stock fallback kernel"
+rg -Fq 'require_file "$boot_dir/vmlinuz-linux-rg"' "$refind_script" \
+    || fail "generated refind install script must require linux-rg kernel image"
 
 for json_text in \
     '"pressure_rising_beyond"' \
