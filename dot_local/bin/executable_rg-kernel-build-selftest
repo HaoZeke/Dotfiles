@@ -51,7 +51,7 @@ rg -q '^RG_KERNEL_CONFIG_FRAGMENT="\$HOME/\.config/rg-kernel/linux-rg/config-fra
     || fail "kernel build policy does not define the host config fragment"
 rg -q '^RG_KERNEL_OOMD_CONFIG="\$HOME/\.config/oomd/oomd-rgx1gen11\.json"$' "$policy" \
     || fail "kernel build policy does not define the host oomd profile"
-rg -q '^RG_KERNEL_MIN_LOCAL_AVAIL_GIB=45$' "$policy" \
+rg -q '^RG_KERNEL_MIN_LOCAL_AVAIL_GIB=10$' "$policy" \
     || fail "kernel build policy should fit the current local free-space budget"
 rg -q '^RG_KERNEL_LOCAL_CPU_PERCENT=80$' "$policy" \
     || fail "kernel build policy must cap local CPU use"
