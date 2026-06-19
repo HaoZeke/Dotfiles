@@ -31,6 +31,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_config/systemd/user/rg-sched@.service" \
     "$repo/dot_local/bin/executable_rg-psi-snapshot" \
+    "$repo/dot_local/bin/executable_rg-memory-sysctl-check" \
+    "$repo/dot_local/bin/executable_rg-memory-sysctl-check-selftest" \
     "$repo/dot_local/bin/executable_rg-damon-reclaim" \
     "$repo/dot_local/bin/executable_rg-damon-reclaim-selftest" \
     "$repo/dot_local/bin/executable_browser-media-watchdog" \

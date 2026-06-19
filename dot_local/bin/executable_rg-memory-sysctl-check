@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-memory-sysctl-check).
+
+set -euo pipefail
+
+proc_root=/proc/sys
+config_file=/etc/sysctl.d/99-memory.conf
+check_config=1
+
+usage() {
+    cat <<'USAGE'
+usage: rg-memory-sysctl-check [OPTIONS]
+
+Check live rgx1gen11 memory sysctls and the managed sysctl drop-in.
+
+Options:
+  --proc-root PATH   Read live sysctls from PATH instead of /proc/sys.
+  --config PATH      Check PATH instead of /etc/sysctl.d/99-memory.conf.
+  --no-config        Check live sysctls only.
+  -h, --help
+USAGE
+}
+
+die() {
+    printf 'rg-memory-sysctl-check: %s\n' "$*" >&2
+    exit 2
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+    --proc-root)
+        [ "$#" -ge 2 ] || die "--proc-root requires a path"
+        proc_root=$2
+        shift 2
+        ;;
+    --config)
+        [ "$#" -ge 2 ] || die "--config requires a path"
+        config_file=$2
+        check_config=1
+        shift 2
+        ;;
+    --no-config)
+        check_config=0
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        die "unknown argument: $1"
+        ;;
+    esac
+done
+
+keys=(
+    vm.swappiness
+    vm.page-cluster
+    vm.vfs_cache_pressure
+    vm.watermark_scale_factor
+    vm.compaction_proactiveness
+    vm.min_free_kbytes
+    vm.dirty_ratio
+    vm.dirty_background_ratio
+    vm.dirty_expire_centisecs
+    vm.dirty_writeback_centisecs
+)
+
+expected_value() {
+    case "$1" in
+    vm.swappiness) printf '100\n' ;;
+    vm.page-cluster) printf '0\n' ;;
+    vm.vfs_cache_pressure) printf '100\n' ;;
+    vm.watermark_scale_factor) printf '50\n' ;;
+    vm.compaction_proactiveness) printf '0\n' ;;
+    vm.min_free_kbytes) printf '262144\n' ;;
+    vm.dirty_ratio) printf '10\n' ;;
+    vm.dirty_background_ratio) printf '5\n' ;;
+    vm.dirty_expire_centisecs) printf '3000\n' ;;
+    vm.dirty_writeback_centisecs) printf '1500\n' ;;
+    *) die "no expected value for $1" ;;
+    esac
+}
+
+sysctl_path() {
+    local key="$1"
+    printf '%s/%s\n' "$proc_root" "${key//.//}"
+}
+
+read_scalar() {
+    local path="$1"
+    tr -d '[:space:]' <"$path"
+}
+
+config_value() {
+    local key="$1" file="$2"
+    awk -F= -v wanted="$key" '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        {
+            key = $1
+            value = $2
+            sub(/#.*/, "", value)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+            if (key == wanted) {
+                found = value
+            }
+        }
+        END {
+            if (found == "") {
+                exit 1
+            }
+            print found
+        }
+    ' "$file"
+}
+
+failures=0
+
+for key in "${keys[@]}"; do
+    path=$(sysctl_path "$key")
+    expected=$(expected_value "$key")
+    if [ ! -r "$path" ]; then
+        printf 'FAIL: missing live sysctl %s at %s\n' "$key" "$path" >&2
+        failures=1
+        continue
+    fi
+    live=$(read_scalar "$path")
+    if [ "$live" != "$expected" ]; then
+        printf 'FAIL: %s live=%s expected=%s path=%s\n' \
+            "$key" "$live" "$expected" "$path" >&2
+        failures=1
+    fi
+done
+
+if [ "$check_config" = "1" ]; then
+    if [ ! -r "$config_file" ]; then
+        printf 'FAIL: missing sysctl config %s\n' "$config_file" >&2
+        failures=1
+    else
+        for key in "${keys[@]}"; do
+            expected=$(expected_value "$key")
+            if ! configured=$(config_value "$key" "$config_file"); then
+                printf 'FAIL: missing config sysctl %s in %s\n' "$key" "$config_file" >&2
+                failures=1
+                continue
+            fi
+            if [ "$configured" != "$expected" ]; then
+                printf 'FAIL: %s config=%s expected=%s file=%s\n' \
+                    "$key" "$configured" "$expected" "$config_file" >&2
+                failures=1
+            fi
+        done
+    fi
+fi
+
+if [ "$failures" != "0" ]; then
+    exit 1
+fi
+
+printf 'ok: memory sysctl profile matches rgx1gen11 policy\n'

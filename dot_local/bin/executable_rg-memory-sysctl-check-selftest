@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-memory-sysctl-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-memory-sysctl-check"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing executable memory sysctl checker"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+proc_root="$tmpdir/proc/sys"
+vm_root="$proc_root/vm"
+conf="$tmpdir/99-memory.conf"
+mkdir -p "$vm_root"
+
+write_live() {
+    printf '%s\n' "$2" >"$vm_root/$1"
+}
+
+write_live swappiness 100
+write_live page-cluster 0
+write_live vfs_cache_pressure 100
+write_live watermark_scale_factor 50
+write_live compaction_proactiveness 0
+write_live min_free_kbytes 262144
+write_live dirty_ratio 10
+write_live dirty_background_ratio 5
+write_live dirty_expire_centisecs 3000
+write_live dirty_writeback_centisecs 1500
+
+cat >"$conf" <<'EOF'
+# Managed test fixture
+vm.swappiness = 100
+vm.page-cluster = 0
+vm.vfs_cache_pressure = 100
+vm.watermark_scale_factor = 50
+vm.compaction_proactiveness = 0
+vm.min_free_kbytes = 262144
+vm.dirty_ratio = 10
+vm.dirty_background_ratio = 5
+vm.dirty_expire_centisecs = 3000
+vm.dirty_writeback_centisecs = 1500
+EOF
+
+"$script" --proc-root "$proc_root" --config "$conf" >"$tmpdir/ok.out" \
+    || fail "correct fixture should pass"
+rg -q '^ok: memory sysctl profile matches rgx1gen11 policy$' "$tmpdir/ok.out" \
+    || fail "successful check should report profile match"
+
+write_live dirty_expire_centisecs 1500
+if "$script" --proc-root "$proc_root" --config "$conf" >"$tmpdir/live.out" 2>&1; then
+    fail "live dirty_expire drift should fail"
+fi
+rg -q 'vm.dirty_expire_centisecs live=1500 expected=3000' "$tmpdir/live.out" \
+    || fail "live drift report should identify dirty_expire"
+write_live dirty_expire_centisecs 3000
+
+sed -i 's/vm.dirty_writeback_centisecs = 1500/vm.dirty_writeback_centisecs = 500/' "$conf"
+if "$script" --proc-root "$proc_root" --config "$conf" >"$tmpdir/config.out" 2>&1; then
+    fail "config dirty_writeback drift should fail"
+fi
+rg -q 'vm.dirty_writeback_centisecs config=500 expected=1500' "$tmpdir/config.out" \
+    || fail "config drift report should identify dirty_writeback"
+sed -i 's/vm.dirty_writeback_centisecs = 500/vm.dirty_writeback_centisecs = 1500/' "$conf"
+
+trash="$tmpdir/missing"
+mv "$vm_root/dirty_ratio" "$trash"
+if "$script" --proc-root "$proc_root" --config "$conf" >"$tmpdir/missing.out" 2>&1; then
+    fail "missing live sysctl file should fail"
+fi
+rg -q 'missing live sysctl vm.dirty_ratio' "$tmpdir/missing.out" \
+    || fail "missing live file report should name dirty_ratio"
+mv "$trash" "$vm_root/dirty_ratio"
+
+"$script" --proc-root "$proc_root" --no-config >/dev/null \
+    || fail "--no-config should check live values only"
+
+printf 'ok\n'
