@@ -197,7 +197,7 @@ switch_scheduler() {
     scx_name=$(scheduler_scx_name "$sched_id")
     [ -n "$scx_name" ] || die "scheduler $sched_id has no scx_name"
     require_sched_ext
-    command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed (pacman -S scx_loader scx-scheds)"
+    command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed (pacman -S scx-tools scx-scheds)"
     stop_asa
     printf 'loading %s\n' "$scx_name"
     "${SCX_LOADER[@]}" switch "$scx_name"
@@ -233,7 +233,7 @@ cmd_bench() {
 cmd_packages() {
     cat <<'PKG'
 # sched_ext userspace stack (Arch):
-sudo pacman -S --needed scx_loader scx-scheds
+sudo pacman -S --needed scx-tools scx-scheds
 
 # linux-rg kernel (local build):
 rg-kernel-build install-command

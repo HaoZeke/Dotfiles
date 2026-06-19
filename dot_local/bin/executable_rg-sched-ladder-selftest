@@ -30,6 +30,8 @@ RG_SCHED_LADDER="$ladder" "$script" list | rg '^off$' >/dev/null \
 
 RG_SCHED_LADDER="$ladder" "$script" describe lavd | rg 'scx_lavd' >/dev/null \
     || fail "lavd must map to scx_lavd"
+RG_SCHED_LADDER="$ladder" "$script" packages | rg 'scx-tools scx-scheds' >/dev/null \
+    || fail "packages must name Arch scx-tools package"
 
 rg -q 'interactive=scx_lavd' "$asa" || fail "ASA mapping missing interactive expert"
 rg -q 'EEVDF is mainline' "$ladder" || fail "ladder must document EEVDF as baseline not ceiling"
