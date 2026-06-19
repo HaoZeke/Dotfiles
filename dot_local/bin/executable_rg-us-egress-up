@@ -74,6 +74,45 @@ require_conf_key() {
     fi
 }
 
+verify_route_uses_tailscale() {
+    local label="$1" target="$2" route
+    route="$(ip route get "$target" 2>/dev/null || true)"
+    if [ -z "$route" ]; then
+        printf 'no route found for %s (%s)\n' "$target" "$label" >&2
+        return 1
+    fi
+    printf '%s route: %s\n' "$label" "$route"
+    case "$route" in
+        *" dev tailscale0 "*|*" dev tailscale0")
+            return 0
+            ;;
+    esac
+    printf '%s does not route through tailscale0\n' "$label" >&2
+    return 1
+}
+
+verify_tailscale_probe_name() {
+    local name="${RG_TAILSCALE_ROUTE_PROBE_NAME:-}" addr found=0
+    [ -n "$name" ] || return 0
+
+    while IFS= read -r addr; do
+        case "$addr" in
+            ''|*[!0-9.]*)
+                continue
+                ;;
+        esac
+        found=1
+        verify_route_uses_tailscale "$name" "$addr"
+    done <<EOF
+$(dig @100.100.100.100 "$name" A +time=5 +tries=1 +short 2>/dev/null || true)
+EOF
+
+    if [ "$found" -eq 0 ]; then
+        printf 'Tailscale DNS probe produced no IPv4 answers for %s\n' "$name" >&2
+        return 1
+    fi
+}
+
 require_conf_key PrivateKey
 require_conf_key Address
 require_conf_key PublicKey
@@ -103,8 +142,20 @@ install -d -m 0700 /etc/wireguard
 tmp_conf="$(mktemp)"
 trap 'rm -f "$tmp_conf"' EXIT
 awk '
+    BEGIN { injected = 0 }
+    function inject_hooks() {
+        if (injected == 0) {
+            print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
+            print "PostUp = ip -6 rule add pref 5206 lookup 52 2>/dev/null || true"
+            print "PreDown = ip -4 rule del pref 5206 lookup 52 2>/dev/null || true"
+            print "PreDown = ip -6 rule del pref 5206 lookup 52 2>/dev/null || true"
+            injected = 1
+        }
+    }
     /^[[:space:]]*DNS[[:space:]]*=/ { next }
+    /^[[:space:]]*\[Peer\][[:space:]]*$/ { inject_hooks() }
     { print }
+    END { inject_hooks() }
 ' "$conf" >"$tmp_conf"
 install -m 0600 "$tmp_conf" "$runtime_conf"
 
@@ -144,6 +195,8 @@ printf 'Lean release host resolves via local DNS\n'
 
 printf '\n== route checks ==\n'
 ip route get 1.1.1.1
+verify_route_uses_tailscale "Tailscale DNS" 100.100.100.100
+verify_tailscale_probe_name
 ip -6 route get 2606:4700:4700::1111 || true
 
 printf '\n== egress checks ==\n'
