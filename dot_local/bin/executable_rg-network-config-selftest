@@ -173,6 +173,10 @@ rg -F -q 'systemctl start "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not start WireGuard under systemd ownership"
 rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not verify the WireGuard unit remains active"
+cleanup_call_line=$(rg -n '^cleanup_us_egress_state$' "$us_egress_up" | head -n 1 | cut -d: -f1)
+dns_fix_call_line=$(rg -n '^if command -v "\$dns_fix"' "$us_egress_up" | cut -d: -f1)
+test -n "$cleanup_call_line" && test -n "$dns_fix_call_line" && test "$cleanup_call_line" -lt "$dns_fix_call_line" \
+    || fail "US egress helper repairs DNS before clearing stale WireGuard routes"
 ! rg -q 'PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|/home/rgoswami/Downloads' "$fix_local_dns" "$us_egress_up" \
     || fail "managed network helpers contain provider-local paths or WireGuard secret material"
 
