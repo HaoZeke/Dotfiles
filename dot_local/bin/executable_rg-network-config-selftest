@@ -149,8 +149,8 @@ rg -q 'releases\.lean-lang\.org' "$laptop_script" \
     || fail "Control D daemon must not be disabled by the managed resolver setup"
 rg -q '/etc/unbound/unbound.conf.d/rg-local.conf' "$laptop_script" \
     || fail "hardened Unbound config is not installed"
-rg -q 'auto-trust-anchor-file: "/trusted-key.key"' "$laptop_script" \
-    || fail "Unbound trust anchor path is not valid inside the Arch chroot"
+rg -q 'auto-trust-anchor-file: "/etc/unbound/trusted-key.key"' "$laptop_script" \
+    || fail "Unbound trust anchor path must match the non-chroot resolver config"
 rg -q '/etc/systemd/resolved.conf.d/99-rg-local-dns.conf' "$laptop_script" \
     || fail "systemd-resolved local resolver drop-in is not installed"
 rg -U -q 'DNS=\nDNS=127\.0\.0\.1' "$laptop_script" \
