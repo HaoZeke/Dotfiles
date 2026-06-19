@@ -106,7 +106,7 @@ missing_pass_err="$tmp_net/weather-missing-pass.err"
 missing_pass_out=$(
     PATH="$tmp_net/bin:$PATH" \
     HOME="$tmp_net/home" \
-    OPENWEATHER_API_KEY= \
+    OPENWEATHER_API_KEY='' \
         bash "$rendered_weather" reykjavik 2>"$missing_pass_err"
 )
 test ! -s "$missing_pass_err" \
