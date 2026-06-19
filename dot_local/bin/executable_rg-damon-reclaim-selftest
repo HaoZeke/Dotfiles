@@ -67,6 +67,13 @@ test "$(cat "$param_dir/quota_ms")" = 20 || fail "memory-pressure should set quo
 test "$(cat "$param_dir/quota_sz")" = 536870912 || fail "memory-pressure should set quota_sz"
 test "$(cat "$param_dir/wmarks_mid")" = 450 || fail "memory-pressure should set wmarks_mid"
 test "$(cat "$param_dir/commit_inputs")" = Y || fail "profile enable should commit inputs"
+status_out="$tmpdir/status.out"
+RG_DAMON_PARAM_DIR="$param_dir" "$script" status >"$status_out"
+rg -q '^kdamond processes: [0-9]+$' "$status_out" \
+    || fail "status should print a single kdamond process count"
+if rg -qx '0' "$status_out"; then
+    fail "status should not print a raw duplicate pgrep count"
+fi
 
 root_script="$tmpdir/damon-root.sh"
 RG_DAMON_PARAM_DIR="$param_dir" "$script" root-script laptop "$root_script" >/dev/null

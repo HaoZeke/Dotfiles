@@ -156,7 +156,7 @@ cmd_status() {
         printf 'damon_reclaim: unavailable\n'
         return 0
     fi
-    local name
+    local name kdamond_count
     for name in \
         enabled quota_ms quota_sz quota_reset_interval_ms \
         wmarks_high wmarks_mid wmarks_low wmarks_interval \
@@ -166,7 +166,8 @@ cmd_status() {
         nr_reclaimed_regions bytes_reclaimed_regions nr_quota_exceeds; do
         printf '%s: %s\n' "$name" "$(read_param "$name")"
     done
-    printf 'kdamond processes: %s\n' "$(pgrep -c kdamond 2>/dev/null || echo 0)"
+    kdamond_count=$(pgrep -c kdamond 2>/dev/null || true)
+    printf 'kdamond processes: %s\n' "${kdamond_count:-0}"
 }
 
 cmd_root_script() {
