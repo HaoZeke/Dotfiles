@@ -137,6 +137,10 @@ rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
     || fail "Unbound does not forward default DNS to the local Control D listener"
 rg -q 'do-not-query-localhost: no' "$laptop_script" \
     || fail "Unbound cannot query the local Control D listener"
+rg -q 'chroot: ""' "$laptop_script" \
+    || fail "Unbound local resolver must not inherit the Arch package chroot"
+rg -q 'do-ip6: no' "$laptop_script" \
+    || fail "Unbound local resolver should avoid an unused IPv6 listener in this chain"
 rg -q 'releases\.lean-lang\.org' "$laptop_script" \
     || fail "Lean release domains do not bypass the Control D profile"
 ! rg -q 'disable --now unbound.service' "$laptop_script" \

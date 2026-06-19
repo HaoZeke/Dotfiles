@@ -308,12 +308,11 @@ unmanaged-devices=interface-name:wlan0
 UNBOUND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 server:
     interface: 127.0.0.1
-    interface: ::1
     port: 53
+    chroot: ""
     access-control: 127.0.0.0/8 allow
-    access-control: ::1 allow
     do-ip4: yes
-    do-ip6: yes
+    do-ip6: no
     do-udp: yes
     do-tcp: yes
     hide-identity: yes
