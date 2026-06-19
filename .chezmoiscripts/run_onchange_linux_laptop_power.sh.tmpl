@@ -363,6 +363,7 @@ server:
     port: 53
     chroot: ""
     access-control: 127.0.0.0/8 allow
+    module-config: "iterator"
     do-ip4: yes
     do-ip6: no
     do-udp: yes
@@ -370,21 +371,16 @@ server:
     hide-identity: yes
     hide-version: yes
     harden-glue: yes
-    harden-dnssec-stripped: yes
     harden-referral-path: yes
-    harden-algo-downgrade: yes
     qname-minimisation: yes
-    aggressive-nsec: yes
     prefetch: yes
     rrset-roundrobin: yes
-    use-caps-for-id: yes
     do-not-query-localhost: no
     private-address: 10.0.0.0/8
     private-address: 172.16.0.0/12
     private-address: 192.168.0.0/16
     private-address: fd00::/8
     private-address: fe80::/10
-    auto-trust-anchor-file: "/etc/unbound/trusted-key.key"
     tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
 
 include: "/etc/unbound/rg-forward-zones.conf"
