@@ -22,6 +22,14 @@ printf '%s\n' "$output" | rg -q 'memory-pressure' || fail "list missing memory-p
 
 RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'scaling_governor: powersave' >/dev/null \
     || fail "travel profile must use powersave governor"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scaling_governor: powersave' >/dev/null \
+    || fail "undocked-mixed must use powersave governor on active intel_pstate"
+RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'scaling_governor: powersave' >/dev/null \
+    || fail "memory-pressure must use powersave governor on active intel_pstate"
+RG_X1GEN11_PROFILES="$profiles" "$script" show docked-office | rg 'scaling_governor: powersave' >/dev/null \
+    || fail "docked-office must use powersave governor on active intel_pstate"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scaling_governor: performance' >/dev/null \
+    || fail "build-heavy must use performance governor"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'damon_reclaim: true' >/dev/null \
     || fail "memory-pressure must enable DAMON reclaim"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: lavd' >/dev/null \

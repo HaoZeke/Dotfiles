@@ -4,7 +4,7 @@
     "undocked-mixed": {
       "description": "Daily Sway + browser + occasional make -j9",
       "platform_profile": "balanced",
-      "scaling_governor": "schedutil",
+      "scaling_governor": "powersave",
       "iwlwifi_power_save": "Y",
       "zram_size": "ram / 2",
       "damon_reclaim": false,
@@ -26,7 +26,7 @@
     "memory-pressure": {
       "description": "Browser + VM + build concurrently; PSI and reclaim tuning",
       "platform_profile": "balanced",
-      "scaling_governor": "schedutil",
+      "scaling_governor": "powersave",
       "iwlwifi_power_save": "Y",
       "zram_size": "ram / 2",
       "damon_reclaim": true,
@@ -48,7 +48,7 @@
     "docked-office": {
       "description": "TB4 dock, external 4K, Ethernet",
       "platform_profile": "balanced",
-      "scaling_governor": "schedutil",
+      "scaling_governor": "powersave",
       "iwlwifi_power_save": "N",
       "zram_size": "ram / 2",
       "damon_reclaim": false,
