@@ -127,6 +127,12 @@ rg -q 'rg-weather-json iitk' "$bottom_bar" \
 
 rg -q 'unbound.service' "$laptop_script" \
     || fail "local resolver service is not managed"
+rg -q 'ctrld.service' "$laptop_script" \
+    || fail "Control D daemon presence is not checked before starting Unbound"
+rg -q 'disable --now unbound.service' "$laptop_script" \
+    || fail "Unbound is not disabled when Control D owns local DNS"
+! rg -q 'disable --now ctrld.service' "$laptop_script" \
+    || fail "Control D daemon must not be disabled by the managed resolver setup"
 rg -q '/etc/unbound/unbound.conf.d/rg-local.conf' "$laptop_script" \
     || fail "hardened Unbound config is not installed"
 rg -q 'auto-trust-anchor-file: "/trusted-key.key"' "$laptop_script" \

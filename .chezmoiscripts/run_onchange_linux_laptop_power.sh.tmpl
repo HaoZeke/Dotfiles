@@ -717,7 +717,14 @@ if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
 fi
 
-if [ "$UNBOUND_CHANGED" = "1" ] \
+if sudo systemctl is-active ctrld.service >/dev/null 2>&1 \
+   || sudo systemctl is-enabled ctrld.service >/dev/null 2>&1; then
+    sudo systemctl disable --now unbound.service >/dev/null 2>&1 || true
+    if [ "$RESOLVED_CHANGED" = "1" ]; then
+        sudo systemctl restart systemd-resolved.service
+    fi
+    echo "chezmoi: Control D resolver active; unbound disabled to avoid local DNS port conflict"
+elif [ "$UNBOUND_CHANGED" = "1" ] \
    || [ "$RESOLVED_CHANGED" = "1" ] \
    || ( ! sudo systemctl is-enabled unbound.service >/dev/null 2>&1 ); then
     if command -v unbound-checkconf >/dev/null 2>&1 \
