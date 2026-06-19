@@ -12,6 +12,7 @@ airplane="$repo/dot_local/bin/executable_rg-airplane"
 network_json="$repo/dot_local/bin/executable_rg-network-status-json"
 weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
 fix_local_dns="$repo/dot_local/bin/executable_rg-fix-local-dns"
+fix_nm_ctrld="$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld"
 us_egress_up="$repo/dot_local/bin/executable_rg-us-egress-up"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
@@ -22,6 +23,7 @@ test -r "$airplane" || fail "missing rg-airplane helper"
 test -r "$network_json" || fail "missing rg-network-status-json helper"
 test -r "$weather_json" || fail "missing rg-weather-json helper"
 test -r "$fix_local_dns" || fail "missing local DNS repair helper"
+test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
@@ -145,6 +147,14 @@ rg -q -- '--restore-from' "$fix_local_dns" \
     || fail "local DNS repair helper lacks snapshot restore support"
 rg -q '/var/tmp/rg-dns-backups' "$fix_local_dns" \
     || fail "local DNS repair helper does not use a stable backup root"
+rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not clear Control D dependencies"
+rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not verify effective Control D dependencies"
+rg -q 'systemctl disable --now NetworkManager-wait-online.service NetworkManager-dispatcher.service NetworkManager.service' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not disable the NetworkManager service trio"
+rg -q 'systemctl restart ctrld.service' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not restart Control D after dependency cleanup"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

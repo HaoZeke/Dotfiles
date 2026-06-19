@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+backup_root=${RG_NM_CTRLD_BACKUP_ROOT:-/var/tmp/rg-networkmanager-ctrld-backups}
+dropin=/etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf
+unit_file=/etc/systemd/system/ctrld.service
+
+step() {
+    printf '\n== %s ==\n' "$*"
+}
+
+usage() {
+    cat <<'EOF'
+Usage: sudo rg-fix-networkmanager-ctrld
+
+Repair Control D systemd ordering so restarting ctrld.service cannot pull in
+NetworkManager-wait-online.service. This keeps iwd/systemd-networkd in charge
+of Wi-Fi while Control D remains behind the local resolver chain.
+EOF
+}
+
+if [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+if [ "$(id -u)" -ne 0 ]; then
+    printf 'rg-fix-networkmanager-ctrld must run as root\n' >&2
+    exit 2
+fi
+
+extract_cd_uid() {
+    awk '
+        {
+            for (i = 1; i <= NF; i++) {
+                token = $i
+                gsub(/^"|"$/, "", token)
+                if (token == "--cd" && i < NF) {
+                    next_token = $(i + 1)
+                    gsub(/^"|"$/, "", next_token)
+                    print next_token
+                } else if (token ~ /^--cd=/) {
+                    sub(/^--cd=/, "", token)
+                    print token
+                } else if (token ~ /^--primary_upstream=https:\/\/76\.76\.(2|10)\.22\//) {
+                    sub(/^--primary_upstream=https:\/\/76\.76\.(2|10)\.22\//, "", token)
+                    print token
+                } else if (token ~ /^--secondary_upstream=https:\/\/76\.76\.(2|10)\.22\//) {
+                    sub(/^--secondary_upstream=https:\/\/76\.76\.(2|10)\.22\//, "", token)
+                    print token
+                }
+            }
+        }
+    ' "$@"
+}
+
+step "read Control D resolver id"
+tmp_unit_text=$(mktemp)
+for path in "$unit_file" /etc/systemd/system/ctrld.service.d/*.conf; do
+    [ -e "$path" ] || continue
+    cat "$path" >>"$tmp_unit_text"
+    printf '\n' >>"$tmp_unit_text"
+done
+cd_uid=$(extract_cd_uid "$tmp_unit_text" | head -n 1)
+rm -f "$tmp_unit_text"
+if [ -z "$cd_uid" ]; then
+    printf 'could not extract Control D resolver id from ctrld.service\n' >&2
+    exit 3
+fi
+
+step "backup live Control D unit files"
+install -d -m 0700 "$backup_root"
+backup_dir=$(mktemp -d "$backup_root/$(date -u +%Y%m%dT%H%M%SZ).XXXXXX")
+[ -e "$unit_file" ] && cp -a "$unit_file" "$backup_dir/ctrld.service"
+[ -e "$dropin" ] && cp -a "$dropin" "$backup_dir/50-rg-local-chain.conf"
+systemctl show ctrld.service -p Wants -p After >"$backup_dir/ctrld-effective-before.txt" 2>/dev/null || true
+printf 'backup: %s\n' "$backup_dir"
+
+step "install Control D unit reset"
+install -d -m 0755 /etc/systemd/system/ctrld.service.d
+cat >"$dropin" <<EOF
+[Unit]
+Wants=
+After=
+Wants=nss-lookup.target
+After=network.target nss-lookup.target
+
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+EOF
+
+step "verify effective Control D dependencies"
+systemctl daemon-reload
+deps=$(systemctl show ctrld.service -p Wants -p After)
+printf '%s\n' "$deps"
+printf '%s\n' "$deps" >"$backup_dir/ctrld-effective-after.txt"
+if printf '%s\n' "$deps" | grep -q NetworkManager; then
+    printf 'ctrld.service still depends on NetworkManager after the drop-in\n' >&2
+    exit 4
+fi
+
+step "stop NetworkManager units"
+systemctl disable --now NetworkManager-wait-online.service NetworkManager-dispatcher.service NetworkManager.service >/dev/null 2>&1 || true
+systemctl reset-failed NetworkManager-wait-online.service NetworkManager-dispatcher.service NetworkManager.service >/dev/null 2>&1 || true
+if systemctl is-active --quiet NetworkManager.service; then
+    printf 'NetworkManager.service is still active after stop request\n' >&2
+    exit 5
+fi
+
+step "restart Control D"
+if systemctl is-active --quiet ctrld.service || systemctl is-enabled --quiet ctrld.service; then
+    systemctl restart ctrld.service
+fi
+
+step "final NetworkManager state"
+systemctl is-active NetworkManager.service || true
+systemctl is-enabled NetworkManager.service || true
+systemctl is-enabled NetworkManager-wait-online.service || true
+
+printf '\nrg-fix-networkmanager-ctrld: Control D no longer pulls NetworkManager\n'
+printf 'rg-fix-networkmanager-ctrld: backup kept at %s\n' "$backup_dir"
