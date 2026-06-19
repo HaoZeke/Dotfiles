@@ -13,18 +13,24 @@ policy="$repo/dot_config/rg-kernel/build-lanes.env"
 series="$repo/dot_config/rg-kernel/linux-rg/patches/series"
 patch_sources="$repo/dot_config/rg-kernel/linux-rg/patch-sources.tsv"
 compat="$repo/dot_config/rg-kernel/linux-rg/compatible-patches.tsv"
+compression_policy="$repo/dot_config/rg-kernel/linux-rg/compression-policy.tsv"
 fragment="$repo/dot_config/rg-kernel/linux-rg/config-fragments/rgx1gen11.config"
 oomd_config="$repo/dot_config/oomd/oomd-rgx1gen11.json"
 oomd_installer="$repo/dot_local/bin/executable_rg-oomd-profile-install"
+memory_tuning="$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl"
+x1_profile="$repo/dot_local/bin/executable_rg-x1gen11-profile"
 
 test -r "$launcher" || fail "missing rg-kernel-build launcher"
 test -r "$policy" || fail "missing rg-kernel build policy"
 test -r "$series" || fail "missing linux-rg patch series"
 test -r "$patch_sources" || fail "missing linux-rg selected patch source manifest"
 test -r "$compat" || fail "missing linux-rg compatibility manifest"
+test -r "$compression_policy" || fail "missing linux-rg compression policy manifest"
 test -r "$fragment" || fail "missing rgx1gen11 kernel config fragment"
 test -r "$oomd_config" || fail "missing rgx1gen11 oomd config"
 test -x "$oomd_installer" || fail "missing executable oomd profile installer"
+test -r "$memory_tuning" || fail "missing memory tuning script"
+test -x "$x1_profile" || fail "missing rgx1gen11 profile switcher"
 
 if rg -n 'rg[.]cosmolab|RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
     "$launcher" "$policy"; then
@@ -100,6 +106,26 @@ rg -q $'^selected\tcache-aware-sched\t' "$compat" \
 rg -q $'^selected\tmm-bulk-free-hotpaths\t' "$compat" \
     || fail "compatibility manifest must select carried bulk-free hot paths"
 
+rg -q $'^selected\tzswap-zstd\t' "$compression_policy" \
+    || fail "compression policy must select zstd-backed zswap"
+rg -q $'^selected\tzram-zstd\t' "$compression_policy" \
+    || fail "compression policy must select zstd-backed zram"
+rg -q $'^selected\tzram-writeback-tracking\t' "$compression_policy" \
+    || fail "compression policy must track zram writeback and memory accounting"
+rg -q $'^selected\tinitramfs-package-zstd\t' "$compression_policy" \
+    || fail "compression policy must keep initramfs/package zstd compatibility explicit"
+rg -q $'^evaluate\tbtrfs-compress-zstd\t' "$compression_policy" \
+    || fail "compression policy must require measured btrfs compress=zstd evaluation"
+rg -q 'compression-algorithm = zstd' "$memory_tuning" \
+    || fail "base zram-generator policy must use zstd"
+rg -q 'compression-algorithm = zstd' "$x1_profile" \
+    || fail "profile zram-generator override must use zstd"
+if rg -n --glob '*.tmpl' --glob '*.conf' --glob '*.json' --glob '*.sh' \
+    '(^|[,[:space:]])compress=zstd' \
+    "$repo/.chezmoiscripts" "$repo/dot_config" "$repo/dot_local/bin"; then
+    fail "btrfs compress=zstd must stay out of live host config until evaluated"
+fi
+
 for carried_patch in 0001-bore-cachy.patch 0018-cachy-mm-ratios.patch 0021-mm-bulk-free-hotpaths.patch; do
     test -r "$HOME/Git/Github/Tools/linux-rg/$carried_patch" \
         || fail "linux-rg source repo missing $carried_patch"
@@ -118,6 +144,13 @@ for config in \
     CONFIG_SCHED_ASA=y \
     CONFIG_SCHED_BORE=y \
     CONFIG_SCHED_CACHE=y \
+    CONFIG_ZSWAP=y \
+    CONFIG_ZSWAP_DEFAULT_ON=y \
+    CONFIG_ZSWAP_COMPRESSOR_DEFAULT_ZSTD=y \
+    CONFIG_ZRAM_WRITEBACK=y \
+    CONFIG_ZRAM_MEMORY_TRACKING=y \
+    CONFIG_ZSTD_COMPRESS=m \
+    CONFIG_ZSTD_DECOMPRESS=m \
     CONFIG_MIN_BASE_SLICE_NS=2000000 \
     CONFIG_DEBUG_INFO_BTF=y \
     CONFIG_BPF_JIT=y \

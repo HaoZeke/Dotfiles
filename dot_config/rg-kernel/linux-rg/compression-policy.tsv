@@ -1,0 +1,6 @@
+status	id	surface	policy	vissue
+selected	zswap-zstd	kernel	CONFIG_ZSWAP_DEFAULT_ON with CONFIG_ZSWAP_COMPRESSOR_DEFAULT_ZSTD	linux-rg-wr9r
+selected	zram-zstd	userspace	zram-generator uses compression-algorithm = zstd in base and profile drop-ins	linux-rg-zram
+selected	zram-writeback-tracking	kernel	CONFIG_ZRAM_WRITEBACK and CONFIG_ZRAM_MEMORY_TRACKING stay enabled for measured pressure runs	linux-rg-wr9r
+selected	initramfs-package-zstd	package	PKGBUILD depends on zstd and module packaging uses ZSTD_CLEVEL=19	linux-rg-wr9r
+evaluate	btrfs-compress-zstd	mount	LUKS+btrfs snapshots plus swapfile require workload evidence before fstab mount-option changes	linux-rg-wr9r
