@@ -137,6 +137,10 @@ rg -q 'resolvectl dns' "$fix_local_dns" \
     || fail "local DNS repair helper does not verify resolved global DNS"
 rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$fix_local_dns" \
     || fail "local DNS repair helper lacks a secondary Control D upstream"
+rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_local_dns" \
+    || fail "local DNS repair helper does not clear Control D NetworkManager dependencies"
+rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_local_dns" \
+    || fail "local DNS repair helper does not verify effective Control D dependencies"
 rg -q -- '--restore-from' "$fix_local_dns" \
     || fail "local DNS repair helper lacks snapshot restore support"
 rg -q '/var/tmp/rg-dns-backups' "$fix_local_dns" \
@@ -161,6 +165,10 @@ rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \
     || fail "US egress helper does not retry transient IPv4 egress checks"
 rg -q 'cleanup_us_egress_state' "$us_egress_up" \
     || fail "US egress helper does not clean stale WireGuard policy state"
+rg -q 'disable_networkmanager_for_iwd' "$us_egress_up" \
+    || fail "US egress helper does not keep NetworkManager stopped for iwd-owned Wi-Fi"
+rg -q 'NetworkManager-wait-online.service' "$us_egress_up" \
+    || fail "US egress helper does not stop NetworkManager wait-online"
 rg -q 'delete_rules_for_table -4 51820' "$us_egress_up" \
     || fail "US egress helper does not remove stale IPv4 wg-quick routing policy"
 rg -q 'delete_rules_for_table -6 51820' "$us_egress_up" \
@@ -190,6 +198,10 @@ rg -q -- '--primary_upstream=https://76\.76\.2\.22/' "$laptop_script" \
     || fail "Control D listener lacks an explicit upstream in no-config mode"
 rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$laptop_script" \
     || fail "Control D listener lacks a secondary upstream"
+rg -q 'disable_networkmanager_for_iwd' "$laptop_script" \
+    || fail "laptop script does not stop NetworkManager before network service restarts"
+rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$laptop_script" \
+    || fail "laptop script does not clear Control D NetworkManager dependencies"
 rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
     || fail "Unbound does not forward default DNS to the local Control D listener"
 rg -q 'do-not-query-localhost: no' "$laptop_script" \

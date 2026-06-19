@@ -45,6 +45,18 @@ write_executable_if_diff() {
     return 1
 }
 
+disable_networkmanager_for_iwd() {
+    if sudo systemctl is-enabled NetworkManager.service >/dev/null 2>&1 \
+       || sudo systemctl is-active NetworkManager.service >/dev/null 2>&1 \
+       || sudo systemctl is-enabled NetworkManager-dispatcher.service >/dev/null 2>&1 \
+       || sudo systemctl is-active NetworkManager-dispatcher.service >/dev/null 2>&1 \
+       || sudo systemctl is-enabled NetworkManager-wait-online.service >/dev/null 2>&1 \
+       || sudo systemctl is-active NetworkManager-wait-online.service >/dev/null 2>&1; then
+        echo "chezmoi: disabling NetworkManager services; iwd owns Wi-Fi"
+        sudo systemctl disable --now NetworkManager.service NetworkManager-dispatcher.service NetworkManager-wait-online.service >/dev/null 2>&1 || true
+    fi
+}
+
 write_ctrld_local_chain_dropin() {
     local unit_text cd_uid content
 
@@ -69,6 +81,12 @@ write_ctrld_local_chain_dropin() {
     [ -n "$cd_uid" ] || return 1
 
     content="# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+[Unit]
+Wants=
+After=
+Wants=nss-lookup.target
+After=network.target nss-lookup.target
+
 [Service]
 ExecStart=
 ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
@@ -809,6 +827,8 @@ if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ] || [ "$CTRLD_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
 fi
 
+disable_networkmanager_for_iwd
+
 if [ "$NETWORKD_CHANGED" = "1" ] && sudo systemctl is-active systemd-networkd.service >/dev/null 2>&1; then
     sudo networkctl reload || true
     sudo networkctl reconfigure wlan0 || true
@@ -853,13 +873,7 @@ elif ! sudo systemctl is-active iwd.service >/dev/null 2>&1; then
     sudo systemctl start iwd.service
 fi
 
-if sudo systemctl is-enabled NetworkManager.service >/dev/null 2>&1 \
-   || sudo systemctl is-active NetworkManager.service >/dev/null 2>&1 \
-   || sudo systemctl is-enabled NetworkManager-dispatcher.service >/dev/null 2>&1 \
-   || sudo systemctl is-active NetworkManager-dispatcher.service >/dev/null 2>&1; then
-    echo "chezmoi: disabling NetworkManager services; iwd owns Wi-Fi"
-    sudo systemctl disable --now NetworkManager.service NetworkManager-dispatcher.service >/dev/null 2>&1 || true
-fi
+disable_networkmanager_for_iwd
 
 if command -v tailscale >/dev/null 2>&1 \
    && systemctl is-active tailscaled.service >/dev/null 2>&1; then

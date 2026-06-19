@@ -51,6 +51,11 @@ cleanup_us_egress_state() {
     ip link delete "$iface" >/dev/null 2>&1 || true
 }
 
+disable_networkmanager_for_iwd() {
+    systemctl disable --now NetworkManager.service NetworkManager-dispatcher.service NetworkManager-wait-online.service >/dev/null 2>&1 || true
+    systemctl reset-failed NetworkManager.service NetworkManager-dispatcher.service NetworkManager-wait-online.service >/dev/null 2>&1 || true
+}
+
 on_error() {
     local rc=$? line="${1:-unknown}"
     if [ "${activation_started:-0}" -eq 1 ]; then
@@ -184,6 +189,7 @@ chmod 0600 "$conf"
 
 printf '\n== remove stale WireGuard state ==\n'
 cleanup_us_egress_state
+disable_networkmanager_for_iwd
 
 if command -v "$dns_fix" >/dev/null 2>&1; then
     "$dns_fix"
@@ -195,6 +201,7 @@ else
     printf 'DNS repair helper not found: %s\n' "$dns_fix" >&2
     exit 2
 fi
+disable_networkmanager_for_iwd
 
 printf '\n== install wg-quick runtime config ==\n'
 install -d -m 0700 /etc/wireguard

@@ -359,11 +359,22 @@ test -n "$cd_uid"
 step "start Control D high-port resolver"
 install -d -m 0755 /etc/systemd/system/ctrld.service.d
 cat >/etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf <<EOF
+[Unit]
+Wants=
+After=
+Wants=nss-lookup.target
+After=network.target nss-lookup.target
+
 [Service]
 ExecStart=
 ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
 EOF
 systemctl daemon-reload
+if systemctl show ctrld.service -p Wants -p After | grep -q NetworkManager; then
+    printf 'ctrld.service still depends on NetworkManager after local drop-in\n' >&2
+    systemctl show ctrld.service -p Wants -p After >&2
+    exit 7
+fi
 systemctl restart ctrld.service
 wait_for_a_record 127.0.0.1 5354 duckduckgo.com >/dev/null
 
