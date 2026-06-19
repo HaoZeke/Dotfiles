@@ -31,6 +31,12 @@ rg -q '99-persistent-storage.conf' "$laptop_script" \
     || fail "managed journald persistent drop-in is missing"
 rg -q 'Storage=persistent' "$laptop_script" \
     || fail "journald persistent storage is not managed"
+rg -Fq 'Storage[[:space:]]*=[[:space:]]*volatile' "$laptop_script" \
+    || fail "journald volatile storage conflict detector is missing"
+rg -q '/tmp/rg-journald-storage-fix.sh' "$laptop_script" \
+    || fail "journald storage conflict fix script is missing"
+rg -q 'trash-put' "$laptop_script" \
+    || fail "journald storage conflict fix must use trash-put"
 rg -q '99-wlan0-unmanaged.conf' "$laptop_script" \
     || fail "NetworkManager wlan0 unmanaged drop-in is missing"
 rg -q 'unmanaged-devices=interface-name:wlan0' "$laptop_script" \

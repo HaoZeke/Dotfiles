@@ -45,6 +45,44 @@ write_executable_if_diff() {
     return 1
 }
 
+write_journald_storage_fix_script() {
+    local dir=/etc/systemd/journald.conf.d
+    local script=/tmp/rg-journald-storage-fix.sh
+    local file
+    local conflicts=()
+
+    sudo test -d "$dir" || return 0
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        case "$file" in
+            "$dir/99-persistent-storage.conf") continue ;;
+        esac
+        if sudo grep -Eq '^[[:space:]]*Storage[[:space:]]*=[[:space:]]*volatile([[:space:]#]|$)' "$file"; then
+            conflicts+=("$file")
+        fi
+    done < <(sudo find "$dir" -maxdepth 1 -type f -name '*.conf' -print 2>/dev/null | sort)
+
+    [ "${#conflicts[@]}" -gt 0 ] || return 0
+
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'set -euo pipefail\n\n'
+        printf 'command -v trash-put >/dev/null\n'
+        printf 'trash-put'
+        printf ' %q' "${conflicts[@]}"
+        printf '\n'
+        printf 'systemctl daemon-reload\n'
+        printf 'systemctl kill --signal=SIGHUP systemd-journald || true\n'
+        printf 'journalctl --flush\n'
+        printf 'journalctl --disk-usage\n'
+    } >"$script"
+    chmod 0755 "$script"
+
+    printf 'chezmoi: journald Storage=volatile conflicts with managed persistent storage:\n' >&2
+    printf '  %s\n' "${conflicts[@]}" >&2
+    printf 'chezmoi: wrote %s; run: sudo bash %s\n' "$script" "$script" >&2
+}
+
 IOSCHED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # BFQ on every rotational and non-rotational block device for better
 # interactive latency under I/O contention. Only ramdisks, loop, and
@@ -139,6 +177,7 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
 '
 
+# shellcheck disable=SC2016
 RG_TAILNET_POWER_CONTENT='#!/usr/bin/env bash
 set -euo pipefail
 
@@ -303,6 +342,7 @@ Cache=yes
 DNSStubListener=yes
 '
 
+# shellcheck disable=SC2016
 TAILSCALED_INSTANCE_CONTENT='[Unit]
 Description=Tailscale userspace tailnet instance %i
 Documentation=https://tailscale.com/docs/
@@ -368,6 +408,7 @@ TAILNETS_ENABLED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_lin
 #     last frame until a full modeset came through).
 # The hook is executed by systemd-sleep(8) with $1 in {pre,post} and
 # $2 in {suspend,hibernate,suspend-then-hibernate,hybrid-sleep}.
+# shellcheck disable=SC2016
 RESUME_KICK_CONTENT='#!/usr/bin/env bash
 # Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Re-arm the sway input subsystem after a sleep/hibernate cycle so
@@ -522,7 +563,6 @@ write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     
 # stamps 0644, and systemd-sleep refuses to execute non-executable
 # hooks.
 RESUME_KICK_PATH=/usr/lib/systemd/system-sleep/99-rg-resume-kick
-RESUME_KICK_CHANGED=0
 if ! sudo test -f "$RESUME_KICK_PATH" \
    || ! printf "%s" "$RESUME_KICK_CONTENT" | sudo cmp -s - "$RESUME_KICK_PATH"; then
     TMP=$(mktemp)
@@ -530,7 +570,6 @@ if ! sudo test -f "$RESUME_KICK_PATH" \
     sudo install -D -m 0755 -o root -g root "$TMP" "$RESUME_KICK_PATH"
     rm -f "$TMP"
     echo "chezmoi: updated $RESUME_KICK_PATH"
-    RESUME_KICK_CHANGED=1
 fi
 
 BTRBK_CHANGED=0
@@ -665,6 +704,7 @@ fi
 # empty placeholder on stock Arch installs, and systemd-journald only
 # starts persisting once it finds the directory populated with the
 # right ownership and a flush signal.
+write_journald_storage_fix_script
 if [ "$JOURNALD_CHANGED" = "1" ] || [ -z "$(sudo ls -A /var/log/journal 2>/dev/null)" ]; then
     echo "chezmoi: enabling persistent journal"
     sudo install -d -m 2755 -o root -g systemd-journal /var/log/journal
@@ -725,12 +765,10 @@ fi
 # Enable TLP's own units explicitly. tlp-stat checks for tlp.service by
 # name; a bare `systemctl enable tlp` sometimes resolves to a stale
 # symlink target on Arch and leaves it reporting "not enabled".
-for unit in tlp.service; do
-    if ! sudo systemctl is-enabled "$unit" >/dev/null 2>&1; then
-        echo "chezmoi: enabling $unit"
-        sudo systemctl enable "$unit"
-    fi
-done
+if ! sudo systemctl is-enabled tlp.service >/dev/null 2>&1; then
+    echo "chezmoi: enabling tlp.service"
+    sudo systemctl enable tlp.service
+fi
 
 if [ "$TLP_CHANGED" = "1" ]; then
     sudo systemctl restart tlp.service
