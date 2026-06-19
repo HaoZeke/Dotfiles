@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-LADDER="$HOME/.local/bin/rg-sched-ladder"
+LADDER="${RG_SCHED_LADDER_BIN:-$HOME/.local/bin/rg-sched-ladder}"
 
 die() {
     printf 'rg-scx-loader: %s\n' "$*" >&2
@@ -31,8 +31,11 @@ main() {
     case "$cmd" in
     status)
         "$LADDER" current
-        [ -r /sys/kernel/sched_ext/current ] \
-            && printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+        if [ -r /sys/kernel/sched_ext/current ]; then
+            printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+        else
+            printf 'sched_ext current: unavailable\n'
+        fi
         ;;
     list) "$LADDER" list ;;
     switch) "$LADDER" switch "${1:-}" ;;
