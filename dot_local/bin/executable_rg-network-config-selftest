@@ -145,6 +145,8 @@ rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \
     || fail "US egress helper does not use the managed DNS repair helper"
+rg -q 'script_dir=' "$us_egress_up" \
+    || fail "US egress helper does not locate the DNS helper relative to itself"
 rg -q 'settle resolver after route change' "$us_egress_up" \
     || fail "US egress helper does not settle DNS after WireGuard route changes"
 rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \

@@ -4,7 +4,8 @@ set -euo pipefail
 conf="${1:-${RG_US_EGRESS_CONF:-}}"
 iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 runtime_conf="/etc/wireguard/${iface}.conf"
-dns_fix="${RG_DNS_FIX_SCRIPT:-rg-fix-local-dns}"
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
 
 if [ "$(id -u)" -ne 0 ]; then
     printf 'run as root: sudo bash %s [wireguard.conf]\n' "$0" >&2
