@@ -159,6 +159,20 @@ rg -q 'verify_route_uses_interface "IPv4 default egress" 1\.1\.1\.1 "\$iface"' "
     || fail "US egress helper does not verify default IPv4 egress after prioritizing mesh routes"
 rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \
     || fail "US egress helper does not retry transient IPv4 egress checks"
+rg -q 'cleanup_us_egress_state' "$us_egress_up" \
+    || fail "US egress helper does not clean stale WireGuard policy state"
+rg -q 'delete_rules_for_table -4 51820' "$us_egress_up" \
+    || fail "US egress helper does not remove stale IPv4 wg-quick routing policy"
+rg -q 'delete_rules_for_table -6 51820' "$us_egress_up" \
+    || fail "US egress helper does not remove stale IPv6 wg-quick routing policy"
+rg -q 'route flush table 51820' "$us_egress_up" \
+    || fail "US egress helper does not remove stale wg-quick routing policy"
+rg -q 'trap '\''on_error \$LINENO'\'' ERR' "$us_egress_up" \
+    || fail "US egress helper does not clean WireGuard state after activation failures"
+rg -F -q 'systemctl start "wg-quick@${iface}.service"' "$us_egress_up" \
+    || fail "US egress helper does not start WireGuard under systemd ownership"
+rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_up" \
+    || fail "US egress helper does not verify the WireGuard unit remains active"
 ! rg -q 'PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|/home/rgoswami/Downloads' "$fix_local_dns" "$us_egress_up" \
     || fail "managed network helpers contain provider-local paths or WireGuard secret material"
 

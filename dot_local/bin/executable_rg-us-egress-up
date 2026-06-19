@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 conf="${1:-${RG_US_EGRESS_CONF:-}}"
 iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 runtime_conf="/etc/wireguard/${iface}.conf"
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
+tmp_conf=""
+activation_started=0
 
 if [ "$(id -u)" -ne 0 ]; then
     printf 'run as root: sudo bash %s [wireguard.conf]\n' "$0" >&2
@@ -20,10 +22,47 @@ fi
 
 command -v wg >/dev/null
 command -v wg-quick >/dev/null
+command -v systemctl >/dev/null
 command -v resolvectl >/dev/null
 command -v dig >/dev/null
 command -v curl >/dev/null
 command -v tailscale >/dev/null
+
+cleanup_tmp() {
+    [ -z "${tmp_conf:-}" ] || rm -f "$tmp_conf"
+}
+
+delete_rules_for_table() {
+    local family="$1" table="$2" pref
+    while :; do
+        pref="$(ip "$family" rule show | awk -v table="$table" '$0 ~ ("lookup " table) { sub(":", "", $1); print $1; exit }')"
+        [ -n "$pref" ] || break
+        ip "$family" rule del pref "$pref" 2>/dev/null || break
+    done
+}
+
+cleanup_us_egress_state() {
+    systemctl stop "wg-quick@${iface}.service" >/dev/null 2>&1 || true
+    wg-quick down "$iface" >/dev/null 2>&1 || true
+    delete_rules_for_table -4 51820
+    delete_rules_for_table -6 51820
+    ip -4 route flush table 51820 >/dev/null 2>&1 || true
+    ip -6 route flush table 51820 >/dev/null 2>&1 || true
+    ip link delete "$iface" >/dev/null 2>&1 || true
+}
+
+on_error() {
+    local rc=$? line="${1:-unknown}"
+    if [ "${activation_started:-0}" -eq 1 ]; then
+        printf 'US egress activation failed at line %s; cleaning WireGuard policy state\n' "$line" >&2
+        cleanup_us_egress_state
+    fi
+    cleanup_tmp
+    exit "$rc"
+}
+
+trap 'on_error $LINENO' ERR
+trap cleanup_tmp EXIT
 
 wait_for_dig() {
     local label="$1" server="$2" port="$3" name="$4" out i
@@ -157,7 +196,6 @@ fi
 printf '\n== install wg-quick runtime config ==\n'
 install -d -m 0700 /etc/wireguard
 tmp_conf="$(mktemp)"
-trap 'rm -f "$tmp_conf"' EXIT
 awk '
     BEGIN { injected = 0 }
     function inject_hooks() {
@@ -176,9 +214,15 @@ awk '
 ' "$conf" >"$tmp_conf"
 install -m 0600 "$tmp_conf" "$runtime_conf"
 
+printf '\n== remove stale WireGuard state ==\n'
+cleanup_us_egress_state
+
 printf '\n== start WireGuard full-tunnel interface ==\n'
-wg-quick down "$iface" >/dev/null 2>&1 || true
-wg-quick up "$iface"
+activation_started=1
+systemctl daemon-reload
+systemctl reset-failed "wg-quick@${iface}.service" >/dev/null 2>&1 || true
+systemctl start "wg-quick@${iface}.service"
+systemctl is-active --quiet "wg-quick@${iface}.service"
 
 printf '\n== settle resolver after route change ==\n'
 sleep 2
@@ -218,9 +262,10 @@ ip -6 route get 2606:4700:4700::1111 || true
 
 printf '\n== egress checks ==\n'
 retry_cmd "ipinfo IPv4 egress" curl -4 --connect-timeout 8 --max-time 15 https://ipinfo.io/json
-retry_cmd "ipapi IPv4 egress" curl -4 --connect-timeout 8 --max-time 15 https://ipapi.co/json/
+retry_cmd "ipapi IPv4 egress" curl -4 --connect-timeout 8 --max-time 15 https://ipapi.co/json/ || printf 'ipapi IPv4 egress check failed after retries\n' >&2
 curl -6 --connect-timeout 8 --max-time 15 https://ifconfig.co/json || printf 'IPv6 egress check failed or IPv6 is unavailable\n'
 
 printf '\n== mesh checks ==\n'
 tailscale status >/dev/null && printf 'tailscale status: ok\n'
-tailscale netcheck
+tailscale netcheck || printf 'tailscale netcheck failed; route checks above are authoritative for this helper\n' >&2
+activation_started=0
