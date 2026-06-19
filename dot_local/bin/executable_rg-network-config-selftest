@@ -155,6 +155,8 @@ rg -q 'ip -6 rule add pref 5206 lookup 52' "$us_egress_up" \
     || fail "US egress helper does not prioritize Tailscale IPv6 routes before WireGuard"
 rg -q 'verify_route_uses_tailscale "Tailscale DNS" 100\.100\.100\.100' "$us_egress_up" \
     || fail "US egress helper does not verify Tailscale DNS routing after WireGuard activation"
+rg -q 'verify_route_uses_interface "IPv4 default egress" 1\.1\.1\.1 "\$iface"' "$us_egress_up" \
+    || fail "US egress helper does not verify default IPv4 egress after prioritizing mesh routes"
 rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \
     || fail "US egress helper does not retry transient IPv4 egress checks"
 ! rg -q 'PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|/home/rgoswami/Downloads' "$fix_local_dns" "$us_egress_up" \

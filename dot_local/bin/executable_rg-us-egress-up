@@ -91,6 +91,23 @@ verify_route_uses_tailscale() {
     return 1
 }
 
+verify_route_uses_interface() {
+    local label="$1" target="$2" expected="$3" route
+    route="$(ip route get "$target" 2>/dev/null || true)"
+    if [ -z "$route" ]; then
+        printf 'no route found for %s (%s)\n' "$target" "$label" >&2
+        return 1
+    fi
+    printf '%s route: %s\n' "$label" "$route"
+    case "$route" in
+        *" dev ${expected} "*|*" dev ${expected}")
+            return 0
+            ;;
+    esac
+    printf '%s does not route through %s\n' "$label" "$expected" >&2
+    return 1
+}
+
 verify_tailscale_probe_name() {
     local name="${RG_TAILSCALE_ROUTE_PROBE_NAME:-}" addr found=0
     [ -n "$name" ] || return 0
@@ -194,7 +211,7 @@ fi
 printf 'Lean release host resolves via local DNS\n'
 
 printf '\n== route checks ==\n'
-ip route get 1.1.1.1
+verify_route_uses_interface "IPv4 default egress" 1.1.1.1 "$iface"
 verify_route_uses_tailscale "Tailscale DNS" 100.100.100.100
 verify_tailscale_probe_name
 ip -6 route get 2606:4700:4700::1111 || true
