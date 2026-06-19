@@ -128,9 +128,17 @@ rg -q 'rg-weather-json iitk' "$bottom_bar" \
 rg -q 'unbound.service' "$laptop_script" \
     || fail "local resolver service is not managed"
 rg -q 'ctrld.service' "$laptop_script" \
-    || fail "Control D daemon presence is not checked before starting Unbound"
-rg -q 'disable --now unbound.service' "$laptop_script" \
-    || fail "Unbound is not disabled when Control D owns local DNS"
+    || fail "Control D daemon is not managed for local DNS chaining"
+rg -q '127\.0\.0\.1:5354' "$laptop_script" \
+    || fail "Control D is not moved behind Unbound on a non-conflicting local port"
+rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
+    || fail "Unbound does not forward default DNS to the local Control D listener"
+rg -q 'do-not-query-localhost: no' "$laptop_script" \
+    || fail "Unbound cannot query the local Control D listener"
+rg -q 'releases\.lean-lang\.org' "$laptop_script" \
+    || fail "Lean release domains do not bypass the Control D profile"
+! rg -q 'disable --now unbound.service' "$laptop_script" \
+    || fail "Unbound must stay enabled in the Control D chain"
 ! rg -q 'disable --now ctrld.service' "$laptop_script" \
     || fail "Control D daemon must not be disabled by the managed resolver setup"
 rg -q '/etc/unbound/unbound.conf.d/rg-local.conf' "$laptop_script" \

@@ -45,6 +45,27 @@ write_executable_if_diff() {
     return 1
 }
 
+write_ctrld_local_chain_dropin() {
+    local unit_text cd_uid content
+
+    command -v /usr/local/bin/ctrld >/dev/null 2>&1 || return 1
+    unit_text="$(sudo systemctl cat ctrld.service 2>/dev/null || true)"
+    [ -n "$unit_text" ] || return 1
+    cd_uid="$(printf '%s\n' "$unit_text" \
+        | sed -n \
+            -e 's/.*"--cd"[[:space:]]*"\([^"]\+\)".*/\1/p' \
+            -e 's/.*--cd[= ]\([^ "]*\).*/\1/p' \
+        | head -n 1)"
+    [ -n "$cd_uid" ] || return 1
+
+    content="# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/ctrld run --cd $cd_uid --listen=127.0.0.1:5354 --intercept-mode=dns --homedir=/etc/controld --config=/etc/controld/ctrld.toml
+"
+    write_if_diff /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf "$content"
+}
+
 write_journald_storage_fix_script() {
     local dir=/etc/systemd/journald.conf.d
     local script=/tmp/rg-journald-storage-fix.sh
@@ -296,6 +317,7 @@ server:
     prefetch: yes
     rrset-roundrobin: yes
     use-caps-for-id: yes
+    do-not-query-localhost: no
     private-address: 10.0.0.0/8
     private-address: 172.16.0.0/12
     private-address: 192.168.0.0/16
@@ -307,11 +329,18 @@ server:
 include: "/etc/unbound/rg-forward-zones.conf"
 
 forward-zone:
+    name: "releases.lean-lang.org."
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
+
+forward-zone:
+    name: "release.lean-lang.org."
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
+
+forward-zone:
     name: "."
-    forward-tls-upstream: yes
-    forward-addr: 9.9.9.9@853#dns.quad9.net
-    forward-addr: 149.112.112.112@853#dns.quad9.net
-    forward-addr: 1.1.1.1@853#cloudflare-dns.com
+    forward-addr: 127.0.0.1@5354
 '
 
 UNBOUND_MAIN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -538,6 +567,7 @@ JOURNALD_CHANGED=0
 UNBOUND_CHANGED=0
 RESOLVED_CHANGED=0
 TAILSCALED_TEMPLATE_CHANGED=0
+CTRLD_CHANGED=0
 
 XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
@@ -550,6 +580,7 @@ write_if_diff /etc/unbound/unbound.conf                  "$UNBOUND_MAIN_CONTENT"
 write_if_diff /etc/unbound/unbound.conf.d/rg-local.conf  "$UNBOUND_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/unbound/rg-forward-zones.conf         "$UNBOUND_FORWARD_ZONES_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/systemd/resolved.conf.d/99-rg-local-dns.conf "$RESOLVED_LOCAL_DNS_CONTENT" && RESOLVED_CHANGED=1 || true
+write_ctrld_local_chain_dropin && CTRLD_CHANGED=1 || true
 write_if_diff /etc/systemd/system/tailscaled@.service    "$TAILSCALED_INSTANCE_CONTENT" && TAILSCALED_TEMPLATE_CHANGED=1 || true
 write_if_diff /etc/rg-tailnets/README                    "$TAILNETS_README_CONTENT" || true
 if ! sudo test -f /etc/rg-tailnets/enabled; then
@@ -713,18 +744,18 @@ if [ "$JOURNALD_CHANGED" = "1" ] || [ -z "$(sudo ls -A /var/log/journal 2>/dev/n
     sudo journalctl --flush >/dev/null 2>&1 || true
 fi
 
-if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ]; then
+if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ] || [ "$CTRLD_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
 fi
 
 if sudo systemctl is-active ctrld.service >/dev/null 2>&1 \
    || sudo systemctl is-enabled ctrld.service >/dev/null 2>&1; then
-    sudo systemctl disable --now unbound.service >/dev/null 2>&1 || true
-    if [ "$RESOLVED_CHANGED" = "1" ]; then
-        sudo systemctl restart systemd-resolved.service
+    if [ "$CTRLD_CHANGED" = "1" ]; then
+        sudo systemctl restart ctrld.service
     fi
-    echo "chezmoi: Control D resolver active; unbound disabled to avoid local DNS port conflict"
-elif [ "$UNBOUND_CHANGED" = "1" ] \
+fi
+
+if [ "$UNBOUND_CHANGED" = "1" ] \
    || [ "$RESOLVED_CHANGED" = "1" ] \
    || ( ! sudo systemctl is-enabled unbound.service >/dev/null 2>&1 ); then
     if command -v unbound-checkconf >/dev/null 2>&1 \
