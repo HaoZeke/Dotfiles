@@ -131,6 +131,8 @@ rg -q 'ctrld.service' "$laptop_script" \
     || fail "Control D daemon is not managed for local DNS chaining"
 rg -q '127\.0\.0\.1:5354' "$laptop_script" \
     || fail "Control D is not moved behind Unbound on a non-conflicting local port"
+rg -q -- '--primary_upstream=https://76\.76\.2\.22/' "$laptop_script" \
+    || fail "Control D listener lacks an explicit upstream in no-config mode"
 rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
     || fail "Unbound does not forward default DNS to the local Control D listener"
 rg -q 'do-not-query-localhost: no' "$laptop_script" \

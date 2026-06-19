@@ -49,19 +49,29 @@ write_ctrld_local_chain_dropin() {
     local unit_text cd_uid content
 
     command -v /usr/local/bin/ctrld >/dev/null 2>&1 || return 1
-    unit_text="$(sudo systemctl cat ctrld.service 2>/dev/null || true)"
+    unit_text="$(sudo sh -c 'cat /etc/systemd/system/ctrld.service /etc/systemd/system/ctrld.service.d/*.conf 2>/dev/null' || true)"
     [ -n "$unit_text" ] || return 1
     cd_uid="$(printf '%s\n' "$unit_text" \
-        | sed -n \
-            -e 's/.*"--cd"[[:space:]]*"\([^"]\+\)".*/\1/p' \
-            -e 's/.*--cd[= ]\([^ "]*\).*/\1/p' \
+        | awk '{
+            for (i = 1; i <= NF; i++) {
+                gsub(/^"|"$/, "", $i)
+                if ($i == "--cd" && i < NF) {
+                    gsub(/^"|"$/, "", $(i + 1))
+                    print $(i + 1)
+                } else if ($i ~ /^--cd=/) {
+                    sub(/^--cd=/, "", $i)
+                    gsub(/^"|"$/, "", $i)
+                    print $i
+                }
+            }
+        }' \
         | head -n 1)"
     [ -n "$cd_uid" ] || return 1
 
     content="# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 [Service]
 ExecStart=
-ExecStart=/usr/local/bin/ctrld run --cd $cd_uid --listen=127.0.0.1:5354 --intercept-mode=dns --homedir=/etc/controld --config=/etc/controld/ctrld.toml
+ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --cache_size=10000
 "
     write_if_diff /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf "$content"
 }
