@@ -256,6 +256,25 @@ case "$(RG_KERNEL_POLICY="$policy" "$launcher" jobs)" in
     *) fail "bounded job calculation did not return 9" ;;
 esac
 
+bad_src=$(mktemp -d /tmp/rg-kernel-bad-src.XXXXXX)
+bad_build_root=$(mktemp -d /tmp/rg-kernel-bad-build.XXXXXX)
+bad_policy=$(mktemp /tmp/rg-kernel-bad-policy.XXXXXX)
+printf 'pkgbase=linux-rg\n' >"$bad_src/PKGBUILD"
+sed \
+    -e "s|^RG_KERNEL_SOURCE_REPO=.*|RG_KERNEL_SOURCE_REPO=\"$bad_src\"|" \
+    -e "s|^RG_KERNEL_BUILD_ROOT=.*|RG_KERNEL_BUILD_ROOT=\"$bad_build_root\"|" \
+    -e 's|^RG_KERNEL_MIN_LOCAL_AVAIL_GIB=.*|RG_KERNEL_MIN_LOCAL_AVAIL_GIB=0|' \
+    "$policy" >"$bad_policy"
+if RG_KERNEL_POLICY="$bad_policy" "$launcher" prepare >/tmp/rg-kernel-bad-prepare.out 2>&1; then
+    fail "prepare should fail when source repo is not a git checkout"
+fi
+if rg -q '^prepared linux-rg' /tmp/rg-kernel-bad-prepare.out; then
+    cat /tmp/rg-kernel-bad-prepare.out >&2
+    fail "prepare must not print success after source copy failure"
+fi
+rg -q 'could not copy source package' /tmp/rg-kernel-bad-prepare.out \
+    || fail "prepare failure should explain source package copy failure"
+
 deps_output=$(RG_KERNEL_POLICY="$policy" "$launcher" deps-command)
 case "$deps_output" in
     *'sudo pacman -S --needed'*'base-devel'*'rust-bindgen'*'rust-src'*'clang'*'lld'*) ;;

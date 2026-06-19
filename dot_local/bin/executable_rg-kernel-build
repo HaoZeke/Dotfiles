@@ -2,6 +2,7 @@
 # Managed by chezmoi (dot_local/bin/executable_rg-kernel-build).
 
 set -euo pipefail
+shopt -s inherit_errexit 2>/dev/null || true
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 source_dir=${CHEZMOI_SOURCE_DIR:-}
@@ -531,11 +532,12 @@ copy_source_pkgbuild() {
     if [ -e "$build" ]; then
         stale_parent="$(dirname "$build")/old"
         stale="$stale_parent/$(basename "$build").$(date +%Y%m%d-%H%M%S)"
-        mkdir -p "$stale_parent"
-        mv "$build" "$stale"
+        mkdir -p "$stale_parent" || fail "could not create stale package directory: $stale_parent"
+        mv "$build" "$stale" || fail "could not move stale package build to $stale"
     fi
-    mkdir -p "$build"
-    git -C "$src" archive --format=tar HEAD | tar -xf - -C "$build"
+    mkdir -p "$build" || fail "could not create package build directory: $build"
+    git -C "$src" archive --format=tar HEAD | tar -xf - -C "$build" \
+        || fail "could not copy source package from $src to $build"
     printf '%s\n' "$build"
 }
 
@@ -578,17 +580,17 @@ copy_base_pkgbuild() {
     if [ -e "$build" ]; then
         stale_parent="$(dirname "$build")/old"
         stale="$stale_parent/$(basename "$build").$(date +%Y%m%d-%H%M%S)"
-        mkdir -p "$stale_parent"
-        mv "$build" "$stale"
+        mkdir -p "$stale_parent" || fail "could not create stale package directory: $stale_parent"
+        mv "$build" "$stale" || fail "could not move stale package build to $stale"
     fi
-    mkdir -p "$build"
+    mkdir -p "$build" || fail "could not create package build directory: $build"
     (
         cd "$src"
         tar -cf - .
     ) | (
         cd "$build"
         tar -xf -
-    )
+    ) || fail "could not copy base package from $src to $build"
     printf '%s\n' "$build"
 }
 
