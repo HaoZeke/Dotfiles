@@ -292,6 +292,8 @@ UNBOUND_FORWARD_ZONES_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchang
 
 RESOLVED_LOCAL_DNS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 [Resolve]
+# Reset list-valued DNS entries from lower-priority drop-ins.
+DNS=
 DNS=127.0.0.1
 FallbackDNS=
 Domains=~.
@@ -506,7 +508,7 @@ write_if_diff /etc/NetworkManager/conf.d/99-wlan0-unmanaged.conf "$NM_WLAN_UNMAN
 write_if_diff /etc/unbound/unbound.conf                  "$UNBOUND_MAIN_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/unbound/unbound.conf.d/rg-local.conf  "$UNBOUND_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/unbound/rg-forward-zones.conf         "$UNBOUND_FORWARD_ZONES_CONTENT" && UNBOUND_CHANGED=1 || true
-write_if_diff /etc/systemd/resolved.conf.d/50-rg-local-dns.conf "$RESOLVED_LOCAL_DNS_CONTENT" && RESOLVED_CHANGED=1 || true
+write_if_diff /etc/systemd/resolved.conf.d/99-rg-local-dns.conf "$RESOLVED_LOCAL_DNS_CONTENT" && RESOLVED_CHANGED=1 || true
 write_if_diff /etc/systemd/system/tailscaled@.service    "$TAILSCALED_INSTANCE_CONTENT" && TAILSCALED_TEMPLATE_CHANGED=1 || true
 write_if_diff /etc/rg-tailnets/README                    "$TAILNETS_README_CONTENT" || true
 if ! sudo test -f /etc/rg-tailnets/enabled; then
