@@ -82,4 +82,12 @@ mv "$trash" "$vm_root/dirty_ratio"
 "$script" --proc-root "$proc_root" --no-config >/dev/null \
     || fail "--no-config should check live values only"
 
+RG_MEMORY_SYSCTL_CHECK_BIN="$script" "$script" --config "$conf" --root-script "$tmpdir/reload-root.sh" >"$tmpdir/root-script.out" \
+    || fail "root-script emission should pass"
+test -x "$tmpdir/reload-root.sh" || fail "root script must be executable"
+rg -q 'sysctl -p "\$config_file"' "$tmpdir/reload-root.sh" \
+    || fail "root script must reload the selected config file"
+rg -q "check_bin=$script" "$tmpdir/reload-root.sh" \
+    || fail "root script must carry the selected checker path"
+
 printf 'ok\n'

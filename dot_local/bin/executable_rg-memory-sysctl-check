@@ -6,6 +6,7 @@ set -euo pipefail
 proc_root=/proc/sys
 config_file=/etc/sysctl.d/99-memory.conf
 check_config=1
+root_script=
 
 usage() {
     cat <<'USAGE'
@@ -17,6 +18,7 @@ Options:
   --proc-root PATH   Read live sysctls from PATH instead of /proc/sys.
   --config PATH      Check PATH instead of /etc/sysctl.d/99-memory.conf.
   --no-config        Check live sysctls only.
+  --root-script PATH Write a root script that reloads the managed sysctl policy.
   -h, --help
 USAGE
 }
@@ -24,6 +26,30 @@ USAGE
 die() {
     printf 'rg-memory-sysctl-check: %s\n' "$*" >&2
     exit 2
+}
+
+write_root_script() {
+    local dst="$1"
+    local dir check_bin
+    dir=$(dirname -- "$dst")
+    check_bin=${RG_MEMORY_SYSCTL_CHECK_BIN:-$HOME/.local/bin/rg-memory-sysctl-check}
+    mkdir -p "$dir"
+    {
+        printf '%s\n' '#!/usr/bin/env bash'
+        printf '%s\n' 'set -euo pipefail'
+        printf 'config_file=%q\n' "$config_file"
+        printf 'check_bin=%q\n' "$check_bin"
+        printf '%s\n' 'sysctl -p "$config_file"'
+        printf '%s\n' 'if [ -x "$check_bin" ]; then'
+        printf '%s\n' '    "$check_bin"'
+        printf '%s\n' 'elif command -v rg-memory-sysctl-check >/dev/null 2>&1; then'
+        printf '%s\n' '    rg-memory-sysctl-check'
+        printf '%s\n' 'else'
+        printf '%s\n' '    printf '\''warning: rg-memory-sysctl-check not found; policy reloaded only\n'\'' >&2'
+        printf '%s\n' 'fi'
+    } >"$dst"
+    chmod 0755 "$dst"
+    printf 'wrote: %s\n' "$dst"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -43,6 +69,11 @@ while [ "$#" -gt 0 ]; do
         check_config=0
         shift
         ;;
+    --root-script)
+        [ "$#" -ge 2 ] || die "--root-script requires a path"
+        root_script=$2
+        shift 2
+        ;;
     -h | --help)
         usage
         exit 0
@@ -52,6 +83,11 @@ while [ "$#" -gt 0 ]; do
         ;;
     esac
 done
+
+if [ -n "$root_script" ]; then
+    write_root_script "$root_script"
+    exit 0
+fi
 
 keys=(
     vm.swappiness
