@@ -198,8 +198,17 @@ json_field() {
 }
 
 fetch_egress_json() {
+    local curl_proxy
     command -v "$curl_bin" >/dev/null 2>&1 || return 1
-    "$curl_bin" -fsS --max-time 4 https://ipinfo.io/json 2>/dev/null
+    if [ -n "$proxy" ]; then
+        curl_proxy="$proxy"
+        case "$curl_proxy" in
+            socks5://*) curl_proxy="socks5h://${curl_proxy#socks5://}" ;;
+        esac
+        "$curl_bin" -fsS --max-time 8 --proxy "$curl_proxy" https://ipinfo.io/json 2>/dev/null
+    else
+        "$curl_bin" -fsS --max-time 4 https://ipinfo.io/json 2>/dev/null
+    fi
 }
 
 print_egress_info() {
@@ -517,6 +526,8 @@ print_system_location_dry_run() {
 
 print_doctor() {
     local system_tz geolocation_values geoclue_override processes
+    load_proxy_from_pass
+
     printf 'profile=%s\n' "$PROFILE_NAME"
     printf 'profile_timezone=%s\n' "$TZ_NAME"
     printf 'profile_locale=%s\n' "$LANG_NAME"

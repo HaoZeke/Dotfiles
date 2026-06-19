@@ -37,6 +37,7 @@ trap 'rm -rf "$tmp_home"' EXIT
 fake_curl="$tmp_home/curl"
 cat >"$fake_curl" <<'SH'
 #!/usr/bin/env sh
+[ -z "${RG_FAKE_CURL_ARGS:-}" ] || printf '%s\n' "$*" >"$RG_FAKE_CURL_ARGS"
 printf '%s\n' '{"ip":"198.51.100.9","city":"Livingston","region":"Texas","country":"US","loc":"30.7110,-94.9327","org":"AS64500 Example","timezone":"America/Chicago"}'
 SH
 chmod +x "$fake_curl"
@@ -163,6 +164,20 @@ assert_contains "$out" "profile=livingston" "doctor profile"
 assert_contains "$out" "system_timezone=America/Chicago" "doctor timezone"
 assert_contains "$out" "egress_region=Texas" "doctor egress region"
 assert_contains "$out" "egress_timezone=America/Chicago" "doctor egress timezone"
+
+curl_args="$tmp_home/curl.args"
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_PASS="$fake_pass" \
+    RG_LIVINGSTON_TIMEDATECTL="$fake_timedatectl" \
+    RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
+    RG_FAKE_CURL_ARGS="$curl_args" \
+    "$SCRIPT" doctor
+)
+assert_contains "$(cat "$curl_args")" "--proxy socks5h://wind-user:wind-pass@us.windscribe.example:1080" "proxied egress check"
 
 out=$(
     HOME="$tmp_home" \
