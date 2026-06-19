@@ -262,7 +262,7 @@ server:
     private-address: 192.168.0.0/16
     private-address: fd00::/8
     private-address: fe80::/10
-    auto-trust-anchor-file: "/var/lib/unbound/root.key"
+    auto-trust-anchor-file: "/trusted-key.key"
     tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
 
 include: "/etc/unbound/rg-forward-zones.conf"
