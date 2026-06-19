@@ -52,6 +52,26 @@ fi
 SH
 chmod +x "$fake_timedatectl"
 
+fake_pass="$tmp_home/pass"
+cat >"$fake_pass" <<'SH'
+#!/usr/bin/env sh
+case "$*" in
+    "show websites/windscribe/socks5/USloc")
+        printf '%s\n' 'us.windscribe.example:1080'
+        ;;
+    "show websites/windscribe/socks5/username")
+        printf '%s\n' 'wind-user'
+        ;;
+    "show websites/windscribe/socks5/password")
+        printf '%s\n' 'wind-pass'
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+SH
+chmod +x "$fake_pass"
+
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
@@ -92,6 +112,15 @@ out=$(
     "$SCRIPT" --dry-run --proxy socks5://127.0.0.1:9050 chromium
 )
 assert_contains "$out" "--proxy-server=socks5://127.0.0.1:9050" "proxy flag"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_PASS="$fake_pass" \
+    "$SCRIPT" --dry-run chromium
+)
+assert_contains "$out" "--proxy-server=socks5://wind-user:wind-pass@us.windscribe.example:1080" "pass-provided proxy flag"
 
 out=$(
     HOME="$tmp_home" \

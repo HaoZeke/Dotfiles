@@ -80,6 +80,9 @@ test_bin="${RG_LIVINGSTON_TEST:-test}"
 curl_bin="${RG_LIVINGSTON_CURL:-curl}"
 jq_bin="${RG_LIVINGSTON_JQ:-jq}"
 pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
+pass_bin="${RG_LIVINGSTON_PASS:-pass}"
+proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
+windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -135,6 +138,38 @@ print_env() {
     for entry in "${profile_env[@]}"; do
         printf '%s\n' "$entry"
     done
+}
+
+load_proxy_from_pass() {
+    local candidate host username password
+    [ -z "$proxy" ] || return 0
+    [ "${RG_LIVINGSTON_PROXY_FROM_PASS:-1}" = "1" ] || return 0
+    command -v "$pass_bin" >/dev/null 2>&1 || return 0
+
+    if [ -n "$proxy_pass_entry" ]; then
+        candidate="$("$pass_bin" show "$proxy_pass_entry" 2>/dev/null \
+            | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
+        if [ -n "$candidate" ]; then
+            proxy="$candidate"
+            return 0
+        fi
+    fi
+
+    host="$("$pass_bin" show "$windscribe_socks_pass_prefix/USloc" 2>/dev/null \
+        | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
+    username="$("$pass_bin" show "$windscribe_socks_pass_prefix/username" 2>/dev/null \
+        | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
+    password="$("$pass_bin" show "$windscribe_socks_pass_prefix/password" 2>/dev/null \
+        | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
+    [ -n "$host" ] || return 0
+    if [ -n "$username" ] && [ -n "$password" ]; then
+        candidate="socks5://$username:$password@$host"
+    else
+        candidate="socks5://$host"
+    fi
+
+    [ -n "$candidate" ] || return 0
+    proxy="$candidate"
 }
 
 as_root() {
@@ -285,6 +320,7 @@ run_browser() {
     local -a browser_args extra_browser_args
     shift
 
+    load_proxy_from_pass
     browser_bin="$(resolve_browser "$browser_name")" || die "cannot locate $browser_name"
     profile_dir="$profile_root/$browser_name"
     url="about:blank"
