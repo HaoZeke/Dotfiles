@@ -1,0 +1,444 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    printf 'Run as root:\n  sudo bash %s\n' "$0" >&2
+    exit 1
+fi
+
+backup_root="${RG_DNS_BACKUP_ROOT:-/var/tmp/rg-dns-backups}"
+restore_from=""
+list_backups=0
+
+usage() {
+    cat >&2 <<EOF
+usage:
+  sudo bash $0
+  sudo bash $0 --restore-from /var/tmp/rg-dns-backups/SNAPSHOT
+  sudo bash $0 --list-backups
+
+options:
+  --backup-root DIR     backup master directory (default: $backup_root)
+  --restore-from DIR    restore files and recorded service states from DIR
+  --list-backups        list backup snapshots in the master directory
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --backup-root)
+            test "$#" -ge 2 || {
+                usage
+                exit 2
+            }
+            backup_root="$2"
+            shift 2
+            ;;
+        --backup-root=*)
+            backup_root="${1#--backup-root=}"
+            shift
+            ;;
+        --restore-from)
+            test "$#" -ge 2 || {
+                usage
+                exit 2
+            }
+            restore_from="$2"
+            shift 2
+            ;;
+        --restore-from=*)
+            restore_from="${1#--restore-from=}"
+            shift
+            ;;
+        --list-backups)
+            list_backups=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+step_name=init
+tmp_dir="$(mktemp -d /tmp/rg-dns-preflight.XXXXXX)"
+backup_dir=""
+committed=0
+
+orig_ctrld_active="$(systemctl is-active ctrld.service 2>/dev/null || true)"
+orig_ctrld_enabled="$(systemctl is-enabled ctrld.service 2>/dev/null || true)"
+orig_unbound_active="$(systemctl is-active unbound.service 2>/dev/null || true)"
+orig_unbound_enabled="$(systemctl is-enabled unbound.service 2>/dev/null || true)"
+orig_resolved_active="$(systemctl is-active systemd-resolved.service 2>/dev/null || true)"
+orig_networkd_active="$(systemctl is-active systemd-networkd.service 2>/dev/null || true)"
+
+managed_paths=(
+    /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf
+    /etc/unbound/unbound.conf
+    /etc/unbound/unbound.conf.d/rg-local.conf
+    /etc/unbound/rg-forward-zones.conf
+    /etc/systemd/resolved.conf.d/99-rg-local-dns.conf
+    /etc/systemd/resolved.conf.d/zzzz-rg-local-dns.conf
+    /etc/systemd/network/20-wlan.network
+)
+
+step() {
+    step_name="$1"
+    printf '\n== %s ==\n' "$step_name" >&2
+}
+
+key_for_path() {
+    local path="$1"
+    printf '%s' "$path" | tr / _
+}
+
+create_backup_dir() {
+    local stamp
+    install -d -m 0700 "$backup_root"
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    mktemp -d "$backup_root/$stamp.XXXXXX"
+}
+
+write_snapshot_metadata() {
+    local dir="$1"
+    {
+        printf 'created_at_utc=%q\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        printf 'host=%q\n' "$(hostname)"
+        printf 'ctrld_active=%q\n' "$orig_ctrld_active"
+        printf 'ctrld_enabled=%q\n' "$orig_ctrld_enabled"
+        printf 'unbound_active=%q\n' "$orig_unbound_active"
+        printf 'unbound_enabled=%q\n' "$orig_unbound_enabled"
+        printf 'resolved_active=%q\n' "$orig_resolved_active"
+        printf 'networkd_active=%q\n' "$orig_networkd_active"
+    } >"$dir/service-state.env"
+    {
+        printf 'rg-fix-local-dns backup snapshot\n'
+        printf 'created_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        printf 'restore_command=sudo bash %q --restore-from %q\n' "$0" "$dir"
+        printf 'paths:\n'
+        printf '  %s\n' "${managed_paths[@]}"
+    } >"$dir/README"
+}
+
+backup_file() {
+    local dir="$1" path="$2" key
+    key="$(printf '%s' "$path" | tr / _)"
+    if [ -e "$path" ]; then
+        cp -a "$path" "$dir/$key"
+    else
+        : >"$dir/$key.absent"
+    fi
+}
+
+backup_managed_files() {
+    local dir="$1" path
+    write_snapshot_metadata "$dir"
+    for path in "${managed_paths[@]}"; do
+        backup_file "$dir" "$path"
+    done
+}
+
+snapshot_has_known_files() {
+    local dir="$1" path key
+    for path in "${managed_paths[@]}"; do
+        key="$(key_for_path "$path")"
+        if [ -e "$dir/$key" ] || [ -e "$dir/$key.absent" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+restore_file_from_snapshot() {
+    local snapshot="$1" stash="$2" path="$3" key
+    key="$(key_for_path "$path")"
+    if [ -e "$snapshot/$key" ]; then
+        cp -a "$snapshot/$key" "$path"
+    elif [ -e "$snapshot/$key.absent" ] && [ -e "$path" ]; then
+        mv -f "$path" "$stash/created-$key"
+    fi
+}
+
+restore_snapshot_files() {
+    local snapshot="$1" stash="$2" path
+    test -d "$snapshot"
+    snapshot_has_known_files "$snapshot"
+    for path in "${managed_paths[@]}"; do
+        restore_file_from_snapshot "$snapshot" "$stash" "$path"
+    done
+}
+
+apply_enabled_state() {
+    local service="$1" state="$2"
+    case "$state" in
+        enabled) systemctl enable "$service" >/dev/null 2>&1 || true ;;
+        disabled) systemctl disable "$service" >/dev/null 2>&1 || true ;;
+        masked) systemctl mask "$service" >/dev/null 2>&1 || true ;;
+    esac
+}
+
+apply_active_state() {
+    local service="$1" state="$2"
+    case "$state" in
+        active|activating) systemctl restart "$service" || systemctl start "$service" || true ;;
+        *) systemctl stop "$service" >/dev/null 2>&1 || true ;;
+    esac
+}
+
+apply_snapshot_service_states() {
+    local snapshot="$1"
+    local ctrld_active="$orig_ctrld_active"
+    local ctrld_enabled="$orig_ctrld_enabled"
+    local unbound_active="$orig_unbound_active"
+    local unbound_enabled="$orig_unbound_enabled"
+    local resolved_active="$orig_resolved_active"
+    local networkd_active="$orig_networkd_active"
+    if [ -r "$snapshot/service-state.env" ]; then
+        # shellcheck disable=SC1090
+        . "$snapshot/service-state.env"
+    fi
+    systemctl daemon-reload || true
+    if [ "$networkd_active" = active ]; then
+        networkctl reload || true
+        networkctl reconfigure wlan0 || true
+    fi
+    apply_enabled_state ctrld.service "$ctrld_enabled"
+    apply_enabled_state unbound.service "$unbound_enabled"
+    apply_active_state ctrld.service "$ctrld_active"
+    apply_active_state unbound.service "$unbound_active"
+    case "$resolved_active" in active|activating) systemctl restart systemd-resolved.service || true ;; esac
+    resolvectl flush-caches >/dev/null 2>&1 || true
+}
+
+rollback() {
+    local rc=$?
+    [ "$committed" -eq 0 ] || exit "$rc"
+    if [ -z "${backup_dir:-}" ]; then
+        rm -rf "$tmp_dir"
+        exit "$rc"
+    fi
+    printf 'rg-fix-local-dns: failed during step "%s"; restoring files from %s\n' "$step_name" "$backup_dir" >&2
+    restore_snapshot_files "$backup_dir" "$backup_dir"
+    apply_snapshot_service_states "$backup_dir"
+    rm -rf "$tmp_dir"
+    exit "$rc"
+}
+trap rollback ERR
+
+cleanup() {
+    [ "$committed" -eq 0 ] || rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+require() {
+    command -v "$1" >/dev/null || {
+        printf 'missing command: %s\n' "$1" >&2
+        exit 1
+    }
+}
+
+wait_for_a_record() {
+    local server="$1" port="$2" name="$3" want_nonzero="${4:-0}" out i
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        out="$(dig @"$server" -p "$port" +time=2 +tries=1 "$name" A +short 2>/dev/null || true)"
+        if [ -n "$out" ]; then
+            if [ "$want_nonzero" -eq 0 ] || ! printf '%s\n' "$out" | grep -Fxq '0.0.0.0'; then
+                printf '%s\n' "$out"
+                return 0
+            fi
+        fi
+        sleep 1
+    done
+    dig @"$server" -p "$port" +time=3 +tries=1 "$name" A
+    return 1
+}
+
+write_unbound_policy() {
+    local out="$1" port="$2" daemonize="$3" username_line="$4"
+    cat >"$out" <<EOF
+server:
+    interface: 127.0.0.1
+    port: $port
+    chroot: ""
+$username_line
+    access-control: 127.0.0.0/8 allow
+    module-config: "iterator"
+    do-ip4: yes
+    do-ip6: no
+    do-udp: yes
+    do-tcp: yes
+    do-daemonize: $daemonize
+    hide-identity: yes
+    hide-version: yes
+    harden-glue: yes
+    harden-referral-path: yes
+    qname-minimisation: yes
+    prefetch: yes
+    rrset-roundrobin: yes
+    do-not-query-localhost: no
+    private-address: 10.0.0.0/8
+    private-address: 172.16.0.0/12
+    private-address: 192.168.0.0/16
+    private-address: fd00::/8
+    private-address: fe80::/10
+    tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
+
+forward-zone:
+    name: "releases.lean-lang.org."
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
+
+forward-zone:
+    name: "release.lean-lang.org."
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
+
+forward-zone:
+    name: "."
+    forward-addr: 127.0.0.1@5354
+EOF
+}
+
+require systemctl
+require unbound-checkconf
+require unbound
+require dig
+require curl
+require networkctl
+require resolvectl
+
+if [ "$list_backups" -eq 1 ]; then
+    if [ -d "$backup_root" ]; then
+        find "$backup_root" -mindepth 1 -maxdepth 1 -type d -print | sort
+    fi
+    rm -rf "$tmp_dir"
+    exit 0
+fi
+
+backup_dir="$(create_backup_dir)"
+backup_managed_files "$backup_dir"
+printf 'rg-fix-local-dns: backup snapshot %s\n' "$backup_dir" >&2
+
+if [ -n "$restore_from" ]; then
+    step "restore DNS snapshot"
+    restore_snapshot_files "$restore_from" "$backup_dir"
+    apply_snapshot_service_states "$restore_from"
+    printf '\nrg-fix-local-dns: restored DNS snapshot from %s\n' "$restore_from"
+    printf 'rg-fix-local-dns: pre-restore backup kept at %s\n' "$backup_dir"
+    rm -rf "$tmp_dir"
+    committed=1
+    exit 0
+fi
+
+step "preflight inputs"
+test -x /usr/local/bin/ctrld
+cd_uid=$(
+    sh -c 'cat /etc/systemd/system/ctrld.service /etc/systemd/system/ctrld.service.d/*.conf 2>/dev/null || true' |
+        awk '{
+            for (i = 1; i <= NF; i++) {
+                gsub(/^"|"$/, "", $i)
+                if ($i == "--cd" && i < NF) {
+                    gsub(/^"|"$/, "", $(i + 1))
+                    print $(i + 1)
+                } else if ($i ~ /^--cd=/) {
+                    sub(/^--cd=/, "", $i)
+                    gsub(/^"|"$/, "", $i)
+                    print $i
+                }
+            }
+        }' |
+        head -n 1
+)
+test -n "$cd_uid"
+
+step "start Control D high-port resolver"
+install -d -m 0755 /etc/systemd/system/ctrld.service.d
+cat >/etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+EOF
+systemctl daemon-reload
+systemctl restart ctrld.service
+wait_for_a_record 127.0.0.1 5354 duckduckgo.com >/dev/null
+
+step "preflight temporary Unbound policy"
+probe_conf="$tmp_dir/unbound-probe.conf"
+write_unbound_policy "$probe_conf" 11554 no '    username: ""'
+unbound-checkconf "$probe_conf"
+/usr/bin/timeout 20s unbound -d -c "$probe_conf" >"$tmp_dir/unbound-probe.log" 2>&1 &
+probe_pid=$!
+sleep 1
+wait_for_a_record 127.0.0.1 11554 duckduckgo.com >/dev/null
+wait_for_a_record 127.0.0.1 11554 releases.lean-lang.org 1 >/dev/null
+kill "$probe_pid" >/dev/null 2>&1 || true
+wait "$probe_pid" >/dev/null 2>&1 || true
+
+step "install and start Unbound service"
+install -d -m 0755 /etc/unbound /etc/unbound/unbound.conf.d
+service_conf="$tmp_dir/unbound-service.conf"
+write_unbound_policy "$service_conf" 53 no ''
+unbound-checkconf "$service_conf"
+cp -a "$service_conf" /etc/unbound/unbound.conf
+: >/etc/unbound/rg-forward-zones.conf
+systemctl enable unbound.service >/dev/null 2>&1 || true
+systemctl restart unbound.service
+wait_for_a_record 127.0.0.1 53 duckduckgo.com >/dev/null
+wait_for_a_record 127.0.0.1 53 releases.lean-lang.org 1 >/dev/null
+
+step "disable DHCP DNS on wlan0"
+cat >/etc/systemd/network/20-wlan.network <<'EOF'
+[Match]
+Name=wlan*
+
+[Network]
+DHCP=yes
+IPv6PrivacyExtensions=yes
+
+[DHCPv4]
+RouteMetric=600
+UseDNS=no
+
+[IPv6AcceptRA]
+RouteMetric=600
+UseDNS=no
+EOF
+networkctl reload
+networkctl reconfigure wlan0
+sleep 2
+
+step "cut systemd-resolved to localhost"
+install -d -m 0755 /etc/systemd/resolved.conf.d
+cat >/etc/systemd/resolved.conf.d/zzzz-rg-local-dns.conf <<'EOF'
+[Resolve]
+DNS=
+DNS=127.0.0.1
+FallbackDNS=
+Domains=~.
+DNSSEC=no
+DNSOverTLS=no
+Cache=yes
+DNSStubListener=yes
+EOF
+systemctl restart systemd-resolved.service
+resolvectl flush-caches
+
+step "verify resolved path"
+global_dns="$(resolvectl dns | awk '/^Global:/ {sub(/^Global:[[:space:]]*/, ""); print; exit}')"
+test "$global_dns" = "127.0.0.1"
+lean_ip="$(resolvectl query releases.lean-lang.org | awk '/releases\.lean-lang\.org:/ {print $2; exit}')"
+test -n "$lean_ip"
+test "$lean_ip" != "0.0.0.0"
+resolvectl query duckduckgo.com >/dev/null
+curl -I -L --connect-timeout 10 --max-time 20 \
+    https://releases.lean-lang.org/lean4/v4.29.0-rc6/lean-4.29.0-rc6-linux.tar.zst >/dev/null
+
+committed=1
+rm -rf "$tmp_dir"
+printf '\nrg-fix-local-dns: local DNS chain active\n'
+printf 'rg-fix-local-dns: backup kept at %s\n' "$backup_dir"

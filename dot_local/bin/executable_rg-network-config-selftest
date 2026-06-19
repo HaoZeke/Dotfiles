@@ -11,6 +11,8 @@ fail() {
 airplane="$repo/dot_local/bin/executable_rg-airplane"
 network_json="$repo/dot_local/bin/executable_rg-network-status-json"
 weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
+fix_local_dns="$repo/dot_local/bin/executable_rg-fix-local-dns"
+us_egress_up="$repo/dot_local/bin/executable_rg-us-egress-up"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
 bottom_bar="$repo/dot_config/i3rust/i3_bottom.toml.tmpl"
@@ -19,6 +21,8 @@ sway_config="$repo/dot_config/sway/config.tmpl"
 test -r "$airplane" || fail "missing rg-airplane helper"
 test -r "$network_json" || fail "missing rg-network-status-json helper"
 test -r "$weather_json" || fail "missing rg-weather-json helper"
+test -r "$fix_local_dns" || fail "missing local DNS repair helper"
+test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
 test -r "$bottom_bar" || fail "missing bottom i3status-rs config"
@@ -96,6 +100,8 @@ rg -q 'pass show services/openweather-api-key 2>/dev/null' "$weather_json" \
 rendered_weather="$tmp_net/rg-weather-json"
 chezmoi --source "$repo" --no-tty --refresh-externals=never execute-template < "$weather_json" > "$rendered_weather"
 bash -n "$rendered_weather"
+bash -n "$fix_local_dns"
+bash -n "$us_egress_up"
 mkdir -p "$tmp_net/bin"
 cat >"$tmp_net/bin/pass" <<'SH'
 #!/usr/bin/env sh
@@ -124,6 +130,27 @@ rg -q 'rg-weather-json iitk' "$bottom_bar" \
     || fail "bottom bar does not use quiet IITK weather wrapper"
 ! rg -q '^block = "weather"$' "$bottom_bar" \
     || fail "bottom bar still uses generic weather blocks"
+
+rg -q 'zzzz-rg-local-dns.conf' "$fix_local_dns" \
+    || fail "local DNS repair helper does not install a last-sorting resolved drop-in"
+rg -q 'resolvectl dns' "$fix_local_dns" \
+    || fail "local DNS repair helper does not verify resolved global DNS"
+rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$fix_local_dns" \
+    || fail "local DNS repair helper lacks a secondary Control D upstream"
+rg -q -- '--restore-from' "$fix_local_dns" \
+    || fail "local DNS repair helper lacks snapshot restore support"
+rg -q '/var/tmp/rg-dns-backups' "$fix_local_dns" \
+    || fail "local DNS repair helper does not use a stable backup root"
+rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
+    || fail "US egress helper does not support an environment-provided WireGuard config"
+rg -q 'rg-fix-local-dns' "$us_egress_up" \
+    || fail "US egress helper does not use the managed DNS repair helper"
+rg -q 'settle resolver after route change' "$us_egress_up" \
+    || fail "US egress helper does not settle DNS after WireGuard route changes"
+rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \
+    || fail "US egress helper does not retry transient IPv4 egress checks"
+! rg -q 'PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|/home/rgoswami/Downloads' "$fix_local_dns" "$us_egress_up" \
+    || fail "managed network helpers contain provider-local paths or WireGuard secret material"
 
 rg -q 'unbound.service' "$laptop_script" \
     || fail "local resolver service is not managed"

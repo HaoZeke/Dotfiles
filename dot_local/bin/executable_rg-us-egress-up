@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+conf="${1:-${RG_US_EGRESS_CONF:-}}"
+iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+runtime_conf="/etc/wireguard/${iface}.conf"
+dns_fix="${RG_DNS_FIX_SCRIPT:-rg-fix-local-dns}"
+
+if [ "$(id -u)" -ne 0 ]; then
+    printf 'run as root: sudo bash %s [wireguard.conf]\n' "$0" >&2
+    exit 2
+fi
+
+if [ -z "$conf" ] || [ ! -r "$conf" ]; then
+    printf 'usage: sudo %s /path/to/wireguard.conf\n' "$0" >&2
+    printf 'or set RG_US_EGRESS_CONF=/path/to/wireguard.conf\n' >&2
+    exit 2
+fi
+
+command -v wg >/dev/null
+command -v wg-quick >/dev/null
+command -v resolvectl >/dev/null
+command -v dig >/dev/null
+command -v curl >/dev/null
+command -v tailscale >/dev/null
+
+wait_for_dig() {
+    local label="$1" server="$2" port="$3" name="$4" out i
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        out="$(dig @"$server" -p "$port" "$name" +time=2 +tries=1 +short 2>/dev/null || true)"
+        if [ -n "$out" ]; then
+            printf '%s: %s\n' "$label" "$(printf '%s\n' "$out" | head -n 1)"
+            return 0
+        fi
+        sleep 2
+    done
+    printf '%s did not resolve through %s:%s\n' "$name" "$server" "$port" >&2
+    return 1
+}
+
+wait_for_resolved() {
+    local name="$1" i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        if resolvectl query "$name" >/dev/null 2>&1; then
+            resolvectl query "$name"
+            return 0
+        fi
+        sleep 2
+    done
+    resolvectl query "$name"
+}
+
+retry_cmd() {
+    local label="$1"
+    shift
+    local i
+    for i in 1 2 3 4 5 6; do
+        if "$@"; then
+            return 0
+        fi
+        printf '%s failed on attempt %s; retrying\n' "$label" "$i" >&2
+        sleep 3
+    done
+    printf '%s failed after retries\n' "$label" >&2
+    return 1
+}
+
+require_conf_key() {
+    local key="$1"
+    if ! grep -Eq "^${key}[[:space:]]*=" "$conf"; then
+        printf 'WireGuard config missing required key: %s\n' "$key" >&2
+        exit 2
+    fi
+}
+
+require_conf_key PrivateKey
+require_conf_key Address
+require_conf_key PublicKey
+require_conf_key AllowedIPs
+require_conf_key Endpoint
+
+if ! grep -Eq '^AllowedIPs[[:space:]]*=[[:space:]]*.*0\.0\.0\.0/0' "$conf"; then
+    printf 'WireGuard config does not route IPv4 default traffic\n' >&2
+    exit 2
+fi
+
+chmod 0600 "$conf"
+
+if command -v "$dns_fix" >/dev/null 2>&1; then
+    "$dns_fix"
+elif [ -x "$dns_fix" ]; then
+    "$dns_fix"
+elif [ -f "$dns_fix" ]; then
+    bash "$dns_fix"
+else
+    printf 'DNS repair helper not found: %s\n' "$dns_fix" >&2
+    exit 2
+fi
+
+printf '\n== install wg-quick runtime config ==\n'
+install -d -m 0700 /etc/wireguard
+tmp_conf="$(mktemp)"
+trap 'rm -f "$tmp_conf"' EXIT
+awk '
+    /^[[:space:]]*DNS[[:space:]]*=/ { next }
+    { print }
+' "$conf" >"$tmp_conf"
+install -m 0600 "$tmp_conf" "$runtime_conf"
+
+printf '\n== start WireGuard full-tunnel interface ==\n'
+wg-quick down "$iface" >/dev/null 2>&1 || true
+wg-quick up "$iface"
+
+printf '\n== settle resolver after route change ==\n'
+sleep 2
+systemctl restart ctrld.service
+wait_for_dig "Control D high-port DNS" 127.0.0.1 5354 ipinfo.io
+systemctl restart unbound.service
+wait_for_dig "Unbound local DNS" 127.0.0.1 53 ipinfo.io
+resolvectl flush-caches || true
+if [ "$(resolvectl dns | awk '/^Global:/ {sub(/^Global:[[:space:]]*/, ""); print; exit}')" != "127.0.0.1" ]; then
+    printf 'systemd-resolved global DNS is not pinned to 127.0.0.1\n' >&2
+    resolvectl dns >&2
+    exit 5
+fi
+wait_for_resolved ipinfo.io
+
+if [ "${RG_US_EGRESS_ENABLE:-0}" = "1" ]; then
+    systemctl enable "wg-quick@${iface}.service"
+fi
+
+printf '\n== resolver checks ==\n'
+systemctl is-active --quiet ctrld.service
+systemctl is-active --quiet unbound.service
+resolvectl query duckduckgo.com
+resolvectl query releases.lean-lang.org
+lean_ip="$(dig @127.0.0.1 releases.lean-lang.org +short | head -n 1)"
+if [ -z "$lean_ip" ] || [ "$lean_ip" = "0.0.0.0" ]; then
+    printf 'Lean release host is still blocked or unresolved via local DNS\n' >&2
+    exit 4
+fi
+printf 'Lean release host resolves via local DNS\n'
+
+printf '\n== route checks ==\n'
+ip route get 1.1.1.1
+ip -6 route get 2606:4700:4700::1111 || true
+
+printf '\n== egress checks ==\n'
+retry_cmd "ipinfo IPv4 egress" curl -4 --connect-timeout 8 --max-time 15 https://ipinfo.io/json
+retry_cmd "ipapi IPv4 egress" curl -4 --connect-timeout 8 --max-time 15 https://ipapi.co/json/
+curl -6 --connect-timeout 8 --max-time 15 https://ifconfig.co/json || printf 'IPv6 egress check failed or IPv6 is unavailable\n'
+
+printf '\n== mesh checks ==\n'
+tailscale status >/dev/null && printf 'tailscale status: ok\n'
+tailscale netcheck
