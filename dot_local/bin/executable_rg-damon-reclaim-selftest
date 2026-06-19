@@ -17,7 +17,9 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 missing="$tmpdir/missing/enabled"
 enabled="$tmpdir/enabled"
+param_dir="$tmpdir/params"
 fake_sudo="$tmpdir/fake-sudo"
+mkdir -p "$param_dir"
 
 cat >"$fake_sudo" <<'SH'
 #!/usr/bin/env bash
@@ -49,9 +51,27 @@ rg -q 'DAMON_RECLAIM not available' /tmp/rg-damon-enable.out \
     || fail "enable failure should explain missing DAMON_RECLAIM"
 
 printf 'N\n' >"$enabled"
-RG_DAMON_ENABLED_PATH="$enabled" RG_DAMON_SUDO="$fake_sudo" "$script" enable >/dev/null
+RG_DAMON_ENABLED_PATH="$enabled" RG_DAMON_SUDO="$fake_sudo" "$script" enable off >/dev/null
 test "$(cat "$enabled")" = Y || fail "enable should write Y"
 RG_DAMON_ENABLED_PATH="$enabled" RG_DAMON_SUDO="$fake_sudo" "$script" disable >/dev/null
 test "$(cat "$enabled")" = N || fail "disable should write N"
+
+for name in enabled quota_ms quota_sz quota_reset_interval_ms wmarks_high wmarks_mid \
+    wmarks_low wmarks_interval min_age sample_interval aggr_interval min_nr_regions \
+    max_nr_regions skip_anon quota_mem_pressure_us quota_autotune_feedback commit_inputs; do
+    printf '0\n' >"$param_dir/$name"
+done
+RG_DAMON_PARAM_DIR="$param_dir" RG_DAMON_SUDO="$fake_sudo" "$script" enable memory-pressure >/dev/null
+test "$(cat "$param_dir/enabled")" = Y || fail "profile enable should turn DAMON on"
+test "$(cat "$param_dir/quota_ms")" = 20 || fail "memory-pressure should set quota_ms"
+test "$(cat "$param_dir/quota_sz")" = 536870912 || fail "memory-pressure should set quota_sz"
+test "$(cat "$param_dir/wmarks_mid")" = 450 || fail "memory-pressure should set wmarks_mid"
+test "$(cat "$param_dir/commit_inputs")" = Y || fail "profile enable should commit inputs"
+
+root_script="$tmpdir/damon-root.sh"
+RG_DAMON_PARAM_DIR="$param_dir" "$script" root-script laptop "$root_script" >/dev/null
+bash -n "$root_script" || fail "generated DAMON root script should be valid bash"
+rg -q 'write_param quota_ms 10' "$root_script" \
+    || fail "root script should carry laptop quota"
 
 printf 'ok\n'

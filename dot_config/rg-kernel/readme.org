@@ -44,9 +44,19 @@ Industry userspace (chezmoi, rgx1gen11 only):
 
 #+begin_src shell
 rg-x1gen11-profile apply undocked-mixed
+rg-x1gen11-profile root-script undocked-mixed
 rg-oomd-profile-install && sudo bash /tmp/rg-oomd-profile-install-root.sh
 rg-psi-snapshot bench /tmp/psi.csv 60
 rg-scx-loader switch lavd
+#+end_src
+
+For no-sudo agent runs, emit root batches first and run them explicitly:
+
+#+begin_src shell
+rg-x1gen11-profile root-script undocked-mixed /tmp/rg-x1gen11-profile-root.sh
+sudo bash /tmp/rg-x1gen11-profile-root.sh
+rg-x1gen11-profile apply-user undocked-mixed
+rg-damon-reclaim root-script memory-pressure /tmp/rg-damon-reclaim-root.sh
 #+end_src
 
 =rg-kernel-build build= writes packages under

@@ -7,18 +7,26 @@
 
 set -euo pipefail
 
-ENABLED_PATH=${RG_DAMON_ENABLED_PATH:-/sys/module/damon_reclaim/parameters/enabled}
+PARAM_DIR=${RG_DAMON_PARAM_DIR:-/sys/module/damon_reclaim/parameters}
+ENABLED_PATH=${RG_DAMON_ENABLED_PATH:-$PARAM_DIR/enabled}
 SUDO="${RG_DAMON_SUDO:-sudo}"
+ROOT_SCRIPT=${RG_DAMON_ROOT_SCRIPT:-/tmp/rg-damon-reclaim-root.sh}
 
 usage() {
     cat <<'USAGE'
 usage: rg-damon-reclaim COMMAND
 
 Commands:
-  status    Print whether DAMON reclaim is enabled and kdamond process count.
-  enable    Turn DAMON reclaim on (requires linux-rg or DAMON_RECLAIM kernel).
-  disable   Turn DAMON reclaim off.
+  status                  Print DAMON reclaim state and policy parameters.
+  enable [PROFILE]        Apply PROFILE and turn DAMON reclaim on.
+  disable                 Turn DAMON reclaim off.
+  root-script PROFILE [OUT]
+                          Write an inspectable root script for PROFILE.
   -h, --help
+
+Profiles:
+  laptop           Conservative bounded reclaim profile.
+  memory-pressure  Stronger bounded profile for browser + VM + build pressure.
 USAGE
 }
 
@@ -33,10 +41,105 @@ require_enabled_file() {
     fi
 }
 
-write_enabled() {
-    local value="$1"
+param_path() {
+    local name="$1"
+    if [ "$name" = enabled ]; then
+        printf '%s\n' "$ENABLED_PATH"
+    else
+        printf '%s/%s\n' "$PARAM_DIR" "$name"
+    fi
+}
+
+read_param() {
+    local name="$1" path
+    path=$(param_path "$name")
+    if [ ! -e "$path" ]; then
+        printf 'missing'
+    elif [ -r "$path" ]; then
+        cat "$path"
+    else
+        printf 'permission-denied'
+    fi
+}
+
+write_param() {
+    local name="$1" value="$2" path
+    path=$(param_path "$name")
+    if [ ! -e "$path" ]; then
+        printf 'skip missing parameter: %s\n' "$name" >&2
+        return 0
+    fi
+    echo "$value" | $SUDO tee "$path" >/dev/null
+}
+
+profile_params() {
+    local profile="$1"
+    case "$profile" in
+    laptop)
+        cat <<'EOF'
+quota_ms=10
+quota_sz=134217728
+quota_reset_interval_ms=1000
+wmarks_high=500
+wmarks_mid=350
+wmarks_low=200
+wmarks_interval=5000000
+min_age=120000000
+sample_interval=5000
+aggr_interval=100000
+min_nr_regions=10
+max_nr_regions=1000
+skip_anon=N
+quota_mem_pressure_us=0
+quota_autotune_feedback=0
+EOF
+        ;;
+    memory-pressure)
+        cat <<'EOF'
+quota_ms=20
+quota_sz=536870912
+quota_reset_interval_ms=1000
+wmarks_high=600
+wmarks_mid=450
+wmarks_low=250
+wmarks_interval=5000000
+min_age=60000000
+sample_interval=5000
+aggr_interval=100000
+min_nr_regions=10
+max_nr_regions=2000
+skip_anon=N
+quota_mem_pressure_us=0
+quota_autotune_feedback=0
+EOF
+        ;;
+    off)
+        ;;
+    *) die "unknown profile: $profile" ;;
+    esac
+}
+
+apply_profile_params() {
+    local profile="$1" line name value wrote=0
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        name=${line%%=*}
+        value=${line#*=}
+        write_param "$name" "$value"
+        wrote=1
+    done < <(profile_params "$profile")
+    if [ "$wrote" = 1 ] && [ -e "$(param_path commit_inputs)" ]; then
+        write_param commit_inputs Y
+    fi
+}
+
+cmd_enable() {
+    local profile=${1:-laptop}
     require_enabled_file
-    echo "$value" | $SUDO tee "$ENABLED_PATH" >/dev/null
+    write_param enabled N
+    apply_profile_params "$profile"
+    write_param enabled Y
+    cmd_status
 }
 
 cmd_disable() {
@@ -44,7 +147,7 @@ cmd_disable() {
         cmd_status
         return 0
     fi
-    write_enabled N
+    write_param enabled N
     cmd_status
 }
 
@@ -53,16 +156,92 @@ cmd_status() {
         printf 'damon_reclaim: unavailable\n'
         return 0
     fi
-    printf 'damon_reclaim enabled: %s\n' "$(cat "$ENABLED_PATH")"
+    local name
+    for name in \
+        enabled quota_ms quota_sz quota_reset_interval_ms \
+        wmarks_high wmarks_mid wmarks_low wmarks_interval \
+        min_age sample_interval aggr_interval min_nr_regions max_nr_regions \
+        skip_anon quota_mem_pressure_us quota_autotune_feedback \
+        kdamond_pid nr_reclaim_tried_regions bytes_reclaim_tried_regions \
+        nr_reclaimed_regions bytes_reclaimed_regions nr_quota_exceeds; do
+        printf '%s: %s\n' "$name" "$(read_param "$name")"
+    done
     printf 'kdamond processes: %s\n' "$(pgrep -c kdamond 2>/dev/null || echo 0)"
+}
+
+cmd_root_script() {
+    local profile=${1:-}
+    local out=${2:-$ROOT_SCRIPT}
+    [ -n "$profile" ] || die "root-script requires PROFILE"
+    profile_params "$profile" >/dev/null
+    cat >"$out" <<ROOT
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "\$(id -u)" -ne 0 ]; then
+    printf 'run as root: sudo bash %s\n' "\$0" >&2
+    exit 2
+fi
+
+param_dir=${PARAM_DIR}
+enabled_path=${ENABLED_PATH}
+
+param_path() {
+    local name=\$1
+    if [ "\$name" = enabled ]; then
+        printf '%s\n' "\$enabled_path"
+    else
+        printf '%s/%s\n' "\$param_dir" "\$name"
+    fi
+}
+
+write_param() {
+    local name=\$1 value=\$2 path
+    path=\$(param_path "\$name")
+    if [ ! -e "\$path" ]; then
+        printf 'skip missing parameter: %s\n' "\$name" >&2
+        return 0
+    fi
+    printf '%s\n' "\$value" >"\$path"
+}
+
+if [ ! -e "\$enabled_path" ]; then
+    printf 'DAMON_RECLAIM not available: %s\n' "\$enabled_path" >&2
+    exit 1
+fi
+
+write_param enabled N
+ROOT
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        printf 'write_param %q %q\n' "${line%%=*}" "${line#*=}" >>"$out"
+    done < <(profile_params "$profile")
+    cat >>"$out" <<'ROOT'
+if [ -e "$(param_path commit_inputs)" ]; then
+    write_param commit_inputs Y
+fi
+write_param enabled Y
+
+printf 'DAMON_RECLAIM profile applied\n'
+for name in enabled quota_ms quota_sz quota_reset_interval_ms wmarks_high wmarks_mid wmarks_low min_age skip_anon; do
+    path=$(param_path "$name")
+    if [ -r "$path" ]; then
+        printf '%s: %s\n' "$name" "$(cat "$path")"
+    fi
+done
+ROOT
+    chmod 0755 "$out"
+    printf 'wrote %s\n' "$out"
+    printf 'run: sudo bash %s\n' "$out"
 }
 
 main() {
     local cmd=${1:-}
     case "$cmd" in
     status) cmd_status ;;
-    enable) write_enabled Y; cmd_status ;;
+    enable) cmd_enable "${2:-laptop}" ;;
     disable) cmd_disable ;;
+    root-script) cmd_root_script "${2:-}" "${3:-$ROOT_SCRIPT}" ;;
     -h | --help | "") usage ;;
     *) die "unknown command: $cmd" ;;
     esac
