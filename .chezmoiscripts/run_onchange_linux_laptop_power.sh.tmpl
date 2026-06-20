@@ -101,6 +101,7 @@ KillMode=process
 WantedBy=multi-user.target
 "
     write_if_diff /etc/systemd/system/ctrld.service "$content"
+    sudo rm -f /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf
 }
 
 write_journald_storage_fix_script() {
@@ -455,6 +456,7 @@ DNSSEC=no
 DNSOverTLS=no
 Cache=yes
 DNSStubListener=yes
+MulticastDNS=no
 '
 
 # shellcheck disable=SC2016
@@ -839,6 +841,8 @@ if [ "$TAILSCALED_TEMPLATE_CHANGED" = "1" ] || [ "$CTRLD_CHANGED" = "1" ]; then
 fi
 
 disable_networkmanager_for_iwd
+
+sudo systemctl enable --now systemd-networkd.service systemd-resolved.service >/dev/null 2>&1 || true
 
 if [ "$NETWORKD_CHANGED" = "1" ] && sudo systemctl is-active systemd-networkd.service >/dev/null 2>&1; then
     sudo networkctl reload || true

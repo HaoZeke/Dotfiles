@@ -13,6 +13,7 @@ network_json="$repo/dot_local/bin/executable_rg-network-status-json"
 weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
 fix_local_dns="$repo/dot_local/bin/executable_rg-fix-local-dns"
 fix_nm_ctrld="$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld"
+profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
 us_egress_up="$repo/dot_local/bin/executable_rg-us-egress-up"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
@@ -24,6 +25,7 @@ test -r "$network_json" || fail "missing rg-network-status-json helper"
 test -r "$weather_json" || fail "missing rg-weather-json helper"
 test -r "$fix_local_dns" || fail "missing local DNS repair helper"
 test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
+test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
@@ -103,6 +105,7 @@ rendered_weather="$tmp_net/rg-weather-json"
 chezmoi --source "$repo" --no-tty --refresh-externals=never execute-template < "$weather_json" > "$rendered_weather"
 bash -n "$rendered_weather"
 bash -n "$fix_local_dns"
+bash -n "$profile_selftest"
 bash -n "$us_egress_up"
 mkdir -p "$tmp_net/bin"
 cat >"$tmp_net/bin/pass" <<'SH'
@@ -204,6 +207,8 @@ test -n "$cleanup_call_line" && test -n "$dns_fix_call_line" && test "$cleanup_c
 
 rg -q 'unbound.service' "$laptop_script" \
     || fail "local resolver service is not managed"
+rg -q 'systemctl enable --now systemd-networkd.service systemd-resolved.service' "$laptop_script" \
+    || fail "networkd and resolved are not explicitly enabled for boot"
 rg -q 'ctrld.service' "$laptop_script" \
     || fail "Control D daemon is not managed for local DNS chaining"
 rg -q '127\.0\.0\.1:5354' "$laptop_script" \
@@ -214,6 +219,10 @@ rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$laptop_script" \
     || fail "Control D listener lacks a secondary upstream"
 rg -q 'disable_networkmanager_for_iwd' "$laptop_script" \
     || fail "laptop script does not stop NetworkManager before network service restarts"
+rg -q 'rm -f /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf' "$laptop_script" \
+    || fail "laptop script does not retire the stale Control D drop-in"
+rg -q 'MulticastDNS=no' "$laptop_script" \
+    || fail "systemd-resolved mDNS is not disabled in the managed local resolver drop-in"
 rg -q 'write_if_diff /etc/systemd/system/ctrld.service "\$content"' "$laptop_script" \
     || fail "laptop script does not replace the Control D unit"
 rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$laptop_script" \
@@ -250,6 +259,18 @@ rg -q '/etc/systemd/network/20-wlan.network' "$laptop_script" \
     || fail "networkd wlan profile is not managed"
 rg -q 'UseDNS=no' "$laptop_script" \
     || fail "networkd DHCP DNS must be disabled so resolved uses the local resolver"
+eth_dns_count=$(sed -n "/^NETWORKD_ETHERNET_CONTENT=/,/^'$/p" "$laptop_script" | rg -c '^UseDNS=no$' || true)
+test "$eth_dns_count" -ge 2 || fail "Ethernet profile can still accept DHCP DNS"
+wwan_dns_count=$(sed -n "/^NETWORKD_WWAN_CONTENT=/,/^'$/p" "$laptop_script" | rg -c '^UseDNS=no$' || true)
+test "$wwan_dns_count" -ge 2 || fail "WWAN profile can still accept DHCP DNS"
+rg -q 'systemctl is-enabled systemd-networkd.service systemd-resolved.service' "$profile_selftest" \
+    || fail "live profile selftest does not check network service enablement"
+rg -q '/etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf' "$profile_selftest" \
+    || fail "live profile selftest does not check stale Control D drop-in removal"
+rg -q 'MulticastDNS=no' "$profile_selftest" \
+    || fail "live profile selftest does not check resolved mDNS policy"
+rg -q 'UseDNS=no' "$profile_selftest" \
+    || fail "live profile selftest does not check DHCP DNS policy"
 rg -q 'networkctl reconfigure wlan0' "$laptop_script" \
     || fail "networkd wlan profile changes must be applied without restarting Wi-Fi managers"
 rg -q 'tailscaled@.service' "$laptop_script" \

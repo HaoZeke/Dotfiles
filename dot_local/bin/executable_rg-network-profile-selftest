@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+systemctl is-enabled systemd-networkd.service systemd-resolved.service >/dev/null \
+    || fail "systemd-networkd/systemd-resolved are not enabled"
+
+for path in /etc/systemd/network/20-ethernet.network \
+            /etc/systemd/network/20-wlan.network \
+            /etc/systemd/network/20-wwan.network; do
+    test -r "$path" || fail "missing $path"
+    rg -q 'UseDNS=no' "$path" || fail "$path accepts DHCP DNS"
+done
+
+test ! -e /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf \
+    || fail "stale Control D drop-in still exists"
+if systemctl show ctrld.service -p Wants -p After | rg -q NetworkManager; then
+    fail "ctrld.service still depends on NetworkManager"
+fi
+
+rg -q 'MulticastDNS=no' /etc/systemd/resolved.conf.d/zzzz-rg-local-dns.conf \
+    || fail "systemd-resolved mDNS is not disabled"
+test "$(resolvectl dns | awk '/^Global:/ {sub(/^Global:[[:space:]]*/, ""); print; exit}')" = "127.0.0.1" \
+    || fail "global DNS is not pinned to 127.0.0.1"
+
+printf 'ok\n'
