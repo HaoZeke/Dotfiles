@@ -233,8 +233,8 @@ rg -q 'makepkg --syncdeps --noconfirm' "$launcher" \
     || fail "launcher does not use makepkg for pacman artifacts"
 rg -q 'PKGDEST="\$artifact_dir"' "$launcher" \
     || fail "launcher does not put built packages in the artifact directory"
-rg -q 'pacman -U' "$launcher" \
-    || fail "launcher does not print pacman install guidance"
+rg -q 'rgx1gen11-reinstall-check-root' "$launcher" \
+    || fail "launcher does not print checked linux-rg reinstall guidance"
 rg -q '\$RG_KERNEL_PACKAGE_BASE-headers-\*\.pkg\.tar\.\*' "$launcher" \
     || fail "launcher does not require linux-rg headers artifacts"
 rg -q 'pacman -Qq.*-dkms' "$launcher" \

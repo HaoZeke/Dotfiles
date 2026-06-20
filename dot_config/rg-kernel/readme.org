@@ -8,9 +8,9 @@
 
 =linux-rg= is the custom kernel package for the ThinkPad X1 Carbon Gen 11
 (=21HM002GUS=, host =rgx1gen11=). It is built as an Arch-native PKGBUILD with
-=makepkg= and installed with =pacman -U=, so pacman owns the kernel package,
-the headers package is tracked, DKMS sees the matching headers, and initramfs
-hooks run through normal Arch package semantics.
+=makepkg= and installed through the checked =linux-rg= reinstall helper, so
+pacman owns the kernel package, the headers package is tracked, DKMS sees the
+matching headers, and initramfs plus rEFInd checks run with the package install.
 
 The package source of truth is the local =~/Git/Github/Tools/linux-rg= checkout,
 which carries the adapted =0001= through =0021= patch queue, PKGBUILD, source
@@ -61,10 +61,10 @@ rg-damon-reclaim root-script memory-pressure /tmp/rg-damon-reclaim-root.sh
 
 =rg-kernel-build build= writes packages under
 =~/.local/share/rg-kernel/artifacts/linux-rg=. The printed install command is
-the privileged package install step:
+the privileged reinstall and boot-check step:
 
 #+begin_src shell
-sudo pacman -U ~/.local/share/rg-kernel/artifacts/linux-rg/*.pkg.tar.*
+sudo ~/Git/Github/Tools/linux-rg/scripts/rgx1gen11-reinstall-check-root --artifact-dir ~/.local/share/rg-kernel/artifacts/linux-rg
 #+end_src
 
 =rg-kernel-build refind-command= writes a rEFInd stanza to =/tmp= using the

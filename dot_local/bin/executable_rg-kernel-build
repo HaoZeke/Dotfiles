@@ -839,7 +839,12 @@ install_preflight() {
 }
 
 install_command_text() {
-    printf 'sudo pacman -U %s/*.pkg.tar.*\n' "$(artifact_dir)"
+    local installer
+    installer=${RG_KERNEL_INSTALLER:-"$RG_KERNEL_SOURCE_REPO/scripts/rgx1gen11-reinstall-check-root"}
+    [ -x "$installer" ] || fail "missing linux-rg reinstall helper: $installer"
+    printf 'sudo %s --artifact-dir %s\n' \
+        "$(shell_quote "$installer")" \
+        "$(shell_quote "$(artifact_dir)")"
 }
 
 print_install_command() {
