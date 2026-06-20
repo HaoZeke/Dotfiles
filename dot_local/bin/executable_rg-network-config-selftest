@@ -214,6 +214,10 @@ rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.tar
     || fail "laptop script does not clear Control D NetworkManager dependencies"
 rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
     || fail "Unbound does not forward default DNS to the local Control D listener"
+rg -U -q 'forward-zone:\n    name: "\."\n    forward-addr: 127\.0\.0\.1@5354\n    forward-addr: 1\.1\.1\.1\n    forward-addr: 9\.9\.9\.9' "$fix_local_dns" \
+    || fail "local DNS repair helper does not keep public fallback resolvers behind Control D"
+rg -U -q 'forward-zone:\n    name: "\."\n    forward-addr: 127\.0\.0\.1@5354\n    forward-addr: 1\.1\.1\.1\n    forward-addr: 9\.9\.9\.9' "$laptop_script" \
+    || fail "laptop resolver setup does not keep public fallback resolvers behind Control D"
 rg -q 'do-not-query-localhost: no' "$laptop_script" \
     || fail "Unbound cannot query the local Control D listener"
 rg -q 'chroot: ""' "$laptop_script" \

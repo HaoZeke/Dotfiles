@@ -301,6 +301,8 @@ forward-zone:
 forward-zone:
     name: "."
     forward-addr: 127.0.0.1@5354
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
 EOF
 }
 
