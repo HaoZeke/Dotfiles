@@ -37,6 +37,10 @@ RG_SCHED_LADDER="$ladder" "$script" packages | rg 'scx-tools scx-scheds' >/dev/n
     || fail "packages must name Arch scx-tools package"
 RG_SCHED_LADDER="$ladder" RG_SCHED_LADDER_BIN="$script" "$wrapper" status | rg '^off$|sched_ext current:' >/dev/null \
     || fail "scx-loader status must be inspectable without linux-rg boot"
+rg -q 'switch --sched' "$script" \
+    || fail "sched ladder must use current scxctl switch syntax"
+rg -q 'start --sched' "$script" \
+    || fail "sched ladder must start the first scx scheduler"
 
 rg -q 'interactive=scx_lavd' "$asa" || fail "ASA mapping missing interactive expert"
 rg -q 'EEVDF is mainline' "$ladder" || fail "ladder must document EEVDF as baseline not ceiling"

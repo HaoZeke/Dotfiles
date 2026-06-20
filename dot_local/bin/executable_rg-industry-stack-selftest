@@ -57,8 +57,8 @@ rg -q 'build.slice' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
     || fail "profile switcher must tune build.slice"
 rg -q 'scx_lavd' "$repo/dot_config/rg-x1gen11/sched-ladder.json" \
     || fail "sched ladder must include scx_lavd"
-rg -q '"scx_mode": "lavd"' "$repo/dot_config/rg-x1gen11/profiles.json" \
-    || fail "undocked-mixed must default to lavd not bare EEVDF"
+rg -q '"scx_mode": "off"' "$repo/dot_config/rg-x1gen11/profiles.json" \
+    || fail "cool laptop profiles must default to EEVDF+BORE"
 rg -q 'rg-sched-ladder' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
     || fail "profile switcher must use sched ladder"
 rg -q 'EEVDF' "$repo/dot_config/rg-kernel/linux-rg/internal-design.org" \

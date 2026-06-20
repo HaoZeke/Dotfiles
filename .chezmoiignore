@@ -81,6 +81,7 @@ scripts/vault.nim
 readme.org
 todo.org
 LICENSE
+.local/share/rg-caffeine-src/target
 # These are essentially templates
 {{ if ne .chezmoi.os "darwin" }}
 Library/Application Support/nushell/config.nu

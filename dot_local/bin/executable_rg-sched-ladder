@@ -13,6 +13,7 @@ LADDER_JSON="${RG_SCHED_LADDER:-$HOME/.config/rg-x1gen11/sched-ladder.json}"
 CHEZMOI_LADDER="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/sched-ladder.json"
 ASA_MAPPING="${RG_ASA_MAPPING:-$HOME/.config/rg-x1gen11/asa-mapping.conf}"
 CHEZMOI_ASA="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/asa-mapping.conf"
+SCX_CTL=(scxctl)
 SCX_LOADER=(scx_loader)
 ASA_ROUTER=(asa-router)
 
@@ -133,6 +134,20 @@ cmd_current() {
         cat "$STATE_FILE"
         return 0
     fi
+    if command -v scxctl >/dev/null 2>&1; then
+        local info
+        info=$(scxctl get 2>/dev/null || true)
+        case "$info" in
+        *"no scx scheduler running"* | "") printf 'off\n' ;;
+        *"lavd"*) printf 'lavd\n' ;;
+        *"rusty"*) printf 'rusty\n' ;;
+        *"bpfland"*) printf 'bpfland\n' ;;
+        *"p2dq"*) printf 'p2dq\n' ;;
+        *"flash"*) printf 'flash\n' ;;
+        *) printf '%s\n' "$info" | head -n 1 ;;
+        esac
+        return 0
+    fi
     if [ -r /sys/kernel/sched_ext/current ]; then
         local cur
         cur=$(cat /sys/kernel/sched_ext/current 2>/dev/null || true)
@@ -168,8 +183,21 @@ load_asa() {
 
 unload_scx() {
     stop_asa
-    if command -v scx_loader >/dev/null 2>&1; then
+    if command -v scxctl >/dev/null 2>&1; then
+        scxctl stop 2>/dev/null || true
+    elif command -v scx_loader >/dev/null 2>&1; then
         scx_loader unload 2>/dev/null || true
+    fi
+}
+
+scxctl_load_sched() {
+    local sched="$1"
+    local info
+    info=$(scxctl get 2>/dev/null || true)
+    if [ -z "$info" ] || printf '%s\n' "$info" | grep -q 'no scx scheduler running'; then
+        "${SCX_CTL[@]}" start --sched "$sched"
+    else
+        "${SCX_CTL[@]}" switch --sched "$sched"
     fi
 }
 
@@ -186,7 +214,8 @@ switch_scheduler() {
         ;;
     asa)
         require_sched_ext
-        command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed"
+        command -v scxctl >/dev/null 2>&1 || command -v scx_loader >/dev/null 2>&1 \
+            || die "scx userspace not installed (pacman -S scx-tools scx-scheds)"
         load_asa
         record_scheduler asa
         printf 'active: ASA router (experts: lavd/rusty/bpfland/p2dq)\n'
@@ -197,10 +226,15 @@ switch_scheduler() {
     scx_name=$(scheduler_scx_name "$sched_id")
     [ -n "$scx_name" ] || die "scheduler $sched_id has no scx_name"
     require_sched_ext
-    command -v scx_loader >/dev/null 2>&1 || die "scx_loader not installed (pacman -S scx-tools scx-scheds)"
+    command -v scxctl >/dev/null 2>&1 || command -v scx_loader >/dev/null 2>&1 \
+        || die "scx userspace not installed (pacman -S scx-tools scx-scheds)"
     stop_asa
     printf 'loading %s\n' "$scx_name"
-    "${SCX_LOADER[@]}" switch "$scx_name"
+    if command -v scxctl >/dev/null 2>&1; then
+        scxctl_load_sched "${scx_name#scx_}"
+    else
+        "${SCX_LOADER[@]}" switch "$scx_name"
+    fi
     record_scheduler "$sched_id"
 }
 

@@ -110,6 +110,7 @@ impl TryFrom<&str> for PerformanceMode {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PerformanceBackend {
+    X1Profile,
     Tlp,
     RgPower,
     PowerProfilesCtl,
@@ -119,6 +120,7 @@ enum PerformanceBackend {
 impl PerformanceBackend {
     fn as_str(self) -> &'static str {
         match self {
+            Self::X1Profile => "x1profile",
             Self::Tlp => "tlp",
             Self::RgPower => "rgpower",
             Self::PowerProfilesCtl => "powerprofilesctl",
@@ -132,6 +134,7 @@ impl TryFrom<&str> for PerformanceBackend {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
+            "x1profile" => Ok(Self::X1Profile),
             "tlp" => Ok(Self::Tlp),
             "rgpower" => Ok(Self::RgPower),
             "powerprofilesctl" => Ok(Self::PowerProfilesCtl),
@@ -386,6 +389,16 @@ fn rgpower_path() -> Option<PathBuf> {
     }
 }
 
+fn x1_profile_path() -> Option<PathBuf> {
+    let home = env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|home| home.join(".local/bin/rg-x1gen11-profile"));
+    match home {
+        Some(path) if path_is_executable(&path) => Some(path),
+        _ => command_path("rg-x1gen11-profile"),
+    }
+}
+
 fn tlp_path() -> Option<PathBuf> {
     let system = PathBuf::from(TLP_BIN);
     if path_is_executable(&system) {
@@ -403,12 +416,15 @@ fn privileged_power_allowed() -> bool {
 }
 
 fn choose_performance_backend(
+    has_x1_profile: bool,
     has_tlp: bool,
     has_rgpower: bool,
     has_powerprofilesctl: bool,
     allow_privileged: bool,
 ) -> PerformanceBackend {
-    if allow_privileged && has_tlp {
+    if allow_privileged && has_x1_profile {
+        PerformanceBackend::X1Profile
+    } else if allow_privileged && has_tlp {
         PerformanceBackend::Tlp
     } else if has_powerprofilesctl {
         PerformanceBackend::PowerProfilesCtl
@@ -424,7 +440,9 @@ fn release_backend_for_state(
     allow_privileged: bool,
 ) -> PerformanceBackend {
     match backend {
-        PerformanceBackend::Tlp | PerformanceBackend::RgPower if !allow_privileged => {
+        PerformanceBackend::X1Profile | PerformanceBackend::Tlp | PerformanceBackend::RgPower
+            if !allow_privileged =>
+        {
             PerformanceBackend::Unavailable
         }
         backend => backend,
@@ -433,6 +451,7 @@ fn release_backend_for_state(
 
 fn detect_performance_backend() -> PerformanceBackend {
     choose_performance_backend(
+        x1_profile_path().is_some(),
         tlp_path().is_some(),
         rgpower_path().is_some(),
         command_path("powerprofilesctl").is_some(),
@@ -526,6 +545,23 @@ fn tlp_current_profile() -> Result<Option<String>, String> {
     Ok(None)
 }
 
+fn x1_current_profile() -> Result<Option<String>, String> {
+    let program = x1_profile_path().ok_or_else(|| "rg-x1gen11-profile not found".to_string())?;
+    let output = Command::new(program)
+        .arg("current")
+        .output()
+        .map_err(|err| err.to_string())?;
+    if !output.status.success() {
+        return Err("rg-x1gen11-profile current failed".to_string());
+    }
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if text.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(text))
+    }
+}
+
 fn sync_idle_inhibitor(mode: Mode) -> Result<(), String> {
     let action = if mode == Mode::Off { "stop" } else { "start" };
     let status = Command::new("systemctl")
@@ -578,6 +614,16 @@ fn performance_apply(path: &PathBuf) -> Result<PerformanceState, String> {
     state.backend = detect_performance_backend();
 
     match state.backend {
+        PerformanceBackend::X1Profile => {
+            let current_profile = x1_current_profile()?;
+            if current_profile.as_deref() != Some("build-heavy") {
+                state.restore_profile = current_profile;
+            } else {
+                state.restore_profile = None;
+            }
+            let program = x1_profile_path().ok_or_else(|| "rg-x1gen11-profile not found".to_string())?;
+            run_command(&program, &["apply", "build-heavy"])?;
+        }
         PerformanceBackend::Tlp => {
             state.restore_profile = tlp_current_profile()?;
             run_privileged_absolute(TLP_BIN, &["ac"])?;
@@ -609,6 +655,11 @@ fn performance_release(path: &PathBuf) -> Result<PerformanceState, String> {
     let mut state = load_performance_state(path).map_err(|err| err.to_string())?;
 
     match release_backend_for_state(state.backend, privileged_power_allowed()) {
+        PerformanceBackend::X1Profile => {
+            let profile = state.restore_profile.as_deref().unwrap_or("undocked-mixed");
+            let program = x1_profile_path().ok_or_else(|| "rg-x1gen11-profile not found".to_string())?;
+            run_command(&program, &["apply", profile])?;
+        }
         PerformanceBackend::Tlp => {
             run_privileged_absolute(TLP_BIN, &["start"])?;
         }
@@ -1220,6 +1271,7 @@ fn main() {
                 Ok(state) => {
                     let summary = if state.mode == PerformanceMode::Performance {
                         match state.backend {
+                            PerformanceBackend::X1Profile => "boost enabled via x1 profile",
                             PerformanceBackend::Tlp => "boost enabled via tlp",
                             PerformanceBackend::Unavailable => "boost requested (no backend available)",
                             PerformanceBackend::RgPower => "performance enabled via rgpower",
@@ -1243,6 +1295,7 @@ fn main() {
         ) {
             Ok(state) => {
                 let summary = match state.backend {
+                    PerformanceBackend::X1Profile => "boost enabled via x1 profile",
                     PerformanceBackend::Tlp => "boost enabled via tlp",
                     PerformanceBackend::Unavailable => "boost requested (no backend available)",
                     PerformanceBackend::RgPower => "performance enabled via rgpower",
@@ -1444,29 +1497,37 @@ mod tests {
     #[test]
     fn backend_selection_does_not_choose_privileged_sudo_backend_without_opt_in() {
         assert_eq!(
-            choose_performance_backend(true, false, false, false),
+            choose_performance_backend(true, true, false, false, false),
             PerformanceBackend::Unavailable
         );
         assert_eq!(
-            choose_performance_backend(false, true, false, false),
+            choose_performance_backend(false, false, true, false, false),
             PerformanceBackend::Unavailable
         );
         assert_eq!(
-            choose_performance_backend(true, false, true, false),
+            choose_performance_backend(false, true, false, true, false),
             PerformanceBackend::PowerProfilesCtl
         );
         assert_eq!(
-            choose_performance_backend(true, false, false, true),
+            choose_performance_backend(false, true, false, false, true),
             PerformanceBackend::Tlp
         );
         assert_eq!(
-            choose_performance_backend(false, true, false, true),
+            choose_performance_backend(false, false, true, false, true),
             PerformanceBackend::RgPower
+        );
+        assert_eq!(
+            choose_performance_backend(true, true, true, true, true),
+            PerformanceBackend::X1Profile
         );
     }
 
     #[test]
     fn release_backend_ignores_stale_privileged_state_without_opt_in() {
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::X1Profile, false),
+            PerformanceBackend::Unavailable
+        );
         assert_eq!(
             release_backend_for_state(PerformanceBackend::Tlp, false),
             PerformanceBackend::Unavailable
@@ -1478,6 +1539,10 @@ mod tests {
         assert_eq!(
             release_backend_for_state(PerformanceBackend::PowerProfilesCtl, false),
             PerformanceBackend::PowerProfilesCtl
+        );
+        assert_eq!(
+            release_backend_for_state(PerformanceBackend::X1Profile, true),
+            PerformanceBackend::X1Profile
         );
         assert_eq!(
             release_backend_for_state(PerformanceBackend::Tlp, true),

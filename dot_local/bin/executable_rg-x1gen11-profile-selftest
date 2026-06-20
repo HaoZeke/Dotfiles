@@ -22,18 +22,26 @@ printf '%s\n' "$output" | rg -q 'memory-pressure' || fail "list missing memory-p
 
 RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'scaling_governor: powersave' >/dev/null \
     || fail "travel profile must use powersave governor"
+RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'energy_performance_preference: power' >/dev/null \
+    || fail "travel profile must use the lowest EPP tier"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scaling_governor: powersave' >/dev/null \
     || fail "undocked-mixed must use powersave governor on active intel_pstate"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'energy_performance_preference: balance_power' >/dev/null \
+    || fail "undocked-mixed must keep EPP below performance"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'scaling_governor: powersave' >/dev/null \
     || fail "memory-pressure must use powersave governor on active intel_pstate"
 RG_X1GEN11_PROFILES="$profiles" "$script" show docked-office | rg 'scaling_governor: powersave' >/dev/null \
     || fail "docked-office must use powersave governor on active intel_pstate"
 RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scaling_governor: performance' >/dev/null \
     || fail "build-heavy must use performance governor"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'energy_performance_preference: performance' >/dev/null \
+    || fail "build-heavy must use performance EPP"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'damon_reclaim: true' >/dev/null \
     || fail "memory-pressure must enable DAMON reclaim"
-RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: lavd' >/dev/null \
-    || fail "undocked-mixed must select scx_lavd via sched ladder"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: off' >/dev/null \
+    || fail "undocked-mixed must avoid sched_ext userspace overhead"
+RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'scx_mode: off' >/dev/null \
+    || fail "travel must avoid sched_ext userspace overhead"
 RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scx_mode: rusty' >/dev/null \
     || fail "build-heavy must select scx_rusty"
 
@@ -121,11 +129,15 @@ rg -q 'systemctl --user set-property browser.slice MemoryHigh=5G' "$tmpdir/root/
     || fail "apply must set the browser slice cap"
 rg -q 'systemctl --user set-property build.slice MemoryHigh=8G' "$tmpdir/root/commands.log" \
     || fail "apply must set the build slice cap"
-rg -q 'rg-sched-ladder switch lavd' "$tmpdir/root/commands.log" \
-    || fail "apply must switch the scheduler ladder"
+rg -q 'rg-sched-ladder switch off' "$tmpdir/root/commands.log" \
+    || fail "travel apply must keep sched_ext unloaded"
 if [ -e /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
     rg -q '^powersave$' "$tmpdir/root/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor" \
         || fail "apply must write CPU governors through sudo"
+fi
+if [ -e /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference ]; then
+    rg -q '^power$' "$tmpdir/root/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference" \
+        || fail "apply must write CPU EPP through sudo"
 fi
 
 printf 'ok\n'

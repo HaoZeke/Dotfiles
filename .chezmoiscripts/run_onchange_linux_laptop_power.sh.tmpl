@@ -217,6 +217,11 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp start
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp ac
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp bat
 rgoswami ALL=(root) NOPASSWD: /usr/bin/tlp-stat -s
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root undocked-mixed
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root build-heavy
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root memory-pressure
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root travel
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root docked-office
 rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block all
 rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill unblock all
 rgoswami ALL=(root) NOPASSWD: /usr/bin/rfkill block wlan wwan gps fm nfc uwb wimax
@@ -234,6 +239,140 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
+'
+
+RG_X1GEN11_PROFILE_ROOT_CONTENT='#!/usr/bin/env bash
+set -euo pipefail
+
+profile="${1:-}"
+case "$profile" in
+undocked-mixed)
+    platform=balanced
+    governor=powersave
+    epp=balance_power
+    iwl=Y
+    zram_expr="ram / 2"
+    damon=N
+    ;;
+build-heavy)
+    platform=performance
+    governor=performance
+    epp=performance
+    iwl=N
+    zram_expr="ram * 3 / 8"
+    damon=N
+    ;;
+memory-pressure)
+    platform=balanced
+    governor=powersave
+    epp=balance_power
+    iwl=Y
+    zram_expr="ram / 2"
+    damon=Y
+    ;;
+travel)
+    platform=low-power
+    governor=powersave
+    epp=power
+    iwl=Y
+    zram_expr="ram / 4"
+    damon=N
+    ;;
+docked-office)
+    platform=balanced
+    governor=powersave
+    epp=balance_performance
+    iwl=N
+    zram_expr="ram / 2"
+    damon=N
+    ;;
+*)
+    printf "usage: %s {undocked-mixed|build-heavy|memory-pressure|travel|docked-office}\n" "$0" >&2
+    exit 2
+    ;;
+esac
+
+write_platform_profile() {
+    local path choices
+    for path in /sys/firmware/acpi/platform_profile /sys/devices/platform/thinkpad_acpi/platform_profile; do
+        [ -e "$path" ] || continue
+        choices="${path}_choices"
+        if [ -r "$choices" ] && ! grep -qw "$platform" "$choices"; then
+            printf "platform profile %s unavailable in %s\n" "$platform" "$choices" >&2
+            exit 1
+        fi
+        printf "%s\n" "$platform" >"$path"
+        return 0
+    done
+    printf "platform_profile sysfs missing; skip\n" >&2
+}
+
+write_sysfs_value() {
+    local path="$1" value="$2"
+    sh -c 'printf "%s\n" "$1" >"$2"' sh "$value" "$path" 2>/dev/null
+}
+
+write_cpufreq_value() {
+    local name="$1" value="$2" avail_name="$3"
+    local cpu path avail
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        path="$cpu/cpufreq/$name"
+        avail="$cpu/cpufreq/$avail_name"
+        [ -e "$path" ] || continue
+        if [ -r "$avail" ] && ! grep -qw "$value" "$avail"; then
+            printf "skip %s: %s unavailable\n" "$path" "$value" >&2
+            continue
+        fi
+        if ! write_sysfs_value "$path" "$value"; then
+            printf "skip %s: write rejected\n" "$path" >&2
+        fi
+    done
+}
+
+write_if_path() {
+    local path="$1" value="$2" label="$3"
+    if [ ! -e "$path" ]; then
+        printf "%s: missing; skip\n" "$label" >&2
+        return 0
+    fi
+    if [ ! -w "$path" ]; then
+        printf "%s: read-only; skip\n" "$label" >&2
+        return 0
+    fi
+    if ! write_sysfs_value "$path" "$value"; then
+        printf "%s: write rejected; skip\n" "$label" >&2
+    fi
+}
+
+write_zram() {
+    install -d -m0755 /etc/systemd/zram-generator.conf.d
+    cat >/etc/systemd/zram-generator.conf.d/10-rg-profile.conf <<ZRAM
+# Managed by rg-x1gen11-profile-root
+[zram0]
+zram-size = $zram_expr
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+ZRAM
+    systemctl daemon-reload
+    systemctl restart systemd-zram-setup@zram0.service 2>/dev/null || true
+}
+
+write_damon() {
+    local path=/sys/module/damon_reclaim/parameters/enabled
+    [ -e "$path" ] || return 0
+    printf "%s\n" "$damon" >"$path"
+}
+
+write_platform_profile
+write_cpufreq_value scaling_governor "$governor" scaling_available_governors
+write_cpufreq_value energy_performance_preference "$epp" energy_performance_available_preferences
+write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
+write_zram
+write_damon
+
+printf "root profile applied: %s\n" "$profile"
 '
 
 # shellcheck disable=SC2016
@@ -592,9 +731,9 @@ exit 0
 # Matches the 21HM ThinkPad (T14 Gen 3) hardware stack.
 TLP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # CPU scaling
-CPU_SCALING_GOVERNOR_ON_AC=performance
+CPU_SCALING_GOVERNOR_ON_AC=powersave
 CPU_SCALING_GOVERNOR_ON_BAT=powersave
-CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
 CPU_ENERGY_PERF_POLICY_ON_BAT=power
 CPU_BOOST_ON_AC=1
 CPU_BOOST_ON_BAT=0
@@ -680,6 +819,7 @@ if ! sudo test -f /etc/rg-tailnets/enabled; then
 fi
 write_executable_if_diff /usr/local/sbin/rg-tailnet-power "$RG_TAILNET_POWER_CONTENT" || true
 write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
+write_executable_if_diff /usr/local/sbin/rg-x1gen11-profile-root "$RG_X1GEN11_PROFILE_ROOT_CONTENT" || true
 
 # system-sleep hook: runs as root on every suspend/hibernate cycle.
 # Written with 0755 via a separate path because write_if_diff always

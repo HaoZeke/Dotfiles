@@ -14,6 +14,7 @@ STATE_FILE="$STATE_DIR/active-profile"
 PROFILES_JSON="${RG_X1GEN11_PROFILES:-$HOME/.config/rg-x1gen11/profiles.json}"
 CHEZMOI_PROFILES="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/profiles.json"
 SUDO="${RG_X1GEN11_SUDO:-sudo}"
+ROOT_HELPER="${RG_X1GEN11_ROOT_HELPER:-/usr/local/sbin/rg-x1gen11-profile-root}"
 
 if [ ! -r "$PROFILES_JSON" ] && [ -r "$CHEZMOI_PROFILES" ]; then
     PROFILES_JSON="$CHEZMOI_PROFILES"
@@ -62,6 +63,8 @@ if profile not in profiles:
 spec = profiles[profile]
 if field == "damon_profile" and field not in spec:
     value = "memory-pressure" if spec.get("damon_reclaim") else "off"
+elif field == "energy_performance_preference" and field not in spec:
+    value = "performance" if spec.get("scaling_governor") == "performance" else "balance_power"
 else:
     value = spec[field]
 if isinstance(value, bool):
@@ -113,6 +116,22 @@ write_scaling_governor() {
     done
 }
 
+write_energy_performance_preference() {
+    local epp="$1"
+    local cpu path avail
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        path="$cpu/cpufreq/energy_performance_preference"
+        avail="$cpu/cpufreq/energy_performance_available_preferences"
+        [ -e "$path" ] || continue
+        if [ -r "$avail" ] && ! grep -qw "$epp" "$avail"; then
+            printf 'skip %s: EPP %s unavailable\n' "$path" "$epp" >&2
+            continue
+        fi
+        echo "$epp" | $SUDO tee "$path" >/dev/null
+    done
+}
+
 write_platform_profile() {
     local profile="$1"
     local path choices
@@ -130,11 +149,17 @@ write_platform_profile() {
 write_iwl_power_save() {
     local value="$1"
     local path=/sys/module/iwlwifi/parameters/power_save
-    if [ ! -w "$path" ] && [ ! -r "$path" ]; then
+    if [ ! -e "$path" ]; then
         printf 'iwlwifi power_save sysfs missing; skip\n' >&2
         return 0
     fi
-    echo "$value" | $SUDO tee "$path" >/dev/null
+    if [ ! -w "$path" ]; then
+        printf 'iwlwifi power_save sysfs read-only; skip\n' >&2
+        return 0
+    fi
+    if ! echo "$value" | $SUDO tee "$path" >/dev/null; then
+        printf 'iwlwifi power_save write rejected; skip\n' >&2
+    fi
 }
 
 write_zram_size() {
@@ -215,12 +240,19 @@ apply_scx_mode() {
     fi
 }
 
+apply_root_helper() {
+    local profile="$1"
+    [ -x "$ROOT_HELPER" ] || return 1
+    "$SUDO" -n "$ROOT_HELPER" "$profile" >/dev/null 2>&1
+}
+
 apply_profile() {
     local profile="$1"
-    local platform governor iwl zram damon damon_profile scx browser_high build_high
+    local platform governor epp iwl zram damon damon_profile scx browser_high build_high
 
     platform=$(profile_field "$profile" platform_profile)
     governor=$(profile_field "$profile" scaling_governor)
+    epp=$(profile_field "$profile" energy_performance_preference)
     iwl=$(profile_field "$profile" iwlwifi_power_save)
     zram=$(profile_field "$profile" zram_size)
     damon=$(profile_field "$profile" damon_reclaim)
@@ -230,12 +262,15 @@ apply_profile() {
     build_high=$(profile_field "$profile" build_memory_high)
 
     mkdir -p "$STATE_DIR"
-    write_platform_profile "$platform"
-    write_scaling_governor "$governor"
-    write_iwl_power_save "$iwl"
-    write_zram_size "$zram"
+    if ! apply_root_helper "$profile"; then
+        write_platform_profile "$platform"
+        write_scaling_governor "$governor"
+        write_energy_performance_preference "$epp"
+        write_iwl_power_save "$iwl"
+        write_zram_size "$zram"
+        apply_damon "$damon" "$damon_profile"
+    fi
     apply_slice_caps "$browser_high" "$build_high"
-    apply_damon "$damon" "$damon_profile"
     apply_scx_mode "$scx"
     printf '%s\n' "$profile" >"$STATE_FILE"
     printf 'applied profile: %s\n' "$profile"
@@ -256,9 +291,10 @@ apply_user_profile() {
 
 write_root_script() {
     local profile="$1" out="${2:-/tmp/rg-x1gen11-profile-root.sh}"
-    local platform governor iwl zram damon damon_profile
+    local platform governor epp iwl zram damon damon_profile
     platform=$(profile_field "$profile" platform_profile)
     governor=$(profile_field "$profile" scaling_governor)
+    epp=$(profile_field "$profile" energy_performance_preference)
     iwl=$(profile_field "$profile" iwlwifi_power_save)
     zram=$(profile_field "$profile" zram_size)
     damon=$(profile_field "$profile" damon_reclaim)
@@ -279,7 +315,9 @@ write_if_path() {
         printf '%s: missing; skip\n' "\$label" >&2
         return 0
     fi
-    printf '%s\n' "\$value" >"\$path"
+    if ! sh -c 'printf "%s\n" "\$1" >"\$2"' sh "\$value" "\$path" 2>/dev/null; then
+        printf '%s: write rejected; skip\n' "\$label" >&2
+    fi
 }
 
 write_scaling_governor() {
@@ -293,7 +331,26 @@ write_scaling_governor() {
             printf 'skip %s: governor %s unavailable\n' "\$path" "\$governor" >&2
             continue
         fi
-        printf '%s\n' "\$governor" >"\$path"
+        if ! sh -c 'printf "%s\n" "\$1" >"\$2"' sh "\$governor" "\$path" 2>/dev/null; then
+            printf 'skip %s: write rejected\n' "\$path" >&2
+        fi
+    done
+}
+
+write_energy_performance_preference() {
+    local epp=\$1 cpu path avail
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "\$cpu" ] || continue
+        path="\$cpu/cpufreq/energy_performance_preference"
+        avail="\$cpu/cpufreq/energy_performance_available_preferences"
+        [ -e "\$path" ] || continue
+        if [ -r "\$avail" ] && ! grep -qw "\$epp" "\$avail"; then
+            printf 'skip %s: EPP %s unavailable\n' "\$path" "\$epp" >&2
+            continue
+        fi
+        if ! sh -c 'printf "%s\n" "\$1" >"\$2"' sh "\$epp" "\$path" 2>/dev/null; then
+            printf 'skip %s: write rejected\n' "\$path" >&2
+        fi
     done
 }
 
@@ -310,12 +367,15 @@ if [ -n "\$platform_path" ]; then
         printf 'platform profile %s unavailable in %s\n' ${platform@Q} "\$choices" >&2
         exit 1
     fi
-    printf '%s\n' ${platform@Q} >"\$platform_path"
+    if ! sh -c 'printf "%s\n" "\$1" >"\$2"' sh ${platform@Q} "\$platform_path" 2>/dev/null; then
+        printf 'platform profile %s write rejected; skip\n' ${platform@Q} >&2
+    fi
 else
     printf 'platform_profile sysfs missing; skip\n' >&2
 fi
 
 write_scaling_governor ${governor@Q}
+write_energy_performance_preference ${epp@Q}
 write_if_path /sys/module/iwlwifi/parameters/power_save ${iwl@Q} iwlwifi_power_save
 
 install -d -m0755 /etc/systemd/zram-generator.conf.d
@@ -352,6 +412,7 @@ show_profile() {
     printf '  description: %s\n' "$(profile_field "$profile" description)"
     printf '  platform_profile: %s\n' "$(profile_field "$profile" platform_profile)"
     printf '  scaling_governor: %s\n' "$(profile_field "$profile" scaling_governor)"
+    printf '  energy_performance_preference: %s\n' "$(profile_field "$profile" energy_performance_preference)"
     printf '  iwlwifi_power_save: %s\n' "$(profile_field "$profile" iwlwifi_power_save)"
     printf '  zram_size: %s\n' "$(profile_field "$profile" zram_size)"
     printf '  damon_reclaim: %s\n' "$(profile_field "$profile" damon_reclaim)"
@@ -379,6 +440,9 @@ doctor() {
     fi
     if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
         printf 'cpu0 governor: %s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)"
+    fi
+    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference ]; then
+        printf 'cpu0 EPP: %s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference)"
     fi
 
     printf '\n== iwlwifi ==\n'
