@@ -144,6 +144,10 @@ rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$fix_local_dns" \
     || fail "local DNS repair helper lacks a secondary Control D upstream"
 rg -q 'cat >/etc/systemd/system/ctrld.service <<EOF' "$fix_local_dns" \
     || fail "local DNS repair helper does not replace the Control D unit"
+rg -q 'rm -f /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf' "$fix_local_dns" \
+    || fail "local DNS repair helper does not retire the stale Control D drop-in"
+rg -q 'MulticastDNS=no' "$fix_local_dns" \
+    || fail "local DNS repair helper does not disable resolved mDNS"
 rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_local_dns" \
     || fail "local DNS repair helper does not install Control D without NetworkManager dependencies"
 rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_local_dns" \
@@ -154,6 +158,8 @@ rg -q '/var/tmp/rg-dns-backups' "$fix_local_dns" \
     || fail "local DNS repair helper does not use a stable backup root"
 rg -q 'cat >"\$unit_file" <<EOF' "$fix_nm_ctrld" \
     || fail "NetworkManager Control D repair helper does not replace the Control D unit"
+rg -q 'rm -f "\$dropin"' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not retire the stale Control D drop-in"
 rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_nm_ctrld" \
     || fail "NetworkManager Control D repair helper does not install Control D without NetworkManager dependencies"
 rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_nm_ctrld" \

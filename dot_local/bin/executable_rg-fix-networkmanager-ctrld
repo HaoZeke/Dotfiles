@@ -98,6 +98,7 @@ KillMode=process
 [Install]
 WantedBy=multi-user.target
 EOF
+rm -f "$dropin"
 
 step "verify effective Control D dependencies"
 systemctl daemon-reload

@@ -380,6 +380,7 @@ KillMode=process
 [Install]
 WantedBy=multi-user.target
 EOF
+rm -f /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf
 systemctl daemon-reload
 if systemctl show ctrld.service -p Wants -p After | grep -q NetworkManager; then
     printf 'ctrld.service still depends on NetworkManager after local unit install\n' >&2
@@ -446,6 +447,7 @@ DNSSEC=no
 DNSOverTLS=no
 Cache=yes
 DNSStubListener=yes
+MulticastDNS=no
 EOF
 systemctl restart systemd-resolved.service
 resolvectl flush-caches
