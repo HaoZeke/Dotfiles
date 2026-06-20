@@ -76,18 +76,27 @@ backup_dir=$(mktemp -d "$backup_root/$(date -u +%Y%m%dT%H%M%SZ).XXXXXX")
 systemctl show ctrld.service -p Wants -p After >"$backup_dir/ctrld-effective-before.txt" 2>/dev/null || true
 printf 'backup: %s\n' "$backup_dir"
 
-step "install Control D unit reset"
+step "install Control D local unit"
 install -d -m 0755 /etc/systemd/system/ctrld.service.d
-cat >"$dropin" <<EOF
+cat >"$unit_file" <<EOF
 [Unit]
-Wants=
-After=
+Description=A highly configurable, multi-protocol DNS forwarding proxy
+ConditionFileIsExecutable=/usr/local/bin/ctrld
 Wants=nss-lookup.target
 After=network.target nss-lookup.target
 
 [Service]
-ExecStart=
+StartLimitInterval=5
+StartLimitBurst=10
 ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+WorkingDirectory=/etc/controld
+Restart=always
+RestartSec=30
+EnvironmentFile=-/etc/sysconfig/ctrld
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
 step "verify effective Control D dependencies"
@@ -96,7 +105,7 @@ deps=$(systemctl show ctrld.service -p Wants -p After)
 printf '%s\n' "$deps"
 printf '%s\n' "$deps" >"$backup_dir/ctrld-effective-after.txt"
 if printf '%s\n' "$deps" | grep -q NetworkManager; then
-    printf 'ctrld.service still depends on NetworkManager after the drop-in\n' >&2
+    printf 'ctrld.service still depends on NetworkManager after local unit install\n' >&2
     exit 4
 fi
 

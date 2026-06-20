@@ -139,16 +139,20 @@ rg -q 'resolvectl dns' "$fix_local_dns" \
     || fail "local DNS repair helper does not verify resolved global DNS"
 rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$fix_local_dns" \
     || fail "local DNS repair helper lacks a secondary Control D upstream"
-rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_local_dns" \
-    || fail "local DNS repair helper does not clear Control D NetworkManager dependencies"
+rg -q 'cat >/etc/systemd/system/ctrld.service <<EOF' "$fix_local_dns" \
+    || fail "local DNS repair helper does not replace the Control D unit"
+rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_local_dns" \
+    || fail "local DNS repair helper does not install Control D without NetworkManager dependencies"
 rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_local_dns" \
     || fail "local DNS repair helper does not verify effective Control D dependencies"
 rg -q -- '--restore-from' "$fix_local_dns" \
     || fail "local DNS repair helper lacks snapshot restore support"
 rg -q '/var/tmp/rg-dns-backups' "$fix_local_dns" \
     || fail "local DNS repair helper does not use a stable backup root"
-rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_nm_ctrld" \
-    || fail "NetworkManager Control D repair helper does not clear Control D dependencies"
+rg -q 'cat >"\$unit_file" <<EOF' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not replace the Control D unit"
+rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$fix_nm_ctrld" \
+    || fail "NetworkManager Control D repair helper does not install Control D without NetworkManager dependencies"
 rg -q 'systemctl show ctrld.service -p Wants -p After' "$fix_nm_ctrld" \
     || fail "NetworkManager Control D repair helper does not verify effective Control D dependencies"
 rg -q 'systemctl disable --now NetworkManager-wait-online.service NetworkManager-dispatcher.service NetworkManager.service' "$fix_nm_ctrld" \
@@ -210,8 +214,10 @@ rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$laptop_script" \
     || fail "Control D listener lacks a secondary upstream"
 rg -q 'disable_networkmanager_for_iwd' "$laptop_script" \
     || fail "laptop script does not stop NetworkManager before network service restarts"
-rg -U -q '\[Unit\]\nWants=\nAfter=\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$laptop_script" \
-    || fail "laptop script does not clear Control D NetworkManager dependencies"
+rg -q 'write_if_diff /etc/systemd/system/ctrld.service "\$content"' "$laptop_script" \
+    || fail "laptop script does not replace the Control D unit"
+rg -U -q '\[Unit\]\nDescription=A highly configurable, multi-protocol DNS forwarding proxy\nConditionFileIsExecutable=/usr/local/bin/ctrld\nWants=nss-lookup\.target\nAfter=network\.target nss-lookup\.target' "$laptop_script" \
+    || fail "laptop script does not install Control D without NetworkManager dependencies"
 rg -q 'forward-addr: 127\.0\.0\.1@5354' "$laptop_script" \
     || fail "Unbound does not forward default DNS to the local Control D listener"
 rg -U -q 'forward-zone:\n    name: "\."\n    forward-addr: 127\.0\.0\.1@5354\n    forward-addr: 1\.1\.1\.1\n    forward-addr: 9\.9\.9\.9' "$fix_local_dns" \

@@ -360,20 +360,29 @@ test -n "$cd_uid"
 
 step "start Control D high-port resolver"
 install -d -m 0755 /etc/systemd/system/ctrld.service.d
-cat >/etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf <<EOF
+cat >/etc/systemd/system/ctrld.service <<EOF
 [Unit]
-Wants=
-After=
+Description=A highly configurable, multi-protocol DNS forwarding proxy
+ConditionFileIsExecutable=/usr/local/bin/ctrld
 Wants=nss-lookup.target
 After=network.target nss-lookup.target
 
 [Service]
-ExecStart=
+StartLimitInterval=5
+StartLimitBurst=10
 ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+WorkingDirectory=/etc/controld
+Restart=always
+RestartSec=30
+EnvironmentFile=-/etc/sysconfig/ctrld
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 if systemctl show ctrld.service -p Wants -p After | grep -q NetworkManager; then
-    printf 'ctrld.service still depends on NetworkManager after local drop-in\n' >&2
+    printf 'ctrld.service still depends on NetworkManager after local unit install\n' >&2
     systemctl show ctrld.service -p Wants -p After >&2
     exit 7
 fi

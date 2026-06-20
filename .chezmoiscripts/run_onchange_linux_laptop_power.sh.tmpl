@@ -82,16 +82,25 @@ write_ctrld_local_chain_dropin() {
 
     content="# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 [Unit]
-Wants=
-After=
+Description=A highly configurable, multi-protocol DNS forwarding proxy
+ConditionFileIsExecutable=/usr/local/bin/ctrld
 Wants=nss-lookup.target
 After=network.target nss-lookup.target
 
 [Service]
-ExecStart=
+StartLimitInterval=5
+StartLimitBurst=10
 ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+WorkingDirectory=/etc/controld
+Restart=always
+RestartSec=30
+EnvironmentFile=-/etc/sysconfig/ctrld
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
 "
-    write_if_diff /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf "$content"
+    write_if_diff /etc/systemd/system/ctrld.service "$content"
 }
 
 write_journald_storage_fix_script() {
