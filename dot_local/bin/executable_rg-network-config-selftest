@@ -142,6 +142,8 @@ rg -q 'resolvectl dns' "$fix_local_dns" \
     || fail "local DNS repair helper does not verify resolved global DNS"
 rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$fix_local_dns" \
     || fail "local DNS repair helper lacks a secondary Control D upstream"
+rg -F -q 'else if ($i ~ /^--primary_upstream=https:\/\/76\.76\.(2|10)\.22\//)' "$fix_local_dns" \
+    || fail "local DNS repair helper cannot recover Control D id from local upstream flags"
 rg -q 'cat >/etc/systemd/system/ctrld.service <<EOF' "$fix_local_dns" \
     || fail "local DNS repair helper does not replace the Control D unit"
 rg -q 'rm -f /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf' "$fix_local_dns" \

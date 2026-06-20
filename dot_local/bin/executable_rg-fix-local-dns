@@ -351,6 +351,14 @@ cd_uid=$(
                     sub(/^--cd=/, "", $i)
                     gsub(/^"|"$/, "", $i)
                     print $i
+                } else if ($i ~ /^--primary_upstream=https:\/\/76\.76\.(2|10)\.22\//) {
+                    sub(/^--primary_upstream=https:\/\/76\.76\.(2|10)\.22\//, "", $i)
+                    gsub(/^"|"$/, "", $i)
+                    print $i
+                } else if ($i ~ /^--secondary_upstream=https:\/\/76\.76\.(2|10)\.22\//) {
+                    sub(/^--secondary_upstream=https:\/\/76\.76\.(2|10)\.22\//, "", $i)
+                    gsub(/^"|"$/, "", $i)
+                    print $i
                 }
             }
         }' |
