@@ -15,6 +15,8 @@ PROFILES_JSON="${RG_X1GEN11_PROFILES:-$HOME/.config/rg-x1gen11/profiles.json}"
 CHEZMOI_PROFILES="$HOME/.local/share/chezmoi/dot_config/rg-x1gen11/profiles.json"
 SUDO="${RG_X1GEN11_SUDO:-sudo}"
 ROOT_HELPER="${RG_X1GEN11_ROOT_HELPER:-/usr/local/sbin/rg-x1gen11-profile-root}"
+SYSFS_ROOT="${RG_X1GEN11_SYSFS_ROOT:-/sys}"
+PROC_ROOT="${RG_X1GEN11_PROC_ROOT:-/proc}"
 
 if [ ! -r "$PROFILES_JSON" ] && [ -r "$CHEZMOI_PROFILES" ]; then
     PROFILES_JSON="$CHEZMOI_PROFILES"
@@ -42,6 +44,14 @@ USAGE
 die() {
     printf 'rg-x1gen11-profile: %s\n' "$*" >&2
     exit 2
+}
+
+sys_path() {
+    printf '%s%s\n' "$SYSFS_ROOT" "$1"
+}
+
+proc_path() {
+    printf '%s%s\n' "$PROC_ROOT" "$1"
 }
 
 require_python() {
@@ -90,8 +100,8 @@ PY
 
 platform_profile_path() {
     for path in \
-        /sys/firmware/acpi/platform_profile \
-        /sys/devices/platform/thinkpad_acpi/platform_profile; do
+        "$(sys_path /firmware/acpi/platform_profile)" \
+        "$(sys_path /devices/platform/thinkpad_acpi/platform_profile)"; do
         if [ -r "$path" ]; then
             printf '%s\n' "$path"
             return 0
@@ -422,8 +432,81 @@ show_profile() {
     printf '  build_memory_high: %s\n' "$(profile_field "$profile" build_memory_high)"
 }
 
+active_profile() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    else
+        require_python
+        python3 - "$PROFILES_JSON" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("default", "undocked-mixed"))
+PY
+    fi
+}
+
+read_trimmed() {
+    local path="$1"
+    if [ ! -r "$path" ]; then
+        return 1
+    fi
+    tr -d '\n' <"$path"
+}
+
+profile_policy_check() {
+    local profile="$1" failures=0
+    local expected live path
+
+    compare_value() {
+        local label="$1" value="$2" want="$3"
+        if [ "$value" != "$want" ]; then
+            printf 'profile drift: %s live=%s expected=%s\n' "$label" "$value" "$want" >&2
+            failures=$((failures + 1))
+        fi
+    }
+
+    expected=$(profile_field "$profile" platform_profile)
+    if path=$(platform_profile_path 2>/dev/null) && live=$(read_trimmed "$path"); then
+        compare_value platform_profile "$live" "$expected"
+    else
+        printf 'profile drift: platform_profile live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" scaling_governor)
+    path=$(sys_path /devices/system/cpu/cpu0/cpufreq/scaling_governor)
+    if live=$(read_trimmed "$path"); then
+        compare_value scaling_governor "$live" "$expected"
+    else
+        printf 'profile drift: scaling_governor live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" energy_performance_preference)
+    path=$(sys_path /devices/system/cpu/cpu0/cpufreq/energy_performance_preference)
+    if live=$(read_trimmed "$path"); then
+        compare_value energy_performance_preference "$live" "$expected"
+    else
+        printf 'profile drift: energy_performance_preference live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" iwlwifi_power_save)
+    path=$(sys_path /module/iwlwifi/parameters/power_save)
+    if live=$(read_trimmed "$path"); then
+        compare_value iwlwifi_power_save "$live" "$expected"
+    else
+        printf 'profile drift: iwlwifi_power_save live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    if (( failures > 0 )); then
+        return 1
+    fi
+    printf 'profile policy: ok\n'
+}
+
 doctor() {
-    local path unit_state
+    local check_policy="${1:-}" path unit_state profile
 
     unit_state() {
         local unit="$1" label="$2" inactive_note="${3:-inactive}" state
@@ -437,11 +520,8 @@ doctor() {
     }
 
     printf '== workload profile ==\n'
-    if [ -f "$STATE_FILE" ]; then
-        printf 'active: %s\n' "$(cat "$STATE_FILE")"
-    else
-        printf 'active: (none recorded)\n'
-    fi
+    profile=$(active_profile)
+    printf 'active: %s\n' "$profile"
 
     printf '\n== platform / cpufreq ==\n'
     if path=$(platform_profile_path 2>/dev/null); then
@@ -450,29 +530,34 @@ doctor() {
     else
         printf 'platform_profile: unavailable\n'
     fi
-    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ]; then
-        printf 'cpu0 governor: %s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)"
+    path=$(sys_path /devices/system/cpu/cpu0/cpufreq/scaling_governor)
+    if [ -r "$path" ]; then
+        printf 'cpu0 governor: %s\n' "$(cat "$path")"
     fi
-    if [ -r /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference ]; then
-        printf 'cpu0 EPP: %s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference)"
+    path=$(sys_path /devices/system/cpu/cpu0/cpufreq/energy_performance_preference)
+    if [ -r "$path" ]; then
+        printf 'cpu0 EPP: %s\n' "$(cat "$path")"
     fi
 
     printf '\n== iwlwifi ==\n'
-    if [ -r /sys/module/iwlwifi/parameters/power_save ]; then
-        printf 'power_save: %s\n' "$(cat /sys/module/iwlwifi/parameters/power_save)"
+    path=$(sys_path /module/iwlwifi/parameters/power_save)
+    if [ -r "$path" ]; then
+        printf 'power_save: %s\n' "$(cat "$path")"
     else
         printf 'power_save: unavailable\n'
     fi
 
     printf '\n== zram ==\n'
-    if [ -r /sys/block/zram0/disksize ]; then
-        printf 'zram0 size: %s bytes\n' "$(cat /sys/block/zram0/disksize)"
-        if [ -r /sys/block/zram0/mm_stat ]; then
+    path=$(sys_path /block/zram0/disksize)
+    if [ -r "$path" ]; then
+        printf 'zram0 size: %s bytes\n' "$(cat "$path")"
+        path=$(sys_path /block/zram0/mm_stat)
+        if [ -r "$path" ]; then
             awk '
                 {
                     printf "zram0 mm_stat: orig=%s compr=%s mem=%s same=%s pages=%s\n", $1, $2, $3, $4, $6
                 }
-            ' /sys/block/zram0/mm_stat
+            ' "$path"
         fi
     elif [ -b /dev/zram0 ]; then
         printf 'zram0 size: %s bytes\n' "$(blockdev --getsize64 /dev/zram0 2>/dev/null || echo unknown)"
@@ -481,9 +566,10 @@ doctor() {
     fi
 
     printf '\n== PSI (some avg10) ==\n'
-    if [ -r /proc/pressure/memory ] && [ -x "$HOME/.local/bin/rg-psi-snapshot" ]; then
+    path=$(proc_path /pressure/memory)
+    if [ -r "$path" ] && [ -x "$HOME/.local/bin/rg-psi-snapshot" ]; then
         "$HOME/.local/bin/rg-psi-snapshot" once 2>/dev/null || true
-    elif [ ! -r /proc/pressure/memory ]; then
+    elif [ ! -r "$path" ]; then
         printf 'PSI: unavailable\n'
     fi
 
@@ -495,22 +581,24 @@ doctor() {
     if [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
         printf 'active id: %s\n' "$("$HOME/.local/bin/rg-sched-ladder" current 2>/dev/null || echo unknown)"
     fi
-    if [ -d /sys/kernel/sched_ext ]; then
-        if [ -r /sys/kernel/sched_ext/current ]; then
-            printf 'sched_ext current: %s\n' "$(cat /sys/kernel/sched_ext/current 2>/dev/null || echo none)"
+    path=$(sys_path /kernel/sched_ext)
+    if [ -d "$path" ]; then
+        if [ -r "$path/current" ]; then
+            printf 'sched_ext current: %s\n' "$(cat "$path/current" 2>/dev/null || echo none)"
         fi
-        if [ -d /sys/kernel/sched_ext/asa ]; then
-            printf 'ASA enabled: %s\n' "$(cat /sys/kernel/sched_ext/asa/enabled 2>/dev/null || echo n/a)"
-            printf 'ASA recommended: %s\n' "$(cat /sys/kernel/sched_ext/asa/recommended_scheduler 2>/dev/null || echo n/a)"
+        if [ -d "$path/asa" ]; then
+            printf 'ASA enabled: %s\n' "$(cat "$path/asa/enabled" 2>/dev/null || echo n/a)"
+            printf 'ASA recommended: %s\n' "$(cat "$path/asa/recommended_scheduler" 2>/dev/null || echo n/a)"
         fi
     else
         printf 'sched_ext: sysfs missing — EEVDF+BORE only (stock kernel?)\n'
     fi
 
     printf '\n== DAMON reclaim ==\n'
-    if [ -r /sys/module/damon_reclaim/parameters/enabled ]; then
-        printf 'damon_reclaim: %s\n' "$(cat /sys/module/damon_reclaim/parameters/enabled)"
-    elif [ -e /sys/module/damon_reclaim/parameters/enabled ]; then
+    path=$(sys_path /module/damon_reclaim/parameters/enabled)
+    if [ -r "$path" ]; then
+        printf 'damon_reclaim: %s\n' "$(cat "$path")"
+    elif [ -e "$path" ]; then
         printf 'damon_reclaim: present (root-readable)\n'
     else
         printf 'damon_reclaim: module missing\n'
@@ -519,6 +607,13 @@ doctor() {
     if [ -x "$HOME/.local/bin/rg-hfi-status" ]; then
         printf '\n'
         "$HOME/.local/bin/rg-hfi-status"
+    fi
+
+    if [ "$check_policy" = "--check" ]; then
+        printf '\n== profile policy check ==\n'
+        profile_policy_check "$profile"
+    elif [ -n "$check_policy" ]; then
+        die "unknown doctor argument: $check_policy"
     fi
 }
 
@@ -565,7 +660,7 @@ print(json.load(open(sys.argv[1], encoding="utf-8")).get("default", "undocked-mi
 PY
         fi
         ;;
-    doctor) doctor ;;
+    doctor) doctor "${2:-}" ;;
     -h | --help | "") usage ;;
     *) die "unknown command: $cmd" ;;
     esac

@@ -142,4 +142,46 @@ if [ -e /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference ]; th
         || fail "apply must write CPU EPP through sudo"
 fi
 
+check_state="$tmpdir/check-state"
+fake_sys="$tmpdir/check-sys"
+fake_proc="$tmpdir/check-proc"
+mkdir -p \
+    "$check_state" \
+    "$fake_sys/firmware/acpi" \
+    "$fake_sys/devices/system/cpu/cpu0/cpufreq" \
+    "$fake_sys/module/iwlwifi/parameters" \
+    "$fake_proc/pressure"
+
+printf 'undocked-mixed\n' >"$check_state/active-profile"
+printf 'low-power\n' >"$fake_sys/firmware/acpi/platform_profile"
+printf 'low-power balanced performance\n' >"$fake_sys/firmware/acpi/platform_profile_choices"
+printf 'powersave\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+printf 'power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+printf 'Y\n' >"$fake_sys/module/iwlwifi/parameters/power_save"
+
+if RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-drift.out" 2>&1; then
+    fail "doctor --check must fail on EPP drift"
+fi
+rg -q 'profile drift: energy_performance_preference live=power expected=balance_power' \
+    "$tmpdir/doctor-drift.out" \
+    || fail "doctor --check must report EPP drift"
+
+printf 'balance_power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-ok.out" 2>&1 \
+    || fail "doctor --check must pass when live policy matches active profile"
+rg -q '^profile policy: ok$' "$tmpdir/doctor-ok.out" \
+    || fail "doctor --check must print policy success"
+
 printf 'ok\n'

@@ -131,7 +131,7 @@ printf '\n== scheduler and power userspace ==\n'
 command -v scx_loader || true
 command -v scx_p2dq || true
 command -v scx_rusty || true
-HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor || true
+check 'profile policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor --check
 
 printf '\n== thermal snapshot ==\n'
 thermal_root=$(host_path /sys/class/thermal)
