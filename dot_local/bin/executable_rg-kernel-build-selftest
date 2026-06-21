@@ -330,6 +330,8 @@ refind_tmp=$(mktemp /tmp/rg-kernel-refind.XXXXXX)
 RG_KERNEL_POLICY="$policy" "$launcher" refind-command "$refind_tmp" >/tmp/rg-kernel-refind.out
 rg -q 'menuentry "Arch Linux \(linux-rg\)"' "$refind_tmp" \
     || fail "refind-command did not write a linux-rg menuentry"
+rg -q 'icon /EFI/refind/icons/os_linux_rg.png' "$refind_tmp" \
+    || fail "refind-command should use the linux-rg rEFInd icon"
 rg -q 'loader /vmlinuz-linux-rg' "$refind_tmp" \
     || fail "refind-command did not point at vmlinuz-linux-rg"
 rg -q 'initrd /initramfs-linux-rg.img' "$refind_tmp" \
@@ -368,6 +370,8 @@ bash -n "$refind_script" || fail "generated refind install script is not valid b
 shellcheck "$refind_script" || fail "generated refind install script fails shellcheck"
 rg -q 'BEGIN linux-rg managed entry' "$refind_script" \
     || fail "generated refind install script lacks managed entry marker"
+rg -q 'icon /EFI/refind/icons/os_linux_rg.png' "$refind_script" \
+    || fail "generated refind install script should use the linux-rg rEFInd icon"
 rg -Fq 'require_file "$boot_dir/vmlinuz-linux"' "$refind_script" \
     || fail "generated refind install script must require stock fallback kernel"
 rg -Fq 'require_file "$boot_dir/vmlinuz-linux-rg"' "$refind_script" \

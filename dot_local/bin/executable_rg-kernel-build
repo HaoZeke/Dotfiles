@@ -232,7 +232,7 @@ refind_command() {
     options=$(refind_options)
     cat >"$out" <<EOF
 menuentry "Arch Linux (linux-rg)" {
-    icon /EFI/refind/icons/os_arch.png
+    icon /EFI/refind/icons/os_linux_rg.png
     loader /vmlinuz-linux-rg
     initrd /intel-ucode.img
     initrd /initramfs-linux-rg.img
@@ -338,7 +338,7 @@ cat >>"\$refind_conf" <<'STANZA'
 
 # BEGIN linux-rg managed entry
 menuentry "Arch Linux (linux-rg)" {
-    icon /EFI/refind/icons/os_arch.png
+    icon /EFI/refind/icons/os_linux_rg.png
     loader /vmlinuz-linux-rg
     initrd /intel-ucode.img
     initrd /initramfs-linux-rg.img
