@@ -52,6 +52,12 @@ for helper in \
     executable_rg-zswap-tune \
     executable_rg-thermal-stack-check \
     executable_rg-x1gen11-profile \
+    executable_rg-sched-ladder \
+    executable_rg-scx-loader \
+    executable_rg-damon-reclaim \
+    executable_rg-psi-snapshot \
+    executable_rg-psi-top \
+    executable_rg-hfi-status \
     executable_rg-linux-rg-postboot-check \
     executable_rg-bench-matrix; do
     cat >"$fake_chezmoi/dot_local/bin/$helper" <<'SH'
@@ -183,6 +189,18 @@ test -x "$fake_home/.local/bin/rg-thermal-stack-check" \
     || fail "finish helper must install thermal checker into user bin"
 test -x "$fake_home/.local/bin/rg-x1gen11-profile" \
     || fail "finish helper must install profile helper into user bin"
+test -x "$fake_home/.local/bin/rg-sched-ladder" \
+    || fail "finish helper must install sched ladder into user bin"
+test -x "$fake_home/.local/bin/rg-scx-loader" \
+    || fail "finish helper must install scx loader into user bin"
+test -x "$fake_home/.local/bin/rg-damon-reclaim" \
+    || fail "finish helper must install DAMON reclaim helper into user bin"
+test -x "$fake_home/.local/bin/rg-psi-snapshot" \
+    || fail "finish helper must install PSI snapshot helper into user bin"
+test -x "$fake_home/.local/bin/rg-psi-top" \
+    || fail "finish helper must install PSI top helper into user bin"
+test -x "$fake_home/.local/bin/rg-hfi-status" \
+    || fail "finish helper must install HFI status helper into user bin"
 test -x "$fake_home/.local/bin/rg-linux-rg-postboot-check" \
     || fail "finish helper must install postboot checker into user bin"
 test -x "$fake_home/.local/bin/rg-bench-matrix" \

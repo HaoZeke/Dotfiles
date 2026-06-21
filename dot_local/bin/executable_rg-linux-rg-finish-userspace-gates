@@ -122,7 +122,13 @@ for helper in \
     rg-storage-trim-check \
     rg-zswap-tune \
     rg-thermal-stack-check \
-    rg-x1gen11-profile; do
+    rg-x1gen11-profile \
+    rg-sched-ladder \
+    rg-scx-loader \
+    rg-damon-reclaim \
+    rg-psi-snapshot \
+    rg-psi-top \
+    rg-hfi-status; do
     install_user_helper "$chezmoi/dot_local/bin/executable_$helper" "$user_home/.local/bin/$helper"
 done
 install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-postboot-check" "$postboot"
