@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-finish-userspace-gates-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-linux-rg-finish-userspace-gates"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing finish helper"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+fake_home="$tmpdir/home"
+fake_root="$tmpdir/root"
+fake_bin="$tmpdir/bin"
+fake_linux_rg="$tmpdir/linux-rg"
+fake_chezmoi="$tmpdir/chezmoi"
+log="$tmpdir/commands.log"
+
+mkdir -p \
+    "$fake_home/.local/bin" \
+    "$fake_root/boot/EFI/refind/icons" \
+    "$fake_root/usr/share/linux-rg/refind" \
+    "$fake_bin" \
+    "$fake_linux_rg" \
+    "$fake_chezmoi/dot_local/bin"
+
+base64 -d >"$fake_linux_rg/os_linux_rg.png" <<'EOF'
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAD/AP8A/6C9p5MAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjYtMDYtMjFUMjM6MDI6NDMrMDA6MDB0FloOAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI2LTA2LTIxVDIzOjAyOjQzKzAwOjAwBUvisgAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNi0wNi0yMVQyMzowMjo0MyswMDowMFJew20AAAALSURBVAjXY2AAAgAABQAB4iYFmwAAAABJRU5ErkJggg==
+EOF
+
+for helper in \
+    executable_rg-linux-rg-userspace-root-setup \
+    executable_rg-oomd-policy-check \
+    executable_rg-linux-rg-postboot-check \
+    executable_rg-bench-matrix; do
+    cat >"$fake_chezmoi/dot_local/bin/$helper" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s %s\n' "$(basename "$0")" "$*" >>"${RG_TEST_LOG:?}"
+case "$(basename "$0")" in
+rg-bench-matrix|executable_rg-bench-matrix)
+    case "${1:-}" in
+    --quick)
+        shift
+        ;;
+    esac
+    case "${1:-}" in
+    new)
+        run="${RG_BENCH_DIR:?}/fake-run"
+        mkdir -p "$run"
+        cat >"$run/manifest.env" <<EOF
+RUN_ID='fake-run'
+RUN_DIR='$run'
+HOSTNAME='rgx1gen11'
+KERNEL='7.0.12-arch1-1-rg'
+UNAME='Linux rgx1gen11 fake'
+CREATED_UTC='20260621T000000Z'
+QUICK='1'
+EOF
+        printf '%s\n' "$run"
+        ;;
+    run)
+        printf 'ran gates\n' >"${3:?}/gates.out"
+        printf 'ts\tgate-oomd\tPASS\tfake\n' >"${3:?}/results.tsv"
+        ;;
+    report)
+        printf 'report %s\n' "${2:-}" >>"${RG_TEST_LOG:?}"
+        ;;
+    esac
+    ;;
+esac
+SH
+    chmod +x "$fake_chezmoi/dot_local/bin/$helper"
+done
+
+cat >"$fake_bin/pacman" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'linux-rg 1\nlinux-rg-headers 1\nlinux 1\nlinux-headers 1\nmkinitcpio 1\nrefind 1\n'
+SH
+chmod +x "$fake_bin/pacman"
+
+cat >"$fake_bin/uname" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'Linux rgx1gen11 7.0.12-arch1-1-rg\n'
+SH
+chmod +x "$fake_bin/uname"
+
+cat >"$fake_bin/getent" <<SH
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'rgoswami:x:1000:1000::%s:/bin/bash\n' "$fake_home"
+SH
+chmod +x "$fake_bin/getent"
+
+cat >"$fake_bin/id" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+"-gn rgoswami")
+    printf 'rgoswami\n'
+    ;;
+*)
+    /usr/bin/id "$@"
+    ;;
+esac
+SH
+chmod +x "$fake_bin/id"
+
+cat >"$fake_bin/sudo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" = "-u" ]; then
+    shift 2
+fi
+while [[ ${1:-} == *=* ]]; do
+    export "$1"
+    shift
+done
+exec "$@"
+SH
+chmod +x "$fake_bin/sudo"
+
+cat >"$fake_bin/sync" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+:
+SH
+chmod +x "$fake_bin/sync"
+
+PATH="$fake_bin:$PATH" \
+RG_TEST_LOG="$log" \
+RG_FINISH_USER=rgoswami \
+RG_FINISH_USER_HOME="$fake_home" \
+RG_FINISH_ROOT="$fake_root" \
+RG_FINISH_REPO="$fake_linux_rg" \
+RG_FINISH_CHEZMOI="$fake_chezmoi" \
+RG_FINISH_EUID=0 \
+    "$script" >"$tmpdir/out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/out" >&2
+    fail "finish helper should pass under fake root"
+}
+
+test -x "$fake_home/.local/bin/rg-linux-rg-userspace-root-setup" \
+    || fail "finish helper must install root setup into user bin"
+test -x "$fake_home/.local/bin/rg-oomd-policy-check" \
+    || fail "finish helper must install OOMD checker into user bin"
+test -x "$fake_home/.local/bin/rg-linux-rg-postboot-check" \
+    || fail "finish helper must install postboot checker into user bin"
+test -x "$fake_home/.local/bin/rg-bench-matrix" \
+    || fail "finish helper must install bench matrix into user bin"
+test -r "$fake_root/boot/EFI/refind/icons/os_linux_rg.png" \
+    || fail "finish helper must install the rEFInd icon under the fake root"
+test -r "$fake_root/usr/share/linux-rg/refind/os_linux_rg.png" \
+    || fail "finish helper must install the packaged rEFInd icon under the fake root"
+rg -q '^rg-linux-rg-userspace-root-setup ' "$log" \
+    || fail "finish helper must run root setup"
+rg -q '^rg-linux-rg-postboot-check ' "$log" \
+    || fail "finish helper must run postboot check"
+rg -q '^rg-bench-matrix .*run gates' "$log" \
+    || fail "finish helper must run the gates bench"
+rg -q '^report ' "$log" \
+    || fail "finish helper must report the gates bench"
+
+printf 'ok\n'

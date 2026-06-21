@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-finish-userspace-gates).
+
+set -euo pipefail
+
+effective_euid=${RG_FINISH_EUID:-$EUID}
+user_name=${RG_FINISH_USER:-${SUDO_USER:-rgoswami}}
+target_root=${RG_FINISH_ROOT:-}
+repo=${RG_FINISH_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
+chezmoi=${RG_FINISH_CHEZMOI:-/home/rgoswami/.local/share/chezmoi}
+
+if [[ -n ${RG_FINISH_USER_HOME:-} ]]; then
+    user_home=$RG_FINISH_USER_HOME
+else
+    user_home=$(getent passwd "$user_name" | cut -d: -f6)
+    if [[ -z $user_home || ! -d $user_home ]]; then
+        user_name=rgoswami
+        user_home=/home/rgoswami
+    fi
+fi
+
+root_setup=$user_home/.local/bin/rg-linux-rg-userspace-root-setup
+oomd_check=$user_home/.local/bin/rg-oomd-policy-check
+postboot=$user_home/.local/bin/rg-linux-rg-postboot-check
+bench_matrix=$user_home/.local/bin/rg-bench-matrix
+source_icon=$repo/os_linux_rg.png
+package_icon=/usr/share/linux-rg/refind/os_linux_rg.png
+boot_icon=/boot/EFI/refind/icons/os_linux_rg.png
+
+if [[ $effective_euid != 0 ]]; then
+    printf 'error: run as root\n' >&2
+    exit 1
+fi
+
+target_path() {
+    local path=$1
+    if [[ -n $target_root && $path = /* ]]; then
+        printf '%s%s\n' "$target_root" "$path"
+    else
+        printf '%s\n' "$path"
+    fi
+}
+
+require_file() {
+    local path=$1
+    if [[ ! -e $path ]]; then
+        printf 'error: missing %s\n' "$path" >&2
+        exit 1
+    fi
+}
+
+install_user_helper() {
+    local source=$1 target=$2
+    require_file "$source"
+    install -D -m 0755 -o "$user_name" -g "$(id -gn "$user_name")" "$source" "$target"
+    printf 'installed: %s\n' "$target"
+}
+
+install_root_data() {
+    local source=$1 target=$2
+    require_file "$source"
+    install -Dm644 "$source" "$(target_path "$target")"
+    printf 'installed: %s\n' "$target"
+}
+
+png_color_type() {
+    local path=$1
+    od -An -tu1 -j25 -N1 "$path" 2>/dev/null | tr -d '[:space:]'
+}
+
+verify_icon_alpha() {
+    local path=$1 color_type corner
+    color_type=$(png_color_type "$path")
+    case "$color_type" in
+    4 | 6)
+        printf 'ok: %s keeps PNG alpha channel\n' "$path"
+        ;;
+    *)
+        printf 'error: %s lacks PNG alpha channel (color type %s)\n' "$path" "${color_type:-unreadable}" >&2
+        exit 1
+        ;;
+    esac
+
+    if command -v identify >/dev/null 2>&1; then
+        corner=$(identify -format '%[pixel:p{0,0}]' "$path" 2>/dev/null || true)
+        case "$corner" in
+        *,0\) | *,0.0\) | *#??????00*)
+            printf 'ok: %s has transparent corner\n' "$path"
+            ;;
+        "")
+            printf 'warning: %s corner alpha unreadable\n' "$path" >&2
+            ;;
+        *)
+            printf 'error: %s corner is not transparent: %s\n' "$path" "$corner" >&2
+            exit 1
+            ;;
+        esac
+    fi
+}
+
+run_user() {
+    sudo -u "$user_name" HOME="$user_home" XDG_CONFIG_HOME="$user_home/.config" "$@"
+}
+
+printf '== linux-rg package/user state ==\n'
+pacman -Q linux-rg linux-rg-headers linux linux-headers mkinitcpio refind
+uname -a
+
+printf '\n== transparent rEFInd icon ==\n'
+install_root_data "$source_icon" "$package_icon"
+install_root_data "$source_icon" "$boot_icon"
+verify_icon_alpha "$(target_path "$package_icon")"
+verify_icon_alpha "$(target_path "$boot_icon")"
+
+printf '\n== sync managed helpers ==\n'
+install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" "$root_setup"
+install_user_helper "$chezmoi/dot_local/bin/executable_rg-oomd-policy-check" "$oomd_check"
+install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-postboot-check" "$postboot"
+install_user_helper "$chezmoi/dot_local/bin/executable_rg-bench-matrix" "$bench_matrix"
+
+printf '\n== userspace root setup ==\n'
+"$root_setup"
+
+printf '\n== postboot check ==\n'
+"$postboot"
+
+printf '\n== non-root policy gate matrix ==\n'
+tmpdir=$(run_user mktemp -d /tmp/rg-bench-gates-final.XXXXXX)
+run_dir=$(run_user env RG_BENCH_DIR="$tmpdir" "$bench_matrix" --quick new)
+run_user env RG_BENCH_DIR="$tmpdir" "$bench_matrix" --quick run gates "$run_dir" \
+    >/tmp/rg-bench-gates-final-run.out 2>&1
+printf 'run_dir=%s\n' "$run_dir"
+run_user "$bench_matrix" report "$run_dir"
+
+printf '\nlinux-rg userspace finish gates completed\n'

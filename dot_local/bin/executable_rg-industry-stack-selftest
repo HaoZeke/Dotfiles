@@ -46,6 +46,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check-selftest" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-finish-userspace-gates" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-finish-userspace-gates-selftest" \
     "$repo/dot_config/systemd/user/rg-sched@.service" \
     "$repo/dot_config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
     "$repo/dot_local/bin/executable_rg-psi-snapshot" \
@@ -144,6 +146,8 @@ rg -q 'rg-linux-rg-userspace-root-setup-selftest' "$repo/dot_config/rg-kernel/re
     || fail "kernel readme must document the root setup selftest"
 rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the postboot helper"
+rg -q 'rg-linux-rg-finish-userspace-gates' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the finish gates helper"
 rg -q 'rg-ksm-policy --check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the KSM checker"
 rg -q 'rg-storage-trim-check --check' "$repo/dot_config/rg-kernel/readme.org" \

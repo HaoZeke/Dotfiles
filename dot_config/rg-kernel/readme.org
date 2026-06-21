@@ -36,6 +36,8 @@ rg-kernel-build install-preflight
 rg-kernel-build install-command
 rg-kernel-build refind-command
 rg-kernel-build oomd-command
+rg-linux-rg-finish-userspace-gates
+rg-linux-rg-finish-userspace-gates-selftest
 rg-linux-rg-userspace-root-setup
 rg-linux-rg-userspace-root-setup-selftest
 rg-linux-rg-postboot-check
@@ -93,7 +95,14 @@ boot/live contracts, scheduler/power userspace, active profile drift, sched_ext
 mode drift, KSM madvise policy, and a thermal snapshot. It aggregates missing paths and failed
 probes so one run shows every visible boot problem.
 
+=rg-linux-rg-finish-userspace-gates= is the privileged finalization path after
+booting linux-rg. It installs the transparent rEFInd icon, syncs the managed
+root setup, OOMD checker, postboot checker, and bench matrix into =~/.local/bin=,
+applies the root setup, runs postboot validation, and captures the non-root
+policy gate matrix.
+
 #+begin_src shell
+sudo rg-linux-rg-finish-userspace-gates 2>&1 | tee /tmp/rg-linux-rg-finish-userspace-gates.out
 sudo rg-linux-rg-userspace-root-setup 2>&1 | tee /tmp/rg-linux-rg-userspace-root-setup.out
 sudo rg-linux-rg-postboot-check 2>&1 | tee /tmp/rg-linux-rg-postboot-check.out
 #+end_src
