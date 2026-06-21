@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-storage-trim-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-storage-trim-check"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing storage trim checker"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+root="$tmpdir/root"
+bin="$tmpdir/bin"
+mkdir -p "$root/etc" "$root/proc" "$bin"
+
+cat >"$root/etc/fstab" <<'EOF'
+UUID=54f660eb-1356-48fd-826a-63030ba906f8 / btrfs rw,noatime,ssd,space_cache=v2,subvol=/@ 0 0
+UUID=54f660eb-1356-48fd-826a-63030ba906f8 /home btrfs rw,noatime,ssd,space_cache=v2,subvol=/@home 0 0
+EOF
+cat >"$root/etc/crypttab" <<'EOF'
+luks UUID=54f660eb-1356-48fd-826a-63030ba906f8 none luks,discard
+EOF
+cat >"$root/proc/cmdline" <<'EOF'
+cryptdevice=UUID=54f660eb-1356-48fd-826a-63030ba906f8:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rw
+EOF
+
+cat >"$bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${RG_TEST_SYSTEMCTL_DENIED:-0} == 1 ]]; then
+    printf 'Failed to connect to system scope bus via local transport: Operation not permitted\n' >&2
+    exit 1
+fi
+case "$*" in
+"is-enabled fstrim.timer")
+    printf '%s\n' "${RG_TEST_FSTRIM_ENABLED:-enabled}"
+    [[ ${RG_TEST_FSTRIM_ENABLED:-enabled} == enabled ]]
+    ;;
+"is-active fstrim.timer")
+    printf '%s\n' "${RG_TEST_FSTRIM_ACTIVE:-active}"
+    [[ ${RG_TEST_FSTRIM_ACTIVE:-active} == active ]]
+    ;;
+*)
+    printf 'unexpected systemctl call: %s\n' "$*" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$bin/systemctl"
+
+RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" "$script" --check >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "valid encrypted btrfs trim policy should pass"
+}
+rg -q 'ok: fstrim.timer enabled' "$tmpdir/ok.out" \
+    || fail "checker must verify fstrim.timer is enabled"
+rg -q 'ok: encrypted discard passthrough allows explicit fstrim' "$tmpdir/ok.out" \
+    || fail "checker must verify encrypted discard passthrough"
+rg -q 'ok: btrfs mounts avoid continuous discard' "$tmpdir/ok.out" \
+    || fail "checker must reject continuous discard only when present"
+
+sed -i 's/rw,noatime/rw,noatime,discard=async/' "$root/etc/fstab"
+if RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" "$script" --check >"$tmpdir/discard.out" 2>&1; then
+    fail "continuous btrfs discard should fail"
+fi
+rg -q 'fail: btrfs mount / uses continuous discard option discard=async' "$tmpdir/discard.out" \
+    || fail "continuous discard report should name mount and option"
+sed -i 's/rw,noatime,discard=async/rw,noatime/' "$root/etc/fstab"
+
+cat >"$root/proc/cmdline" <<'EOF'
+cryptdevice=UUID=54f660eb-1356-48fd-826a-63030ba906f8:luks root=/dev/mapper/luks rootflags=subvol=@ rw
+EOF
+cat >"$root/etc/crypttab" <<'EOF'
+luks UUID=54f660eb-1356-48fd-826a-63030ba906f8 none luks
+EOF
+if RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" "$script" --check >"$tmpdir/passthrough.out" 2>&1; then
+    fail "missing encrypted discard passthrough should fail"
+fi
+rg -q 'fail: encrypted discard passthrough missing' "$tmpdir/passthrough.out" \
+    || fail "missing passthrough report should be explicit"
+
+cat >"$root/proc/cmdline" <<'EOF'
+cryptdevice=UUID=54f660eb-1356-48fd-826a-63030ba906f8:luks:allow-discards root=/dev/mapper/luks rootflags=subvol=@ rw
+EOF
+cat >"$root/etc/crypttab" <<'EOF'
+luks UUID=54f660eb-1356-48fd-826a-63030ba906f8 none luks,discard
+EOF
+if RG_TEST_FSTRIM_ENABLED=disabled RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" "$script" --check >"$tmpdir/timer.out" 2>&1; then
+    fail "disabled fstrim.timer should fail"
+fi
+rg -q 'fail: fstrim.timer enabled=disabled expected=enabled' "$tmpdir/timer.out" \
+    || fail "disabled fstrim.timer report should be explicit"
+
+mkdir -p "$root/etc/systemd/system/timers.target.wants"
+ln -sf /usr/lib/systemd/system/fstrim.timer "$root/etc/systemd/system/timers.target.wants/fstrim.timer"
+RG_TEST_SYSTEMCTL_DENIED=1 RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" \
+    "$script" --check >"$tmpdir/denied.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/denied.out" >&2
+    fail "bus-denied non-root timer check should use symlink fallback"
+}
+rg -q 'ok: fstrim.timer enabled via systemd wants symlink' "$tmpdir/denied.out" \
+    || fail "bus denied fallback should report the wants symlink"
+rg -q 'warn: fstrim.timer active state unavailable' "$tmpdir/denied.out" \
+    || fail "bus denied fallback should warn about active state"
+
+rm -f "$root/etc/systemd/system/timers.target.wants/fstrim.timer"
+if RG_TEST_SYSTEMCTL_DENIED=1 RG_STORAGE_TRIM_ROOT="$root" PATH="$bin:$PATH" \
+    "$script" --check >"$tmpdir/denied-missing.out" 2>&1; then
+    fail "bus-denied timer check without wants symlink should fail"
+fi
+rg -q 'fail: fstrim.timer enabled state unavailable and wants symlink missing' "$tmpdir/denied-missing.out" \
+    || fail "missing wants symlink report should be explicit"
+
+printf 'ok\n'

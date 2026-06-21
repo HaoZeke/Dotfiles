@@ -36,6 +36,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-pipewire-rt-check-selftest" \
     "$repo/dot_local/bin/executable_rg-ksm-policy" \
     "$repo/dot_local/bin/executable_rg-ksm-policy-selftest" \
+    "$repo/dot_local/bin/executable_rg-storage-trim-check" \
+    "$repo/dot_local/bin/executable_rg-storage-trim-check-selftest" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
@@ -107,6 +109,12 @@ rg -q 'rg-ksm-madvise.service' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.
     || fail "KSM root setup must install the madvise service"
 rg -q 'use_zero_pages.*0' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl" \
     || fail "KSM root setup must keep zero-page merging disabled"
+rg -q 'fstrim.timer enabled' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
+    || fail "storage trim checker must verify fstrim.timer"
+rg -q 'continuous discard' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
+    || fail "storage trim checker must reject continuous btrfs discard"
+rg -q 'systemctl enable --now fstrim.timer' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
+    || fail "root setup helper must enable periodic fstrim"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \
@@ -127,6 +135,8 @@ rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the postboot helper"
 rg -q 'rg-ksm-policy --check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the KSM checker"
+rg -q 'rg-storage-trim-check --check' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the storage trim checker"
 rg -q 'doctor --check' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     || fail "root setup helper must verify active profile policy"
 rg -q 'rg-x1gen11-profile-root' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \

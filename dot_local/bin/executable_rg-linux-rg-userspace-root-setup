@@ -184,6 +184,7 @@ systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
 systemctl enable --now rg-ksm-madvise.service
+systemctl enable --now fstrim.timer
 sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 
 if profile_bin=$(find_profile_bin); then

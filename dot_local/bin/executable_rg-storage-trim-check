@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-storage-trim-check).
+
+set -euo pipefail
+
+root=${RG_STORAGE_TRIM_ROOT:-}
+check=0
+failures=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-storage-trim-check [--check]
+
+Validate the encrypted btrfs trim policy for rgx1gen11:
+periodic fstrim is enabled, encrypted discard passthrough exists for explicit
+trim, and btrfs mounts avoid continuous discard options.
+USAGE
+}
+
+host_path() {
+    local path=$1
+    if [[ -n $root && $path == /* ]]; then
+        printf '%s%s\n' "$root" "$path"
+    else
+        printf '%s\n' "$path"
+    fi
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+warn() {
+    printf 'warn: %s\n' "$*" >&2
+}
+
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+trim_spaces() {
+    sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+check_timer() {
+    local enabled active wants
+    printf '== fstrim timer ==\n'
+    if enabled=$(systemctl is-enabled fstrim.timer 2>&1); then
+        pass "fstrim.timer enabled"
+    else
+        case "$enabled" in
+        *"Operation not permitted"* | *"Failed to connect"*)
+            wants=$(host_path /etc/systemd/system/timers.target.wants/fstrim.timer)
+            if [[ -e $wants ]]; then
+                pass "fstrim.timer enabled via systemd wants symlink"
+            else
+                fail "fstrim.timer enabled state unavailable and wants symlink missing"
+            fi
+            ;;
+        *)
+            fail "fstrim.timer enabled=$(printf '%s' "$enabled" | trim_spaces) expected=enabled"
+            ;;
+        esac
+    fi
+
+    if active=$(systemctl is-active fstrim.timer 2>&1); then
+        pass "fstrim.timer active"
+    else
+        case "$active" in
+        *"Operation not permitted"* | *"Failed to connect"*)
+            warn "fstrim.timer active state unavailable"
+            ;;
+        *)
+            fail "fstrim.timer active=$(printf '%s' "$active" | trim_spaces) expected=active"
+            ;;
+        esac
+    fi
+}
+
+check_btrfs_mount_options() {
+    local fstab line source target fstype opts dump passno option bad=0
+    fstab=$(host_path /etc/fstab)
+    printf '\n== btrfs discard policy ==\n'
+    if [[ ! -r $fstab ]]; then
+        fail "missing readable /etc/fstab"
+        return
+    fi
+
+    while read -r source target fstype opts dump passno; do
+        [[ -n ${source:-} ]] || continue
+        [[ $source == \#* ]] && continue
+        [[ ${fstype:-} == btrfs ]] || continue
+        IFS=',' read -ra options <<<"${opts:-}"
+        for option in "${options[@]}"; do
+            case "$option" in
+            discard | discard=*)
+                fail "btrfs mount $target uses continuous discard option $option"
+                bad=1
+                ;;
+            esac
+        done
+    done <"$fstab"
+
+    if (( bad == 0 )); then
+        pass "btrfs mounts avoid continuous discard"
+    fi
+}
+
+check_encrypted_passthrough() {
+    local cmdline_path crypttab_path cmdline crypttab
+    cmdline_path=$(host_path /proc/cmdline)
+    crypttab_path=$(host_path /etc/crypttab)
+    printf '\n== encrypted discard passthrough ==\n'
+
+    cmdline=
+    crypttab=
+    [[ -r $cmdline_path ]] && cmdline=$(<"$cmdline_path")
+    [[ -r $crypttab_path ]] && crypttab=$(<"$crypttab_path")
+
+    if printf '%s\n%s\n' "$cmdline" "$crypttab" |
+        rg -q '(^|[[:space:],:])allow-discards($|[[:space:],:])|(^|[[:space:],])discard($|[[:space:],])'; then
+        pass "encrypted discard passthrough allows explicit fstrim"
+    else
+        fail "encrypted discard passthrough missing"
+    fi
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --check)
+        check=1
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+check_timer
+check_btrfs_mount_options
+check_encrypted_passthrough
+
+if (( check == 1 && failures > 0 )); then
+    printf '\nstorage trim policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf '\nstorage trim policy: ok\n'

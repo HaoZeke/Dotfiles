@@ -45,6 +45,7 @@ rg-uvc-camera-check --check
 rg-thermal-stack-check --check
 rg-pipewire-rt-check --check
 rg-ksm-policy --check
+rg-storage-trim-check --check
 rg-x1gen11-profile doctor
 rg-x1gen11-profile doctor --check
 #+end_src
