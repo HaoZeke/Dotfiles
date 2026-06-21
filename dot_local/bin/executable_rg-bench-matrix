@@ -190,6 +190,7 @@ bench_gates() {
 
     PATH="$HOME/.local/bin:$PATH" run_gate memory rg-memory-sysctl-check
     PATH="$HOME/.local/bin:$PATH" run_gate pipewire rg-pipewire-rt-check --check
+    PATH="$HOME/.local/bin:$PATH" run_gate oomd rg-oomd-policy-check --check
     PATH="$HOME/.local/bin:$PATH" run_gate ksm rg-ksm-policy --check
     PATH="$HOME/.local/bin:$PATH" run_gate storage-trim rg-storage-trim-check --check
     PATH="$HOME/.local/bin:$PATH" run_gate zswap rg-zswap-tune check

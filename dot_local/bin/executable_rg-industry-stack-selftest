@@ -35,6 +35,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-thermal-stack-check-selftest" \
     "$repo/dot_local/bin/executable_rg-pipewire-rt-check" \
     "$repo/dot_local/bin/executable_rg-pipewire-rt-check-selftest" \
+    "$repo/dot_local/bin/executable_rg-oomd-policy-check" \
+    "$repo/dot_local/bin/executable_rg-oomd-policy-check-selftest" \
     "$repo/dot_local/bin/executable_rg-ksm-policy" \
     "$repo/dot_local/bin/executable_rg-ksm-policy-selftest" \
     "$repo/dot_local/bin/executable_rg-storage-trim-check" \
@@ -69,6 +71,8 @@ rg -q 'ManagedOOMMemoryPressure=kill' \
     || fail "memory tuning missing systemd-oomd slice policy"
 rg -q 'facebookincubator/oomd' "$repo/dot_local/bin/executable_rg-oomd-profile-install" \
     || fail "oomd installer must document facebook oomd"
+rg -q 'OOMD policy failed' "$repo/dot_local/bin/executable_rg-oomd-policy-check" \
+    || fail "OOMD checker must fail closed on policy drift"
 rg -q 'rg-psi-snapshot' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \
     || fail "profile doctor must sample PSI"
 rg -q 'build.slice' "$repo/dot_local/bin/executable_rg-x1gen11-profile" \

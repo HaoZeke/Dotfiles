@@ -27,6 +27,7 @@ mkdir -p "$fake_home/.local/bin"
 for cmd in \
     rg-memory-sysctl-check \
     rg-pipewire-rt-check \
+    rg-oomd-policy-check \
     rg-ksm-policy \
     rg-storage-trim-check \
     rg-zswap-tune \
@@ -46,6 +47,7 @@ HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run run smok
 HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" run gates "$out" >/dev/null
 test -r "$out/gates/zswap.txt" || fail "gates bench did not preserve zswap output"
 rg -q 'gate-zswap.*PASS' "$out/results.tsv" || fail "gates bench did not record zswap pass"
+rg -q 'gate-oomd.*PASS' "$out/results.tsv" || fail "gates bench did not record oomd pass"
 rg -q 'gate-profile.*PASS' "$out/results.tsv" || fail "gates bench did not record profile pass"
 HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run --quick run-all "$out" >/dev/null
 RG_BENCH_DIR="$tmpdir/bench-runs" "$script" report "$out" >/dev/null

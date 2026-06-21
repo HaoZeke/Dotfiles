@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-oomd-policy-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-oomd-policy-check"
+profile="$repo/dot_config/oomd/oomd-rgx1gen11.json"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing OOMD policy checker"
+test -r "$profile" || fail "missing rgx1gen11 OOMD profile"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+fake_root="$tmpdir/root"
+fake_bin="$tmpdir/bin"
+
+mkdir -p \
+    "$fake_bin" \
+    "$fake_root/proc/pressure" \
+    "$fake_root/sys/fs/cgroup" \
+    "$fake_root/etc/oomd" \
+    "$fake_root/etc/systemd/system.conf.d" \
+    "$fake_root/etc/systemd/system/hostcritical.slice.d" \
+    "$fake_root/etc/systemd/system/oomd.service.d"
+
+cp "$profile" "$fake_root/etc/oomd/oomd.json"
+printf 'some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n' \
+    >"$fake_root/proc/pressure/memory"
+printf 'cpuset cpu io memory pids\n' >"$fake_root/sys/fs/cgroup/cgroup.controllers"
+
+cat >"$fake_root/etc/systemd/system.conf.d/20-rg-resource-accounting.conf" <<'EOF'
+[Manager]
+DefaultCPUAccounting=true
+DefaultIOAccounting=true
+DefaultMemoryAccounting=true
+DefaultTasksAccounting=true
+EOF
+
+cat >"$fake_root/etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf" <<'EOF'
+[Slice]
+MemoryMin=256M
+MemoryLow=256M
+CPUWeight=200
+IOWeight=200
+EOF
+
+cat >"$fake_root/etc/systemd/system/oomd.service.d/10-rg-protection.conf" <<'EOF'
+[Service]
+Slice=hostcritical.slice
+MemoryMin=64M
+MemoryLow=64M
+CPUWeight=200
+IOWeight=200
+EOF
+
+cat >"$fake_bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+"is-active systemd-oomd.service"|"is-active systemd-oomd")
+    printf 'active\n'
+    ;;
+"is-enabled systemd-oomd.service"|"is-enabled systemd-oomd")
+    printf 'enabled\n'
+    ;;
+"is-active oomd.service"|"is-active oomd")
+    printf 'active\n'
+    ;;
+"is-enabled oomd.service"|"is-enabled oomd")
+    printf 'enabled\n'
+    ;;
+*)
+    printf 'unexpected systemctl command: %s\n' "$*" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$fake_bin/systemctl"
+
+cat >"$fake_bin/oomd" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'fake oomd\n'
+SH
+chmod +x "$fake_bin/oomd"
+
+RG_OOMD_CHECK_ROOT="$fake_root" \
+PATH="$fake_bin:$PATH" \
+    "$script" --check >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "complete OOMD policy fixture should pass"
+}
+
+rg -q 'ok: PSI memory pressure readable' "$tmpdir/ok.out" \
+    || fail "checker must verify PSI memory pressure"
+rg -q 'ok: unified cgroup v2 memory/io controllers available' "$tmpdir/ok.out" \
+    || fail "checker must verify cgroup v2 controllers"
+rg -q 'ok: systemd-oomd.service active' "$tmpdir/ok.out" \
+    || fail "checker must verify systemd-oomd is active"
+rg -q 'ok: facebook oomd profile installed' "$tmpdir/ok.out" \
+    || fail "checker must verify the installed facebook oomd profile"
+rg -q 'ok: facebook oomd.service active' "$tmpdir/ok.out" \
+    || fail "checker must verify facebook oomd service when binary exists"
+
+rm -f "$fake_root/etc/oomd/oomd.json"
+if RG_OOMD_CHECK_ROOT="$fake_root" PATH="$fake_bin:$PATH" "$script" --check >"$tmpdir/missing.out" 2>&1; then
+    fail "missing facebook oomd profile should fail"
+fi
+rg -q 'fail: missing /etc/oomd/oomd.json' "$tmpdir/missing.out" \
+    || fail "checker must report a missing facebook oomd profile"
+
+printf 'ok\n'

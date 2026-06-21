@@ -101,7 +101,7 @@ fi
 SH
 chmod +x "$fake_bin/dkms"
 
-for cmd in rgx1gen11-boot-check rgx1gen11-live-check rg-memory-sysctl-check rg-thermal-stack-check rg-pipewire-rt-check rg-ksm-policy rg-storage-trim-check rg-zswap-tune rg-x1gen11-profile; do
+for cmd in rgx1gen11-boot-check rgx1gen11-live-check rg-memory-sysctl-check rg-thermal-stack-check rg-pipewire-rt-check rg-oomd-policy-check rg-ksm-policy rg-storage-trim-check rg-zswap-tune rg-x1gen11-profile; do
     cat >"$fake_bin/$cmd" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -140,5 +140,7 @@ env \
 
 rg -q "linux-rg postboot check passed for $kver" "$tmpdir/ok.out" \
     || fail "successful postboot check should print pass summary"
+rg -q '== OOMD policy ==' "$tmpdir/ok.out" \
+    || fail "postboot check must run the OOMD policy gate"
 
 printf 'ok\n'

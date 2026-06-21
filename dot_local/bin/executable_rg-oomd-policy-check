@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-oomd-policy-check).
+
+set -euo pipefail
+
+check_mode=0
+root=${RG_OOMD_CHECK_ROOT:-}
+
+usage() {
+    cat <<'USAGE'
+usage: rg-oomd-policy-check [--check]
+
+Validate rgx1gen11 PSI, systemd-oomd, and facebookincubator oomd policy.
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+    --check) check_mode=1; shift ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+failures=0
+
+host_path() {
+    local path=$1
+    if [[ -n $root && $path = /* ]]; then
+        printf '%s%s\n' "$root" "$path"
+    else
+        printf '%s\n' "$path"
+    fi
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+warn() {
+    printf 'warn: %s\n' "$*"
+}
+
+fail() {
+    printf 'fail: %s\n' "$*"
+    failures=$((failures + 1))
+}
+
+require_file() {
+    local path=$1 label=$2
+    if [[ -r $(host_path "$path") ]]; then
+        pass "$label"
+    else
+        fail "missing $path"
+    fi
+}
+
+require_pattern() {
+    local path=$1 pattern=$2 label=$3 real
+    real=$(host_path "$path")
+    if [[ ! -r $real ]]; then
+        fail "missing $path"
+    elif rg -q "$pattern" "$real"; then
+        pass "$label"
+    else
+        fail "$label missing in $path"
+    fi
+}
+
+systemctl_state() {
+    local verb=$1 unit=$2 label=$3 want=$4 state
+    if state=$(systemctl "$verb" "$unit" 2>&1); then
+        if [[ $state == "$want" ]]; then
+            pass "$label $want"
+        else
+            fail "$label $verb=$state expected=$want"
+        fi
+    elif printf '%s\n' "$state" | grep -Eq 'Operation not permitted|Failed to connect'; then
+        fail "$label state unavailable: $state"
+    else
+        fail "$label $verb=$(printf '%s' "$state") expected=$want"
+    fi
+}
+
+printf '== PSI and cgroup substrate ==\n'
+if [[ -r $(host_path /proc/pressure/memory) ]]; then
+    pass "PSI memory pressure readable"
+else
+    fail "missing /proc/pressure/memory"
+fi
+
+controllers=$(host_path /sys/fs/cgroup/cgroup.controllers)
+if [[ -r $controllers ]] && rg -q '(^| )memory( |$)' "$controllers" && rg -q '(^| )io( |$)' "$controllers"; then
+    pass "unified cgroup v2 memory/io controllers available"
+else
+    fail "unified cgroup v2 memory/io controllers unavailable"
+fi
+
+printf '\n== systemd-oomd ==\n'
+systemctl_state is-active systemd-oomd.service systemd-oomd.service active
+systemctl_state is-enabled systemd-oomd.service systemd-oomd.service enabled
+
+printf '\n== facebookincubator oomd profile ==\n'
+require_file /etc/oomd/oomd.json "facebook oomd profile installed"
+for pattern in \
+    '"pressure_rising_beyond"' \
+    '"pressure_above"' \
+    '"kill_by_memory_size_or_growth"' \
+    '"kill_by_swap_usage"' \
+    '"resource": "memory"' \
+    '"resource": "io"'; do
+    require_pattern /etc/oomd/oomd.json "$pattern" "facebook oomd profile contains $pattern"
+done
+
+require_pattern /etc/systemd/system.conf.d/20-rg-resource-accounting.conf \
+    'DefaultMemoryAccounting=true' \
+    "systemd memory accounting default enabled"
+require_pattern /etc/systemd/system.conf.d/20-rg-resource-accounting.conf \
+    'DefaultIOAccounting=true' \
+    "systemd IO accounting default enabled"
+require_pattern /etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf \
+    'MemoryMin=256M' \
+    "hostcritical memory reserve installed"
+require_pattern /etc/systemd/system/oomd.service.d/10-rg-protection.conf \
+    'MemoryMin=64M' \
+    "oomd service memory protection installed"
+
+if command -v oomd >/dev/null 2>&1; then
+    printf '\n== facebookincubator oomd service ==\n'
+    systemctl_state is-enabled oomd.service "facebook oomd.service" enabled
+    systemctl_state is-active oomd.service "facebook oomd.service" active
+else
+    printf '\n== facebookincubator oomd service ==\n'
+    warn "oomd binary missing; profile is installed but facebook oomd.service is not enforceable"
+fi
+
+if (( failures > 0 )); then
+    printf '\nOOMD policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf '\nOOMD policy: ok\n'
+exit 0
