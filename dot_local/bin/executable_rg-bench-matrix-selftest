@@ -19,11 +19,35 @@ chmod +x "$script" 2>/dev/null || true
 "$script" list | rg '^thermal' >/dev/null || fail "list missing thermal bench"
 "$script" list | rg '^collect' >/dev/null || fail "list missing collect bench"
 "$script" list | rg '^wifi' >/dev/null || fail "list missing wifi bench"
+"$script" list | rg '^gates' >/dev/null || fail "list missing gates bench"
+"$script" --help | rg 'gates' >/dev/null || fail "help missing gates bench"
+
+fake_home="$tmpdir/home"
+mkdir -p "$fake_home/.local/bin"
+for cmd in \
+    rg-memory-sysctl-check \
+    rg-pipewire-rt-check \
+    rg-ksm-policy \
+    rg-storage-trim-check \
+    rg-zswap-tune \
+    rg-thermal-stack-check \
+    rg-x1gen11-profile; do
+    cat >"$fake_home/.local/bin/$cmd" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s %s\n' "$(basename "$0")" "$*"
+SH
+    chmod +x "$fake_home/.local/bin/$cmd"
+done
 
 out=$(RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run new)
 test -d "$out" || fail "new did not create run dir"
-RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run run smoke "$out" >/dev/null
-RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run --quick run-all "$out" >/dev/null
+HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run run smoke "$out" >/dev/null
+HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" run gates "$out" >/dev/null
+test -r "$out/gates/zswap.txt" || fail "gates bench did not preserve zswap output"
+rg -q 'gate-zswap.*PASS' "$out/results.tsv" || fail "gates bench did not record zswap pass"
+rg -q 'gate-profile.*PASS' "$out/results.tsv" || fail "gates bench did not record profile pass"
+HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run --quick run-all "$out" >/dev/null
 RG_BENCH_DIR="$tmpdir/bench-runs" "$script" report "$out" >/dev/null
 
 rm -rf "$tmpdir"

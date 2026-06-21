@@ -18,7 +18,7 @@ usage: rg-bench-matrix COMMAND [ARGS...]
 Commands:
   list                 Show bench ids from the measurement checklist.
   new                  Create a timestamped run directory and manifest.
-  run ID [RUN_DIR]     Execute one bench (collect, sched, psi-baseline, nvme, idle, smoke, thermal, wifi, suspend).
+  run ID [RUN_DIR]     Execute one bench (gates, collect, sched, psi-baseline, nvme, idle, smoke, thermal, wifi, suspend).
   run-all [RUN_DIR]    Run all benches (use --quick to skip long idle/fio).
   report [RUN_DIR]     Print summary from manifest + CSV artifacts.
   -h, --help
@@ -159,6 +159,42 @@ bench_smoke() {
     if [ "$ok" = "1" ]; then
         append_result "$run_dir" smoke PASS "basic sysfs readable"
     fi
+}
+
+bench_gates() {
+    local run_dir="$1"
+    local out_dir="$run_dir/gates"
+    mkdir -p "$out_dir"
+
+    run_gate() {
+        local id="$1"
+        shift
+        local out="$out_dir/$id.txt"
+        if ! command -v "$1" >/dev/null 2>&1; then
+            append_result "$run_dir" "gate-$id" SKIP "$1 missing"
+            return 0
+        fi
+        if [ "$DRY_RUN" = "1" ]; then
+            printf '+'
+            printf ' %q' "$@"
+            printf ' > %q\n' "$out"
+            append_result "$run_dir" "gate-$id" SKIP "dry-run"
+            return 0
+        fi
+        if "$@" >"$out" 2>&1; then
+            append_result "$run_dir" "gate-$id" PASS "$out"
+        else
+            append_result "$run_dir" "gate-$id" FAIL "$out"
+        fi
+    }
+
+    PATH="$HOME/.local/bin:$PATH" run_gate memory rg-memory-sysctl-check
+    PATH="$HOME/.local/bin:$PATH" run_gate pipewire rg-pipewire-rt-check --check
+    PATH="$HOME/.local/bin:$PATH" run_gate ksm rg-ksm-policy --check
+    PATH="$HOME/.local/bin:$PATH" run_gate storage-trim rg-storage-trim-check --check
+    PATH="$HOME/.local/bin:$PATH" run_gate zswap rg-zswap-tune check
+    PATH="$HOME/.local/bin:$PATH" run_gate thermal rg-thermal-stack-check --check
+    PATH="$HOME/.local/bin:$PATH" run_gate profile rg-x1gen11-profile doctor --check
 }
 
 bench_psi_baseline() {
@@ -333,6 +369,7 @@ bench_build() {
 cmd_list() {
     cat <<'LIST'
 smoke          Basic sysfs and kernel identity
+gates          Cheap userspace policy gates (memory, RT, KSM, trim, zswap, thermal, profile)
 collect        rg-wide-net-collect platform snapshot
 psi-baseline   30s PSI CSV (undocked idle-ish)
 sched          rg-sched-ladder bench off/lavd/rusty (20s each)
@@ -352,6 +389,7 @@ cmd_run() {
     require_host
     case "$bench_id" in
     smoke) bench_smoke "$run_dir" ;;
+    gates) bench_gates "$run_dir" ;;
     collect) bench_collect "$run_dir" ;;
     psi-baseline) bench_psi_baseline "$run_dir" ;;
     sched) bench_sched "$run_dir" ;;
