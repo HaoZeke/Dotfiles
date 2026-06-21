@@ -7,6 +7,7 @@ user_home=${RG_USER_HOME:-/home/rgoswami}
 user_name=${RG_USER_NAME:-$(basename "$user_home")}
 jobs=${RG_DKMS_JOBS:-}
 profile_root_helper=/usr/local/sbin/rg-x1gen11-profile-root
+oomd_profile=${RG_OOMD_PROFILE:-$user_home/.config/oomd/oomd-rgx1gen11.json}
 target_root=${RG_LINUX_RG_ROOT_SETUP_ROOT:-}
 allow_nonroot=${RG_LINUX_RG_ROOT_SETUP_ALLOW_NONROOT:-0}
 
@@ -178,6 +179,38 @@ SYSCTL
   sysctl -p "$(target_path /etc/sysctl.d/98-rg-realtime.conf)"
 }
 
+install_facebook_oomd_policy() {
+  install_data "$oomd_profile" /etc/oomd/oomd.json
+
+  install_content /etc/systemd/system.conf.d/20-rg-resource-accounting.conf 0644 "$(cat <<'ACCOUNTING'
+[Manager]
+DefaultCPUAccounting=true
+DefaultIOAccounting=true
+DefaultMemoryAccounting=true
+DefaultTasksAccounting=true
+ACCOUNTING
+)"
+
+  install_content /etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf 0644 "$(cat <<'RESERVE'
+[Slice]
+MemoryMin=256M
+MemoryLow=256M
+CPUWeight=200
+IOWeight=200
+RESERVE
+)"
+
+  install_content /etc/systemd/system/oomd.service.d/10-rg-protection.conf 0644 "$(cat <<'PROTECTION'
+[Service]
+Slice=hostcritical.slice
+MemoryMin=64M
+MemoryLow=64M
+CPUWeight=200
+IOWeight=200
+PROTECTION
+)"
+}
+
 printf '== sync linux-rg helpers ==\n'
 install_exec "$repo/rgx1gen11-dkms-overlay-apply" /usr/bin/rgx1gen11-dkms-overlay-apply
 install_exec "$repo/linux-rg-module-symvers" /usr/bin/linux-rg-module-symvers
@@ -212,9 +245,15 @@ modinfo -k "$kver" 88XXau | sed -n '1,16p'
 printf '\n== userspace policy ==\n'
 install_pipewire_rt_policy
 install_ksm_policy
+install_facebook_oomd_policy
 systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
+if command -v oomd >/dev/null 2>&1; then
+  systemctl enable --now oomd.service
+else
+  printf 'warning: oomd binary missing; installed /etc/oomd/oomd.json but did not enable oomd.service\n' >&2
+fi
 systemctl enable --now rg-ksm-madvise.service
 systemctl enable --now fstrim.timer
 sysctl --system | rg -n '98-rg-realtime|99-memory|dirty|sched_rt_runtime|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true

@@ -22,6 +22,7 @@ fake_home="$tmpdir/home"
 fake_bin="$tmpdir/bin"
 
 mkdir -p "$fake_root" "$fake_repo/dkms-overlays" "$fake_home/.local/bin" "$fake_bin"
+mkdir -p "$fake_home/.config/oomd"
 
 for helper in \
     rgx1gen11-dkms-overlay-apply \
@@ -49,6 +50,23 @@ touch \
     "$fake_repo/dkms-overlays/ddcci-0.4.5-linux-7.0.patch" \
     "$fake_repo/dkms-overlays/evdi-1.14.7-linux-7.0.patch" \
     "$fake_repo/dkms-overlays/rtl88xxau-r1298-linux-7.0.patch"
+
+cat >"$fake_home/.config/oomd/oomd-rgx1gen11.json" <<'JSON'
+{
+  "rulesets": [
+    {
+      "name": "desktop memory pressure guard",
+      "detectors": [[
+        "user slices and host memory are under pressure",
+        {"name": "pressure_rising_beyond", "args": {"cgroup": "user.slice", "resource": "memory", "threshold": "8", "duration": "20"}}
+      ]],
+      "actions": [
+        {"name": "kill_by_memory_size_or_growth", "args": {"cgroup": "user.slice/*", "recursive": "true"}}
+      ]
+    }
+  ]
+}
+JSON
 
 cat >"$fake_home/.local/bin/rg-x1gen11-profile" <<'SH'
 #!/usr/bin/env bash
@@ -119,6 +137,13 @@ printf 'rg-zswap-tune %s\n' "$*" >>"${RG_TEST_LOG:?}"
 SH
 chmod +x "$fake_bin/rg-zswap-tune"
 
+cat >"$fake_bin/oomd" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'oomd %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$fake_bin/oomd"
+
 cat >"$fake_bin/sed" <<'SH'
 #!/usr/bin/env bash
 exec /usr/bin/sed "$@"
@@ -150,10 +175,22 @@ rg -q '@audio - rtprio 95' "$fake_root/etc/security/limits.d/95-rg-audio-rt.conf
     || fail "setup must grant bounded rtprio to the audio group"
 rg -q 'kernel.sched_rt_runtime_us = 950000' "$fake_root/etc/sysctl.d/98-rg-realtime.conf" \
     || fail "setup must keep global RT throttling enabled"
+test -r "$fake_root/etc/oomd/oomd.json" \
+    || fail "setup must install the facebook oomd profile under the fake root"
+test -r "$fake_root/etc/systemd/system.conf.d/20-rg-resource-accounting.conf" \
+    || fail "setup must install systemd resource accounting defaults"
+test -r "$fake_root/etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf" \
+    || fail "setup must install the hostcritical reserve slice"
+test -r "$fake_root/etc/systemd/system/oomd.service.d/10-rg-protection.conf" \
+    || fail "setup must install oomd service protection"
+rg -q '"pressure_rising_beyond"' "$fake_root/etc/oomd/oomd.json" \
+    || fail "setup must preserve the PSI oomd detector"
 rg -q "systemctl enable --now rg-ksm-madvise.service" "$fake_root/commands.log" \
     || fail "setup must enable the KSM madvise service"
 rg -q "systemctl enable --now fstrim.timer" "$fake_root/commands.log" \
     || fail "setup must enable periodic fstrim"
+rg -q "systemctl enable --now oomd.service" "$fake_root/commands.log" \
+    || fail "setup must enable facebook oomd when the binary exists"
 rg -q 'sysctl -p .*98-rg-realtime.conf' "$fake_root/commands.log" \
     || fail "setup must apply the realtime sysctl directly"
 rg -q 'PROFILES_JSON=' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
