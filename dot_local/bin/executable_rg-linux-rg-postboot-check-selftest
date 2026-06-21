@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-postboot-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-linux-rg-postboot-check"
+kver=7.0.12-arch1-1-rg
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing executable postboot checker"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+fake_root="$tmpdir/root"
+fake_bin="$tmpdir/bin"
+real_rg=$(command -v rg)
+
+mkdir -p \
+    "$fake_bin" \
+    "$fake_root/usr/bin" \
+    "$fake_root/usr/lib/modules/$kver/build" \
+    "$fake_root/boot" \
+    "$fake_root/sys/class/thermal/thermal_zone0"
+
+touch \
+    "$fake_root/usr/bin/rgx1gen11-boot-check" \
+    "$fake_root/usr/bin/rgx1gen11-dkms-overlay-apply" \
+    "$fake_root/usr/bin/linux-rg-module-symvers" \
+    "$fake_root/boot/vmlinuz-linux-rg"
+
+cat >"$fake_root/usr/lib/modules/$kver/build/Module.symvers" <<'EOF'
+0x00000000	cfg80211_del_sta_sinfo	vmlinux	EXPORT_SYMBOL
+0x00000000	cfg80211_ch_switch_notify	vmlinux	EXPORT_SYMBOL
+0x00000000	video_ioctl2	vmlinux	EXPORT_SYMBOL
+0x00000000	v4l2_fh_exit	vmlinux	EXPORT_SYMBOL
+EOF
+printf 'x86_pkg_temp\n' >"$fake_root/sys/class/thermal/thermal_zone0/type"
+printf '42000\n' >"$fake_root/sys/class/thermal/thermal_zone0/temp"
+
+cat >"$fake_bin/uname" <<SH
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ \${1:-} == -r ]]; then
+  printf '%s\n' "$kver"
+else
+  printf 'Linux rgx1gen11 %s #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux\n' "$kver"
+fi
+SH
+chmod +x "$fake_bin/uname"
+
+cat >"$fake_bin/df" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'Filesystem Size Used Avail Use%% Mounted on\n'
+printf 'fake-root 1G 1M 1G 1%% /\n'
+SH
+chmod +x "$fake_bin/df"
+
+cat >"$fake_bin/rg" <<SH
+#!/usr/bin/env bash
+exec "$real_rg" "\$@"
+SH
+chmod +x "$fake_bin/rg"
+
+cat >"$fake_bin/modinfo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+module=${@: -1}
+case "$module" in
+v4l2loopback)
+  printf 'filename: /lib/modules/test/v4l2loopback.ko.zst\n'
+  printf 'intree: Y\n'
+  ;;
+88XXau)
+  printf 'filename: /lib/modules/test/88XXau.ko.zst\n'
+  ;;
+*)
+  exit 1
+  ;;
+esac
+SH
+chmod +x "$fake_bin/modinfo"
+
+cat >"$fake_bin/dkms" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${1:-} == status && ${2:-} == -m ]]; then
+  printf '%s/%s, %s, x86_64: installed\n' "$3" "$5" "$7"
+else
+  printf 'ddcci/0.4.5, 7.0.12-arch1-1-rg, x86_64: installed\n'
+  printf 'evdi/1.14.7, 7.0.12-arch1-1-rg, x86_64: installed\n'
+  printf 'rtl88xxau/r1298.b44d288, 7.0.12-arch1-1-rg, x86_64: installed\n'
+  printf 'vboxhost/7.2.8_OSE, 7.0.12-arch1-1-rg, x86_64: installed\n'
+  printf 'acpi_call/1.2.2, 7.0.12-arch1-1-rg, x86_64: installed\n'
+fi
+SH
+chmod +x "$fake_bin/dkms"
+
+for cmd in rgx1gen11-boot-check rgx1gen11-live-check rg-x1gen11-profile; do
+    cat >"$fake_bin/$cmd" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'ok\n'
+SH
+    chmod +x "$fake_bin/$cmd"
+done
+
+env \
+    RG_LINUX_RG_POSTBOOT_ALLOW_NONROOT=1 \
+    RG_LINUX_RG_POSTBOOT_ROOT="$fake_root" \
+    RG_LINUX_RG_POSTBOOT_COMMAND_PATH="$fake_bin:$PATH" \
+    RG_USER_HOME="$tmpdir/home" \
+    PATH="$fake_bin:$PATH" \
+    "$script" "$kver" >"$tmpdir/missing.out" 2>&1 && fail "missing initramfs should fail"
+
+rg -q 'fail: missing /boot/initramfs-linux-rg.img' "$tmpdir/missing.out" \
+    || fail "missing boot artifact report should name initramfs"
+rg -q '== dkms status ==' "$tmpdir/missing.out" \
+    || fail "postboot check must continue to DKMS status after missing file"
+rg -q 'linux-rg postboot check failed:' "$tmpdir/missing.out" \
+    || fail "postboot check must print the aggregate failure summary"
+
+touch "$fake_root/boot/initramfs-linux-rg.img"
+
+env \
+    RG_LINUX_RG_POSTBOOT_ALLOW_NONROOT=1 \
+    RG_LINUX_RG_POSTBOOT_ROOT="$fake_root" \
+    RG_LINUX_RG_POSTBOOT_COMMAND_PATH="$fake_bin:$PATH" \
+    RG_USER_HOME="$tmpdir/home" \
+    PATH="$fake_bin:$PATH" \
+    "$script" "$kver" >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "complete fake postboot fixture should pass"
+}
+
+rg -q "linux-rg postboot check passed for $kver" "$tmpdir/ok.out" \
+    || fail "successful postboot check should print pass summary"
+
+printf 'ok\n'

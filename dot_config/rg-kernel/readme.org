@@ -36,6 +36,9 @@ rg-kernel-build install-preflight
 rg-kernel-build install-command
 rg-kernel-build refind-command
 rg-kernel-build oomd-command
+rg-linux-rg-userspace-root-setup
+rg-linux-rg-postboot-check
+rg-linux-rg-postboot-check-selftest
 rg-industry-stack-selftest
 rg-x1gen11-profile doctor
 #+end_src
@@ -50,13 +53,39 @@ rg-psi-snapshot bench /tmp/psi.csv 60
 rg-scx-loader switch lavd
 #+end_src
 
-For no-sudo agent runs, emit root batches first and run them explicitly:
+For no-sudo runs, emit root batches first and run them explicitly:
 
 #+begin_src shell
 rg-x1gen11-profile root-script undocked-mixed /tmp/rg-x1gen11-profile-root.sh
 sudo bash /tmp/rg-x1gen11-profile-root.sh
 rg-x1gen11-profile apply-user undocked-mixed
 rg-damon-reclaim root-script memory-pressure /tmp/rg-damon-reclaim-root.sh
+#+end_src
+
+* Managed root helpers
+
+linux-rg package helpers live in =~/Git/Github/Tools/linux-rg=. Host-local
+policy wrappers live in chezmoi and are applied to =~/.local/bin=. The =/tmp=
+scripts used during no-sudo runs are transport wrappers only; they should exec a
+managed helper or be regenerated from one.
+
+=rg-linux-rg-userspace-root-setup= is the privileged repair path for an
+installed linux-rg tree. It syncs the current package helpers to =/usr/bin=,
+refreshes installed =Module.symvers=, applies DKMS compatibility overlays,
+rebuilds DKMS modules, enables the hibernate image-size and oomd services,
+applies the daily laptop profile, rebuilds the linux-rg initramfs, and runs the
+live kernel bundle.
+
+=rg-linux-rg-postboot-check= is the privileged boot validation path after
+selecting linux-rg in rEFInd. It validates the running kernel, required package
+helpers, required exported symbols, DKMS modules, in-tree =v4l2loopback=,
+boot/live contracts, scheduler/power userspace, and a thermal snapshot. It
+aggregates missing paths and failed probes so one run shows every visible boot
+problem.
+
+#+begin_src shell
+sudo rg-linux-rg-userspace-root-setup 2>&1 | tee /tmp/rg-linux-rg-userspace-root-setup.out
+sudo rg-linux-rg-postboot-check 2>&1 | tee /tmp/rg-linux-rg-postboot-check.out
 #+end_src
 
 =rg-kernel-build build= writes packages under

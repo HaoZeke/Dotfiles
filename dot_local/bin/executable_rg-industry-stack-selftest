@@ -29,6 +29,9 @@ for path in \
     "$repo/dot_local/bin/executable_rg-wide-net-collect" \
     "$repo/dot_local/bin/executable_rg-nvme-apst" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check-selftest" \
     "$repo/dot_config/systemd/user/rg-sched@.service" \
     "$repo/dot_local/bin/executable_rg-psi-snapshot" \
     "$repo/dot_local/bin/executable_rg-memory-sysctl-check" \
@@ -83,5 +86,9 @@ rg -q 'root-script PROFILE' "$repo/dot_local/bin/executable_rg-x1gen11-profile" 
     || fail "profile switcher must support root-script workflow"
 rg -q '"damon_profile": "memory-pressure"' "$repo/dot_config/rg-x1gen11/profiles.json" \
     || fail "memory-pressure profile must name DAMON policy"
+rg -q 'rg-linux-rg-userspace-root-setup' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the root setup helper"
+rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the postboot helper"
 
 printf 'ok\n'

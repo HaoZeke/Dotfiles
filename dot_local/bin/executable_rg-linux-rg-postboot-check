@@ -3,20 +3,80 @@ set -euo pipefail
 
 expected=${1:-7.0.12-arch1-1-rg}
 user_home=${RG_USER_HOME:-/home/rgoswami}
+root=${RG_LINUX_RG_POSTBOOT_ROOT:-}
+allow_nonroot=${RG_LINUX_RG_POSTBOOT_ALLOW_NONROOT:-0}
+command_path=${RG_LINUX_RG_POSTBOOT_COMMAND_PATH:-/usr/bin:/usr/local/bin:"$user_home/.local/bin":$PATH}
 failures=0
 
-if (( EUID != 0 )); then
+if (( EUID != 0 )) && [[ $allow_nonroot != 1 ]]; then
   printf 'error: run as root\n' >&2
   exit 1
 fi
+
+host_path() {
+  local path=$1
+  if [[ -n $root && $path == /* ]]; then
+    printf '%s%s\n' "$root" "$path"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
+record_failure() {
+  printf 'fail: %s\n' "$*" >&2
+  failures=$((failures + 1))
+}
 
 check() {
   local label=$1
   shift
   printf '\n== %s ==\n' "$label"
   if ! "$@"; then
-    failures=$((failures + 1))
+    record_failure "$label failed"
   fi
+}
+
+required_stat() {
+  local path mapped meta
+  for path in "$@"; do
+    mapped=$(host_path "$path")
+    if [[ ! -e $mapped ]]; then
+      record_failure "missing $path"
+      continue
+    fi
+    meta=$(stat -c '%U:%G %a %s' "$mapped") || {
+      record_failure "stat failed for $path"
+      continue
+    }
+    printf '%s %s\n' "$meta" "$path"
+  done
+}
+
+show_required_exports() {
+  local module_symvers mapped pattern
+  module_symvers="/usr/lib/modules/$expected/build/Module.symvers"
+  mapped=$(host_path "$module_symvers")
+  pattern='cfg80211_del_sta_sinfo|cfg80211_ch_switch_notify|video_ioctl2|v4l2_fh_exit'
+  if [[ ! -r $mapped ]]; then
+    record_failure "missing $module_symvers"
+    return
+  fi
+  if ! rg -n "$pattern" "$mapped"; then
+    record_failure "missing required Module.symvers exports"
+  fi
+}
+
+show_modinfo() {
+  local module=$1
+  local out
+  out=$(mktemp)
+  if modinfo -k "$expected" "$module" >"$out" 2>&1; then
+    sed -n '1,18p' "$out"
+  else
+    sed -n '1,18p' "$out" >&2
+    record_failure "modinfo failed for $module on $expected"
+  fi
+  rm -f "$out"
 }
 
 printf '== kernel identity ==\n'
@@ -30,7 +90,7 @@ printf '\n== disk ==\n'
 df -h / /boot /tmp || true
 
 printf '\n== ownership sample ==\n'
-stat -c '%U:%G %a %s %n' \
+required_stat \
   /usr/bin/rgx1gen11-boot-check \
   /usr/bin/rgx1gen11-dkms-overlay-apply \
   /usr/bin/linux-rg-module-symvers \
@@ -39,12 +99,11 @@ stat -c '%U:%G %a %s %n' \
   /boot/initramfs-linux-rg.img
 
 printf '\n== symvers required exports ==\n'
-rg -n 'cfg80211_del_sta_sinfo|cfg80211_ch_switch_notify|video_ioctl2|v4l2_fh_exit' \
-  "/usr/lib/modules/$expected/build/Module.symvers"
+show_required_exports
 
 printf '\n== module probes ==\n'
-modinfo -k "$expected" v4l2loopback | sed -n '1,18p'
-modinfo -k "$expected" 88XXau | sed -n '1,18p'
+show_modinfo v4l2loopback
+show_modinfo 88XXau
 
 printf '\n== dkms status ==\n'
 dkms status -k "$expected" || true
@@ -55,20 +114,18 @@ for spec in \
   'vboxhost/7.2.8_OSE' \
   'acpi_call/1.2.2'; do
   if ! dkms status -m "${spec%/*}" -v "${spec#*/}" -k "$expected" | rg -q 'installed'; then
-    printf 'fail: DKMS module not installed for %s: %s\n' "$expected" "$spec" >&2
-    failures=$((failures + 1))
+    record_failure "DKMS module not installed for $expected: $spec"
   fi
 done
 
 printf '\n== in-tree v4l2loopback ==\n'
 if ! modinfo -k "$expected" v4l2loopback | rg -q '^intree:[[:space:]]+Y$'; then
-  printf 'fail: v4l2loopback is not the in-tree linux-rg module\n' >&2
-  failures=$((failures + 1))
+  record_failure "v4l2loopback is not the in-tree linux-rg module"
 fi
 
 check 'installed boot contract' rgx1gen11-boot-check --installed
 check 'live boot contract' rgx1gen11-boot-check --live --require-boot-log
-check 'live bundle' env PATH=/usr/bin:/usr/local/bin:"$user_home/.local/bin":$PATH HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rgx1gen11-live-check --with-userspace
+check 'live bundle' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rgx1gen11-live-check --with-userspace
 
 printf '\n== scheduler and power userspace ==\n'
 command -v scx_loader || true
@@ -77,7 +134,8 @@ command -v scx_rusty || true
 HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor || true
 
 printf '\n== thermal snapshot ==\n'
-for path in /sys/class/thermal/thermal_zone*/temp; do
+thermal_root=$(host_path /sys/class/thermal)
+for path in "$thermal_root"/thermal_zone*/temp; do
   [[ -r $path ]] || continue
   zone=${path%/temp}
   type=$(cat "$zone/type" 2>/dev/null || printf unknown)
