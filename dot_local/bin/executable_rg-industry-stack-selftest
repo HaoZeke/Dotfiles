@@ -92,33 +92,13 @@ rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the postboot helper"
 rg -q 'doctor --check' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     || fail "root setup helper must verify active profile policy"
-python3 - "$repo/dot_config/rg-x1gen11/profiles.json" \
-    "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl" <<'PY' \
-    || fail "root helper template must match profile JSON"
-import json
-import re
-import sys
-
-profiles_path, template_path = sys.argv[1:3]
-profiles = json.load(open(profiles_path, encoding="utf-8"))["profiles"]
-template = open(template_path, encoding="utf-8").read()
-
-for name, spec in profiles.items():
-    match = re.search(rf"{re.escape(name)}\)\n(?P<body>.*?)\n    ;;", template, re.S)
-    if not match:
-        raise SystemExit(f"missing root helper profile block: {name}")
-    body = match.group("body")
-    values = dict(re.findall(r"^\s+(platform|governor|epp|iwl)=(.+)$", body, re.M))
-    expected = {
-        "platform": spec["platform_profile"],
-        "governor": spec["scaling_governor"],
-        "epp": spec["energy_performance_preference"],
-        "iwl": spec["iwlwifi_power_save"],
-    }
-    for key, want in expected.items():
-        got = values.get(key, "").strip('"')
-        if got != want:
-            raise SystemExit(f"{name}.{key}: template={got} profiles.json={want}")
-PY
+rg -q 'PROFILES_JSON=' "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl" \
+    || fail "root helper must load profile JSON"
+rg -q 'json.load' "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl" \
+    || fail "root helper must parse profile JSON"
+if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|memory-pressure|travel|docked-office)[)]' \
+    "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"; then
+    fail "root helper must not duplicate per-profile policy blocks"
+fi
 
 printf 'ok\n'

@@ -245,52 +245,40 @@ RG_X1GEN11_PROFILE_ROOT_CONTENT='#!/usr/bin/env bash
 set -euo pipefail
 
 profile="${1:-}"
-case "$profile" in
-undocked-mixed)
-    platform=low-power
-    governor=powersave
-    epp=balance_power
-    iwl=Y
-    zram_expr="ram / 2"
-    damon=N
-    ;;
-build-heavy)
-    platform=performance
-    governor=performance
-    epp=performance
-    iwl=N
-    zram_expr="ram * 3 / 8"
-    damon=N
-    ;;
-memory-pressure)
-    platform=balanced
-    governor=powersave
-    epp=balance_power
-    iwl=Y
-    zram_expr="ram / 2"
-    damon=Y
-    ;;
-travel)
-    platform=low-power
-    governor=powersave
-    epp=power
-    iwl=Y
-    zram_expr="ram / 4"
-    damon=N
-    ;;
-docked-office)
-    platform=balanced
-    governor=powersave
-    epp=balance_performance
-    iwl=N
-    zram_expr="ram / 2"
-    damon=N
-    ;;
-*)
-    printf "usage: %s {undocked-mixed|build-heavy|memory-pressure|travel|docked-office}\n" "$0" >&2
-    exit 2
-    ;;
-esac
+PROFILES_JSON="${RG_X1GEN11_PROFILES:-/home/rgoswami/.config/rg-x1gen11/profiles.json}"
+CHEZMOI_PROFILES=/home/rgoswami/.local/share/chezmoi/dot_config/rg-x1gen11/profiles.json
+
+if [ ! -r "$PROFILES_JSON" ] && [ -r "$CHEZMOI_PROFILES" ]; then
+    PROFILES_JSON="$CHEZMOI_PROFILES"
+fi
+
+profile_data=$(python3 - "$PROFILES_JSON" "$profile" <<PY
+import json
+import shlex
+import sys
+
+path, profile = sys.argv[1:3]
+data = json.load(open(path, encoding="utf-8"))
+profiles = data["profiles"]
+if profile not in profiles:
+    choices = "|".join(profiles)
+    print(f"usage: {sys.argv[0]} {{{choices}}}", file=sys.stderr)
+    raise SystemExit(2)
+
+spec = profiles[profile]
+values = {
+    "platform": spec["platform_profile"],
+    "governor": spec["scaling_governor"],
+    "epp": spec["energy_performance_preference"],
+    "iwl": spec["iwlwifi_power_save"],
+    "zram_expr": spec["zram_size"],
+    "damon": "Y" if spec["damon_reclaim"] else "N",
+}
+for key, value in values.items():
+    print(f"{key}={shlex.quote(str(value))}")
+PY
+)
+eval "$profile_data"
 
 write_platform_profile() {
     local path choices
@@ -301,7 +289,9 @@ write_platform_profile() {
             printf "platform profile %s unavailable in %s\n" "$platform" "$choices" >&2
             exit 1
         fi
-        printf "%s\n" "$platform" >"$path"
+        if ! write_sysfs_value "$path" "$platform"; then
+            printf "platform profile %s write rejected; skip\n" "$platform" >&2
+        fi
         return 0
     done
     printf "platform_profile sysfs missing; skip\n" >&2
@@ -309,7 +299,7 @@ write_platform_profile() {
 
 write_sysfs_value() {
     local path="$1" value="$2"
-    sh -c 'printf "%s\n" "$1" >"$2"' sh "$value" "$path" 2>/dev/null
+    printf "%s\n" "$value" >"$path" 2>/dev/null
 }
 
 write_cpufreq_value() {
