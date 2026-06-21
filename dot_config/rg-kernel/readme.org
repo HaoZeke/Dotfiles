@@ -80,9 +80,9 @@ live kernel bundle.
 =rg-linux-rg-postboot-check= is the privileged boot validation path after
 selecting linux-rg in rEFInd. It validates the running kernel, required package
 helpers, required exported symbols, DKMS modules, in-tree =v4l2loopback=,
-boot/live contracts, scheduler/power userspace, active profile drift, and a
-thermal snapshot. It aggregates missing paths and failed probes so one run shows
-every visible boot problem.
+boot/live contracts, scheduler/power userspace, active profile drift, sched_ext
+mode drift, and a thermal snapshot. It aggregates missing paths and failed
+probes so one run shows every visible boot problem.
 
 #+begin_src shell
 sudo rg-linux-rg-userspace-root-setup 2>&1 | tee /tmp/rg-linux-rg-userspace-root-setup.out

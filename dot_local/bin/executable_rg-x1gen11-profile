@@ -508,6 +508,15 @@ profile_policy_check() {
         failures=$((failures + 1))
     fi
 
+    expected=$(profile_field "$profile" scx_mode)
+    path="$HOME/.local/bin/rg-sched-ladder"
+    if [ -x "$path" ] && live=$("$path" current 2>/dev/null); then
+        compare_value scx_mode "$live" "$expected"
+    else
+        printf 'profile drift: scx_mode live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
     if (( failures > 0 )); then
         return 1
     fi
