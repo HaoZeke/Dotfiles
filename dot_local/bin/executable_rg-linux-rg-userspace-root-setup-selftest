@@ -142,10 +142,20 @@ test -x "$fake_root/usr/local/sbin/rg-ksm-madvise-root" \
     || fail "setup must install the KSM madvise root helper under the fake root"
 test -r "$fake_root/etc/systemd/system/rg-ksm-madvise.service" \
     || fail "setup must install the KSM madvise service under the fake root"
+test -r "$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
+    || fail "setup must install PipeWire realtime limits under the fake root"
+test -r "$fake_root/etc/sysctl.d/98-rg-realtime.conf" \
+    || fail "setup must install bounded realtime sysctl under the fake root"
+rg -q '@audio - rtprio 95' "$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
+    || fail "setup must grant bounded rtprio to the audio group"
+rg -q 'kernel.sched_rt_runtime_us = 950000' "$fake_root/etc/sysctl.d/98-rg-realtime.conf" \
+    || fail "setup must keep global RT throttling enabled"
 rg -q "systemctl enable --now rg-ksm-madvise.service" "$fake_root/commands.log" \
     || fail "setup must enable the KSM madvise service"
 rg -q "systemctl enable --now fstrim.timer" "$fake_root/commands.log" \
     || fail "setup must enable periodic fstrim"
+rg -q 'sysctl -p .*98-rg-realtime.conf' "$fake_root/commands.log" \
+    || fail "setup must apply the realtime sysctl directly"
 rg -q 'PROFILES_JSON=' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
     || fail "installed profile root helper must load profile JSON"
 rg -q 'json' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \

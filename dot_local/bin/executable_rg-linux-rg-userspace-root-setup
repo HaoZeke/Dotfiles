@@ -4,6 +4,7 @@ set -euo pipefail
 kver=${1:-7.0.12-arch1-1-rg}
 repo=${RG_LINUX_RG_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
 user_home=${RG_USER_HOME:-/home/rgoswami}
+user_name=${RG_USER_NAME:-$(basename "$user_home")}
 jobs=${RG_DKMS_JOBS:-}
 profile_root_helper=/usr/local/sbin/rg-x1gen11-profile-root
 target_root=${RG_LINUX_RG_ROOT_SETUP_ROOT:-}
@@ -147,6 +148,36 @@ SERVICE
 )"
 }
 
+install_pipewire_rt_policy() {
+  install_content /etc/security/limits.d/95-rg-audio-rt.conf 0644 "$(cat <<'LIMITS'
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup)
+@audio - rtprio 95
+@audio - memlock unlimited
+@audio - nice -11
+LIMITS
+)"
+
+  install_content /etc/sysctl.d/98-rg-realtime.conf 0644 "$(cat <<'SYSCTL'
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup)
+# Keep global realtime CPU bandwidth throttling enabled so a runaway RT
+# workload cannot monopolize the laptop.
+kernel.sched_rt_runtime_us = 950000
+SYSCTL
+)"
+
+  if [[ -z $target_root ]]; then
+    if ! getent group audio >/dev/null 2>&1; then
+      groupadd -r audio
+    fi
+    if id "$user_name" >/dev/null 2>&1 && ! id -nG "$user_name" | grep -qw audio; then
+      usermod -aG audio "$user_name"
+      printf 'added %s to audio; start a new login session for PAM limits to apply\n' "$user_name"
+    fi
+  fi
+
+  sysctl -p "$(target_path /etc/sysctl.d/98-rg-realtime.conf)"
+}
+
 printf '== sync linux-rg helpers ==\n'
 install_exec "$repo/rgx1gen11-dkms-overlay-apply" /usr/bin/rgx1gen11-dkms-overlay-apply
 install_exec "$repo/linux-rg-module-symvers" /usr/bin/linux-rg-module-symvers
@@ -179,13 +210,14 @@ modinfo -k "$kver" v4l2loopback | sed -n '1,16p'
 modinfo -k "$kver" 88XXau | sed -n '1,16p'
 
 printf '\n== userspace policy ==\n'
+install_pipewire_rt_policy
 install_ksm_policy
 systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
 systemctl enable --now rg-ksm-madvise.service
 systemctl enable --now fstrim.timer
-sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
+sysctl --system | rg -n '98-rg-realtime|99-memory|dirty|sched_rt_runtime|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \
   HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
   rg-zswap-tune laptop
