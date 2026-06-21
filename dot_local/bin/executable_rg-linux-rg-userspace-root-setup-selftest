@@ -211,5 +211,13 @@ rg -q 'mkinitcpio -p linux-rg' "$fake_root/commands.log" \
     || fail "setup must rebuild the linux-rg initramfs"
 rg -q 'rg-zswap-tune laptop' "$fake_root/commands.log" \
     || fail "setup must apply the laptop zswap policy"
+test -r "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must install the managed TLP profile baseline"
+rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep the TLP AC platform profile aligned with undocked-mixed"
+rg -q '^CPU_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must disable AC turbo boost in the daily TLP baseline"
+rg -q '^CPU_HWP_DYN_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must disable AC HWP dynamic boost in the daily TLP baseline"
 
 printf 'ok\n'

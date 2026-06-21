@@ -179,6 +179,27 @@ SYSCTL
   sysctl -p "$(target_path /etc/sysctl.d/98-rg-realtime.conf)"
 }
 
+install_tlp_profile_baseline() {
+  install_content /etc/tlp.d/00-base.conf 0644 "$(cat <<'TLP'
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup)
+# Daily rgx1gen11 baseline. Explicit focus/build profiles raise policy through
+# rg-x1gen11-profile instead of keeping AC power in a hot default lane.
+CPU_SCALING_GOVERNOR_ON_AC=powersave
+CPU_SCALING_GOVERNOR_ON_BAT=powersave
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power
+CPU_BOOST_ON_AC=0
+CPU_BOOST_ON_BAT=0
+CPU_HWP_DYN_BOOST_ON_AC=0
+CPU_HWP_DYN_BOOST_ON_BAT=0
+PLATFORM_PROFILE_ON_AC=low-power
+PLATFORM_PROFILE_ON_BAT=low-power
+TLP
+)"
+
+  systemctl restart tlp.service 2>/dev/null || systemctl start tlp.service 2>/dev/null || true
+}
+
 install_facebook_oomd_policy() {
   install_data "$oomd_profile" /etc/oomd/oomd.json
 
@@ -243,6 +264,7 @@ modinfo -k "$kver" v4l2loopback | sed -n '1,16p'
 modinfo -k "$kver" 88XXau | sed -n '1,16p'
 
 printf '\n== userspace policy ==\n'
+install_tlp_profile_baseline
 install_pipewire_rt_policy
 install_ksm_policy
 install_facebook_oomd_policy
