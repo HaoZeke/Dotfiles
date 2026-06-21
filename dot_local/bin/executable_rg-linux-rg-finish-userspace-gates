@@ -20,7 +20,6 @@ else
 fi
 
 root_setup=$user_home/.local/bin/rg-linux-rg-userspace-root-setup
-oomd_check=$user_home/.local/bin/rg-oomd-policy-check
 postboot=$user_home/.local/bin/rg-linux-rg-postboot-check
 bench_matrix=$user_home/.local/bin/rg-bench-matrix
 source_icon=$repo/os_linux_rg.png
@@ -114,7 +113,17 @@ verify_icon_alpha "$(target_path "$boot_icon")"
 
 printf '\n== sync managed helpers ==\n'
 install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" "$root_setup"
-install_user_helper "$chezmoi/dot_local/bin/executable_rg-oomd-policy-check" "$oomd_check"
+for helper in \
+    rg-memory-sysctl-check \
+    rg-pipewire-rt-check \
+    rg-oomd-policy-check \
+    rg-ksm-policy \
+    rg-storage-trim-check \
+    rg-zswap-tune \
+    rg-thermal-stack-check \
+    rg-x1gen11-profile; do
+    install_user_helper "$chezmoi/dot_local/bin/executable_$helper" "$user_home/.local/bin/$helper"
+done
 install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-postboot-check" "$postboot"
 install_user_helper "$chezmoi/dot_local/bin/executable_rg-bench-matrix" "$bench_matrix"
 

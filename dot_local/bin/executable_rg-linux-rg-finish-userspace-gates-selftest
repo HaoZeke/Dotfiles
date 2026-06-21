@@ -37,7 +37,14 @@ EOF
 
 for helper in \
     executable_rg-linux-rg-userspace-root-setup \
+    executable_rg-memory-sysctl-check \
+    executable_rg-pipewire-rt-check \
     executable_rg-oomd-policy-check \
+    executable_rg-ksm-policy \
+    executable_rg-storage-trim-check \
+    executable_rg-zswap-tune \
+    executable_rg-thermal-stack-check \
+    executable_rg-x1gen11-profile \
     executable_rg-linux-rg-postboot-check \
     executable_rg-bench-matrix; do
     cat >"$fake_chezmoi/dot_local/bin/$helper" <<'SH'
@@ -151,8 +158,22 @@ RG_FINISH_EUID=0 \
 
 test -x "$fake_home/.local/bin/rg-linux-rg-userspace-root-setup" \
     || fail "finish helper must install root setup into user bin"
+test -x "$fake_home/.local/bin/rg-memory-sysctl-check" \
+    || fail "finish helper must install memory checker into user bin"
+test -x "$fake_home/.local/bin/rg-pipewire-rt-check" \
+    || fail "finish helper must install PipeWire RT checker into user bin"
 test -x "$fake_home/.local/bin/rg-oomd-policy-check" \
     || fail "finish helper must install OOMD checker into user bin"
+test -x "$fake_home/.local/bin/rg-ksm-policy" \
+    || fail "finish helper must install KSM checker into user bin"
+test -x "$fake_home/.local/bin/rg-storage-trim-check" \
+    || fail "finish helper must install storage trim checker into user bin"
+test -x "$fake_home/.local/bin/rg-zswap-tune" \
+    || fail "finish helper must install zswap checker into user bin"
+test -x "$fake_home/.local/bin/rg-thermal-stack-check" \
+    || fail "finish helper must install thermal checker into user bin"
+test -x "$fake_home/.local/bin/rg-x1gen11-profile" \
+    || fail "finish helper must install profile helper into user bin"
 test -x "$fake_home/.local/bin/rg-linux-rg-postboot-check" \
     || fail "finish helper must install postboot checker into user bin"
 test -x "$fake_home/.local/bin/rg-bench-matrix" \
