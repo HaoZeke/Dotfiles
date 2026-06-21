@@ -30,6 +30,7 @@ for path in \
     "$repo/dot_local/bin/executable_rg-nvme-apst" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check-selftest" \
     "$repo/dot_config/systemd/user/rg-sched@.service" \
@@ -88,6 +89,8 @@ rg -q '"damon_profile": "memory-pressure"' "$repo/dot_config/rg-x1gen11/profiles
     || fail "memory-pressure profile must name DAMON policy"
 rg -q 'rg-linux-rg-userspace-root-setup' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the root setup helper"
+rg -q 'rg-linux-rg-userspace-root-setup-selftest' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the root setup selftest"
 rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the postboot helper"
 rg -q 'doctor --check' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \

@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup"
+kver=7.0.12-arch1-1-rg
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing userspace root setup helper"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+fake_root="$tmpdir/root"
+fake_repo="$tmpdir/linux-rg"
+fake_home="$tmpdir/home"
+fake_bin="$tmpdir/bin"
+
+mkdir -p "$fake_root" "$fake_repo/dkms-overlays" "$fake_home/.local/bin" "$fake_bin"
+
+for helper in \
+    rgx1gen11-dkms-overlay-apply \
+    linux-rg-module-symvers \
+    rgx1gen11-boot-check \
+    rgx1gen11-live-check \
+    rgx1gen11-sof-check \
+    rgx1gen11-memory-check \
+    rgx1gen11-nvme-check \
+    rgx1gen11-idle-check \
+    rgx1gen11-s0ix-preflight \
+    rgx1gen11-hibernate-check \
+    rgx1gen11-hibernate-image-size; do
+    cat >"$fake_repo/$helper" <<SH
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s %s\n' "$helper" "\$*" >>"$fake_root/commands.log"
+SH
+    chmod +x "$fake_repo/$helper"
+done
+
+touch \
+    "$fake_repo/rgx1gen11-hibernate-image-size.service" \
+    "$fake_repo/69-linux-rg-dkms-overlays.hook" \
+    "$fake_repo/dkms-overlays/ddcci-0.4.5-linux-7.0.patch" \
+    "$fake_repo/dkms-overlays/evdi-1.14.7-linux-7.0.patch" \
+    "$fake_repo/dkms-overlays/rtl88xxau-r1298-linux-7.0.patch"
+
+cat >"$fake_home/.local/bin/rg-x1gen11-profile" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+log=${RG_TEST_LOG:?}
+case "${1:-}" in
+root-helper-script)
+    out=${2:?}
+    cat >"$out" <<'ROOT'
+#!/usr/bin/env bash
+set -euo pipefail
+PROFILES_JSON="${RG_X1GEN11_PROFILES:-/home/rgoswami/.config/rg-x1gen11/profiles.json}"
+python3 - <<'PY'
+import json
+PY
+printf 'root profile applied: %s\n' "${1:-}"
+ROOT
+    chmod +x "$out"
+    printf 'profile root-helper-script %s\n' "$out" >>"$log"
+    ;;
+apply)
+    printf 'profile apply %s\n' "${2:-}" >>"$log"
+    ;;
+doctor)
+    printf 'profile doctor %s\n' "${2:-}" >>"$log"
+    ;;
+*)
+    printf 'unexpected profile command: %s\n' "$*" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$fake_home/.local/bin/rg-x1gen11-profile"
+
+cat >"$fake_bin/dkms" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'dkms %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$fake_bin/dkms"
+
+cat >"$fake_bin/rg" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ ${1:-} == -n ]]; then
+    exit 1
+fi
+exec /usr/bin/rg "$@"
+SH
+chmod +x "$fake_bin/rg"
+
+for cmd in modinfo systemctl sysctl mkinitcpio; do
+    cat >"$fake_bin/$cmd" <<SH
+#!/usr/bin/env bash
+set -euo pipefail
+printf '$cmd %s\n' "\$*" >>"\${RG_TEST_LOG:?}"
+if [[ '$cmd' == modinfo ]]; then
+  printf 'filename: fake.ko.zst\n'
+fi
+SH
+    chmod +x "$fake_bin/$cmd"
+done
+
+cat >"$fake_bin/sed" <<'SH'
+#!/usr/bin/env bash
+exec /usr/bin/sed "$@"
+SH
+chmod +x "$fake_bin/sed"
+
+RG_LINUX_RG_ROOT_SETUP_ALLOW_NONROOT=1 \
+RG_LINUX_RG_ROOT_SETUP_ROOT="$fake_root" \
+RG_LINUX_RG_REPO="$fake_repo" \
+RG_USER_HOME="$fake_home" \
+RG_TEST_LOG="$fake_root/commands.log" \
+PATH="$fake_bin:$PATH" \
+    "$script" "$kver" >"$tmpdir/setup.out" 2>&1 || {
+    sed -n '1,240p' "$tmpdir/setup.out" >&2
+    fail "fake-root userspace setup should pass"
+}
+
+test -x "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
+    || fail "setup must install the generated profile root helper under the fake root"
+rg -q 'PROFILES_JSON=' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
+    || fail "installed profile root helper must load profile JSON"
+rg -q 'json' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
+    || fail "installed profile root helper must retain JSON parsing"
+test -x "$fake_root/usr/bin/rgx1gen11-boot-check" \
+    || fail "setup must install linux-rg package helpers under the fake root"
+test -r "$fake_root/usr/share/linux-rg/dkms-overlays/ddcci-0.4.5-linux-7.0.patch" \
+    || fail "setup must install DKMS overlay patches under the fake root"
+rg -q 'profile apply undocked-mixed' "$fake_root/commands.log" \
+    || fail "setup must apply the daily laptop profile"
+rg -q 'profile doctor --check' "$fake_root/commands.log" \
+    || fail "setup must verify the applied profile"
+rg -q "rgx1gen11-dkms-overlay-apply $kver" "$fake_root/commands.log" \
+    || fail "setup must run the DKMS overlay repair helper"
+rg -q 'mkinitcpio -p linux-rg' "$fake_root/commands.log" \
+    || fail "setup must rebuild the linux-rg initramfs"
+
+printf 'ok\n'

@@ -37,6 +37,7 @@ rg-kernel-build install-command
 rg-kernel-build refind-command
 rg-kernel-build oomd-command
 rg-linux-rg-userspace-root-setup
+rg-linux-rg-userspace-root-setup-selftest
 rg-linux-rg-postboot-check
 rg-linux-rg-postboot-check-selftest
 rg-industry-stack-selftest

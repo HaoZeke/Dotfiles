@@ -6,8 +6,10 @@ repo=${RG_LINUX_RG_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
 user_home=${RG_USER_HOME:-/home/rgoswami}
 jobs=${RG_DKMS_JOBS:-}
 profile_root_helper=/usr/local/sbin/rg-x1gen11-profile-root
+target_root=${RG_LINUX_RG_ROOT_SETUP_ROOT:-}
+allow_nonroot=${RG_LINUX_RG_ROOT_SETUP_ALLOW_NONROOT:-0}
 
-if (( EUID != 0 )); then
+if (( EUID != 0 )) && [[ $allow_nonroot != 1 ]]; then
   printf 'error: run as root\n' >&2
   exit 1
 fi
@@ -26,18 +28,43 @@ require_file() {
   }
 }
 
+target_path() {
+  local path=$1
+  if [[ -n $target_root && $path = /* ]]; then
+    printf '%s%s\n' "$target_root" "$path"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
 install_exec() {
-  local src=$1 dst=$2
+  local src=$1 dst=$2 target
   require_file "$src"
-  install -D -o root -g root -m 0755 "$src" "$dst"
+  target=$(target_path "$dst")
+  if (( EUID == 0 )); then
+    install -D -o root -g root -m 0755 "$src" "$target"
+  else
+    install -D -m 0755 "$src" "$target"
+  fi
   printf 'installed: %s\n' "$dst"
 }
 
 install_data() {
-  local src=$1 dst=$2
+  local src=$1 dst=$2 target
   require_file "$src"
-  install -D -o root -g root -m 0644 "$src" "$dst"
+  target=$(target_path "$dst")
+  if (( EUID == 0 )); then
+    install -D -o root -g root -m 0644 "$src" "$target"
+  else
+    install -D -m 0644 "$src" "$target"
+  fi
   printf 'installed: %s\n' "$dst"
+}
+
+run_target_exec() {
+  local path=$1
+  shift
+  "$(target_path "$path")" "$@"
 }
 
 find_profile_bin() {
@@ -81,10 +108,10 @@ printf '\n== before dkms repair ==\n'
 dkms status -k "$kver" || true
 printf '\nModule.symvers required exports before repair:\n'
 rg -n 'cfg80211_del_sta_sinfo|cfg80211_ch_switch_notify|video_ioctl2|v4l2_fh_exit' \
-  "/usr/lib/modules/$kver/build/Module.symvers" || true
+  "$(target_path "/usr/lib/modules/$kver/build/Module.symvers")" || true
 
 printf '\n== repair dkms overlays ==\n'
-RG_DKMS_JOBS=$jobs /usr/bin/rgx1gen11-dkms-overlay-apply "$kver"
+RG_DKMS_JOBS=$jobs run_target_exec /usr/bin/rgx1gen11-dkms-overlay-apply "$kver"
 
 printf '\n== module probes ==\n'
 modinfo -k "$kver" v4l2loopback | sed -n '1,16p'
@@ -108,7 +135,7 @@ mkinitcpio -p linux-rg
 printf '\n== live checks ==\n'
 PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \
   HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
-  rgx1gen11-live-check --with-userspace
+  run_target_exec /usr/bin/rgx1gen11-live-check --with-userspace
 
 printf '\n== final dkms status ==\n'
 dkms status -k "$kver" || true
