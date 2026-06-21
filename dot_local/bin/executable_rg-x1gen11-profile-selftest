@@ -26,6 +26,8 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'energy_performance_p
     || fail "travel profile must use the lowest EPP tier"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scaling_governor: powersave' >/dev/null \
     || fail "undocked-mixed must use powersave governor on active intel_pstate"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'platform_profile: low-power' >/dev/null \
+    || fail "undocked-mixed must use the low-power ACPI platform profile"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'energy_performance_preference: balance_power' >/dev/null \
     || fail "undocked-mixed must keep EPP below performance"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'scaling_governor: powersave' >/dev/null \

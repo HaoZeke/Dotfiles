@@ -3,7 +3,7 @@
   "profiles": {
     "undocked-mixed": {
       "description": "Daily Sway + browser + occasional make -j9",
-      "platform_profile": "balanced",
+      "platform_profile": "low-power",
       "scaling_governor": "powersave",
       "energy_performance_preference": "balance_power",
       "iwlwifi_power_save": "Y",
