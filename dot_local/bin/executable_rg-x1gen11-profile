@@ -272,7 +272,16 @@ apply_profile() {
     build_high=$(profile_field "$profile" build_memory_high)
 
     mkdir -p "$STATE_DIR"
-    if ! apply_root_helper "$profile"; then
+    if apply_root_helper "$profile"; then
+        if ! profile_policy_check "$profile"; then
+            write_platform_profile "$platform"
+            write_scaling_governor "$governor"
+            write_energy_performance_preference "$epp"
+            write_iwl_power_save "$iwl"
+            write_zram_size "$zram"
+            apply_damon "$damon" "$damon_profile"
+        fi
+    else
         write_platform_profile "$platform"
         write_scaling_governor "$governor"
         write_energy_performance_preference "$epp"

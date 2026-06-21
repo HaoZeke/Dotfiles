@@ -64,6 +64,14 @@ map_path() {
     esac
 }
 
+if [ "${1:-}" = "-n" ]; then
+    shift
+    cmd=${1:?}
+    shift || true
+    "$cmd" "$@"
+    exit $?
+fi
+
 cmd=${1:?}
 shift || true
 case "$cmd" in
@@ -111,6 +119,7 @@ chmod +x "$tmpdir/home/.local/bin/rg-sched-ladder"
 
 RG_X1GEN11_PROFILES="$profiles" \
     RG_X1GEN11_STATE_DIR="$tmpdir/state" \
+    RG_X1GEN11_ROOT_HELPER="$tmpdir/missing-root-helper" \
     RG_X1GEN11_SUDO="$tmpdir/bin/fake-sudo" \
     RG_X1GEN11_FAKE_ROOT="$tmpdir/root" \
     HOME="$tmpdir/home" \
@@ -141,6 +150,44 @@ if [ -e /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference ]; th
     rg -q '^power$' "$tmpdir/root/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference" \
         || fail "apply must write CPU EPP through sudo"
 fi
+
+stale_state="$tmpdir/stale-state"
+stale_root="$tmpdir/stale-root"
+mkdir -p \
+    "$stale_state" \
+    "$stale_root/sys/firmware/acpi" \
+    "$stale_root/sys/devices/system/cpu/cpu0/cpufreq" \
+    "$stale_root/sys/module/iwlwifi/parameters"
+printf 'low-power balanced performance\n' >"$stale_root/sys/firmware/acpi/platform_profile_choices"
+printf 'balanced\n' >"$stale_root/sys/firmware/acpi/platform_profile"
+printf 'powersave\n' >"$stale_root/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
+printf 'powersave\n' >"$stale_root/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+printf 'power balance_power balance_performance performance\n' \
+    >"$stale_root/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences"
+printf 'balance_power\n' >"$stale_root/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+printf 'Y\n' >"$stale_root/sys/module/iwlwifi/parameters/power_save"
+
+cat >"$tmpdir/stale-root-helper" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'balanced\n' >"${RG_X1GEN11_FAKE_ROOT:?}/sys/firmware/acpi/platform_profile"
+printf 'powersave\n' >"${RG_X1GEN11_FAKE_ROOT:?}/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+printf 'balance_power\n' >"${RG_X1GEN11_FAKE_ROOT:?}/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+printf 'Y\n' >"${RG_X1GEN11_FAKE_ROOT:?}/sys/module/iwlwifi/parameters/power_save"
+SH
+chmod +x "$tmpdir/stale-root-helper"
+
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$stale_state" \
+    RG_X1GEN11_ROOT_HELPER="$tmpdir/stale-root-helper" \
+    RG_X1GEN11_SYSFS_ROOT="$stale_root/sys" \
+    RG_X1GEN11_SUDO="$tmpdir/bin/fake-sudo" \
+    RG_X1GEN11_FAKE_ROOT="$stale_root" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" apply undocked-mixed >"$tmpdir/stale-apply.out" 2>&1
+rg -q '^low-power$' "$stale_root/sys/firmware/acpi/platform_profile" \
+    || fail "apply must correct stale root helper platform drift"
 
 check_state="$tmpdir/check-state"
 fake_sys="$tmpdir/check-sys"
