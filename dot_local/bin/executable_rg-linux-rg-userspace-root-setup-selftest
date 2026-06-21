@@ -112,6 +112,13 @@ SH
     chmod +x "$fake_bin/$cmd"
 done
 
+cat >"$fake_bin/rg-zswap-tune" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'rg-zswap-tune %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$fake_bin/rg-zswap-tune"
+
 cat >"$fake_bin/sed" <<'SH'
 #!/usr/bin/env bash
 exec /usr/bin/sed "$@"
@@ -155,5 +162,7 @@ rg -q "rgx1gen11-dkms-overlay-apply $kver" "$fake_root/commands.log" \
     || fail "setup must run the DKMS overlay repair helper"
 rg -q 'mkinitcpio -p linux-rg' "$fake_root/commands.log" \
     || fail "setup must rebuild the linux-rg initramfs"
+rg -q 'rg-zswap-tune laptop' "$fake_root/commands.log" \
+    || fail "setup must apply the laptop zswap policy"
 
 printf 'ok\n'

@@ -1,24 +1,33 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-zswap-tune).
 #
-# zswap pool tuning for linux-rg (CONFIG_ZSWAP_DEFAULT_ON). Industry pattern:
-# compressed swap in RAM before zram/NVMe; pairs with MGLRU + PSI stack.
+# zswap/zram policy for linux-rg. The selected laptop profile keeps zswap as a
+# bounded compressed front layer and zram as the primary high-priority swap path.
 
 set -euo pipefail
 
 SUDO="${RG_ZSWAP_SUDO:-sudo}"
-DROP_IN=/etc/sysctl.d/99-rg-zswap.conf
+SYSFS_ROOT=${RG_ZSWAP_SYSFS_ROOT:-/sys}
+PROC_ROOT=${RG_ZSWAP_PROC_ROOT:-/proc}
+ROOT_SCRIPT=${RG_ZSWAP_ROOT_SCRIPT:-/tmp/rg-zswap-root.sh}
+failures=0
 
 usage() {
     cat <<'USAGE'
 usage: rg-zswap-tune COMMAND
 
 Commands:
-  status     Show zswap enabled state and pool limits.
-  laptop     Apply ultrabook defaults (smaller pool, conservative accept).
-  pressure   Apply memory-pressure profile (larger pool, faster writeback).
-  install    Write /etc/sysctl.d/99-rg-zswap.conf and reload sysctl.
+  status                  Show zswap and zram compression state.
+  check                   Validate laptop zswap/zram policy.
+  laptop                  Apply the laptop zswap policy via sudo.
+  pressure                Apply the memory-pressure zswap policy via sudo.
+  root-script PROFILE [OUT]
+                          Write an inspectable root script for PROFILE.
   -h, --help
+
+Profiles:
+  laptop    enabled=Y compressor=zstd max_pool_percent=20 accept_threshold=90
+  pressure  enabled=Y compressor=zstd max_pool_percent=25 accept_threshold=85
 USAGE
 }
 
@@ -27,54 +36,245 @@ die() {
     exit 2
 }
 
-cmd_status() {
-    local path
-    for path in \
-        /sys/module/zswap/parameters/enabled \
-        /sys/module/zswap/parameters/max_pool_percent \
-        /sys/module/zswap/parameters/accept_threshold_percent; do
-        if [ -r "$path" ]; then
-            printf '%s: %s\n' "$path" "$(cat "$path")"
-        fi
-    done
-    [ -r /proc/swaps ] && printf '\n%s\n' "$(cat /proc/swaps)"
+pass() {
+    printf 'ok: %s\n' "$*"
 }
 
-profile_content() {
-    local profile="$1"
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+path_for() {
+    local path=$1
+    printf '%s%s\n' "$SYSFS_ROOT" "$path"
+}
+
+proc_path_for() {
+    local path=$1
+    printf '%s%s\n' "$PROC_ROOT" "$path"
+}
+
+read_value() {
+    local path=$1
+    tr -d '[:space:]' <"$path"
+}
+
+selected_zram_algorithm() {
+    local path line
+    path=$(path_for /block/zram0/comp_algorithm)
+    line=$(cat "$path")
+    if [[ $line =~ \[([^]]+)\] ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    else
+        printf 'unknown\n'
+    fi
+}
+
+zram_priority() {
+    local swaps
+    swaps=$(proc_path_for /swaps)
+    awk '$1 == "/dev/zram0" { print $5; found = 1 } END { if (!found) exit 1 }' "$swaps"
+}
+
+profile_params() {
+    local profile=$1
     case "$profile" in
     laptop)
         cat <<'EOF'
-# Managed by rg-zswap-tune (laptop profile)
-# zswap module parameters are sysfs; document intent for manual tuning.
-# Max pool ~20% of RAM keeps headroom for browser + build on 32 GiB box.
+enabled=Y
+compressor=zstd
+max_pool_percent=20
+accept_threshold_percent=90
+shrinker_enabled=Y
 EOF
         ;;
     pressure)
         cat <<'EOF'
-# Managed by rg-zswap-tune (memory-pressure profile)
-# Prefer zram sizing + oomd first; zswap is secondary compressed path.
+enabled=Y
+compressor=zstd
+max_pool_percent=25
+accept_threshold_percent=85
+shrinker_enabled=Y
 EOF
         ;;
     *) die "unknown profile: $profile" ;;
     esac
 }
 
-cmd_install() {
-    local profile=${1:-laptop}
-    profile_content "$profile" | $SUDO tee "$DROP_IN" >/dev/null
-    $SUDO sysctl --system >/dev/null 2>&1 || true
-    printf 'wrote %s (%s notes)\n' "$DROP_IN" "$profile"
+param_path() {
+    local name=$1
+    path_for "/module/zswap/parameters/$name"
+}
+
+write_param() {
+    local name=$1 value=$2 path
+    path=$(param_path "$name")
+    if [[ ! -e $path ]]; then
+        printf 'skip missing zswap parameter: %s\n' "$name" >&2
+        return 0
+    fi
+    printf '%s\n' "$value" | $SUDO tee "$path" >/dev/null
+}
+
+cmd_status() {
+    local path name value selected priority mm_stat disksize
+    printf '== zswap ==\n'
+    for name in enabled compressor max_pool_percent accept_threshold_percent shrinker_enabled; do
+        path=$(param_path "$name")
+        if [[ -r $path ]]; then
+            value=$(read_value "$path")
+            printf '%s: %s\n' "$name" "$value"
+        else
+            printf '%s: missing\n' "$name"
+        fi
+    done
+
+    printf '\n== zram ==\n'
+    path=$(path_for /block/zram0/comp_algorithm)
+    if [[ -r $path ]]; then
+        printf 'comp_algorithm: %s\n' "$(cat "$path")"
+        selected=$(selected_zram_algorithm)
+        printf 'selected_algorithm: %s\n' "$selected"
+    else
+        printf 'comp_algorithm: missing\n'
+    fi
+    disksize=$(path_for /block/zram0/disksize)
+    [[ -r $disksize ]] && printf 'disksize: %s\n' "$(read_value "$disksize")"
+    mm_stat=$(path_for /block/zram0/mm_stat)
+    [[ -r $mm_stat ]] && printf 'mm_stat: %s\n' "$(cat "$mm_stat")"
+    if priority=$(zram_priority 2>/dev/null); then
+        printf 'swap_priority: %s\n' "$priority"
+    else
+        printf 'swap_priority: missing\n'
+    fi
+}
+
+expect_param() {
+    local name=$1 expected=$2 path value
+    path=$(param_path "$name")
+    if [[ ! -r $path ]]; then
+        fail "zswap $name missing"
+        return
+    fi
+    value=$(read_value "$path")
+    if [[ $value == "$expected" ]]; then
+        case "$name" in
+        enabled) pass "zswap enabled" ;;
+        compressor) pass "zswap compressor $expected" ;;
+        *) pass "zswap $name=$expected" ;;
+        esac
+    else
+        fail "zswap $name=$value expected=$expected"
+    fi
+}
+
+cmd_check() {
+    local selected priority
+    printf '== zswap policy ==\n'
+    expect_param enabled Y
+    expect_param compressor zstd
+    expect_param max_pool_percent 20
+    expect_param accept_threshold_percent 90
+    if [[ -e $(param_path shrinker_enabled) ]]; then
+        expect_param shrinker_enabled Y
+    fi
+
+    printf '\n== zram policy ==\n'
+    if [[ -r $(path_for /block/zram0/comp_algorithm) ]]; then
+        selected=$(selected_zram_algorithm)
+        if [[ $selected == zstd ]]; then
+            pass "zram0 selected compressor zstd"
+        else
+            fail "zram0 selected compressor=$selected expected=zstd"
+        fi
+    else
+        fail "zram0 comp_algorithm missing"
+    fi
+
+    if priority=$(zram_priority 2>/dev/null); then
+        if [[ $priority == 100 ]]; then
+            pass "zram0 swap priority 100"
+        else
+            fail "zram0 swap priority=$priority expected=100"
+        fi
+    else
+        fail "zram0 swap entry missing"
+    fi
+
     cmd_status
+
+    if (( failures > 0 )); then
+        printf '\nzswap/zram policy failed: %d issue(s)\n' "$failures" >&2
+        exit 1
+    fi
+    printf '\nzswap/zram policy: ok\n'
+}
+
+cmd_apply() {
+    local profile=$1 line name value
+    while IFS= read -r line; do
+        [[ -n $line ]] || continue
+        name=${line%%=*}
+        value=${line#*=}
+        write_param "$name" "$value"
+    done < <(profile_params "$profile")
+    cmd_status
+}
+
+cmd_root_script() {
+    local profile=${1:-}
+    local out=${2:-$ROOT_SCRIPT}
+    [[ -n $profile ]] || die "root-script requires PROFILE"
+    profile_params "$profile" >/dev/null
+    cat >"$out" <<ROOT
+#!/usr/bin/env bash
+set -euo pipefail
+
+zswap_dir=${SYSFS_ROOT}/module/zswap/parameters
+
+if [[ \$(id -u) -ne 0 ]]; then
+    printf 'run as root: sudo bash %s\n' "\$0" >&2
+    exit 2
+fi
+
+write_param() {
+    local name=\$1 value=\$2 path
+    path="\$zswap_dir/\$name"
+    if [[ ! -e \$path ]]; then
+        printf 'skip missing zswap parameter: %s\n' "\$name" >&2
+        return 0
+    fi
+    printf '%s\n' "\$value" >"\$path"
+}
+ROOT
+    while IFS= read -r line; do
+        [[ -n $line ]] || continue
+        printf 'write_param %q %q\n' "${line%%=*}" "${line#*=}" >>"$out"
+    done < <(profile_params "$profile")
+    cat >>"$out" <<'ROOT'
+
+printf 'zswap policy applied\n'
+for name in enabled compressor max_pool_percent accept_threshold_percent shrinker_enabled; do
+    path="$zswap_dir/$name"
+    if [[ -r $path ]]; then
+        printf '%s: %s\n' "$name" "$(cat "$path")"
+    fi
+done
+ROOT
+    chmod 0755 "$out"
+    printf 'wrote %s\n' "$out"
+    printf 'run: sudo bash %s\n' "$out"
 }
 
 main() {
     local cmd=${1:-}
     case "$cmd" in
     status) cmd_status ;;
-    laptop) cmd_install laptop ;;
-    pressure) cmd_install pressure ;;
-    install) cmd_install "${2:-laptop}" ;;
+    check | --check) cmd_check ;;
+    laptop) cmd_apply laptop ;;
+    pressure) cmd_apply pressure ;;
+    root-script) cmd_root_script "${2:-}" "${3:-$ROOT_SCRIPT}" ;;
     -h | --help | "") usage ;;
     *) die "unknown command: $cmd" ;;
     esac

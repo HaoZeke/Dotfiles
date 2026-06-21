@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-zswap-tune-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-zswap-tune"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing zswap tune helper"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+sys="$tmpdir/sys"
+proc="$tmpdir/proc"
+zswap="$sys/module/zswap/parameters"
+zram="$sys/block/zram0"
+mkdir -p "$zswap" "$zram" "$proc"
+
+write_zswap() {
+    printf '%s\n' Y >"$zswap/enabled"
+    printf '%s\n' zstd >"$zswap/compressor"
+    printf '%s\n' 20 >"$zswap/max_pool_percent"
+    printf '%s\n' 90 >"$zswap/accept_threshold_percent"
+    printf '%s\n' Y >"$zswap/shrinker_enabled"
+}
+
+write_zram() {
+    cat >"$zram/comp_algorithm" <<'EOF'
+lzo-rle lzo lz4 lz4hc [zstd] deflate 842
+EOF
+    printf '%s\n' 16638803968 >"$zram/disksize"
+    cat >"$zram/mm_stat" <<'EOF'
+1085480960 582762187 590667776 0 590667776 154 2 70818 70824
+EOF
+    cat >"$proc/swaps" <<'EOF'
+Filename				Type		Size		Used		Priority
+/dev/zram0                              partition	16248828	1059708	100
+/btrfs/@swap/swapfile                   file		15624188	0	-2
+EOF
+}
+
+write_zswap
+write_zram
+
+RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "valid zswap/zram fixture should pass"
+}
+rg -q 'ok: zswap enabled' "$tmpdir/ok.out" \
+    || fail "checker must verify zswap is enabled"
+rg -q 'ok: zswap compressor zstd' "$tmpdir/ok.out" \
+    || fail "checker must verify zswap zstd"
+rg -q 'ok: zram0 selected compressor zstd' "$tmpdir/ok.out" \
+    || fail "checker must verify zram zstd"
+rg -q 'ok: zram0 swap priority 100' "$tmpdir/ok.out" \
+    || fail "checker must verify zram priority"
+
+printf '%s\n' lz4 >"$zswap/compressor"
+if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/bad-zswap.out" 2>&1; then
+    fail "wrong zswap compressor should fail"
+fi
+rg -q 'fail: zswap compressor=lz4 expected=zstd' "$tmpdir/bad-zswap.out" \
+    || fail "wrong zswap compressor report should be explicit"
+printf '%s\n' zstd >"$zswap/compressor"
+
+cat >"$zram/comp_algorithm" <<'EOF'
+[lzo] lz4 lz4hc zstd deflate 842
+EOF
+if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/bad-zram.out" 2>&1; then
+    fail "wrong zram compressor should fail"
+fi
+rg -q 'fail: zram0 selected compressor=lzo expected=zstd' "$tmpdir/bad-zram.out" \
+    || fail "wrong zram compressor report should be explicit"
+write_zram
+
+RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" root-script laptop "$tmpdir/root.sh" >"$tmpdir/root-script.out"
+bash -n "$tmpdir/root.sh"
+rg -q "write_param enabled Y" "$tmpdir/root.sh" \
+    || fail "root script must enable zswap"
+rg -q "write_param compressor zstd" "$tmpdir/root.sh" \
+    || fail "root script must select zstd compressor"
+rg -q "write_param max_pool_percent 20" "$tmpdir/root.sh" \
+    || fail "root script must set laptop max pool"
+rg -q "write_param accept_threshold_percent 90" "$tmpdir/root.sh" \
+    || fail "root script must set laptop accept threshold"
+
+printf 'ok\n'

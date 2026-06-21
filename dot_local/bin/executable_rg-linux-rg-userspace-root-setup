@@ -186,6 +186,9 @@ systemctl enable --now systemd-oomd.service
 systemctl enable --now rg-ksm-madvise.service
 systemctl enable --now fstrim.timer
 sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
+PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
+  rg-zswap-tune laptop
 
 if profile_bin=$(find_profile_bin); then
   sync_profile_root_helper "$profile_bin"

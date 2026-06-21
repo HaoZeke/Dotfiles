@@ -25,6 +25,7 @@ for path in \
     "$repo/dot_local/bin/executable_rg-scx-loader" \
     "$repo/dot_local/bin/executable_rg-psi-top" \
     "$repo/dot_local/bin/executable_rg-zswap-tune" \
+    "$repo/dot_local/bin/executable_rg-zswap-tune-selftest" \
     "$repo/dot_local/bin/executable_rg-bench-matrix" \
     "$repo/dot_local/bin/executable_rg-wide-net-collect" \
     "$repo/dot_local/bin/executable_rg-nvme-apst" \
@@ -115,6 +116,12 @@ rg -q 'continuous discard' "$repo/dot_local/bin/executable_rg-storage-trim-check
     || fail "storage trim checker must reject continuous btrfs discard"
 rg -q 'systemctl enable --now fstrim.timer' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     || fail "root setup helper must enable periodic fstrim"
+rg -q 'expect_param compressor zstd' "$repo/dot_local/bin/executable_rg-zswap-tune" \
+    || fail "zswap helper must check the selected compressor"
+rg -q 'selected == zstd' "$repo/dot_local/bin/executable_rg-zswap-tune" \
+    || fail "zswap helper must check zram compression"
+rg -q 'rg-zswap-tune laptop' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
+    || fail "root setup helper must apply the laptop zswap policy"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \
@@ -137,6 +144,8 @@ rg -q 'rg-ksm-policy --check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the KSM checker"
 rg -q 'rg-storage-trim-check --check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the storage trim checker"
+rg -q 'rg-zswap-tune check' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the zswap checker"
 rg -q 'doctor --check' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     || fail "root setup helper must verify active profile policy"
 rg -q 'rg-x1gen11-profile-root' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
