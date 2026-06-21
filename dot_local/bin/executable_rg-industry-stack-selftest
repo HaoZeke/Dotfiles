@@ -30,6 +30,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-nvme-apst" \
     "$repo/dot_local/bin/executable_rg-uvc-camera-check" \
     "$repo/dot_local/bin/executable_rg-uvc-camera-check-selftest" \
+    "$repo/dot_local/bin/executable_rg-thermal-stack-check" \
+    "$repo/dot_local/bin/executable_rg-thermal-stack-check-selftest" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
@@ -81,6 +83,10 @@ rg -q 'RG_UVC_VENDOR:-04f2' "$repo/dot_local/bin/executable_rg-uvc-camera-check"
     || fail "uvc camera checker must target the Chicony vendor id"
 rg -q 'RG_UVC_PRODUCT:-b751' "$repo/dot_local/bin/executable_rg-uvc-camera-check" \
     || fail "uvc camera checker must target the integrated camera product id"
+rg -q 'thermald and TLP are both active' "$repo/dot_local/bin/executable_rg-thermal-stack-check" \
+    || fail "thermal checker must reject unplanned TLP plus thermald ownership"
+rg -q 'platform_profile' "$repo/dot_local/bin/executable_rg-thermal-stack-check" \
+    || fail "thermal checker must inspect platform_profile"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \

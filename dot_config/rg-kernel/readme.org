@@ -42,6 +42,7 @@ rg-linux-rg-postboot-check
 rg-linux-rg-postboot-check-selftest
 rg-industry-stack-selftest
 rg-uvc-camera-check --check
+rg-thermal-stack-check --check
 rg-x1gen11-profile doctor
 rg-x1gen11-profile doctor --check
 #+end_src

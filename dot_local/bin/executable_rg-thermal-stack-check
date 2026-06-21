@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-thermal-stack-check).
+
+set -euo pipefail
+
+root=${RG_THERMAL_ROOT:-}
+check=0
+failures=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-thermal-stack-check [--check]
+
+Reports the rgx1gen11 thermal-control stack: platform_profile, thermal zones,
+ThinkPad ACPI thermal/fan exposure, and service ownership across TLP,
+power-profiles-daemon, and thermald.
+USAGE
+}
+
+host_path() {
+    local path=$1
+    if [[ -n $root && $path = /* ]]; then
+        printf '%s%s\n' "$root" "$path"
+    else
+        printf '%s\n' "$path"
+    fi
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+warn() {
+    printf 'warn: %s\n' "$*" >&2
+}
+
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+read_scalar() {
+    local path=$1
+    [[ -r $path ]] || return 1
+    tr -d '\n' <"$path"
+}
+
+systemctl_state() {
+    local verb=$1 unit=$2 out
+    if out=$(systemctl "$verb" "$unit" 2>&1); then
+        printf '%s\n' "$out"
+        return 0
+    fi
+    case "$out" in
+    *"Operation not permitted"* | *"Failed to connect"*)
+        printf 'unknown\n'
+        return 2
+        ;;
+    *)
+        printf '%s\n' "$out"
+        return 1
+        ;;
+    esac
+}
+
+platform_profile_path() {
+    local path
+    for path in \
+        "$(host_path /sys/firmware/acpi/platform_profile)" \
+        "$(host_path /sys/devices/platform/thinkpad_acpi/platform_profile)"; do
+        [[ -e $path ]] || continue
+        printf '%s\n' "$path"
+        return 0
+    done
+    return 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --check)
+        check=1
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+printf '== platform profile ==\n'
+if path=$(platform_profile_path); then
+    live=$(read_scalar "$path" || printf unknown)
+    printf 'platform_profile: %s\n' "$live"
+    if [[ -r ${path}_choices ]]; then
+        printf 'choices: %s\n' "$(tr '\n' ' ' <"${path}_choices")"
+    fi
+    pass "platform_profile exposed"
+else
+    fail "platform_profile sysfs missing"
+fi
+
+printf '\n== thermal zones ==\n'
+thermal_root=$(host_path /sys/class/thermal)
+zone_count=0
+pkg_temp_seen=0
+if [[ -d $thermal_root ]]; then
+    for temp_path in "$thermal_root"/thermal_zone*/temp; do
+        [[ -r $temp_path ]] || continue
+        zone_count=$((zone_count + 1))
+        zone=${temp_path%/temp}
+        type=$(read_scalar "$zone/type" || printf unknown)
+        temp=$(read_scalar "$temp_path" || printf 0)
+        printf '%s %s.%03d C\n' "$type" "$((temp / 1000))" "$((temp % 1000))"
+        [[ $type == x86_pkg_temp ]] && pkg_temp_seen=1
+    done
+fi
+if (( zone_count > 0 )); then
+    pass "thermal zones readable"
+else
+    fail "no readable thermal zones"
+fi
+if (( pkg_temp_seen == 1 )); then
+    pass "x86 package thermal zone present"
+else
+    warn "x86_pkg_temp thermal zone not found"
+fi
+
+printf '\n== ThinkPad ACPI thermal/fan ==\n'
+for path in /proc/acpi/ibm/thermal /proc/acpi/ibm/fan; do
+    mapped=$(host_path "$path")
+    if [[ -r $mapped ]]; then
+        printf '%s: present\n' "$path"
+    else
+        printf '%s: unavailable\n' "$path"
+    fi
+done
+
+printf '\n== service ownership ==\n'
+tlp_active=$(systemctl_state is-active tlp.service || true)
+ppd_active=$(systemctl_state is-active power-profiles-daemon.service || true)
+thermald_active=$(systemctl_state is-active thermald.service || true)
+tlp_enabled=$(systemctl_state is-enabled tlp.service || true)
+ppd_enabled=$(systemctl_state is-enabled power-profiles-daemon.service || true)
+thermald_enabled=$(systemctl_state is-enabled thermald.service || true)
+
+printf 'tlp.service active=%s enabled=%s\n' "$tlp_active" "$tlp_enabled"
+printf 'power-profiles-daemon.service active=%s enabled=%s\n' "$ppd_active" "$ppd_enabled"
+printf 'thermald.service active=%s enabled=%s\n' "$thermald_active" "$thermald_enabled"
+
+if [[ $tlp_active == active ]]; then
+    pass "TLP owns laptop power policy"
+elif [[ $tlp_active == unknown ]]; then
+    warn "TLP state unknown from this session"
+else
+    fail "TLP is not active"
+fi
+
+if [[ $ppd_active == active ]]; then
+    fail "power-profiles-daemon is active while TLP owns power policy"
+elif [[ $ppd_active == unknown ]]; then
+    warn "power-profiles-daemon state unknown from this session"
+else
+    pass "power-profiles-daemon inactive"
+fi
+
+if [[ $tlp_active == active && $thermald_active == active ]]; then
+    fail "thermald and TLP are both active without an explicit split policy"
+elif [[ $thermald_active == active ]]; then
+    pass "thermald active without TLP"
+elif [[ $thermald_active == unknown ]]; then
+    warn "thermald state unknown from this session"
+else
+    pass "thermald inactive; DPTF/platform_profile/TLP remain primary"
+fi
+
+if (( check == 1 && failures > 0 )); then
+    printf '\nthermal stack policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf '\nthermal stack policy: ok\n'

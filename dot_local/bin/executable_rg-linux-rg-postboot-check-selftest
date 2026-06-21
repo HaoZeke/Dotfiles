@@ -101,7 +101,7 @@ fi
 SH
 chmod +x "$fake_bin/dkms"
 
-for cmd in rgx1gen11-boot-check rgx1gen11-live-check rg-memory-sysctl-check rg-x1gen11-profile; do
+for cmd in rgx1gen11-boot-check rgx1gen11-live-check rg-memory-sysctl-check rg-thermal-stack-check rg-x1gen11-profile; do
     cat >"$fake_bin/$cmd" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail

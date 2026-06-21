@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-thermal-stack-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-thermal-stack-check"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing thermal stack checker"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+fake_root="$tmpdir/root"
+fake_bin="$tmpdir/bin"
+
+mkdir -p \
+    "$fake_bin" \
+    "$fake_root/sys/firmware/acpi" \
+    "$fake_root/sys/class/thermal/thermal_zone0" \
+    "$fake_root/proc/acpi/ibm"
+
+printf 'low-power\n' >"$fake_root/sys/firmware/acpi/platform_profile"
+printf 'low-power balanced performance\n' >"$fake_root/sys/firmware/acpi/platform_profile_choices"
+printf 'x86_pkg_temp\n' >"$fake_root/sys/class/thermal/thermal_zone0/type"
+printf '42000\n' >"$fake_root/sys/class/thermal/thermal_zone0/temp"
+printf 'temperatures:\t42 41 40\n' >"$fake_root/proc/acpi/ibm/thermal"
+printf 'status:\t\tenabled\nspeed:\t\t2300\n' >"$fake_root/proc/acpi/ibm/fan"
+
+cat >"$fake_bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+verb=${1:?}
+unit=${2:?}
+case "$verb:$unit" in
+is-active:tlp.service) printf 'active\n' ;;
+is-enabled:tlp.service) printf 'enabled\n' ;;
+is-active:power-profiles-daemon.service) printf 'inactive\n'; exit 3 ;;
+is-enabled:power-profiles-daemon.service) printf 'disabled\n'; exit 1 ;;
+is-active:thermald.service) printf 'inactive\n'; exit 3 ;;
+is-enabled:thermald.service) printf 'disabled\n'; exit 1 ;;
+*) printf 'unexpected systemctl %s %s\n' "$verb" "$unit" >&2; exit 2 ;;
+esac
+SH
+chmod +x "$fake_bin/systemctl"
+
+PATH="$fake_bin:$PATH" RG_THERMAL_ROOT="$fake_root" "$script" --check \
+    >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,200p' "$tmpdir/ok.out" >&2
+    fail "complete thermal fixture should pass"
+}
+rg -q 'ok: TLP owns laptop power policy' "$tmpdir/ok.out" \
+    || fail "checker must assert TLP ownership"
+rg -q 'ok: thermald inactive; DPTF/platform_profile/TLP remain primary' "$tmpdir/ok.out" \
+    || fail "checker must document thermald as inactive under TLP"
+
+cat >"$fake_bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+verb=${1:?}
+unit=${2:?}
+case "$verb:$unit" in
+is-active:tlp.service) printf 'active\n' ;;
+is-enabled:tlp.service) printf 'enabled\n' ;;
+is-active:power-profiles-daemon.service) printf 'inactive\n'; exit 3 ;;
+is-enabled:power-profiles-daemon.service) printf 'disabled\n'; exit 1 ;;
+is-active:thermald.service) printf 'active\n' ;;
+is-enabled:thermald.service) printf 'enabled\n' ;;
+*) printf 'unexpected systemctl %s %s\n' "$verb" "$unit" >&2; exit 2 ;;
+esac
+SH
+chmod +x "$fake_bin/systemctl"
+
+if PATH="$fake_bin:$PATH" RG_THERMAL_ROOT="$fake_root" "$script" --check \
+    >"$tmpdir/conflict.out" 2>&1; then
+    fail "TLP plus thermald should fail without explicit split policy"
+fi
+rg -q 'fail: thermald and TLP are both active' "$tmpdir/conflict.out" \
+    || fail "checker must report the TLP/thermald conflict"
+
+printf 'ok\n'
