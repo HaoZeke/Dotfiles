@@ -61,6 +61,20 @@ install_data() {
   printf 'installed: %s\n' "$dst"
 }
 
+install_content() {
+  local dst=$1 mode=$2 content=$3 target tmp
+  tmp=$(mktemp)
+  printf '%s\n' "$content" >"$tmp"
+  target=$(target_path "$dst")
+  if (( EUID == 0 )); then
+    install -D -o root -g root -m "$mode" "$tmp" "$target"
+  else
+    install -D -m "$mode" "$tmp" "$target"
+  fi
+  rm -f "$tmp"
+  printf 'installed: %s\n' "$dst"
+}
+
 run_target_exec() {
   local path=$1
   shift
@@ -84,6 +98,53 @@ sync_profile_root_helper() {
   bash -n "$tmp"
   install_exec "$tmp" "$profile_root_helper"
   rm -f "$tmp"
+}
+
+install_ksm_policy() {
+  install_content /usr/local/sbin/rg-ksm-madvise-root 0755 "$(cat <<'ROOT'
+#!/usr/bin/env bash
+set -euo pipefail
+
+ksm=/sys/kernel/mm/ksm
+if [ ! -d "$ksm" ]; then
+    printf "KSM sysfs missing: %s\n" "$ksm" >&2
+    exit 0
+fi
+
+write_if_present() {
+    local file=$1 value=$2 path
+    path="$ksm/$file"
+    if [ -e "$path" ]; then
+        printf "%s\n" "$value" >"$path"
+    fi
+}
+
+if [ -e "$ksm/advisor_mode" ] && grep -qw scan-time "$ksm/advisor_mode"; then
+    printf "%s\n" scan-time >"$ksm/advisor_mode"
+fi
+
+write_if_present smart_scan 1
+write_if_present use_zero_pages 0
+printf '%s\n' 1 > /sys/kernel/mm/ksm/run
+
+printf "KSM madvise policy applied\n"
+ROOT
+)"
+
+  install_content /etc/systemd/system/rg-ksm-madvise.service 0644 "$(cat <<'SERVICE'
+[Unit]
+Description=Apply rgx1gen11 KSM madvise policy
+ConditionPathExists=/sys/kernel/mm/ksm/run
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-ksm-madvise-root
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+)"
 }
 
 printf '== sync linux-rg helpers ==\n'
@@ -118,9 +179,11 @@ modinfo -k "$kver" v4l2loopback | sed -n '1,16p'
 modinfo -k "$kver" 88XXau | sed -n '1,16p'
 
 printf '\n== userspace policy ==\n'
+install_ksm_policy
 systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
+systemctl enable --now rg-ksm-madvise.service
 sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 
 if profile_bin=$(find_profile_bin); then

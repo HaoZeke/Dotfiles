@@ -1,0 +1,72 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+#!/usr/bin/env bash
+# Configure KSM for explicit MADV_MERGEABLE workloads on rgx1gen11.
+
+set -euo pipefail
+
+write_if_diff() {
+    local dst="$1" content="$2" mode="${3:-0644}"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+KSM_ROOT_CONTENT='#!/usr/bin/env bash
+set -euo pipefail
+
+ksm=/sys/kernel/mm/ksm
+if [ ! -d "$ksm" ]; then
+    printf "KSM sysfs missing: %s\n" "$ksm" >&2
+    exit 0
+fi
+
+write_if_present() {
+    local file=$1 value=$2 path
+    path="$ksm/$file"
+    if [ -e "$path" ]; then
+        printf "%s\n" "$value" >"$path"
+    fi
+}
+
+if [ -e "$ksm/advisor_mode" ] && grep -qw scan-time "$ksm/advisor_mode"; then
+    printf "%s\n" scan-time >"$ksm/advisor_mode"
+fi
+
+write_if_present smart_scan 1
+write_if_present use_zero_pages 0
+printf '\''%s\n'\'' 1 > /sys/kernel/mm/ksm/run
+
+printf "KSM madvise policy applied\n"
+'
+
+KSM_SERVICE_CONTENT='[Unit]
+Description=Apply rgx1gen11 KSM madvise policy
+ConditionPathExists=/sys/kernel/mm/ksm/run
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-ksm-madvise-root
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+'
+
+CHANGED=0
+write_if_diff /usr/local/sbin/rg-ksm-madvise-root "$KSM_ROOT_CONTENT" 0755 && CHANGED=1 || true
+write_if_diff /etc/systemd/system/rg-ksm-madvise.service "$KSM_SERVICE_CONTENT" 0644 && CHANGED=1 || true
+
+if [ "$CHANGED" = 1 ]; then
+    sudo systemctl daemon-reload
+fi
+
+sudo systemctl enable --now rg-ksm-madvise.service >/dev/null
+{{- end }}

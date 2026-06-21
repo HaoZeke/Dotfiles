@@ -44,6 +44,7 @@ rg-industry-stack-selftest
 rg-uvc-camera-check --check
 rg-thermal-stack-check --check
 rg-pipewire-rt-check --check
+rg-ksm-policy --check
 rg-x1gen11-profile doctor
 rg-x1gen11-profile doctor --check
 #+end_src
@@ -65,6 +66,7 @@ rg-x1gen11-profile root-script undocked-mixed /tmp/rg-x1gen11-profile-root.sh
 sudo bash /tmp/rg-x1gen11-profile-root.sh
 rg-x1gen11-profile apply-user undocked-mixed
 rg-damon-reclaim root-script memory-pressure /tmp/rg-damon-reclaim-root.sh
+rg-ksm-policy --check
 #+end_src
 
 * Managed root helpers
@@ -86,7 +88,7 @@ initramfs, and runs the live kernel bundle.
 selecting linux-rg in rEFInd. It validates the running kernel, required package
 helpers, required exported symbols, DKMS modules, in-tree =v4l2loopback=,
 boot/live contracts, scheduler/power userspace, active profile drift, sched_ext
-mode drift, and a thermal snapshot. It aggregates missing paths and failed
+mode drift, KSM madvise policy, and a thermal snapshot. It aggregates missing paths and failed
 probes so one run shows every visible boot problem.
 
 #+begin_src shell

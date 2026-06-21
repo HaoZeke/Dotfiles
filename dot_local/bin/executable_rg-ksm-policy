@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-ksm-policy).
+
+set -euo pipefail
+
+sysfs_root=${RG_KSM_SYSFS_ROOT:-/sys}
+ksm_dir="$sysfs_root/kernel/mm/ksm"
+check=0
+failures=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-ksm-policy [--check]
+
+Validate the rgx1gen11 KSM policy for explicit MADV_MERGEABLE workloads.
+The policy keeps ksmd enabled, uses smart scan and the scan-time advisor when
+available, and leaves zero-page merging disabled.
+USAGE
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+read_trimmed() {
+    local path=$1
+    tr -d '[:space:]' <"$path"
+}
+
+read_line() {
+    local path=$1
+    sed -n '1p' "$path"
+}
+
+selected_choice() {
+    local path=$1 line
+    line=$(read_line "$path")
+    if [[ $line =~ \[([^]]+)\] ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    else
+        printf '%s\n' "$line"
+    fi
+}
+
+metric() {
+    local name=$1 path="$ksm_dir/$name"
+    if [[ -r $path ]]; then
+        printf '%s: %s\n' "$name" "$(read_trimmed "$path")"
+    fi
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --check)
+        check=1
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+printf '== KSM sysfs ==\n'
+printf 'path: %s\n' "$ksm_dir"
+if [[ ! -d $ksm_dir ]]; then
+    fail "KSM sysfs missing at $ksm_dir"
+else
+    pass "KSM sysfs present"
+fi
+
+if [[ -d $ksm_dir ]]; then
+    run_path="$ksm_dir/run"
+    if [[ -r $run_path ]]; then
+        run=$(read_trimmed "$run_path")
+        if [[ $run == 1 ]]; then
+            pass "KSM daemon enabled for MADV_MERGEABLE areas"
+        else
+            fail "KSM run=$run expected=1"
+        fi
+    else
+        fail "KSM run control missing"
+    fi
+
+    smart_scan_path="$ksm_dir/smart_scan"
+    if [[ -r $smart_scan_path ]]; then
+        smart_scan=$(read_trimmed "$smart_scan_path")
+        if [[ $smart_scan == 1 ]]; then
+            pass "KSM smart scan enabled"
+        else
+            fail "KSM smart_scan=$smart_scan expected=1"
+        fi
+    else
+        pass "KSM smart scan control unavailable"
+    fi
+
+    zero_path="$ksm_dir/use_zero_pages"
+    if [[ -r $zero_path ]]; then
+        zero=$(read_trimmed "$zero_path")
+        if [[ $zero == 0 ]]; then
+            pass "KSM zero-page merging disabled"
+        else
+            fail "KSM use_zero_pages=$zero expected=0"
+        fi
+    else
+        pass "KSM zero-page control unavailable"
+    fi
+
+    advisor_path="$ksm_dir/advisor_mode"
+    if [[ -r $advisor_path ]]; then
+        advisor=$(selected_choice "$advisor_path")
+        if [[ $advisor == scan-time ]]; then
+            pass "KSM scan-time advisor selected"
+        else
+            fail "KSM advisor_mode=$advisor expected=scan-time"
+        fi
+    else
+        pass "KSM scan-time advisor unavailable"
+    fi
+
+    printf '\n== KSM metrics ==\n'
+    for name in \
+        pages_shared pages_sharing pages_unshared pages_volatile pages_skipped \
+        full_scans general_profit stable_node_chains stable_node_dups; do
+        metric "$name"
+    done
+fi
+
+if (( check == 1 && failures > 0 )); then
+    printf '\nKSM policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf '\nKSM policy: ok\n'

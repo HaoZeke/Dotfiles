@@ -34,6 +34,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-thermal-stack-check-selftest" \
     "$repo/dot_local/bin/executable_rg-pipewire-rt-check" \
     "$repo/dot_local/bin/executable_rg-pipewire-rt-check-selftest" \
+    "$repo/dot_local/bin/executable_rg-ksm-policy" \
+    "$repo/dot_local/bin/executable_rg-ksm-policy-selftest" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
@@ -48,6 +50,7 @@ for path in \
     "$repo/dot_local/bin/executable_rg-damon-reclaim-selftest" \
     "$repo/dot_local/bin/executable_browser-media-watchdog" \
     "$repo/.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl" \
+    "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl" \
     "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl"; do
     test -r "$path" || fail "missing $path"
 done
@@ -98,6 +101,12 @@ rg -q '@audio[[:space:]]+-[[:space:]]+rtprio[[:space:]]+95' \
     || fail "PipeWire RT root setup must install @audio rtprio limits"
 rg -q 'sched_rt_runtime_us' "$repo/dot_local/bin/executable_rg-pipewire-rt-check" \
     || fail "PipeWire RT checker must inspect RT bandwidth throttling"
+rg -q 'KSM daemon enabled for MADV_MERGEABLE areas' "$repo/dot_local/bin/executable_rg-ksm-policy" \
+    || fail "KSM checker must verify ksmd activation for explicit mergeable areas"
+rg -q 'rg-ksm-madvise.service' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl" \
+    || fail "KSM root setup must install the madvise service"
+rg -q 'use_zero_pages.*0' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl" \
+    || fail "KSM root setup must keep zero-page merging disabled"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \
@@ -116,6 +125,8 @@ rg -q 'rg-linux-rg-userspace-root-setup-selftest' "$repo/dot_config/rg-kernel/re
     || fail "kernel readme must document the root setup selftest"
 rg -q 'rg-linux-rg-postboot-check' "$repo/dot_config/rg-kernel/readme.org" \
     || fail "kernel readme must document the postboot helper"
+rg -q 'rg-ksm-policy --check' "$repo/dot_config/rg-kernel/readme.org" \
+    || fail "kernel readme must document the KSM checker"
 rg -q 'doctor --check' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     || fail "root setup helper must verify active profile policy"
 rg -q 'rg-x1gen11-profile-root' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-ksm-policy-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-ksm-policy"
+root_script="$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing KSM policy checker"
+test -r "$root_script" || fail "missing managed KSM root deployment script"
+
+rg -q 'rg-ksm-madvise.service' "$root_script" \
+    || fail "root script must install the KSM madvise systemd service"
+rg -q 'smart_scan' "$root_script" \
+    || fail "root script must enable KSM smart scan"
+rg -q 'advisor_mode' "$root_script" \
+    || fail "root script must configure the KSM scan-time advisor"
+rg -Fq "printf '\\''%s\\n'\\'' 1 > /sys/kernel/mm/ksm/run" "$root_script" \
+    || fail "root script must enable ksmd"
+! rg -q 'use_zero_pages.*1' "$root_script" \
+    || fail "root script must not enable KSM zero-page merging"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+ksm="$tmpdir/sys/kernel/mm/ksm"
+mkdir -p "$ksm"
+
+cat >"$ksm/advisor_mode" <<'EOF'
+none [scan-time]
+EOF
+cat >"$ksm/run" <<'EOF'
+1
+EOF
+cat >"$ksm/smart_scan" <<'EOF'
+1
+EOF
+cat >"$ksm/use_zero_pages" <<'EOF'
+0
+EOF
+cat >"$ksm/pages_shared" <<'EOF'
+0
+EOF
+cat >"$ksm/pages_sharing" <<'EOF'
+0
+EOF
+cat >"$ksm/pages_unshared" <<'EOF'
+0
+EOF
+cat >"$ksm/pages_volatile" <<'EOF'
+0
+EOF
+cat >"$ksm/pages_skipped" <<'EOF'
+0
+EOF
+cat >"$ksm/full_scans" <<'EOF'
+0
+EOF
+cat >"$ksm/general_profit" <<'EOF'
+0
+EOF
+
+RG_KSM_SYSFS_ROOT="$tmpdir/sys" "$script" --check >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "complete fake KSM madvise policy should pass"
+}
+rg -q 'ok: KSM daemon enabled for MADV_MERGEABLE areas' "$tmpdir/ok.out" \
+    || fail "checker must verify KSM daemon activation"
+rg -q 'ok: KSM smart scan enabled' "$tmpdir/ok.out" \
+    || fail "checker must verify smart scan"
+rg -q 'ok: KSM zero-page merging disabled' "$tmpdir/ok.out" \
+    || fail "checker must verify zero-page merging is disabled"
+
+printf '0\n' >"$ksm/run"
+if RG_KSM_SYSFS_ROOT="$tmpdir/sys" "$script" --check >"$tmpdir/disabled.out" 2>&1; then
+    fail "checker must fail when ksmd is stopped"
+fi
+rg -q 'fail: KSM run=0 expected=1' "$tmpdir/disabled.out" \
+    || fail "checker must report disabled ksmd"
+
+printf '1\n' >"$ksm/run"
+printf '1\n' >"$ksm/use_zero_pages"
+if RG_KSM_SYSFS_ROOT="$tmpdir/sys" "$script" --check >"$tmpdir/zero.out" 2>&1; then
+    fail "checker must fail when zero-page merging is enabled"
+fi
+rg -q 'fail: KSM use_zero_pages=1 expected=0' "$tmpdir/zero.out" \
+    || fail "checker must report zero-page merge drift"
+
+printf 'ok\n'

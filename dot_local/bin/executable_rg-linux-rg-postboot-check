@@ -129,6 +129,7 @@ check 'live bundle' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$us
 check 'memory sysctl policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-memory-sysctl-check
 check 'thermal stack policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-thermal-stack-check --check
 check 'PipeWire RT policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-pipewire-rt-check --check
+check 'KSM madvise policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-ksm-policy --check
 
 printf '\n== scheduler and power userspace ==\n'
 command -v scx_loader || true

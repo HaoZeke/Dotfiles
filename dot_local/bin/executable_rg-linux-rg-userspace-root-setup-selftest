@@ -131,6 +131,12 @@ PATH="$fake_bin:$PATH" \
 
 test -x "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
     || fail "setup must install the generated profile root helper under the fake root"
+test -x "$fake_root/usr/local/sbin/rg-ksm-madvise-root" \
+    || fail "setup must install the KSM madvise root helper under the fake root"
+test -r "$fake_root/etc/systemd/system/rg-ksm-madvise.service" \
+    || fail "setup must install the KSM madvise service under the fake root"
+rg -q "systemctl enable --now rg-ksm-madvise.service" "$fake_root/commands.log" \
+    || fail "setup must enable the KSM madvise service"
 rg -q 'PROFILES_JSON=' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
     || fail "installed profile root helper must load profile JSON"
 rg -q 'json' "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
