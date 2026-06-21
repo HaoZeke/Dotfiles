@@ -423,7 +423,19 @@ show_profile() {
 }
 
 doctor() {
-    local path
+    local path unit_state
+
+    unit_state() {
+        local unit="$1" label="$2" inactive_note="${3:-inactive}" state
+        if state=$(systemctl is-active "$unit" 2>&1); then
+            printf '%s: active\n' "$label"
+        elif printf '%s\n' "$state" | grep -Eq 'Operation not permitted|Failed to connect'; then
+            printf '%s: unknown (%s)\n' "$label" "$state"
+        else
+            printf '%s: %s\n' "$label" "$inactive_note"
+        fi
+    }
+
     printf '== workload profile ==\n'
     if [ -f "$STATE_FILE" ]; then
         printf 'active: %s\n' "$(cat "$STATE_FILE")"
@@ -453,7 +465,16 @@ doctor() {
     fi
 
     printf '\n== zram ==\n'
-    if [ -b /dev/zram0 ]; then
+    if [ -r /sys/block/zram0/disksize ]; then
+        printf 'zram0 size: %s bytes\n' "$(cat /sys/block/zram0/disksize)"
+        if [ -r /sys/block/zram0/mm_stat ]; then
+            awk '
+                {
+                    printf "zram0 mm_stat: orig=%s compr=%s mem=%s same=%s pages=%s\n", $1, $2, $3, $4, $6
+                }
+            ' /sys/block/zram0/mm_stat
+        fi
+    elif [ -b /dev/zram0 ]; then
         printf 'zram0 size: %s bytes\n' "$(blockdev --getsize64 /dev/zram0 2>/dev/null || echo unknown)"
     else
         printf 'zram0: not present\n'
@@ -467,12 +488,8 @@ doctor() {
     fi
 
     printf '\n== OOMD stack ==\n'
-    systemctl is-active systemd-oomd >/dev/null 2>&1 \
-        && printf 'systemd-oomd: active\n' \
-        || printf 'systemd-oomd: inactive\n'
-    systemctl is-active oomd >/dev/null 2>&1 \
-        && printf 'facebook oomd: active\n' \
-        || printf 'facebook oomd: inactive (install via rg-oomd-profile-install)\n'
+    unit_state systemd-oomd systemd-oomd inactive
+    unit_state oomd "facebook oomd" "inactive (install via rg-oomd-profile-install)"
 
     printf '\n== scheduler ladder ==\n'
     if [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
@@ -493,6 +510,8 @@ doctor() {
     printf '\n== DAMON reclaim ==\n'
     if [ -r /sys/module/damon_reclaim/parameters/enabled ]; then
         printf 'damon_reclaim: %s\n' "$(cat /sys/module/damon_reclaim/parameters/enabled)"
+    elif [ -e /sys/module/damon_reclaim/parameters/enabled ]; then
+        printf 'damon_reclaim: present (root-readable)\n'
     else
         printf 'damon_reclaim: module missing\n'
     fi
