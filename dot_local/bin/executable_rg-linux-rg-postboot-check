@@ -5,7 +5,7 @@ expected=${1:-7.0.12-arch1-1-rg}
 user_home=${RG_USER_HOME:-/home/rgoswami}
 root=${RG_LINUX_RG_POSTBOOT_ROOT:-}
 allow_nonroot=${RG_LINUX_RG_POSTBOOT_ALLOW_NONROOT:-0}
-command_path=${RG_LINUX_RG_POSTBOOT_COMMAND_PATH:-/usr/bin:/usr/local/bin:"$user_home/.local/bin":$PATH}
+command_path=${RG_LINUX_RG_POSTBOOT_COMMAND_PATH:-"$user_home/.local/bin":/usr/local/bin:/usr/bin:$PATH}
 failures=0
 
 if (( EUID != 0 )) && [[ $allow_nonroot != 1 ]]; then

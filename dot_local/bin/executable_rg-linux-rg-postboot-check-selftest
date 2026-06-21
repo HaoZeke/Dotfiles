@@ -13,6 +13,8 @@ fail() {
 }
 
 test -x "$script" || fail "missing executable postboot checker"
+rg -Fq 'command_path=${RG_LINUX_RG_POSTBOOT_COMMAND_PATH:-"$user_home/.local/bin":/usr/local/bin:/usr/bin:$PATH}' "$script" \
+    || fail "postboot checker must prefer synced user helpers before packaged helpers"
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT

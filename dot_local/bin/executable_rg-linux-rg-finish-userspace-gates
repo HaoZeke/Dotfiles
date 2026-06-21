@@ -113,6 +113,7 @@ verify_icon_alpha "$(target_path "$boot_icon")"
 
 printf '\n== sync managed helpers ==\n'
 install_user_helper "$chezmoi/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" "$root_setup"
+install_user_helper "$repo/rgx1gen11-live-check" "$user_home/.local/bin/rgx1gen11-live-check"
 for helper in \
     rg-memory-sysctl-check \
     rg-pipewire-rt-check \

@@ -35,6 +35,13 @@ base64 -d >"$fake_linux_rg/os_linux_rg.png" <<'EOF'
 iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAD/AP8A/6C9p5MAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjYtMDYtMjFUMjM6MDI6NDMrMDA6MDB0FloOAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI2LTA2LTIxVDIzOjAyOjQzKzAwOjAwBUvisgAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNi0wNi0yMVQyMzowMjo0MyswMDowMFJew20AAAALSURBVAjXY2AAAgAABQAB4iYFmwAAAABJRU5ErkJggg==
 EOF
 
+cat >"$fake_linux_rg/rgx1gen11-live-check" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'rgx1gen11-live-check %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$fake_linux_rg/rgx1gen11-live-check"
+
 for helper in \
     executable_rg-linux-rg-userspace-root-setup \
     executable_rg-memory-sysctl-check \
@@ -158,6 +165,8 @@ RG_FINISH_EUID=0 \
 
 test -x "$fake_home/.local/bin/rg-linux-rg-userspace-root-setup" \
     || fail "finish helper must install root setup into user bin"
+test -x "$fake_home/.local/bin/rgx1gen11-live-check" \
+    || fail "finish helper must install live-check into user bin"
 test -x "$fake_home/.local/bin/rg-memory-sysctl-check" \
     || fail "finish helper must install memory checker into user bin"
 test -x "$fake_home/.local/bin/rg-pipewire-rt-check" \
