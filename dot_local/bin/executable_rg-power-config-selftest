@@ -49,6 +49,8 @@ rg -q 'b751' "$laptop_script" \
     || fail "UVC autosuspend rule must target the integrated camera product id"
 rg -q 'power/control' "$laptop_script" \
     || fail "UVC autosuspend rule must set USB runtime PM"
+rg -q 'CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power' "$laptop_script" \
+    || fail "TLP battery EPP must match the undocked-mixed profile"
 rg -q 'iwd.service' "$laptop_script" \
     || fail "iwd service is not managed"
 rg -q 'disable --now NetworkManager.service NetworkManager-dispatcher.service' "$laptop_script" \
