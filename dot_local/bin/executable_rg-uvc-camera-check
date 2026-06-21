@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-uvc-camera-check).
+
+set -euo pipefail
+
+sysfs_root=${RG_UVC_SYSFS_ROOT:-/sys}
+vendor=${RG_UVC_VENDOR:-04f2}
+product=${RG_UVC_PRODUCT:-b751}
+check=${1:-}
+failures=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-uvc-camera-check [--check]
+
+Verifies the rgx1gen11 integrated Chicony UVC camera policy:
+device presence, uvcvideo module availability, and USB runtime PM autosuspend.
+USAGE
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+read_value() {
+    local path=$1
+    [ -r "$path" ] || return 1
+    tr -d '\n' <"$path"
+}
+
+find_camera_device() {
+    local dev id_vendor id_product
+    for dev in "$sysfs_root"/bus/usb/devices/*; do
+        [ -d "$dev" ] || continue
+        id_vendor=$(read_value "$dev/idVendor" 2>/dev/null || true)
+        id_product=$(read_value "$dev/idProduct" 2>/dev/null || true)
+        if [[ $id_vendor == "$vendor" && $id_product == "$product" ]]; then
+            printf '%s\n' "$dev"
+            return 0
+        fi
+    done
+    return 1
+}
+
+case "$check" in
+"" | --check) ;;
+-h | --help)
+    usage
+    exit 0
+    ;;
+*)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+camera=$(find_camera_device || true)
+if [ -n "$camera" ]; then
+    pass "Chicony UVC camera $vendor:$product present at ${camera#"$sysfs_root"/}"
+else
+    fail "Chicony UVC camera $vendor:$product not found"
+fi
+
+if [ -d "$sysfs_root/module/uvcvideo" ]; then
+    pass "uvcvideo module present"
+else
+    fail "uvcvideo module missing"
+fi
+
+if [ -n "$camera" ]; then
+    control_path="$camera/power/control"
+    if control=$(read_value "$control_path"); then
+        if [ "$control" = auto ]; then
+            pass "USB runtime PM control is auto"
+        else
+            fail "USB runtime PM control live=$control expected=auto"
+        fi
+    else
+        fail "USB runtime PM control unreadable at ${control_path#"$sysfs_root"/}"
+    fi
+
+    delay_path="$camera/power/autosuspend_delay_ms"
+    if delay=$(read_value "$delay_path"); then
+        if [[ $delay =~ ^-?[0-9]+$ ]] && (( delay <= 2000 )); then
+            pass "USB autosuspend delay is $delay ms"
+        else
+            fail "USB autosuspend delay live=$delay expected<=2000"
+        fi
+    else
+        fail "USB autosuspend delay unreadable at ${delay_path#"$sysfs_root"/}"
+    fi
+fi
+
+if (( failures > 0 )); then
+    printf 'uvc camera policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf 'uvc camera policy: ok\n'

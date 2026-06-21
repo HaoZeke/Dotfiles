@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-uvc-camera-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-uvc-camera-check"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing UVC camera checker"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+sys="$tmpdir/sys"
+
+mkdir -p "$sys/bus/usb/devices/1-5/power" "$sys/module/uvcvideo"
+printf '04f2\n' >"$sys/bus/usb/devices/1-5/idVendor"
+printf 'b751\n' >"$sys/bus/usb/devices/1-5/idProduct"
+printf 'auto\n' >"$sys/bus/usb/devices/1-5/power/control"
+printf '2000\n' >"$sys/bus/usb/devices/1-5/power/autosuspend_delay_ms"
+
+RG_UVC_SYSFS_ROOT="$sys" "$script" --check >"$tmpdir/ok.out" 2>&1 \
+    || fail "matching fake UVC policy should pass"
+rg -q 'ok: Chicony UVC camera 04f2:b751 present' "$tmpdir/ok.out" \
+    || fail "checker must identify the integrated Chicony camera"
+rg -q 'ok: uvcvideo module present' "$tmpdir/ok.out" \
+    || fail "checker must report the uvcvideo module"
+rg -q 'ok: USB runtime PM control is auto' "$tmpdir/ok.out" \
+    || fail "checker must verify autosuspend runtime PM"
+rg -q 'uvc camera policy: ok' "$tmpdir/ok.out" \
+    || fail "checker must print a success summary"
+
+printf 'on\n' >"$sys/bus/usb/devices/1-5/power/control"
+if RG_UVC_SYSFS_ROOT="$sys" "$script" --check >"$tmpdir/drift.out" 2>&1; then
+    fail "checker must fail when camera runtime PM is forced on"
+fi
+rg -q 'fail: USB runtime PM control live=on expected=auto' "$tmpdir/drift.out" \
+    || fail "checker must report runtime PM drift"
+
+rm -f "$sys/bus/usb/devices/1-5/idProduct"
+if RG_UVC_SYSFS_ROOT="$sys" "$script" --check >"$tmpdir/missing.out" 2>&1; then
+    fail "checker must fail when the integrated camera is missing"
+fi
+rg -q 'fail: Chicony UVC camera 04f2:b751 not found' "$tmpdir/missing.out" \
+    || fail "checker must report a missing integrated camera"
+
+printf 'ok\n'

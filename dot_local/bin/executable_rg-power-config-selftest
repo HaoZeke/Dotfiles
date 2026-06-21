@@ -41,6 +41,14 @@ rg -q '99-wlan0-unmanaged.conf' "$laptop_script" \
     || fail "NetworkManager wlan0 unmanaged drop-in is missing"
 rg -q 'unmanaged-devices=interface-name:wlan0' "$laptop_script" \
     || fail "NetworkManager is not configured to leave wlan0 to iwd"
+rg -q '70-rg-uvc-autosuspend.rules' "$laptop_script" \
+    || fail "UVC autosuspend udev rule is missing"
+rg -q '04f2' "$laptop_script" \
+    || fail "UVC autosuspend rule must target the Chicony vendor id"
+rg -q 'b751' "$laptop_script" \
+    || fail "UVC autosuspend rule must target the integrated camera product id"
+rg -q 'power/control' "$laptop_script" \
+    || fail "UVC autosuspend rule must set USB runtime PM"
 rg -q 'iwd.service' "$laptop_script" \
     || fail "iwd service is not managed"
 rg -q 'disable --now NetworkManager.service NetworkManager-dispatcher.service' "$laptop_script" \

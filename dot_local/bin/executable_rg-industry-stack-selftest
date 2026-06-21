@@ -28,6 +28,8 @@ for path in \
     "$repo/dot_local/bin/executable_rg-bench-matrix" \
     "$repo/dot_local/bin/executable_rg-wide-net-collect" \
     "$repo/dot_local/bin/executable_rg-nvme-apst" \
+    "$repo/dot_local/bin/executable_rg-uvc-camera-check" \
+    "$repo/dot_local/bin/executable_rg-uvc-camera-check-selftest" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
@@ -75,6 +77,10 @@ rg -q 'cpu_capacity' "$repo/dot_local/bin/executable_rg-hfi-status" \
     || fail "hfi status must read cpu_capacity"
 rg -q 'nvme id-ctrl' "$repo/dot_local/bin/executable_rg-nvme-apst" \
     || fail "nvme apst helper must use nvme-cli"
+rg -q 'RG_UVC_VENDOR:-04f2' "$repo/dot_local/bin/executable_rg-uvc-camera-check" \
+    || fail "uvc camera checker must target the Chicony vendor id"
+rg -q 'RG_UVC_PRODUCT:-b751' "$repo/dot_local/bin/executable_rg-uvc-camera-check" \
+    || fail "uvc camera checker must target the integrated camera product id"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \
