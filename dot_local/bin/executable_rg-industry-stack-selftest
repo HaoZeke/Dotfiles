@@ -32,18 +32,22 @@ for path in \
     "$repo/dot_local/bin/executable_rg-uvc-camera-check-selftest" \
     "$repo/dot_local/bin/executable_rg-thermal-stack-check" \
     "$repo/dot_local/bin/executable_rg-thermal-stack-check-selftest" \
+    "$repo/dot_local/bin/executable_rg-pipewire-rt-check" \
+    "$repo/dot_local/bin/executable_rg-pipewire-rt-check-selftest" \
     "$repo/dot_local/bin/executable_rg-hfi-status" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup-selftest" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check" \
     "$repo/dot_local/bin/executable_rg-linux-rg-postboot-check-selftest" \
     "$repo/dot_config/systemd/user/rg-sched@.service" \
+    "$repo/dot_config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
     "$repo/dot_local/bin/executable_rg-psi-snapshot" \
     "$repo/dot_local/bin/executable_rg-memory-sysctl-check" \
     "$repo/dot_local/bin/executable_rg-memory-sysctl-check-selftest" \
     "$repo/dot_local/bin/executable_rg-damon-reclaim" \
     "$repo/dot_local/bin/executable_rg-damon-reclaim-selftest" \
     "$repo/dot_local/bin/executable_browser-media-watchdog" \
+    "$repo/.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl" \
     "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl"; do
     test -r "$path" || fail "missing $path"
 done
@@ -87,6 +91,13 @@ rg -q 'thermald and TLP are both active' "$repo/dot_local/bin/executable_rg-ther
     || fail "thermal checker must reject unplanned TLP plus thermald ownership"
 rg -q 'platform_profile' "$repo/dot_local/bin/executable_rg-thermal-stack-check" \
     || fail "thermal checker must inspect platform_profile"
+rg -q 'module[.]rt[.]args' "$repo/dot_config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
+    || fail "PipeWire RT config must override module-rt args"
+rg -q '@audio[[:space:]]+-[[:space:]]+rtprio[[:space:]]+95' \
+    "$repo/.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl" \
+    || fail "PipeWire RT root setup must install @audio rtprio limits"
+rg -q 'sched_rt_runtime_us' "$repo/dot_local/bin/executable_rg-pipewire-rt-check" \
+    || fail "PipeWire RT checker must inspect RT bandwidth throttling"
 rg -q 'thermal' "$repo/dot_local/bin/executable_rg-bench-matrix" \
     || fail "bench matrix must include thermal snapshot"
 rg -q '/sys/module/damon_reclaim/parameters' "$repo/dot_local/bin/executable_rg-damon-reclaim" \

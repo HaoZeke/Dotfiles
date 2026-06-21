@@ -1,0 +1,57 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+#!/usr/bin/env bash
+# Configure bounded realtime privileges for PipeWire on rgx1gen11.
+
+set -euo pipefail
+
+write_if_diff() {
+    local dst="$1" content="$2"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m 0644 -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+RT_LIMITS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl)
+@audio - rtprio 95
+@audio - memlock unlimited
+@audio - nice -11
+'
+
+RT_SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl)
+# Keep global realtime CPU bandwidth throttling enabled so a runaway RT
+# workload cannot monopolize the laptop.
+kernel.sched_rt_runtime_us = 950000
+'
+
+if ! getent group audio >/dev/null 2>&1; then
+    sudo groupadd -r audio
+fi
+
+if ! id -nG "$USER" | grep -qw audio; then
+    sudo usermod -aG audio "$USER"
+    echo "chezmoi: added $USER to audio; start a new login session for PAM limits to apply."
+fi
+
+LIMITS_CHANGED=0
+SYSCTL_CHANGED=0
+write_if_diff /etc/security/limits.d/95-rg-audio-rt.conf "$RT_LIMITS_CONTENT" && LIMITS_CHANGED=1 || true
+write_if_diff /etc/sysctl.d/98-rg-realtime.conf "$RT_SYSCTL_CONTENT" && SYSCTL_CHANGED=1 || true
+
+if [ "$SYSCTL_CHANGED" = "1" ]; then
+    sudo sysctl -p /etc/sysctl.d/98-rg-realtime.conf >/dev/null
+fi
+
+if [ "$LIMITS_CHANGED" = "1" ]; then
+    echo "chezmoi: PipeWire realtime limits apply to newly started user sessions."
+fi
+
+systemctl --user daemon-reload 2>/dev/null || true
+{{- end }}

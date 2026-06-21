@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-pipewire-rt-check-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-pipewire-rt-check"
+pipewire_conf="$repo/dot_config/pipewire/pipewire.conf.d/10-rg-rt.conf"
+root_script="$repo/.chezmoiscripts/run_onchange_linux_audio_rt.sh.tmpl"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing PipeWire RT checker"
+test -r "$pipewire_conf" || fail "missing managed PipeWire RT config"
+test -r "$root_script" || fail "missing root audio RT deployment script"
+
+rg -q 'module.rt.args' "$pipewire_conf" \
+    || fail "PipeWire config must override module-rt args"
+rg -q 'rt.prio[[:space:]]*=[[:space:]]*88' "$pipewire_conf" \
+    || fail "PipeWire config must request rt.prio 88"
+rg -q 'rlimits.enabled[[:space:]]*=[[:space:]]*true' "$pipewire_conf" \
+    || fail "PipeWire config must enable rlimits"
+rg -q '@audio[[:space:]]+-[[:space:]]+rtprio[[:space:]]+95' "$root_script" \
+    || fail "root script must install @audio rtprio limit"
+rg -q 'usermod -aG audio' "$root_script" \
+    || fail "root script must enroll the user in the audio group"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+fake_root="$tmpdir/root"
+fake_home="$tmpdir/home"
+mkdir -p \
+    "$fake_root/etc/security/limits.d" \
+    "$fake_root/proc/sys/kernel" \
+    "$fake_home/.config/pipewire/pipewire.conf.d"
+
+cp "$pipewire_conf" "$fake_home/.config/pipewire/pipewire.conf.d/10-rg-rt.conf"
+cat >"$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" <<'LIMITS'
+@audio - rtprio 95
+@audio - memlock unlimited
+@audio - nice -11
+LIMITS
+printf '950000\n' >"$fake_root/proc/sys/kernel/sched_rt_runtime_us"
+
+HOME="$fake_home" \
+RG_PIPEWIRE_RT_CONF="$fake_home/.config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
+RG_PIPEWIRE_RT_LIMITS="$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
+RG_PIPEWIRE_RT_PROC_ROOT="$fake_root/proc/sys" \
+RG_PIPEWIRE_RT_GROUPS='rgoswami wheel audio' \
+    "$script" --check >"$tmpdir/ok.out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/ok.out" >&2
+    fail "complete fake PipeWire RT policy should pass"
+}
+rg -q 'ok: PipeWire module-rt override present' "$tmpdir/ok.out" \
+    || fail "checker must verify the module-rt override"
+rg -q 'ok: @audio realtime limits present' "$tmpdir/ok.out" \
+    || fail "checker must verify PAM realtime limits"
+rg -q 'ok: sched_rt_runtime_us bounds RT CPU time' "$tmpdir/ok.out" \
+    || fail "checker must verify bounded RT runtime"
+
+printf -- '-1\n' >"$fake_root/proc/sys/kernel/sched_rt_runtime_us"
+if HOME="$fake_home" \
+    RG_PIPEWIRE_RT_CONF="$fake_home/.config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
+    RG_PIPEWIRE_RT_LIMITS="$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
+    RG_PIPEWIRE_RT_PROC_ROOT="$fake_root/proc/sys" \
+    RG_PIPEWIRE_RT_GROUPS='rgoswami wheel audio' \
+        "$script" --check >"$tmpdir/unbounded.out" 2>&1; then
+    fail "checker must fail when RT bandwidth throttling is disabled"
+fi
+rg -q 'fail: sched_rt_runtime_us=-1 disables RT bandwidth throttling' "$tmpdir/unbounded.out" \
+    || fail "checker must report unbounded RT runtime"
+
+printf '950000\n' >"$fake_root/proc/sys/kernel/sched_rt_runtime_us"
+if HOME="$fake_home" \
+    RG_PIPEWIRE_RT_CONF="$fake_home/.config/pipewire/pipewire.conf.d/10-rg-rt.conf" \
+    RG_PIPEWIRE_RT_LIMITS="$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
+    RG_PIPEWIRE_RT_PROC_ROOT="$fake_root/proc/sys" \
+    RG_PIPEWIRE_RT_GROUPS='rgoswami wheel' \
+        "$script" --check >"$tmpdir/group.out" 2>&1; then
+    fail "checker must fail when the user is missing the audio group"
+fi
+rg -q 'fail: user is not in audio group' "$tmpdir/group.out" \
+    || fail "checker must report missing audio group membership"
+
+printf 'ok\n'

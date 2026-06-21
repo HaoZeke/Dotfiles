@@ -128,6 +128,7 @@ check 'live boot contract' rgx1gen11-boot-check --live --require-boot-log
 check 'live bundle' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rgx1gen11-live-check --with-userspace
 check 'memory sysctl policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-memory-sysctl-check
 check 'thermal stack policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-thermal-stack-check --check
+check 'PipeWire RT policy' env PATH="$command_path" HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-pipewire-rt-check --check
 
 printf '\n== scheduler and power userspace ==\n'
 command -v scx_loader || true

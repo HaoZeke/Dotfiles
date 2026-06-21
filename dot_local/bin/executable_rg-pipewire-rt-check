@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-pipewire-rt-check).
+
+set -euo pipefail
+
+rt_conf=${RG_PIPEWIRE_RT_CONF:-"$HOME/.config/pipewire/pipewire.conf.d/10-rg-rt.conf"}
+limits_conf=${RG_PIPEWIRE_RT_LIMITS:-/etc/security/limits.d/95-rg-audio-rt.conf}
+proc_root=${RG_PIPEWIRE_RT_PROC_ROOT:-/proc/sys}
+user_name=${RG_PIPEWIRE_RT_USER:-$(id -un 2>/dev/null || printf rgoswami)}
+check=0
+failures=0
+
+usage() {
+    cat <<'USAGE'
+usage: rg-pipewire-rt-check [--check]
+
+Validate the PipeWire module-rt policy, PAM realtime limits, audio group
+membership, and bounded kernel realtime CPU runtime.
+USAGE
+}
+
+pass() {
+    printf 'ok: %s\n' "$*"
+}
+
+warn() {
+    printf 'warn: %s\n' "$*" >&2
+}
+
+fail() {
+    printf 'fail: %s\n' "$*" >&2
+    failures=$((failures + 1))
+}
+
+require_pattern() {
+    local label=$1 pattern=$2 file=$3
+    if rg -q "$pattern" "$file"; then
+        return 0
+    fi
+    fail "$label missing in $file"
+}
+
+limit_value() {
+    local field=$1
+    awk -v field="$field" '
+        /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+        $1 == "@audio" && $2 == "-" && $3 == field { value = $4 }
+        END {
+            if (value == "") {
+                exit 1
+            }
+            print value
+        }
+    ' "$limits_conf"
+}
+
+groups_for_user() {
+    if [[ -n ${RG_PIPEWIRE_RT_GROUPS:-} ]]; then
+        printf '%s\n' "$RG_PIPEWIRE_RT_GROUPS"
+    else
+        id -nG "$user_name" 2>/dev/null || true
+    fi
+}
+
+systemctl_user_state() {
+    local unit=$1 out
+    if out=$(systemctl --user is-active "$unit" 2>&1); then
+        printf '%s\n' "$out"
+        return 0
+    fi
+    case "$out" in
+    *"Operation not permitted"* | *"Failed to connect"*)
+        printf 'unknown\n'
+        return 2
+        ;;
+    *)
+        printf '%s\n' "$out"
+        return 1
+        ;;
+    esac
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --check)
+        check=1
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+printf '== PipeWire module-rt config ==\n'
+if [[ -r $rt_conf ]]; then
+    require_pattern "module.rt.args" 'module[.]rt[.]args' "$rt_conf"
+    require_pattern "nice.level=-11" 'nice[.]level[[:space:]]*=[[:space:]]*-11' "$rt_conf"
+    require_pattern "rt.prio=88" 'rt[.]prio[[:space:]]*=[[:space:]]*88' "$rt_conf"
+    require_pattern "rlimits.enabled=true" 'rlimits[.]enabled[[:space:]]*=[[:space:]]*true' "$rt_conf"
+    require_pattern "rtkit.enabled=true" 'rtkit[.]enabled[[:space:]]*=[[:space:]]*true' "$rt_conf"
+    require_pattern "rtportal.enabled=true" 'rtportal[.]enabled[[:space:]]*=[[:space:]]*true' "$rt_conf"
+    if (( failures == 0 )); then
+        pass "PipeWire module-rt override present"
+    fi
+else
+    fail "missing PipeWire RT config $rt_conf"
+fi
+
+printf '\n== realtime limits ==\n'
+if [[ -r $limits_conf ]]; then
+    rtprio=$(limit_value rtprio || true)
+    memlock=$(limit_value memlock || true)
+    nice=$(limit_value nice || true)
+    if [[ $rtprio =~ ^[0-9]+$ && $rtprio -ge 88 ]] \
+        && [[ $memlock == unlimited ]] \
+        && [[ $nice =~ ^-?[0-9]+$ && $nice -le -11 ]]; then
+        pass "@audio realtime limits present"
+    else
+        fail "@audio realtime limits invalid: rtprio=${rtprio:-missing} memlock=${memlock:-missing} nice=${nice:-missing}"
+    fi
+else
+    fail "missing realtime limits $limits_conf"
+fi
+
+printf '\n== user group ==\n'
+groups=$(groups_for_user)
+printf 'user: %s\n' "$user_name"
+printf 'groups: %s\n' "${groups:-unavailable}"
+if printf '%s\n' "$groups" | grep -qw audio; then
+    pass "user is in audio group"
+else
+    fail "user is not in audio group"
+fi
+
+printf '\n== kernel RT throttle ==\n'
+runtime_path="$proc_root/kernel/sched_rt_runtime_us"
+if [[ -r $runtime_path ]]; then
+    runtime=$(tr -d '[:space:]' <"$runtime_path")
+    printf 'sched_rt_runtime_us: %s\n' "$runtime"
+    if [[ $runtime == -1 ]]; then
+        fail "sched_rt_runtime_us=-1 disables RT bandwidth throttling"
+    elif [[ $runtime =~ ^[0-9]+$ && $runtime -gt 0 ]]; then
+        pass "sched_rt_runtime_us bounds RT CPU time"
+    else
+        fail "sched_rt_runtime_us=$runtime is not a positive bounded runtime"
+    fi
+else
+    fail "missing $runtime_path"
+fi
+
+printf '\n== user services ==\n'
+for unit in pipewire.service pipewire-pulse.service wireplumber.service; do
+    state=$(systemctl_user_state "$unit" || true)
+    printf '%s: %s\n' "$unit" "$state"
+    if [[ $state == unknown ]]; then
+        warn "$unit state unavailable from this session"
+    elif [[ $state == active ]]; then
+        pass "$unit active"
+    else
+        warn "$unit is not active"
+    fi
+done
+
+printf '\n== pulse compatibility ==\n'
+if pactl info >/tmp/rg-pipewire-rt-pactl.out 2>/tmp/rg-pipewire-rt-pactl.err; then
+    sed -n '1,20p' /tmp/rg-pipewire-rt-pactl.out
+    if rg -q 'Server Name: PulseAudio \\(on PipeWire' /tmp/rg-pipewire-rt-pactl.out; then
+        pass "PulseAudio compatibility is backed by PipeWire"
+    else
+        warn "pactl did not report PipeWire as the PulseAudio backend"
+    fi
+else
+    warn "pactl info unavailable"
+fi
+
+if (( check == 1 && failures > 0 )); then
+    printf '\nPipeWire RT policy failed: %d issue(s)\n' "$failures" >&2
+    exit 1
+fi
+
+printf '\nPipeWire RT policy: ok\n'
