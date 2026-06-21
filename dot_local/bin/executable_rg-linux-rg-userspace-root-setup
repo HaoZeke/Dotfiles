@@ -78,6 +78,7 @@ sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cl
 
 if command -v rg-x1gen11-profile >/dev/null 2>&1; then
   HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile apply undocked-mixed
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor --check
 fi
 
 printf '\n== rebuild initramfs ==\n'
