@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+expected=${1:-7.0.12-arch1-1-rg}
+user_home=${RG_USER_HOME:-/home/rgoswami}
+failures=0
+
+if (( EUID != 0 )); then
+  printf 'error: run as root\n' >&2
+  exit 1
+fi
+
+check() {
+  local label=$1
+  shift
+  printf '\n== %s ==\n' "$label"
+  if ! "$@"; then
+    failures=$((failures + 1))
+  fi
+}
+
+printf '== kernel identity ==\n'
+uname -a
+if [[ $(uname -r) != "$expected" ]]; then
+  printf 'fail: running kernel is %s, expected %s\n' "$(uname -r)" "$expected" >&2
+  failures=$((failures + 1))
+fi
+
+printf '\n== disk ==\n'
+df -h / /boot /tmp || true
+
+printf '\n== ownership sample ==\n'
+stat -c '%U:%G %a %s %n' \
+  /usr/bin/rgx1gen11-boot-check \
+  /usr/bin/rgx1gen11-dkms-overlay-apply \
+  /usr/bin/linux-rg-module-symvers \
+  "/usr/lib/modules/$expected/build/Module.symvers" \
+  /boot/vmlinuz-linux-rg \
+  /boot/initramfs-linux-rg.img
+
+printf '\n== symvers required exports ==\n'
+rg -n 'cfg80211_del_sta_sinfo|cfg80211_ch_switch_notify|video_ioctl2|v4l2_fh_exit' \
+  "/usr/lib/modules/$expected/build/Module.symvers"
+
+printf '\n== module probes ==\n'
+modinfo -k "$expected" v4l2loopback | sed -n '1,18p'
+modinfo -k "$expected" 88XXau | sed -n '1,18p'
+
+printf '\n== dkms status ==\n'
+dkms status -k "$expected" || true
+for spec in \
+  'ddcci/0.4.5' \
+  'evdi/1.14.7' \
+  'rtl88xxau/r1298.b44d288' \
+  'vboxhost/7.2.8_OSE' \
+  'acpi_call/1.2.2'; do
+  if ! dkms status -m "${spec%/*}" -v "${spec#*/}" -k "$expected" | rg -q 'installed'; then
+    printf 'fail: DKMS module not installed for %s: %s\n' "$expected" "$spec" >&2
+    failures=$((failures + 1))
+  fi
+done
+
+printf '\n== in-tree v4l2loopback ==\n'
+if ! modinfo -k "$expected" v4l2loopback | rg -q '^intree:[[:space:]]+Y$'; then
+  printf 'fail: v4l2loopback is not the in-tree linux-rg module\n' >&2
+  failures=$((failures + 1))
+fi
+
+check 'installed boot contract' rgx1gen11-boot-check --installed
+check 'live boot contract' rgx1gen11-boot-check --live --require-boot-log
+check 'live bundle' env PATH=/usr/bin:/usr/local/bin:"$user_home/.local/bin":$PATH HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rgx1gen11-live-check --with-userspace
+
+printf '\n== scheduler and power userspace ==\n'
+command -v scx_loader || true
+command -v scx_p2dq || true
+command -v scx_rusty || true
+HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor || true
+
+printf '\n== thermal snapshot ==\n'
+for path in /sys/class/thermal/thermal_zone*/temp; do
+  [[ -r $path ]] || continue
+  zone=${path%/temp}
+  type=$(cat "$zone/type" 2>/dev/null || printf unknown)
+  temp=$(cat "$path" 2>/dev/null || printf 0)
+  printf '%s %s.%03d C\n' "$type" "$((temp / 1000))" "$((temp % 1000))"
+done
+
+if (( failures > 0 )); then
+  printf '\nlinux-rg postboot check failed: %d issue(s)\n' "$failures" >&2
+  exit 1
+fi
+
+printf '\nlinux-rg postboot check passed for %s\n' "$expected"

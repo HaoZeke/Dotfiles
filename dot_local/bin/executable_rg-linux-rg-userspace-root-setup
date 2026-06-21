@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+kver=${1:-7.0.12-arch1-1-rg}
+repo=${RG_LINUX_RG_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
+user_home=${RG_USER_HOME:-/home/rgoswami}
+jobs=${RG_DKMS_JOBS:-}
+
+if (( EUID != 0 )); then
+  printf 'error: run as root\n' >&2
+  exit 1
+fi
+
+if [[ -z $jobs ]]; then
+  jobs=$(nproc)
+  jobs=$((jobs * 80 / 100))
+  (( jobs >= 1 )) || jobs=1
+fi
+
+require_file() {
+  local path=$1
+  [[ -e $path ]] || {
+    printf 'error: missing %s\n' "$path" >&2
+    exit 1
+  }
+}
+
+install_exec() {
+  local src=$1 dst=$2
+  require_file "$src"
+  install -D -o root -g root -m 0755 "$src" "$dst"
+  printf 'installed: %s\n' "$dst"
+}
+
+install_data() {
+  local src=$1 dst=$2
+  require_file "$src"
+  install -D -o root -g root -m 0644 "$src" "$dst"
+  printf 'installed: %s\n' "$dst"
+}
+
+printf '== sync linux-rg helpers ==\n'
+install_exec "$repo/rgx1gen11-dkms-overlay-apply" /usr/bin/rgx1gen11-dkms-overlay-apply
+install_exec "$repo/linux-rg-module-symvers" /usr/bin/linux-rg-module-symvers
+install_exec "$repo/rgx1gen11-boot-check" /usr/bin/rgx1gen11-boot-check
+install_exec "$repo/rgx1gen11-live-check" /usr/bin/rgx1gen11-live-check
+install_exec "$repo/rgx1gen11-sof-check" /usr/bin/rgx1gen11-sof-check
+install_exec "$repo/rgx1gen11-memory-check" /usr/bin/rgx1gen11-memory-check
+install_exec "$repo/rgx1gen11-nvme-check" /usr/bin/rgx1gen11-nvme-check
+install_exec "$repo/rgx1gen11-idle-check" /usr/bin/rgx1gen11-idle-check
+install_exec "$repo/rgx1gen11-s0ix-preflight" /usr/bin/rgx1gen11-s0ix-preflight
+install_exec "$repo/rgx1gen11-hibernate-check" /usr/bin/rgx1gen11-hibernate-check
+install_exec "$repo/rgx1gen11-hibernate-image-size" /usr/bin/rgx1gen11-hibernate-image-size
+install_data "$repo/rgx1gen11-hibernate-image-size.service" /usr/lib/systemd/system/rgx1gen11-hibernate-image-size.service
+install_data "$repo/69-linux-rg-dkms-overlays.hook" /usr/share/libalpm/hooks/69-linux-rg-dkms-overlays.hook
+install_data "$repo/dkms-overlays/ddcci-0.4.5-linux-7.0.patch" /usr/share/linux-rg/dkms-overlays/ddcci-0.4.5-linux-7.0.patch
+install_data "$repo/dkms-overlays/evdi-1.14.7-linux-7.0.patch" /usr/share/linux-rg/dkms-overlays/evdi-1.14.7-linux-7.0.patch
+install_data "$repo/dkms-overlays/rtl88xxau-r1298-linux-7.0.patch" /usr/share/linux-rg/dkms-overlays/rtl88xxau-r1298-linux-7.0.patch
+
+printf '\n== before dkms repair ==\n'
+dkms status -k "$kver" || true
+printf '\nModule.symvers required exports before repair:\n'
+rg -n 'cfg80211_del_sta_sinfo|cfg80211_ch_switch_notify|video_ioctl2|v4l2_fh_exit' \
+  "/usr/lib/modules/$kver/build/Module.symvers" || true
+
+printf '\n== repair dkms overlays ==\n'
+RG_DKMS_JOBS=$jobs /usr/bin/rgx1gen11-dkms-overlay-apply "$kver"
+
+printf '\n== module probes ==\n'
+modinfo -k "$kver" v4l2loopback | sed -n '1,16p'
+modinfo -k "$kver" 88XXau | sed -n '1,16p'
+
+printf '\n== userspace policy ==\n'
+systemctl daemon-reload
+systemctl enable --now rgx1gen11-hibernate-image-size.service
+systemctl enable --now systemd-oomd.service
+sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
+
+if command -v rg-x1gen11-profile >/dev/null 2>&1; then
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile apply undocked-mixed
+fi
+
+printf '\n== rebuild initramfs ==\n'
+mkinitcpio -p linux-rg
+
+printf '\n== live checks ==\n'
+PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
+  rgx1gen11-live-check --with-userspace
+
+printf '\n== final dkms status ==\n'
+dkms status -k "$kver" || true
