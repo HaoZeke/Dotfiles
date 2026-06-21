@@ -5,6 +5,7 @@ kver=${1:-7.0.12-arch1-1-rg}
 repo=${RG_LINUX_RG_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
 user_home=${RG_USER_HOME:-/home/rgoswami}
 jobs=${RG_DKMS_JOBS:-}
+profile_root_helper=/usr/local/sbin/rg-x1gen11-profile-root
 
 if (( EUID != 0 )); then
   printf 'error: run as root\n' >&2
@@ -37,6 +38,25 @@ install_data() {
   require_file "$src"
   install -D -o root -g root -m 0644 "$src" "$dst"
   printf 'installed: %s\n' "$dst"
+}
+
+find_profile_bin() {
+  local candidate=${RG_X1GEN11_PROFILE_BIN:-$user_home/.local/bin/rg-x1gen11-profile}
+  if [[ -x $candidate ]]; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+  command -v rg-x1gen11-profile
+}
+
+sync_profile_root_helper() {
+  local profile_bin=$1 tmp
+  tmp=$(mktemp)
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
+    "$profile_bin" root-helper-script "$tmp" >/dev/null
+  bash -n "$tmp"
+  install_exec "$tmp" "$profile_root_helper"
+  rm -f "$tmp"
 }
 
 printf '== sync linux-rg helpers ==\n'
@@ -76,9 +96,10 @@ systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
 sysctl --system | rg -n '99-memory|dirty|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 
-if command -v rg-x1gen11-profile >/dev/null 2>&1; then
-  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile apply undocked-mixed
-  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config rg-x1gen11-profile doctor --check
+if profile_bin=$(find_profile_bin); then
+  sync_profile_root_helper "$profile_bin"
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config "$profile_bin" apply undocked-mixed
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config "$profile_bin" doctor --check
 fi
 
 printf '\n== rebuild initramfs ==\n'

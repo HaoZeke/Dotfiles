@@ -51,6 +51,19 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 mkdir -p "$tmpdir/bin" "$tmpdir/home/.local/bin" "$tmpdir/root"
 
+RG_X1GEN11_PROFILES="$profiles" "$script" root-helper-script "$tmpdir/root-helper" >/dev/null \
+    || fail "root-helper-script command must write a generic root helper"
+bash -n "$tmpdir/root-helper" \
+    || fail "generic root helper must be valid shell"
+rg -q 'PROFILES_JSON=' "$tmpdir/root-helper" \
+    || fail "generic root helper must load profile JSON"
+rg -q 'json.load' "$tmpdir/root-helper" \
+    || fail "generic root helper must parse profile JSON"
+if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|memory-pressure|travel|docked-office)[)]' \
+    "$tmpdir/root-helper"; then
+    fail "generic root helper must not duplicate per-profile policy blocks"
+fi
+
 cat >"$tmpdir/bin/fake-sudo" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
