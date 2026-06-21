@@ -75,6 +75,48 @@ platform_profile_path() {
     return 1
 }
 
+tlp_config_value() {
+    local key=$1 path line value found=0
+    local paths=()
+    paths+=("$(host_path /etc/tlp.conf)")
+    if [[ -d $(host_path /etc/tlp.d) ]]; then
+        while IFS= read -r -d '' path; do
+            paths+=("$path")
+        done < <(find "$(host_path /etc/tlp.d)" -maxdepth 1 -type f -name '*.conf' -print0 | sort -z)
+    fi
+
+    for path in "${paths[@]}"; do
+        [[ -r $path ]] || continue
+        while IFS= read -r line; do
+            line=${line%%#*}
+            if [[ $line =~ ^[[:space:]]*$key[[:space:]]*=[[:space:]]*([^[:space:]]+) ]]; then
+                value=${BASH_REMATCH[1]}
+                found=1
+            fi
+        done <"$path"
+    done
+
+    if (( found == 1 )); then
+        printf '%s\n' "$value"
+        return 0
+    fi
+    return 1
+}
+
+check_tlp_config_key() {
+    local key=$1 expected=$2 live
+    if live=$(tlp_config_value "$key"); then
+        printf '%s=%s\n' "$key" "$live"
+        if [[ $live == "$expected" ]]; then
+            pass "TLP $key matches daily baseline"
+        else
+            fail "TLP $key live=$live expected=$expected"
+        fi
+    else
+        fail "TLP $key missing from readable config"
+    fi
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
     --check)
@@ -139,6 +181,18 @@ for path in /proc/acpi/ibm/thermal /proc/acpi/ibm/fan; do
         printf '%s: unavailable\n' "$path"
     fi
 done
+
+printf '\n== TLP profile config ==\n'
+check_tlp_config_key CPU_SCALING_GOVERNOR_ON_AC powersave
+check_tlp_config_key CPU_SCALING_GOVERNOR_ON_BAT powersave
+check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_AC balance_power
+check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_BAT balance_power
+check_tlp_config_key CPU_BOOST_ON_AC 0
+check_tlp_config_key CPU_BOOST_ON_BAT 0
+check_tlp_config_key CPU_HWP_DYN_BOOST_ON_AC 0
+check_tlp_config_key CPU_HWP_DYN_BOOST_ON_BAT 0
+check_tlp_config_key PLATFORM_PROFILE_ON_AC low-power
+check_tlp_config_key PLATFORM_PROFILE_ON_BAT low-power
 
 printf '\n== service ownership ==\n'
 tlp_active=$(systemctl_state is-active tlp.service || true)

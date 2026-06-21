@@ -20,6 +20,7 @@ fake_bin="$tmpdir/bin"
 
 mkdir -p \
     "$fake_bin" \
+    "$fake_root/etc/tlp.d" \
     "$fake_root/sys/firmware/acpi" \
     "$fake_root/sys/class/thermal/thermal_zone0" \
     "$fake_root/proc/acpi/ibm"
@@ -30,6 +31,18 @@ printf 'x86_pkg_temp\n' >"$fake_root/sys/class/thermal/thermal_zone0/type"
 printf '42000\n' >"$fake_root/sys/class/thermal/thermal_zone0/temp"
 printf 'temperatures:\t42 41 40\n' >"$fake_root/proc/acpi/ibm/thermal"
 printf 'status:\t\tenabled\nspeed:\t\t2300\n' >"$fake_root/proc/acpi/ibm/fan"
+cat >"$fake_root/etc/tlp.d/00-base.conf" <<'TLP'
+CPU_SCALING_GOVERNOR_ON_AC=powersave
+CPU_SCALING_GOVERNOR_ON_BAT=powersave
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power
+CPU_BOOST_ON_AC=0
+CPU_BOOST_ON_BAT=0
+CPU_HWP_DYN_BOOST_ON_AC=0
+CPU_HWP_DYN_BOOST_ON_BAT=0
+PLATFORM_PROFILE_ON_AC=low-power
+PLATFORM_PROFILE_ON_BAT=low-power
+TLP
 
 cat >"$fake_bin/systemctl" <<'SH'
 #!/usr/bin/env bash
@@ -57,6 +70,18 @@ rg -q 'ok: TLP owns laptop power policy' "$tmpdir/ok.out" \
     || fail "checker must assert TLP ownership"
 rg -q 'ok: thermald inactive; DPTF/platform_profile/TLP remain primary' "$tmpdir/ok.out" \
     || fail "checker must document thermald as inactive under TLP"
+
+sed -i 's/^PLATFORM_PROFILE_ON_AC=.*/PLATFORM_PROFILE_ON_AC=balanced/' \
+    "$fake_root/etc/tlp.d/00-base.conf"
+if PATH="$fake_bin:$PATH" RG_THERMAL_ROOT="$fake_root" "$script" --check \
+    >"$tmpdir/tlp-drift.out" 2>&1; then
+    fail "TLP platform profile drift should fail"
+fi
+rg -q 'fail: TLP PLATFORM_PROFILE_ON_AC live=balanced expected=low-power' \
+    "$tmpdir/tlp-drift.out" \
+    || fail "checker must report TLP platform profile drift"
+sed -i 's/^PLATFORM_PROFILE_ON_AC=.*/PLATFORM_PROFILE_ON_AC=low-power/' \
+    "$fake_root/etc/tlp.d/00-base.conf"
 
 cat >"$fake_bin/systemctl" <<'SH'
 #!/usr/bin/env bash
