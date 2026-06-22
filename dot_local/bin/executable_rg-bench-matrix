@@ -450,6 +450,48 @@ cmd_run_all() {
     cmd_report "$run_dir"
 }
 
+report_sched_workloads() {
+    local run_dir="$1"
+    local logs=()
+    mapfile -t logs < <(find "$run_dir" -maxdepth 1 -type f -name 'sched-workload-*.log' | sort)
+    if [ "${#logs[@]}" -eq 0 ]; then
+        return 0
+    fi
+    printf '\nsched workload summary:\n'
+    printf 'scheduler\telapsed_s\tstatus\tmaxrss_kb\tlog\n'
+    local log_file
+    for log_file in "${logs[@]}"; do
+        awk -v file="$log_file" '
+            /^scheduler=/ {
+                sched = substr($0, 11)
+            }
+            /^elapsed=/ {
+                for (i = 1; i <= NF; i++) {
+                    if ($i ~ /^elapsed=/) {
+                        elapsed = substr($i, 9)
+                    } else if ($i ~ /^maxrss_kb=/) {
+                        maxrss = substr($i, 11)
+                    }
+                }
+            }
+            /^workload_status=/ {
+                status = substr($0, 17)
+            }
+            END {
+                if (sched == "") {
+                    sub(/^.*sched-workload-/, "", file)
+                    sub(/\.log$/, "", file)
+                    sched = file
+                }
+                if (elapsed == "") elapsed = "na"
+                if (status == "") status = "na"
+                if (maxrss == "") maxrss = "na"
+                print sched "\t" elapsed "\t" status "\t" maxrss "\t" file
+            }
+        ' "$log_file"
+    done | column -t -s $'\t' 2>/dev/null || true
+}
+
 cmd_report() {
     local run_dir
     run_dir=$(resolve_run "${1:-}")
@@ -462,6 +504,7 @@ cmd_report() {
     else
         printf 'no results.tsv\n'
     fi
+    report_sched_workloads "$run_dir"
 }
 
 main() {
