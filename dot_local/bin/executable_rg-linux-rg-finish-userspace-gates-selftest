@@ -51,6 +51,7 @@ cp "$fake_linux_rg/rgx1gen11-live-check" "$bad_linux_rg/rgx1gen11-live-check"
 
 for helper in \
     executable_rg-linux-rg-userspace-root-setup \
+    executable_rg-linux-rg-cool-sync \
     executable_rg-memory-sysctl-check \
     executable_rg-pipewire-rt-check \
     executable_rg-oomd-policy-check \
@@ -185,6 +186,8 @@ RG_FINISH_EUID=0 \
 
 test -x "$fake_home/.local/bin/rg-linux-rg-userspace-root-setup" \
     || fail "finish helper must install root setup into user bin"
+test -x "$fake_home/.local/bin/rg-linux-rg-cool-sync" \
+    || fail "finish helper must install cool-sync into user bin"
 test -x "$fake_home/.local/bin/rgx1gen11-live-check" \
     || fail "finish helper must install live-check into user bin"
 test -x "$fake_home/.local/bin/rg-memory-sysctl-check" \

@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-cool-sync-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-linux-rg-cool-sync"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || fail "missing cool-sync helper"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+fake_home="$tmpdir/home"
+fake_root="$tmpdir/root"
+fake_linux_rg="$tmpdir/linux-rg"
+fake_chezmoi="$tmpdir/chezmoi"
+log="$tmpdir/commands.log"
+mkdir -p "$fake_home/.local/bin" "$fake_root" "$fake_linux_rg" "$fake_chezmoi/dot_local/bin" "$tmpdir/bin"
+cp "$script" "$fake_chezmoi/dot_local/bin/executable_rg-linux-rg-cool-sync"
+chmod +x "$fake_chezmoi/dot_local/bin/executable_rg-linux-rg-cool-sync"
+
+for helper in \
+    rg-linux-rg-userspace-root-setup \
+    rg-linux-rg-postboot-check \
+    rg-storage-trim-check \
+    rg-thermal-stack-check \
+    rg-x1gen11-profile \
+    rg-sched-ladder \
+    rg-scx-loader \
+    rg-damon-reclaim \
+    rg-zswap-tune \
+    rg-oomd-policy-check \
+    rg-ksm-policy \
+    rg-memory-sysctl-check \
+    rg-pipewire-rt-check; do
+    cat >"$fake_chezmoi/dot_local/bin/executable_$helper" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$(basename "$0")" in
+rg-x1gen11-profile)
+    case "${1:-}" in
+    root-helper-script)
+        cat >"${2:?}" <<'ROOT'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'root-helper %s\n' "$*" >>"${RG_TEST_LOG:?}"
+ROOT
+        ;;
+    apply-user|doctor)
+        printf 'profile %s\n' "$*" >>"${RG_TEST_LOG:?}"
+        ;;
+    esac
+    ;;
+*)
+    printf '%s %s\n' "$(basename "$0")" "$*" >>"${RG_TEST_LOG:?}"
+    ;;
+esac
+SH
+    chmod +x "$fake_chezmoi/dot_local/bin/executable_$helper"
+done
+
+cat >"$fake_linux_rg/rgx1gen11-live-check" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'live-check %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$fake_linux_rg/rgx1gen11-live-check"
+
+cat >"$tmpdir/bin/getent" <<SH
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'rgoswami:x:1000:1000::%s:/bin/bash\n' "$fake_home"
+SH
+chmod +x "$tmpdir/bin/getent"
+
+cat >"$tmpdir/bin/id" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+"-gn rgoswami") printf 'rgoswami\n' ;;
+*) /usr/bin/id "$@" ;;
+esac
+SH
+chmod +x "$tmpdir/bin/id"
+
+cat >"$tmpdir/bin/sudo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${1:-}" = "-u" ]; then
+    shift 2
+fi
+while [[ ${1:-} == *=* ]]; do
+    export "$1"
+    shift
+done
+exec "$@"
+SH
+chmod +x "$tmpdir/bin/sudo"
+
+cat >"$tmpdir/bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'systemctl %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$tmpdir/bin/systemctl"
+
+cat >"$tmpdir/bin/tlp" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'tlp %s\n' "$*" >>"${RG_TEST_LOG:?}"
+SH
+chmod +x "$tmpdir/bin/tlp"
+
+PATH="$tmpdir/bin:$PATH" \
+RG_TEST_LOG="$log" \
+RG_COOL_SYNC_EUID=0 \
+RG_COOL_SYNC_ROOT="$fake_root" \
+RG_COOL_SYNC_USER=rgoswami \
+RG_COOL_SYNC_USER_HOME="$fake_home" \
+RG_COOL_SYNC_CHEZMOI="$fake_chezmoi" \
+RG_COOL_SYNC_LINUX_RG="$fake_linux_rg" \
+RG_COOL_SYNC_SKIP_LIVE=1 \
+    "$script" >"$tmpdir/out" 2>&1 || {
+    sed -n '1,220p' "$tmpdir/out" >&2
+    fail "cool-sync should pass under fake root"
+}
+
+test -x "$fake_home/.local/bin/rg-storage-trim-check" \
+    || fail "cool-sync must sync the fixed storage trim checker"
+test -x "$fake_home/.local/bin/rg-x1gen11-profile" \
+    || fail "cool-sync must sync the profile helper before root helper generation"
+test -x "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
+    || fail "cool-sync must install the generated profile root helper"
+test -r "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install the TLP baseline"
+rg -q '^CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must align battery EPP with undocked-mixed"
+rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must align AC platform profile with undocked-mixed"
+rg -q '^RUNTIME_PM_ON_AC=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install runtime PM policy"
+rg -q '^USB_AUTOSUSPEND=1$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must keep USB autosuspend enabled"
+rg -q '^START_CHARGE_THRESH_BAT0=75$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must keep ThinkPad BAT0 charge start threshold"
+rg -q 'systemctl restart tlp.service' "$log" \
+    || fail "cool-sync must restart TLP"
+rg -q '^root-helper undocked-mixed$' "$log" \
+    || fail "cool-sync must apply the root profile"
+rg -q '^profile apply-user undocked-mixed$' "$log" \
+    || fail "cool-sync must apply user-side profile state"
+
+printf 'ok\n'

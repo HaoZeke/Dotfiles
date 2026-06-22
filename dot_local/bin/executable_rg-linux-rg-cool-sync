@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-cool-sync).
+
+set -euo pipefail
+
+effective_euid=${RG_COOL_SYNC_EUID:-$EUID}
+user_name=${RG_COOL_SYNC_USER:-${SUDO_USER:-rgoswami}}
+target_root=${RG_COOL_SYNC_ROOT:-}
+chezmoi=${RG_COOL_SYNC_CHEZMOI:-/home/rgoswami/.local/share/chezmoi}
+linux_rg=${RG_COOL_SYNC_LINUX_RG:-/home/rgoswami/Git/Github/Tools/linux-rg}
+skip_live=${RG_COOL_SYNC_SKIP_LIVE:-0}
+
+if [[ -n ${RG_COOL_SYNC_USER_HOME:-} ]]; then
+    user_home=$RG_COOL_SYNC_USER_HOME
+else
+    user_home=$(getent passwd "$user_name" | cut -d: -f6)
+    if [[ -z $user_home || ! -d $user_home ]]; then
+        user_name=rgoswami
+        user_home=/home/rgoswami
+    fi
+fi
+
+if [[ $effective_euid != 0 ]]; then
+    printf 'error: run as root\n' >&2
+    exit 1
+fi
+
+target_path() {
+    local path=$1
+    if [[ -n $target_root && $path = /* ]]; then
+        printf '%s%s\n' "$target_root" "$path"
+    else
+        printf '%s\n' "$path"
+    fi
+}
+
+install_user_helper() {
+    local source=$1 target=$2
+    [[ -e $source ]] || {
+        printf 'error: missing %s\n' "$source" >&2
+        exit 1
+    }
+    if (( EUID == 0 )); then
+        install -D -m 0755 -o "$user_name" -g "$(id -gn "$user_name")" "$source" "$target"
+    else
+        install -D -m 0755 "$source" "$target"
+    fi
+    printf 'installed: %s\n' "$target"
+}
+
+install_root_exec() {
+    local source=$1 target target_path_value
+    target=$2
+    target_path_value=$(target_path "$target")
+    if (( EUID == 0 )); then
+        install -D -m 0755 -o root -g root "$source" "$target_path_value"
+    else
+        install -D -m 0755 "$source" "$target_path_value"
+    fi
+    printf 'installed: %s\n' "$target"
+}
+
+install_root_content() {
+    local target=$1 mode=$2 content=$3 tmp target_path_value
+    tmp=$(mktemp)
+    printf '%s\n' "$content" >"$tmp"
+    target_path_value=$(target_path "$target")
+    if (( EUID == 0 )); then
+        install -D -m "$mode" -o root -g root "$tmp" "$target_path_value"
+    else
+        install -D -m "$mode" "$tmp" "$target_path_value"
+    fi
+    rm -f "$tmp"
+    printf 'installed: %s\n' "$target"
+}
+
+run_user() {
+    if (( EUID == 0 )) && [[ -z $target_root ]]; then
+        sudo -u "$user_name" HOME="$user_home" XDG_CONFIG_HOME="$user_home/.config" "$@"
+    else
+        HOME="$user_home" XDG_CONFIG_HOME="$user_home/.config" "$@"
+    fi
+}
+
+print_thermal() {
+    local path name temp
+    for path in /sys/class/thermal/thermal_zone*/temp; do
+        [[ -r $path ]] || continue
+        name=$(cat "${path%/temp}/type" 2>/dev/null || basename "${path%/temp}")
+        temp=$(cat "$path")
+        printf '%s %.3f C\n' "$name" "$(awk "BEGIN { print $temp / 1000 }")"
+    done
+}
+
+tlp_baseline() {
+    cat <<'TLP'
+# Managed by rg-linux-rg-cool-sync
+CPU_SCALING_GOVERNOR_ON_AC=powersave
+CPU_SCALING_GOVERNOR_ON_BAT=powersave
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power
+CPU_BOOST_ON_AC=0
+CPU_BOOST_ON_BAT=0
+CPU_HWP_DYN_BOOST_ON_AC=0
+CPU_HWP_DYN_BOOST_ON_BAT=0
+PLATFORM_PROFILE_ON_AC=low-power
+PLATFORM_PROFILE_ON_BAT=low-power
+RUNTIME_PM_ON_AC=auto
+RUNTIME_PM_ON_BAT=auto
+PCIE_ASPM_ON_AC=default
+PCIE_ASPM_ON_BAT=powersupersave
+WIFI_PWR_ON_AC=off
+WIFI_PWR_ON_BAT=on
+DISK_IDLE_SECS_ON_AC=0
+DISK_IDLE_SECS_ON_BAT=2
+SATA_LINKPWR_ON_AC=med_power_with_dipm
+SATA_LINKPWR_ON_BAT=min_power
+USB_AUTOSUSPEND=1
+START_CHARGE_THRESH_BAT0=75
+STOP_CHARGE_THRESH_BAT0=80
+RESTORE_THRESHOLDS_ON_BAT=1
+TLP
+}
+
+if [[ $skip_live != 1 ]]; then
+    printf '== thermal before ==\n'
+    print_thermal
+fi
+
+printf '\n== sync user helpers ==\n'
+for helper in \
+    rg-linux-rg-userspace-root-setup \
+    rg-linux-rg-cool-sync \
+    rg-linux-rg-postboot-check \
+    rg-storage-trim-check \
+    rg-thermal-stack-check \
+    rg-x1gen11-profile \
+    rg-sched-ladder \
+    rg-scx-loader \
+    rg-damon-reclaim \
+    rg-zswap-tune \
+    rg-oomd-policy-check \
+    rg-ksm-policy \
+    rg-memory-sysctl-check \
+    rg-pipewire-rt-check; do
+    install_user_helper "$chezmoi/dot_local/bin/executable_$helper" "$user_home/.local/bin/$helper"
+done
+if [[ -x $linux_rg/rgx1gen11-live-check ]]; then
+    install_user_helper "$linux_rg/rgx1gen11-live-check" "$user_home/.local/bin/rgx1gen11-live-check"
+fi
+
+printf '\n== install profile root helper ==\n'
+tmp=$(mktemp)
+HOME="$user_home" XDG_CONFIG_HOME="$user_home/.config" \
+    "$user_home/.local/bin/rg-x1gen11-profile" root-helper-script "$tmp" >/dev/null
+bash -n "$tmp"
+install_root_exec "$tmp" /usr/local/sbin/rg-x1gen11-profile-root
+rm -f "$tmp"
+
+printf '\n== install TLP daily baseline ==\n'
+install_root_content /etc/tlp.d/00-base.conf 0644 "$(tlp_baseline)"
+
+systemctl daemon-reload || true
+systemctl restart tlp.service 2>/dev/null || systemctl start tlp.service 2>/dev/null || true
+tlp start 2>/dev/null || true
+
+printf '\n== apply undocked-mixed profile ==\n'
+"$(target_path /usr/local/sbin/rg-x1gen11-profile-root)" undocked-mixed
+run_user "$user_home/.local/bin/rg-x1gen11-profile" apply-user undocked-mixed
+
+if [[ $skip_live != 1 ]]; then
+    printf '\n== live checks ==\n'
+    run_user "$user_home/.local/bin/rg-x1gen11-profile" doctor --check
+    "$user_home/.local/bin/rg-thermal-stack-check" --check
+    run_user "$user_home/.local/bin/rg-storage-trim-check" --check
+
+    printf '\n== thermal after ==\n'
+    print_thermal
+fi

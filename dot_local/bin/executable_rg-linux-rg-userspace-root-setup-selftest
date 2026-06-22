@@ -267,6 +267,14 @@ rg -q '^PCIE_ASPM_ON_BAT=powersupersave$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep aggressive PCIe ASPM on battery"
 rg -q '^WIFI_PWR_ON_BAT=on$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep Wi-Fi power save on battery"
+rg -q '^DISK_IDLE_SECS_ON_BAT=2$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep the laptop disk idle battery policy"
+rg -q '^USB_AUTOSUSPEND=1$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep USB autosuspend enabled"
+rg -q '^START_CHARGE_THRESH_BAT0=75$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep ThinkPad BAT0 start threshold"
+rg -q '^STOP_CHARGE_THRESH_BAT0=80$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep ThinkPad BAT0 stop threshold"
 rg -q '^CPU_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must disable AC turbo boost in the daily TLP baseline"
 rg -q '^CPU_HWP_DYN_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
