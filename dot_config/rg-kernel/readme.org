@@ -63,6 +63,7 @@ rg-psi-snapshot bench /tmp/psi.csv 60
 rg-scx-loader switch lavd
 rg-bench-matrix run sched
 RG_BENCH_SCHED_WORKLOAD='make -j9 vmlinux' rg-bench-matrix run sched
+rg-bench-matrix report
 #+end_src
 
 For no-sudo runs, emit root batches first and run them explicitly:
