@@ -211,16 +211,19 @@ bench_psi_baseline() {
 
 bench_sched() {
     local run_dir="$1"
+    local sysfs_root sched_set
+    sysfs_root=${RG_BENCH_SYSFS_ROOT:-/sys}
+    sched_set=${RG_BENCH_SCHED_SET:-"off lavd rusty bpfland p2dq"}
     if [ ! -x "$HOME/.local/bin/rg-sched-ladder" ]; then
         append_result "$run_dir" sched SKIP "rg-sched-ladder missing"
         return 0
     fi
-    if [ ! -d /sys/kernel/sched_ext ]; then
+    if [ ! -d "$sysfs_root/kernel/sched_ext" ]; then
         append_result "$run_dir" sched SKIP "sched_ext sysfs missing (stock kernel?)"
         return 0
     fi
     local sched
-    for sched in off lavd rusty; do
+    for sched in $sched_set; do
         local out="$run_dir/psi-sched-${sched}.csv"
         if [ "$DRY_RUN" = "1" ]; then
             printf '+ rg-sched-ladder bench %s 20 -> %s\n' "$sched" "$out"

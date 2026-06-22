@@ -220,6 +220,7 @@ Ladder catalog: =~/.config/rg-x1gen11/sched-ladder.json= (14 scx-scheds binaries
 rg-sched-ladder ladder
 rg-sched-ladder switch lavd
 rg-sched-ladder bench rusty 60
+rg-bench-matrix run sched
 rg-sched-ladder switch asa
 systemctl --user enable rg-sched@lavd.service
 #+end_src

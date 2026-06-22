@@ -61,6 +61,7 @@ rg-x1gen11-profile root-script undocked-mixed
 rg-oomd-profile-install && sudo bash /tmp/rg-oomd-profile-install-root.sh
 rg-psi-snapshot bench /tmp/psi.csv 60
 rg-scx-loader switch lavd
+rg-bench-matrix run sched
 #+end_src
 
 For no-sudo runs, emit root batches first and run them explicitly:

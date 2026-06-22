@@ -32,7 +32,8 @@ for cmd in \
     rg-storage-trim-check \
     rg-zswap-tune \
     rg-thermal-stack-check \
-    rg-x1gen11-profile; do
+    rg-x1gen11-profile \
+    rg-sched-ladder; do
     cat >"$fake_home/.local/bin/$cmd" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -44,6 +45,15 @@ done
 out=$(RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run new)
 test -d "$out" || fail "new did not create run dir"
 HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" --dry-run run smoke "$out" >/dev/null
+mkdir -p "$tmpdir/sys/kernel/sched_ext"
+HOME="$fake_home" \
+    RG_BENCH_DIR="$tmpdir/bench-runs" \
+    RG_BENCH_SYSFS_ROOT="$tmpdir/sys" \
+    "$script" --dry-run run sched "$out" >"$tmpdir/sched-dry-run.out"
+for sched in off lavd rusty bpfland p2dq; do
+    rg -q "rg-sched-ladder bench $sched 20" "$tmpdir/sched-dry-run.out" \
+        || fail "sched bench dry-run missing $sched"
+done
 HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" run gates "$out" >/dev/null
 test -r "$out/gates/zswap.txt" || fail "gates bench did not preserve zswap output"
 rg -q 'gate-zswap.*PASS' "$out/results.tsv" || fail "gates bench did not record zswap pass"
