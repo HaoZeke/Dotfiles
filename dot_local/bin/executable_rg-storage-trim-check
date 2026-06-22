@@ -12,8 +12,8 @@ usage() {
 usage: rg-storage-trim-check [--check]
 
 Validate the encrypted btrfs trim policy for rgx1gen11:
-periodic fstrim is enabled, encrypted discard passthrough exists for explicit
-trim, and btrfs mounts avoid continuous discard options.
+btrfs uses asynchronous discard, encrypted discard passthrough is present, and
+weekly fstrim stays disabled to avoid a duplicate discard path.
 USAGE
 }
 
@@ -47,63 +47,100 @@ check_timer() {
     local enabled active wants
     printf '== fstrim timer ==\n'
     if enabled=$(systemctl is-enabled fstrim.timer 2>&1); then
-        pass "fstrim.timer enabled"
+        enabled=$(printf '%s' "$enabled" | trim_spaces)
+        if [[ $enabled == disabled || $enabled == masked ]]; then
+            pass "fstrim.timer disabled for btrfs discard=async policy"
+        else
+            fail "fstrim.timer enabled; disable it when btrfs discard=async is active"
+        fi
     else
+        enabled=$(printf '%s' "$enabled" | trim_spaces)
         case "$enabled" in
         *"Operation not permitted"* | *"Failed to connect"*)
             wants=$(host_path /etc/systemd/system/timers.target.wants/fstrim.timer)
             if [[ -e $wants ]]; then
-                pass "fstrim.timer enabled via systemd wants symlink"
+                fail "fstrim.timer enabled via systemd wants symlink"
             else
-                fail "fstrim.timer enabled state unavailable and wants symlink missing"
+                pass "fstrim.timer disabled via missing wants symlink"
             fi
             ;;
+        disabled | masked)
+            pass "fstrim.timer disabled for btrfs discard=async policy"
+            ;;
         *)
-            fail "fstrim.timer enabled=$(printf '%s' "$enabled" | trim_spaces) expected=enabled"
+            fail "fstrim.timer enabled=$enabled expected=disabled"
             ;;
         esac
     fi
 
     if active=$(systemctl is-active fstrim.timer 2>&1); then
-        pass "fstrim.timer active"
+        active=$(printf '%s' "$active" | trim_spaces)
+        if [[ $active == inactive ]]; then
+            pass "fstrim.timer inactive"
+        else
+            fail "fstrim.timer active=$active expected=inactive"
+        fi
     else
+        active=$(printf '%s' "$active" | trim_spaces)
         case "$active" in
         *"Operation not permitted"* | *"Failed to connect"*)
             warn "fstrim.timer active state unavailable"
             ;;
+        inactive)
+            pass "fstrim.timer inactive"
+            ;;
         *)
-            fail "fstrim.timer active=$(printf '%s' "$active" | trim_spaces) expected=active"
+            fail "fstrim.timer active=$active expected=inactive"
             ;;
         esac
     fi
 }
 
 check_btrfs_mount_options() {
-    local fstab line source target fstype opts dump passno option bad=0
-    fstab=$(host_path /etc/fstab)
-    printf '\n== btrfs discard policy ==\n'
-    if [[ ! -r $fstab ]]; then
-        fail "missing readable /etc/fstab"
+    local mounts source target fstype opts dump passno option bad=0 seen=0 has_async sync_option
+    mounts=$(host_path /proc/mounts)
+    printf '\n== btrfs async discard policy ==\n'
+    if [[ ! -r $mounts ]]; then
+        fail "missing readable /proc/mounts"
         return
     fi
 
     while read -r source target fstype opts dump passno; do
         [[ -n ${source:-} ]] || continue
-        [[ $source == \#* ]] && continue
         [[ ${fstype:-} == btrfs ]] || continue
+        seen=1
+        has_async=0
+        sync_option=
         IFS=',' read -ra options <<<"${opts:-}"
         for option in "${options[@]}"; do
             case "$option" in
-            discard | discard=*)
-                fail "btrfs mount $target uses continuous discard option $option"
-                bad=1
+            discard=async)
+                has_async=1
+                ;;
+            discard)
+                sync_option=$option
+                ;;
+            discard=*)
+                sync_option=$option
                 ;;
             esac
         done
-    done <"$fstab"
+        if [[ -n $sync_option ]]; then
+            fail "btrfs mount $target uses synchronous discard option $sync_option"
+            bad=1
+        elif (( has_async == 0 )); then
+            fail "btrfs mount $target missing discard=async"
+            bad=1
+        fi
+    done <"$mounts"
+
+    if (( seen == 0 )); then
+        fail "no live btrfs mounts found"
+        return
+    fi
 
     if (( bad == 0 )); then
-        pass "btrfs mounts avoid continuous discard"
+        pass "live btrfs mounts use discard=async"
     fi
 }
 
@@ -118,9 +155,9 @@ check_encrypted_passthrough() {
     [[ -r $cmdline_path ]] && cmdline=$(<"$cmdline_path")
     [[ -r $crypttab_path ]] && crypttab=$(<"$crypttab_path")
 
-    if printf '%s\n%s\n' "$cmdline" "$crypttab" |
-        rg -q '(^|[[:space:],:])allow-discards($|[[:space:],:])|(^|[[:space:],])discard($|[[:space:],])'; then
-        pass "encrypted discard passthrough allows explicit fstrim"
+    if printf '%s\n%s\n' "$cmdline" "$crypttab" | rg -q \
+        '(^|[[:space:],:])allow-discards($|[[:space:],:])|(^|[[:space:],])discard($|[[:space:],])|(^|[[:space:]])rd\.luks\.option=discard($|[[:space:]])'; then
+        pass "encrypted discard passthrough allows btrfs discard=async"
     else
         fail "encrypted discard passthrough missing"
     fi

@@ -294,7 +294,7 @@ else
 fi
 systemctl enable --now rg-ksm-madvise.service
 systemctl disable rg-damon-reclaim-memory-pressure.service 2>/dev/null || true
-systemctl enable --now fstrim.timer
+systemctl disable --now fstrim.timer 2>/dev/null || true
 sysctl --system | rg -n '98-rg-realtime|99-memory|dirty|sched_rt_runtime|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \
   HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \

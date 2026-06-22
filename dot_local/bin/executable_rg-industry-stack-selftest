@@ -116,12 +116,12 @@ rg -q 'rg-ksm-madvise.service' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.
     || fail "KSM root setup must install the madvise service"
 rg -q 'use_zero_pages.*0' "$repo/.chezmoiscripts/run_onchange_linux_ksm.sh.tmpl" \
     || fail "KSM root setup must keep zero-page merging disabled"
-rg -q 'fstrim.timer enabled' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
-    || fail "storage trim checker must verify fstrim.timer"
-rg -q 'continuous discard' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
-    || fail "storage trim checker must reject continuous btrfs discard"
-rg -q 'systemctl enable --now fstrim.timer' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
-    || fail "root setup helper must enable periodic fstrim"
+rg -q 'fstrim.timer disabled for btrfs discard=async policy' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
+    || fail "storage trim checker must verify disabled fstrim.timer"
+rg -q 'live btrfs mounts use discard=async' "$repo/dot_local/bin/executable_rg-storage-trim-check" \
+    || fail "storage trim checker must verify live btrfs async discard"
+rg -q 'systemctl disable --now fstrim.timer' "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup" \
+    || fail "root setup helper must disable periodic fstrim"
 rg -q 'expect_param compressor zstd' "$repo/dot_local/bin/executable_rg-zswap-tune" \
     || fail "zswap helper must check the selected compressor"
 rg -q 'selected == zstd' "$repo/dot_local/bin/executable_rg-zswap-tune" \
