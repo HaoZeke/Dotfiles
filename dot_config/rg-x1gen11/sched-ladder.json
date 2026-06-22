@@ -151,10 +151,10 @@
     }
   ],
   "profile_defaults": {
-    "undocked-mixed": "lavd",
+    "undocked-mixed": "off",
     "build-heavy": "rusty",
     "memory-pressure": "off",
-    "travel": "lavd",
+    "travel": "off",
     "docked-office": "asa",
     "bench-interactive": "flash",
     "bench-throughput": "rusty"

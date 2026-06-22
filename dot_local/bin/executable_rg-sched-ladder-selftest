@@ -45,4 +45,22 @@ rg -q 'start --sched' "$script" \
 rg -q 'interactive=scx_lavd' "$asa" || fail "ASA mapping missing interactive expert"
 rg -q 'EEVDF is mainline' "$ladder" || fail "ladder must document EEVDF as baseline not ceiling"
 
+python3 - "$repo/dot_config/rg-x1gen11/profiles.json" "$ladder" <<'PY' || fail "sched ladder profile defaults must match profiles.json scx_mode"
+import json
+import sys
+
+profiles_path, ladder_path = sys.argv[1:3]
+profiles = json.load(open(profiles_path, encoding="utf-8"))["profiles"]
+defaults = json.load(open(ladder_path, encoding="utf-8"))["profile_defaults"]
+errors = []
+for name, spec in profiles.items():
+    expected = spec.get("scx_mode")
+    live = defaults.get(name)
+    if live != expected:
+        errors.append(f"{name}: profile scx_mode={expected} ladder default={live}")
+if errors:
+    print("\n".join(errors), file=sys.stderr)
+    raise SystemExit(1)
+PY
+
 printf 'ok\n'
