@@ -244,6 +244,7 @@ rg-oomd-profile-install
 rg-psi-snapshot bench /tmp/psi.csv 120
 rg-psi-top 2
 rg-damon-reclaim enable
+rg-damon-reclaim systemd-unit memory-pressure /tmp/rg-damon-reclaim-memory-pressure.service
 rg-sched-ladder ladder
 systemd-run --user --slice=build.slice make -j9
 #+end_src

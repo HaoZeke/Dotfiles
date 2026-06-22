@@ -73,6 +73,8 @@ rg-x1gen11-profile root-script undocked-mixed /tmp/rg-x1gen11-profile-root.sh
 sudo bash /tmp/rg-x1gen11-profile-root.sh
 rg-x1gen11-profile apply-user undocked-mixed
 rg-damon-reclaim root-script memory-pressure /tmp/rg-damon-reclaim-root.sh
+rg-damon-reclaim systemd-unit memory-pressure /tmp/rg-damon-reclaim-memory-pressure.service
+sudo install -Dm644 /tmp/rg-damon-reclaim-memory-pressure.service /etc/systemd/system/rg-damon-reclaim-memory-pressure.service
 rg-ksm-policy --check
 #+end_src
 
