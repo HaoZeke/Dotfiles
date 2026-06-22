@@ -149,6 +149,21 @@ SERVICE
 )"
 }
 
+install_damon_reclaim_unit() {
+  local damon_bin tmp
+  damon_bin=$user_home/.local/bin/rg-damon-reclaim
+  if [[ ! -x $damon_bin ]]; then
+    printf 'warning: rg-damon-reclaim missing; skip DAMON reclaim unit install\n' >&2
+    return 0
+  fi
+  tmp=$(mktemp)
+  HOME=$user_home XDG_CONFIG_HOME=$user_home/.config \
+    "$damon_bin" systemd-unit memory-pressure "$tmp" >/dev/null
+  bash -n "$tmp"
+  install_data "$tmp" /etc/systemd/system/rg-damon-reclaim-memory-pressure.service
+  rm -f "$tmp"
+}
+
 install_pipewire_rt_policy() {
   install_content /etc/security/limits.d/95-rg-audio-rt.conf 0644 "$(cat <<'LIMITS'
 # Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup)
@@ -267,6 +282,7 @@ printf '\n== userspace policy ==\n'
 install_tlp_profile_baseline
 install_pipewire_rt_policy
 install_ksm_policy
+install_damon_reclaim_unit
 install_facebook_oomd_policy
 systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
@@ -277,6 +293,7 @@ else
   printf 'warning: oomd binary missing; installed /etc/oomd/oomd.json but did not enable oomd.service\n' >&2
 fi
 systemctl enable --now rg-ksm-madvise.service
+systemctl disable rg-damon-reclaim-memory-pressure.service 2>/dev/null || true
 systemctl enable --now fstrim.timer
 sysctl --system | rg -n '98-rg-realtime|99-memory|dirty|sched_rt_runtime|swappiness|watermark|workingset|page-cluster|vfs_cache_pressure' || true
 PATH=/usr/bin:/usr/local/bin:$user_home/.local/bin:$PATH \

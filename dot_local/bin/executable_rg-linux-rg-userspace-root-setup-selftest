@@ -101,6 +101,39 @@ esac
 SH
 chmod +x "$fake_home/.local/bin/rg-x1gen11-profile"
 
+cat >"$fake_home/.local/bin/rg-damon-reclaim" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+systemd-unit)
+    profile=${2:?}
+    out=${3:?}
+    cat >"$out" <<SERVICE
+[Unit]
+Description=Apply rgx1gen11 DAMON reclaim profile $profile
+Documentation=https://docs.kernel.org/admin-guide/mm/damon/reclaim.html
+ConditionPathExists=/sys/module/damon_reclaim/parameters/enabled
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=RG_DAMON_SUDO=
+ExecStart=/home/rgoswami/.local/bin/rg-damon-reclaim enable $profile
+ExecStop=/home/rgoswami/.local/bin/rg-damon-reclaim disable
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+    printf 'damon systemd-unit %s %s\n' "$profile" "$out" >>"${RG_TEST_LOG:?}"
+    ;;
+*)
+    printf 'unexpected damon command: %s\n' "$*" >&2
+    exit 2
+    ;;
+esac
+SH
+chmod +x "$fake_home/.local/bin/rg-damon-reclaim"
+
 cat >"$fake_bin/dkms" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -167,6 +200,8 @@ test -x "$fake_root/usr/local/sbin/rg-ksm-madvise-root" \
     || fail "setup must install the KSM madvise root helper under the fake root"
 test -r "$fake_root/etc/systemd/system/rg-ksm-madvise.service" \
     || fail "setup must install the KSM madvise service under the fake root"
+test -r "$fake_root/etc/systemd/system/rg-damon-reclaim-memory-pressure.service" \
+    || fail "setup must install the bounded DAMON reclaim service under the fake root"
 test -r "$fake_root/etc/security/limits.d/95-rg-audio-rt.conf" \
     || fail "setup must install PipeWire realtime limits under the fake root"
 test -r "$fake_root/etc/sysctl.d/98-rg-realtime.conf" \
@@ -187,6 +222,11 @@ rg -q '"pressure_rising_beyond"' "$fake_root/etc/oomd/oomd.json" \
     || fail "setup must preserve the PSI oomd detector"
 rg -q "systemctl enable --now rg-ksm-madvise.service" "$fake_root/commands.log" \
     || fail "setup must enable the KSM madvise service"
+if rg -q "systemctl enable --now rg-damon-reclaim-memory-pressure.service" "$fake_root/commands.log"; then
+    fail "setup must not enable DAMON reclaim by default"
+fi
+rg -q "systemctl disable rg-damon-reclaim-memory-pressure.service" "$fake_root/commands.log" \
+    || fail "setup must keep the DAMON reclaim service disabled until explicit use"
 rg -q "systemctl enable --now fstrim.timer" "$fake_root/commands.log" \
     || fail "setup must enable periodic fstrim"
 rg -q "systemctl enable --now oomd.service" "$fake_root/commands.log" \
@@ -207,6 +247,8 @@ rg -q 'profile doctor --check' "$fake_root/commands.log" \
     || fail "setup must verify the applied profile"
 rg -q "rgx1gen11-dkms-overlay-apply $kver" "$fake_root/commands.log" \
     || fail "setup must run the DKMS overlay repair helper"
+rg -q "damon systemd-unit memory-pressure" "$fake_root/commands.log" \
+    || fail "setup must generate the memory-pressure DAMON unit"
 rg -q 'mkinitcpio -p linux-rg' "$fake_root/commands.log" \
     || fail "setup must rebuild the linux-rg initramfs"
 rg -q 'rg-zswap-tune laptop' "$fake_root/commands.log" \
@@ -219,5 +261,11 @@ rg -q '^CPU_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must disable AC turbo boost in the daily TLP baseline"
 rg -q '^CPU_HWP_DYN_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must disable AC HWP dynamic boost in the daily TLP baseline"
+rg -q '^ConditionPathExists=/sys/module/damon_reclaim/parameters/enabled$' \
+    "$fake_root/etc/systemd/system/rg-damon-reclaim-memory-pressure.service" \
+    || fail "DAMON unit must guard on reclaim sysfs"
+rg -q '^ExecStop=/home/rgoswami/.local/bin/rg-damon-reclaim disable$' \
+    "$fake_root/etc/systemd/system/rg-damon-reclaim-memory-pressure.service" \
+    || fail "DAMON unit stop must disable reclaim"
 
 printf 'ok\n'
