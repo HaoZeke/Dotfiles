@@ -270,6 +270,10 @@ values = {
     "platform": spec["platform_profile"],
     "governor": spec["scaling_governor"],
     "epp": spec["energy_performance_preference"],
+    "hwp": spec.get(
+        "hwp_dynamic_boost",
+        "1" if spec.get("scaling_governor") == "performance" else "0",
+    ),
     "iwl": spec["iwlwifi_power_save"],
     "zram_expr": spec["zram_size"],
     "damon": "Y" if spec["damon_reclaim"] else "N",
@@ -358,6 +362,7 @@ write_damon() {
 write_platform_profile
 write_cpufreq_value scaling_governor "$governor" scaling_available_governors
 write_cpufreq_value energy_performance_preference "$epp" energy_performance_available_preferences
+write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost "$hwp" hwp_dynamic_boost
 write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
 write_zram
 write_damon

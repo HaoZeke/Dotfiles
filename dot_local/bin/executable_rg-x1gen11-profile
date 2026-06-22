@@ -77,6 +77,8 @@ if field == "damon_profile" and field not in spec:
     value = "memory-pressure" if spec.get("damon_reclaim") else "off"
 elif field == "energy_performance_preference" and field not in spec:
     value = "performance" if spec.get("scaling_governor") == "performance" else "balance_power"
+elif field == "hwp_dynamic_boost" and field not in spec:
+    value = "1" if spec.get("scaling_governor") == "performance" else "0"
 else:
     value = spec[field]
 if isinstance(value, bool):
@@ -142,6 +144,17 @@ write_energy_performance_preference() {
         fi
         echo "$epp" | $SUDO tee "$path" >/dev/null
     done
+}
+
+write_hwp_dynamic_boost() {
+    local value="$1"
+    local path
+    path=$(sys_path /devices/system/cpu/intel_pstate/hwp_dynamic_boost)
+    if [ ! -e "$path" ]; then
+        printf 'hwp_dynamic_boost sysfs missing; skip\n' >&2
+        return 0
+    fi
+    echo "$value" | $SUDO tee "$path" >/dev/null
 }
 
 write_platform_profile() {
@@ -260,11 +273,12 @@ apply_root_helper() {
 
 apply_profile() {
     local profile="$1"
-    local platform governor epp iwl zram damon damon_profile scx browser_high build_high
+    local platform governor epp hwp iwl zram damon damon_profile scx browser_high build_high
 
     platform=$(profile_field "$profile" platform_profile)
     governor=$(profile_field "$profile" scaling_governor)
     epp=$(profile_field "$profile" energy_performance_preference)
+    hwp=$(profile_field "$profile" hwp_dynamic_boost)
     iwl=$(profile_field "$profile" iwlwifi_power_save)
     zram=$(profile_field "$profile" zram_size)
     damon=$(profile_field "$profile" damon_reclaim)
@@ -279,6 +293,7 @@ apply_profile() {
             write_platform_profile "$platform"
             write_scaling_governor "$governor"
             write_energy_performance_preference "$epp"
+            write_hwp_dynamic_boost "$hwp"
             write_iwl_power_save "$iwl"
             write_zram_size "$zram"
             apply_damon "$damon" "$damon_profile"
@@ -287,6 +302,7 @@ apply_profile() {
         write_platform_profile "$platform"
         write_scaling_governor "$governor"
         write_energy_performance_preference "$epp"
+        write_hwp_dynamic_boost "$hwp"
         write_iwl_power_save "$iwl"
         write_zram_size "$zram"
         apply_damon "$damon" "$damon_profile"
@@ -312,10 +328,11 @@ apply_user_profile() {
 
 write_root_script() {
     local profile="$1" out="${2:-/tmp/rg-x1gen11-profile-root.sh}"
-    local platform governor epp iwl zram damon damon_profile
+    local platform governor epp hwp iwl zram damon damon_profile
     platform=$(profile_field "$profile" platform_profile)
     governor=$(profile_field "$profile" scaling_governor)
     epp=$(profile_field "$profile" energy_performance_preference)
+    hwp=$(profile_field "$profile" hwp_dynamic_boost)
     iwl=$(profile_field "$profile" iwlwifi_power_save)
     zram=$(profile_field "$profile" zram_size)
     damon=$(profile_field "$profile" damon_reclaim)
@@ -397,6 +414,7 @@ fi
 
 write_scaling_governor ${governor@Q}
 write_energy_performance_preference ${epp@Q}
+write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost ${hwp@Q} hwp_dynamic_boost
 write_if_path /sys/module/iwlwifi/parameters/power_save ${iwl@Q} iwlwifi_power_save
 
 install -d -m0755 /etc/systemd/zram-generator.conf.d
@@ -459,6 +477,10 @@ values = {
     "platform": spec["platform_profile"],
     "governor": spec["scaling_governor"],
     "epp": spec["energy_performance_preference"],
+    "hwp": spec.get(
+        "hwp_dynamic_boost",
+        "1" if spec.get("scaling_governor") == "performance" else "0",
+    ),
     "iwl": spec["iwlwifi_power_save"],
     "zram_expr": spec["zram_size"],
     "damon": "Y" if spec["damon_reclaim"] else "N",
@@ -547,6 +569,7 @@ write_damon() {
 write_platform_profile
 write_cpufreq_value scaling_governor "$governor" scaling_available_governors
 write_cpufreq_value energy_performance_preference "$epp" energy_performance_available_preferences
+write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost "$hwp" hwp_dynamic_boost
 write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
 write_zram
 write_damon
@@ -564,6 +587,7 @@ show_profile() {
     printf '  platform_profile: %s\n' "$(profile_field "$profile" platform_profile)"
     printf '  scaling_governor: %s\n' "$(profile_field "$profile" scaling_governor)"
     printf '  energy_performance_preference: %s\n' "$(profile_field "$profile" energy_performance_preference)"
+    printf '  hwp_dynamic_boost: %s\n' "$(profile_field "$profile" hwp_dynamic_boost)"
     printf '  iwlwifi_power_save: %s\n' "$(profile_field "$profile" iwlwifi_power_save)"
     printf '  zram_size: %s\n' "$(profile_field "$profile" zram_size)"
     printf '  damon_reclaim: %s\n' "$(profile_field "$profile" damon_reclaim)"
@@ -628,6 +652,15 @@ profile_policy_check() {
         compare_value energy_performance_preference "$live" "$expected"
     else
         printf 'profile drift: energy_performance_preference live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" hwp_dynamic_boost)
+    path=$(sys_path /devices/system/cpu/intel_pstate/hwp_dynamic_boost)
+    if live=$(read_trimmed "$path"); then
+        compare_value hwp_dynamic_boost "$live" "$expected"
+    else
+        printf 'profile drift: hwp_dynamic_boost live=unavailable expected=%s\n' "$expected" >&2
         failures=$((failures + 1))
     fi
 
