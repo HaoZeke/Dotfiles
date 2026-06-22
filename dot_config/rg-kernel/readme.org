@@ -106,7 +106,13 @@ root setup, OOMD checker, postboot checker, and bench matrix into =~/.local/bin=
 applies the root setup, runs postboot validation, and captures the non-root
 policy gate matrix.
 
+=rg-linux-rg-cool-sync= is the shorter privileged repair path for a hot or stale
+userspace state. It syncs the managed profile/storage/thermal helpers, installs
+the profile root helper, restores the complete TLP low-power baseline, applies
+=undocked-mixed=, and runs the live profile, thermal, and storage checks.
+
 #+begin_src shell
+sudo rg-linux-rg-cool-sync 2>&1 | tee /tmp/rg-linux-rg-cool-sync.out
 sudo rg-linux-rg-finish-userspace-gates 2>&1 | tee /tmp/rg-linux-rg-finish-userspace-gates.out
 sudo rg-linux-rg-userspace-root-setup 2>&1 | tee /tmp/rg-linux-rg-userspace-root-setup.out
 sudo rg-linux-rg-postboot-check 2>&1 | tee /tmp/rg-linux-rg-postboot-check.out
