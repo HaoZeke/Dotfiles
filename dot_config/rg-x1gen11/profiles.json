@@ -29,6 +29,20 @@
       "browser_memory_high": "4G",
       "build_memory_high": "18G"
     },
+    "focus": {
+      "description": "Low-latency interactive work with explicit warmer bias",
+      "platform_profile": "balanced",
+      "scaling_governor": "powersave",
+      "energy_performance_preference": "balance_performance",
+      "hwp_dynamic_boost": "1",
+      "iwlwifi_power_save": "Y",
+      "zram_size": "ram / 2",
+      "damon_reclaim": false,
+      "damon_profile": "off",
+      "scx_mode": "lavd",
+      "browser_memory_high": "8G",
+      "build_memory_high": "10G"
+    },
     "memory-pressure": {
       "description": "Browser + VM + build concurrently; PSI and reclaim tuning",
       "platform_profile": "balanced",

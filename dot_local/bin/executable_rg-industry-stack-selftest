@@ -68,6 +68,8 @@ rg -q 'undocked-mixed' "$repo/dot_config/rg-x1gen11/profiles.json" \
     || fail "profiles.json missing undocked-mixed"
 rg -q 'memory-pressure' "$repo/dot_config/rg-x1gen11/profiles.json" \
     || fail "profiles.json missing memory-pressure"
+rg -q '"focus"' "$repo/dot_config/rg-x1gen11/profiles.json" \
+    || fail "profiles.json missing focus"
 rg -q 'ManagedOOMMemoryPressure=kill' \
     "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl" \
     || fail "memory tuning missing systemd-oomd slice policy"
@@ -162,7 +164,7 @@ rg -q 'PROFILES_JSON=' "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh
     || fail "root helper must load profile JSON"
 rg -q 'json.load' "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl" \
     || fail "root helper must parse profile JSON"
-if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|memory-pressure|travel|docked-office)[)]' \
+if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|focus|memory-pressure|travel|docked-office)[)]' \
     "$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"; then
     fail "root helper must not duplicate per-profile policy blocks"
 fi

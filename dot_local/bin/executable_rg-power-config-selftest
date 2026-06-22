@@ -55,6 +55,8 @@ rg -q 'CPU_BOOST_ON_AC=0' "$laptop_script" \
     || fail "TLP AC turbo boost must stay off for the undocked-mixed baseline"
 rg -q 'CPU_HWP_DYN_BOOST_ON_AC=0' "$laptop_script" \
     || fail "TLP AC HWP dynamic boost must stay off for the undocked-mixed baseline"
+rg -q '/usr/local/sbin/rg-x1gen11-profile-root focus' "$laptop_script" \
+    || fail "focus profile must be allowed through the exact root-helper sudoers rule"
 rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$laptop_script" \
     || fail "TLP AC platform profile must match the undocked-mixed profile"
 rg -q 'PLATFORM_PROFILE_ON_BAT=low-power' "$laptop_script" \

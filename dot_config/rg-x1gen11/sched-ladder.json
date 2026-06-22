@@ -153,6 +153,7 @@
   "profile_defaults": {
     "undocked-mixed": "off",
     "build-heavy": "rusty",
+    "focus": "lavd",
     "memory-pressure": "off",
     "travel": "off",
     "docked-office": "asa",

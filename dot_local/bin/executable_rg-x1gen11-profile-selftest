@@ -18,6 +18,7 @@ test -r "$profiles" || fail "missing profiles.json"
 output=$(RG_X1GEN11_PROFILES="$profiles" "$script" list)
 printf '%s\n' "$output" | rg -q 'undocked-mixed' || fail "list missing undocked-mixed"
 printf '%s\n' "$output" | rg -q 'build-heavy' || fail "list missing build-heavy"
+printf '%s\n' "$output" | rg -q 'focus' || fail "list missing focus"
 printf '%s\n' "$output" | rg -q 'memory-pressure' || fail "list missing memory-pressure"
 
 RG_X1GEN11_PROFILES="$profiles" "$script" show travel | rg 'scaling_governor: powersave' >/dev/null \
@@ -42,6 +43,10 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'energy_performa
     || fail "build-heavy must use performance EPP"
 RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'hwp_dynamic_boost: 1' >/dev/null \
     || fail "build-heavy may enable HWP dynamic boost"
+RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'scx_mode: lavd' >/dev/null \
+    || fail "focus must select scx_lavd through the scheduler ladder"
+RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'hwp_dynamic_boost: 1' >/dev/null \
+    || fail "focus may enable HWP dynamic boost"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'damon_reclaim: true' >/dev/null \
     || fail "memory-pressure must enable DAMON reclaim"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scx_mode: off' >/dev/null \
@@ -65,7 +70,7 @@ rg -q 'json.load' "$tmpdir/root-helper" \
     || fail "generic root helper must parse profile JSON"
 rg -q 'hwp_dynamic_boost' "$tmpdir/root-helper" \
     || fail "generic root helper must write HWP dynamic boost policy"
-if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|memory-pressure|travel|docked-office)[)]' \
+if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|focus|memory-pressure|travel|docked-office)[)]' \
     "$tmpdir/root-helper"; then
     fail "generic root helper must not duplicate per-profile policy blocks"
 fi
