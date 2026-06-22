@@ -257,6 +257,16 @@ test -r "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must install the managed TLP profile baseline"
 rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep the TLP AC platform profile aligned with undocked-mixed"
+rg -q '^PLATFORM_PROFILE_ON_BAT=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep the TLP battery platform profile aligned with undocked-mixed"
+rg -q '^RUNTIME_PM_ON_AC=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must enable PCIe runtime PM on AC"
+rg -q '^RUNTIME_PM_ON_BAT=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must enable PCIe runtime PM on battery"
+rg -q '^PCIE_ASPM_ON_BAT=powersupersave$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep aggressive PCIe ASPM on battery"
+rg -q '^WIFI_PWR_ON_BAT=on$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must keep Wi-Fi power save on battery"
 rg -q '^CPU_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must disable AC turbo boost in the daily TLP baseline"
 rg -q '^CPU_HWP_DYN_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
