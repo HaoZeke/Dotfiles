@@ -81,4 +81,29 @@ bash -n "$root_script" || fail "generated DAMON root script should be valid bash
 rg -q 'write_param quota_ms 10' "$root_script" \
     || fail "root script should carry laptop quota"
 
+unit_file="$tmpdir/rg-damon-reclaim-memory-pressure.service"
+RG_DAMON_HELPER_PATH=/home/rgoswami/.local/bin/rg-damon-reclaim \
+    "$script" systemd-unit memory-pressure "$unit_file" >/dev/null
+rg -q '^\[Unit\]$' "$unit_file" \
+    || fail "systemd unit should contain Unit section"
+rg -q '^ConditionPathExists=/sys/module/damon_reclaim/parameters/enabled$' "$unit_file" \
+    || fail "systemd unit should guard on DAMON_RECLAIM sysfs"
+rg -q '^Type=oneshot$' "$unit_file" \
+    || fail "systemd unit should be oneshot"
+rg -q '^RemainAfterExit=yes$' "$unit_file" \
+    || fail "systemd unit should keep active state for ExecStop"
+rg -q '^Environment=RG_DAMON_SUDO=$' "$unit_file" \
+    || fail "systemd unit should avoid sudo under root systemd"
+rg -q '^ExecStart=/home/rgoswami/.local/bin/rg-damon-reclaim enable memory-pressure$' "$unit_file" \
+    || fail "systemd unit should apply memory-pressure profile"
+rg -q '^ExecStop=/home/rgoswami/.local/bin/rg-damon-reclaim disable$' "$unit_file" \
+    || fail "systemd unit should disable DAMON on stop"
+rg -q '^WantedBy=multi-user.target$' "$unit_file" \
+    || fail "systemd unit should install under multi-user target"
+if "$script" systemd-unit off "$tmpdir/off.service" >/tmp/rg-damon-unit-off.out 2>&1; then
+    fail "systemd unit should reject off profile"
+fi
+rg -q 'profile off has no systemd unit' /tmp/rg-damon-unit-off.out \
+    || fail "off unit rejection should explain idle-safe policy"
+
 printf 'ok\n'

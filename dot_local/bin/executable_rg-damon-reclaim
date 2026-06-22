@@ -9,8 +9,16 @@ set -euo pipefail
 
 PARAM_DIR=${RG_DAMON_PARAM_DIR:-/sys/module/damon_reclaim/parameters}
 ENABLED_PATH=${RG_DAMON_ENABLED_PATH:-$PARAM_DIR/enabled}
-SUDO="${RG_DAMON_SUDO:-sudo}"
+if [ -n "${RG_DAMON_SUDO+x}" ]; then
+    SUDO="$RG_DAMON_SUDO"
+elif [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    SUDO=
+else
+    SUDO=sudo
+fi
 ROOT_SCRIPT=${RG_DAMON_ROOT_SCRIPT:-/tmp/rg-damon-reclaim-root.sh}
+HELPER_PATH=${RG_DAMON_HELPER_PATH:-$HOME/.local/bin/rg-damon-reclaim}
+UNIT_SCRIPT=${RG_DAMON_UNIT_SCRIPT:-/tmp/rg-damon-reclaim-memory-pressure.service}
 
 usage() {
     cat <<'USAGE'
@@ -22,6 +30,8 @@ Commands:
   disable                 Turn DAMON reclaim off.
   root-script PROFILE [OUT]
                           Write an inspectable root script for PROFILE.
+  systemd-unit PROFILE [OUT]
+                          Write a root systemd unit for a bounded profile.
   -h, --help
 
 Profiles:
@@ -236,6 +246,41 @@ ROOT
     printf 'run: sudo bash %s\n' "$out"
 }
 
+cmd_systemd_unit() {
+    local profile=${1:-}
+    local out=${2:-$UNIT_SCRIPT}
+    [ -n "$profile" ] || die "systemd-unit requires PROFILE"
+    case "$profile" in
+    laptop | memory-pressure)
+        ;;
+    off)
+        die "profile off has no systemd unit; use disable or stop a bounded unit"
+        ;;
+    *)
+        profile_params "$profile" >/dev/null
+        ;;
+    esac
+    cat >"$out" <<UNIT
+[Unit]
+Description=Apply rgx1gen11 DAMON reclaim profile $profile
+Documentation=https://docs.kernel.org/admin-guide/mm/damon/reclaim.html
+ConditionPathExists=$ENABLED_PATH
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=RG_DAMON_SUDO=
+ExecStart=$HELPER_PATH enable $profile
+ExecStop=$HELPER_PATH disable
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    chmod 0644 "$out"
+    printf 'wrote %s\n' "$out"
+    printf 'install: sudo install -Dm644 %s /etc/systemd/system/rg-damon-reclaim-%s.service\n' "$out" "$profile"
+}
+
 main() {
     local cmd=${1:-}
     case "$cmd" in
@@ -243,6 +288,7 @@ main() {
     enable) cmd_enable "${2:-laptop}" ;;
     disable) cmd_disable ;;
     root-script) cmd_root_script "${2:-}" "${3:-$ROOT_SCRIPT}" ;;
+    systemd-unit) cmd_systemd_unit "${2:-}" "${3:-$UNIT_SCRIPT}" ;;
     -h | --help | "") usage ;;
     *) die "unknown command: $cmd" ;;
     esac
