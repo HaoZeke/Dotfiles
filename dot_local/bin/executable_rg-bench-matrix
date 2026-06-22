@@ -31,6 +31,9 @@ Environment:
   RG_BENCH_DIR         Output root (default ~/.config/rg-x1gen11/bench-runs).
   RG_BENCH_HOST        Expected hostname (default rgx1gen11).
   RG_BENCH_KERNEL      linux-rg localversion substring (default rg).
+  RG_BENCH_SCHED_SET   Space-separated sched ids for run sched.
+  RG_BENCH_SCHED_WORKLOAD
+                       Optional shell command timed once under each sched id.
 
 Examples:
   rg-bench-matrix new
@@ -211,9 +214,10 @@ bench_psi_baseline() {
 
 bench_sched() {
     local run_dir="$1"
-    local sysfs_root sched_set
+    local sysfs_root sched_set sched_workload prior
     sysfs_root=${RG_BENCH_SYSFS_ROOT:-/sys}
     sched_set=${RG_BENCH_SCHED_SET:-"off lavd rusty bpfland p2dq"}
+    sched_workload=${RG_BENCH_SCHED_WORKLOAD:-}
     if [ ! -x "$HOME/.local/bin/rg-sched-ladder" ]; then
         append_result "$run_dir" sched SKIP "rg-sched-ladder missing"
         return 0
@@ -223,6 +227,7 @@ bench_sched() {
         return 0
     fi
     local sched
+    prior=$("$HOME/.local/bin/rg-sched-ladder" current 2>/dev/null || printf 'off\n')
     for sched in $sched_set; do
         local out="$run_dir/psi-sched-${sched}.csv"
         if [ "$DRY_RUN" = "1" ]; then
@@ -236,6 +241,28 @@ bench_sched() {
             fi
         fi
         append_result "$run_dir" "sched-$sched" PASS "${out:-logged}"
+        if [ -n "$sched_workload" ]; then
+            local workload_out="$run_dir/sched-workload-${sched}.log"
+            if [ "$DRY_RUN" = "1" ]; then
+                printf '+ rg-sched-ladder switch %s; time bash -lc %q -> %s; rg-sched-ladder switch %s\n' \
+                    "$sched" "$sched_workload" "$workload_out" "$prior"
+            else
+                {
+                    local workload_status
+                    printf 'scheduler=%s\n' "$sched"
+                    printf 'workload=%s\n' "$sched_workload"
+                    "$HOME/.local/bin/rg-sched-ladder" switch "$sched" || true
+                    set +e
+                    /usr/bin/time -f 'elapsed=%e user=%U sys=%S maxrss_kb=%M' \
+                        bash -lc "$sched_workload"
+                    workload_status=$?
+                    set -e
+                    "$HOME/.local/bin/rg-sched-ladder" switch "$prior" || true
+                    printf 'workload_status=%s\n' "$workload_status"
+                } >"$workload_out" 2>&1 || true
+            fi
+            append_result "$run_dir" "sched-workload-$sched" PASS "$workload_out"
+        fi
     done
 }
 
@@ -376,7 +403,7 @@ smoke          Basic sysfs and kernel identity
 gates          Cheap userspace policy gates (memory, RT, KSM, trim, zswap, thermal, profile)
 collect        rg-wide-net-collect platform snapshot
 psi-baseline   30s PSI CSV (undocked idle-ish)
-sched          rg-sched-ladder bench off/lavd/rusty (20s each)
+sched          rg-sched-ladder bench off/lavd/rusty/bpfland/p2dq (20s each)
 thermal        platform_profile, governor, cpuidle, sensors, tlp-stat
 wifi           iwlwifi params + iw link snapshot
 suspend        s2idle preflight only (gate linux-rg-slp)

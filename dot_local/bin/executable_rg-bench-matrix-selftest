@@ -54,6 +54,15 @@ for sched in off lavd rusty bpfland p2dq; do
     rg -q "rg-sched-ladder bench $sched 20" "$tmpdir/sched-dry-run.out" \
         || fail "sched bench dry-run missing $sched"
 done
+HOME="$fake_home" \
+    RG_BENCH_DIR="$tmpdir/bench-runs" \
+    RG_BENCH_SYSFS_ROOT="$tmpdir/sys" \
+    RG_BENCH_SCHED_WORKLOAD=true \
+    "$script" --dry-run run sched "$out" >"$tmpdir/sched-workload-dry-run.out"
+rg -q 'sched-workload-bpfland.log' "$tmpdir/sched-workload-dry-run.out" \
+    || fail "sched workload dry-run missing bpfland workload capture"
+rg -q 'sched-workload-p2dq.log' "$tmpdir/sched-workload-dry-run.out" \
+    || fail "sched workload dry-run missing p2dq workload capture"
 HOME="$fake_home" RG_BENCH_DIR="$tmpdir/bench-runs" "$script" run gates "$out" >/dev/null
 test -r "$out/gates/zswap.txt" || fail "gates bench did not preserve zswap output"
 rg -q 'gate-zswap.*PASS' "$out/results.tsv" || fail "gates bench did not record zswap pass"
