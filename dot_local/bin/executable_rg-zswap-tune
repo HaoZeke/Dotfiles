@@ -77,6 +77,12 @@ zram_priority() {
     awk '$1 == "/dev/zram0" { print $5; found = 1 } END { if (!found) exit 1 }' "$swaps"
 }
 
+zram_backing_dev() {
+    local path
+    path=$(path_for /block/zram0/backing_dev)
+    read_value "$path"
+}
+
 profile_params() {
     local profile=$1
     case "$profile" in
@@ -143,6 +149,24 @@ cmd_status() {
     [[ -r $disksize ]] && printf 'disksize: %s\n' "$(read_value "$disksize")"
     mm_stat=$(path_for /block/zram0/mm_stat)
     [[ -r $mm_stat ]] && printf 'mm_stat: %s\n' "$(cat "$mm_stat")"
+    path=$(path_for /block/zram0/backing_dev)
+    if [[ -r $path ]]; then
+        printf 'backing_dev: %s\n' "$(read_value "$path")"
+    else
+        printf 'backing_dev: missing\n'
+    fi
+    path=$(path_for /block/zram0/writeback)
+    if [[ -e $path ]]; then
+        printf 'writeback: present\n'
+    else
+        printf 'writeback: missing\n'
+    fi
+    path=$(path_for /block/zram0/debug_stat)
+    if [[ -r $path ]]; then
+        printf 'debug_stat: present\n'
+    else
+        printf 'debug_stat: missing\n'
+    fi
     if priority=$(zram_priority 2>/dev/null); then
         printf 'swap_priority: %s\n' "$priority"
     else
@@ -170,7 +194,7 @@ expect_param() {
 }
 
 cmd_check() {
-    local selected priority
+    local selected priority backing_dev
     printf '== zswap policy ==\n'
     expect_param enabled Y
     expect_param compressor zstd
@@ -200,6 +224,29 @@ cmd_check() {
         fi
     else
         fail "zram0 swap entry missing"
+    fi
+
+    if [[ -e $(path_for /block/zram0/writeback) ]]; then
+        pass "zram0 writeback interface present"
+    else
+        fail "zram0 writeback interface missing"
+    fi
+
+    if [[ -r $(path_for /block/zram0/backing_dev) ]]; then
+        backing_dev=$(zram_backing_dev)
+        if [[ $backing_dev == none ]]; then
+            pass "zram0 backing_dev none"
+        else
+            fail "zram0 backing_dev=$backing_dev expected=none"
+        fi
+    else
+        fail "zram0 backing_dev missing"
+    fi
+
+    if [[ -r $(path_for /block/zram0/debug_stat) ]]; then
+        pass "zram0 memory tracking visible"
+    else
+        fail "zram0 memory tracking missing"
     fi
 
     cmd_status

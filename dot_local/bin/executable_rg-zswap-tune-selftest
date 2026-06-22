@@ -34,9 +34,15 @@ write_zram() {
 lzo-rle lzo lz4 lz4hc [zstd] deflate 842
 EOF
     printf '%s\n' 16638803968 >"$zram/disksize"
+    printf '%s\n' none >"$zram/backing_dev"
     cat >"$zram/mm_stat" <<'EOF'
 1085480960 582762187 590667776 0 590667776 154 2 70818 70824
 EOF
+    cat >"$zram/debug_stat" <<'EOF'
+version: 1
+0        0
+EOF
+    : >"$zram/writeback"
     cat >"$proc/swaps" <<'EOF'
 Filename				Type		Size		Used		Priority
 /dev/zram0                              partition	16248828	1059708	100
@@ -59,6 +65,12 @@ rg -q 'ok: zram0 selected compressor zstd' "$tmpdir/ok.out" \
     || fail "checker must verify zram zstd"
 rg -q 'ok: zram0 swap priority 100' "$tmpdir/ok.out" \
     || fail "checker must verify zram priority"
+rg -q 'ok: zram0 writeback interface present' "$tmpdir/ok.out" \
+    || fail "checker must verify zram writeback support"
+rg -q 'ok: zram0 backing_dev none' "$tmpdir/ok.out" \
+    || fail "checker must keep daily zram writeback unconfigured"
+rg -q 'ok: zram0 memory tracking visible' "$tmpdir/ok.out" \
+    || fail "checker must verify zram memory tracking"
 
 printf '%s\n' lz4 >"$zswap/compressor"
 if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/bad-zswap.out" 2>&1; then
@@ -76,6 +88,22 @@ if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpd
 fi
 rg -q 'fail: zram0 selected compressor=lzo expected=zstd' "$tmpdir/bad-zram.out" \
     || fail "wrong zram compressor report should be explicit"
+write_zram
+
+rm -f "$zram/writeback"
+if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/bad-writeback.out" 2>&1; then
+    fail "missing zram writeback interface should fail"
+fi
+rg -q 'fail: zram0 writeback interface missing' "$tmpdir/bad-writeback.out" \
+    || fail "missing zram writeback report should be explicit"
+write_zram
+
+printf '%s\n' /var/lib/zram-writeback.img >"$zram/backing_dev"
+if RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" check >"$tmpdir/bad-backing-dev.out" 2>&1; then
+    fail "configured zram writeback backing device should fail daily policy"
+fi
+rg -q 'fail: zram0 backing_dev=/var/lib/zram-writeback.img expected=none' "$tmpdir/bad-backing-dev.out" \
+    || fail "configured zram backing device report should be explicit"
 write_zram
 
 RG_ZSWAP_SYSFS_ROOT="$sys" RG_ZSWAP_PROC_ROOT="$proc" "$script" root-script laptop "$tmpdir/root.sh" >"$tmpdir/root-script.out"
