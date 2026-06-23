@@ -341,17 +341,35 @@ write_if_path() {
 }
 
 write_zram() {
+    local conf=/etc/systemd/zram-generator.conf.d/10-rg-profile.conf
+    local desired
     install -d -m0755 /etc/systemd/zram-generator.conf.d
-    cat >/etc/systemd/zram-generator.conf.d/10-rg-profile.conf <<ZRAM
-# Managed by rg-x1gen11-profile-root
+    desired="# Managed by rg-x1gen11-profile-root
 [zram0]
 zram-size = $zram_expr
 compression-algorithm = zstd
 swap-priority = 100
-fs-type = swap
-ZRAM
+fs-type = swap"
+    # Already at the target size and live: nothing to do. Resizing zram forces a
+    # swapoff/swapon cycle that blocks under memory pressure, so skip it whenever
+    # the device is already configured the way we want.
+    if [ -r "$conf" ] && [ "$(cat "$conf")" = "$desired" ] \
+        && swapon --show=NAME --noheadings 2>/dev/null | grep -qx /dev/zram0; then
+        return 0
+    fi
+    printf "%s\n" "$desired" >"$conf"
     systemctl daemon-reload
-    systemctl restart systemd-zram-setup@zram0.service 2>/dev/null || true
+    # A disksize left on an idle (non-swap) zram0 makes the generator's
+    # comp_algorithm write fail with EBUSY; reset the device so the rebuild can
+    # run. This is the state a killed restart leaves behind.
+    if [ -e /sys/block/zram0/disksize ] \
+        && [ "$(cat /sys/block/zram0/disksize)" != 0 ] \
+        && ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx /dev/zram0; then
+        printf "1\n" >/sys/block/zram0/reset 2>/dev/null || true
+    fi
+    # Detach the restart so a slow swapoff cannot stall the calling oneshot unit
+    # past its start timeout; that kill mid-restart is what corrupts zram0.
+    systemctl restart --no-block systemd-zram-setup@zram0.service 2>/dev/null || true
 }
 
 write_damon() {

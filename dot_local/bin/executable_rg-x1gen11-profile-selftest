@@ -165,7 +165,7 @@ rg -q 'zram-size = ram / 4' "$tmpdir/root/etc/systemd/zram-generator.conf.d/10-r
     || fail "travel apply must write the travel zram size"
 rg -q 'sudo systemctl daemon-reload' "$tmpdir/root/commands.log" \
     || fail "apply must reload systemd for zram-generator"
-rg -q 'sudo systemctl restart systemd-zram-setup@zram0.service' "$tmpdir/root/commands.log" \
+rg -q 'sudo systemctl restart --no-block systemd-zram-setup@zram0.service' "$tmpdir/root/commands.log" \
     || fail "apply must restart the zram setup unit"
 rg -q 'systemctl --user set-property browser.slice MemoryHigh=5G' "$tmpdir/root/commands.log" \
     || fail "apply must set the browser slice cap"
