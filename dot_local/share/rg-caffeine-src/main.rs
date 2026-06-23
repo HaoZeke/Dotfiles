@@ -752,6 +752,8 @@ fn health_text(health: Health) -> &'static str {
 fn action_allowed(state: State, action: Action) -> bool {
     match (state.mode, action) {
         (Mode::Off, _) => true,
+        (Mode::Idle, Action::Lock) => false,
+        (Mode::Idle, Action::DpmsOff) => false,
         (Mode::Idle, Action::Hibernate) => false,
         (Mode::Idle, _) => true,
         (Mode::Presentation, Action::Dim) => false,
@@ -1492,6 +1494,57 @@ mod tests {
         assert!(json.contains("\"state\":\"Warning\""), "{json}");
         assert!(json.contains("\"backend\":\"unavailable\""), "{json}");
         assert!(json.contains("\"mode\":\"performance\""), "{json}");
+    }
+
+    fn state_with_mode(mode: Mode) -> State {
+        State {
+            mode,
+            expires_at: None,
+        }
+    }
+
+    #[test]
+    fn awake_mode_keeps_screen_unlocked_and_displayed() {
+        let awake = state_with_mode(Mode::Idle);
+        // "awake" must hold the screen on and unlocked: no lock, no display
+        // power-off, no hibernate.
+        assert!(!action_allowed(awake, Action::Lock), "awake must block lock");
+        assert!(
+            !action_allowed(awake, Action::DpmsOff),
+            "awake must block display power-off"
+        );
+        assert!(
+            !action_allowed(awake, Action::Hibernate),
+            "awake must block hibernate"
+        );
+        // Dimming and all resume actions stay available under awake.
+        assert!(action_allowed(awake, Action::Dim), "awake still allows dim");
+        assert!(action_allowed(awake, Action::DimResume));
+        assert!(action_allowed(awake, Action::DpmsOn));
+    }
+
+    #[test]
+    fn off_mode_runs_the_full_idle_ladder() {
+        let off = state_with_mode(Mode::Off);
+        for action in [
+            Action::Dim,
+            Action::Lock,
+            Action::DpmsOff,
+            Action::Hibernate,
+        ] {
+            assert!(action_allowed(off, action), "auto mode runs every action");
+        }
+    }
+
+    #[test]
+    fn presentation_mode_keeps_the_screen_fully_lit() {
+        let present = state_with_mode(Mode::Presentation);
+        assert!(!action_allowed(present, Action::Dim));
+        assert!(!action_allowed(present, Action::Lock));
+        assert!(!action_allowed(present, Action::DpmsOff));
+        assert!(!action_allowed(present, Action::Hibernate));
+        assert!(action_allowed(present, Action::DimResume));
+        assert!(action_allowed(present, Action::DpmsOn));
     }
 
     #[test]
