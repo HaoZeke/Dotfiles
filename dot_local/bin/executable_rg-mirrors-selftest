@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Selftest for rg-mirrors: drives rank/tune/restore against temp files with a
+# mocked reflector, asserting the safety net (refuse empty list, back up before
+# overwrite, restore rolls back) without touching the real system.
+set -uo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+SCRIPT="$SCRIPT_DIR/rg-mirrors"
+[ -f "$SCRIPT" ] || SCRIPT="$SCRIPT_DIR/executable_rg-mirrors"
+[ -f "$SCRIPT" ] || { printf 'FAIL: rg-mirrors not found\n' >&2; exit 1; }
+
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+mirrorlist="$tmp/mirrorlist"
+pacconf="$tmp/pacman.conf"
+backups="$tmp/backups"
+printf 'Server = https://old.example/$repo/os/$arch\n' >"$mirrorlist"
+printf '[options]\n#ParallelDownloads = 5\n#Color\n' >"$pacconf"
+
+cat >"$tmp/reflector-good" <<'R'
+#!/usr/bin/env bash
+cat <<EOF
+Server = https://m1.example/$repo/os/$arch
+Server = https://m2.example/$repo/os/$arch
+Server = https://m3.example/$repo/os/$arch
+Server = https://m4.example/$repo/os/$arch
+EOF
+R
+chmod +x "$tmp/reflector-good"
+
+printf '#!/usr/bin/env bash\nexit 0\n' >"$tmp/reflector-empty"
+chmod +x "$tmp/reflector-empty"
+
+base_env() {
+    # `env` so a VAR=val passed in "$@" is still parsed as an assignment
+    # (a leading assignment from an expansion would otherwise be the command).
+    env RG_MIRRORS_SUDO="" \
+        RG_MIRRORS_MIRRORLIST="$mirrorlist" \
+        RG_MIRRORS_PACMAN_CONF="$pacconf" \
+        RG_MIRRORS_BACKUP_DIR="$backups" \
+        "$@"
+}
+
+# 1. rank with a healthy reflector installs the ranked list and backs up the old one.
+base_env RG_MIRRORS_REFLECTOR="$tmp/reflector-good" bash "$SCRIPT" rank 2>/dev/null \
+    || fail "rank must succeed with a healthy reflector"
+grep -q 'm1.example' "$mirrorlist" || fail "rank must install the ranked mirrors"
+ls "$backups"/mirrorlist.* >/dev/null 2>&1 || fail "rank must back up the previous mirrorlist"
+
+# 2. rank with an empty reflector must refuse and leave the list intact.
+if base_env RG_MIRRORS_REFLECTOR="$tmp/reflector-empty" bash "$SCRIPT" rank 2>/dev/null; then
+    fail "rank must fail when reflector returns too few mirrors"
+fi
+grep -q 'm1.example' "$mirrorlist" || fail "a failed rank must not clobber the mirrorlist"
+
+# 3. tune enables ParallelDownloads + Color.
+base_env bash "$SCRIPT" tune 2>/dev/null || fail "tune must succeed"
+grep -Eq '^ParallelDownloads = 10' "$pacconf" || fail "tune must enable ParallelDownloads"
+grep -Eq '^Color$' "$pacconf" || fail "tune must enable Color"
+
+# 4. restore rolls the mirrorlist back to the earlier backup (old.example).
+base_env bash "$SCRIPT" restore 2>/dev/null || fail "restore must succeed"
+grep -q 'old.example' "$mirrorlist" || fail "restore must roll back to the backed-up list"
+
+printf 'ok\n'

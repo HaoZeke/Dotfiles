@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Install a weekly mirror-ranking timer driven by rg-mirrors. Arch-only and
+# inert without reflector/systemd, so it is safe to evaluate on any Linux host.
+set -euo pipefail
+
+command -v pacman >/dev/null 2>&1 || { echo "chezmoi: not an Arch host; skipping rg-mirrors timer." >&2; exit 0; }
+command -v reflector >/dev/null 2>&1 || { echo "chezmoi: reflector missing; skipping rg-mirrors timer (pacman -S reflector)." >&2; exit 0; }
+command -v systemctl >/dev/null 2>&1 || exit 0
+
+SRC="$HOME/.local/bin/rg-mirrors"
+[ -x "$SRC" ] || { echo "chezmoi: $SRC missing; skipping rg-mirrors timer." >&2; exit 0; }
+
+install_root() {
+    local dest="$1" mode="$2" tmp
+    tmp="$(mktemp)"
+    cat >"$tmp"
+    if ! sudo test -f "$dest" || ! sudo cmp -s "$tmp" "$dest"; then
+        echo "chezmoi: updating $dest"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dest"
+    fi
+    rm -f "$tmp"
+}
+
+# Root-owned copy so the timer (running as root) can write the mirrorlist
+# without sudo.
+if ! sudo cmp -s "$SRC" /usr/local/sbin/rg-mirrors 2>/dev/null; then
+    echo "chezmoi: updating /usr/local/sbin/rg-mirrors"
+    sudo install -D -m 0755 -o root -g root "$SRC" /usr/local/sbin/rg-mirrors
+fi
+
+install_root /etc/systemd/system/rg-mirrors.service 0644 <<'EOF'
+[Unit]
+Description=Rank Arch mirrors by speed (rg-mirrors)
+Documentation=man:reflector(1)
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-mirrors rank
+TimeoutStartSec=300
+Nice=10
+EOF
+
+install_root /etc/systemd/system/rg-mirrors.timer 0644 <<'EOF'
+[Unit]
+Description=Weekly Arch mirror re-ranking
+
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now rg-mirrors.timer
+{{- end }}

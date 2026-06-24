@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# rg-mirrors: rank Arch mirrors by speed and apply pacman download best
+# practices, with a backup/rollback safety net.
+#
+# Subcommands:
+#   rank        Rank mirrors (reflector) and install a new mirrorlist.
+#   tune        Enable ParallelDownloads + Color in pacman.conf (or aria2).
+#   keyring     Refresh the Arch keyring.
+#   all         rank + tune (the usual one-shot).
+#   restore [N] Roll back the mirrorlist to the latest (or named) backup.
+#   backups     List saved mirrorlist backups.
+#
+# Everything privileged goes through $SUDO, which is empty when already root
+# (so the systemd timer can call it directly). The external tools and paths
+# are env-overridable so the selftest can run without touching the system.
+set -uo pipefail
+
+REFLECTOR="${RG_MIRRORS_REFLECTOR:-reflector}"
+MIRRORLIST="${RG_MIRRORS_MIRRORLIST:-/etc/pacman.d/mirrorlist}"
+PACMAN_CONF="${RG_MIRRORS_PACMAN_CONF:-/etc/pacman.conf}"
+BACKUP_DIR="${RG_MIRRORS_BACKUP_DIR:-/var/lib/rg-mirrors/backups}"
+PACMAN="${RG_MIRRORS_PACMAN:-pacman}"
+# Worldwide rate ranking, but seed the pool with home + neighbours so a fast
+# nearby mirror is always in contention. Override with RG_MIRRORS_COUNTRIES or
+# --worldwide for the unfiltered global pool.
+COUNTRIES="${RG_MIRRORS_COUNTRIES:-United States,Canada,Germany}"
+LATEST="${RG_MIRRORS_LATEST:-20}"
+AGE_HOURS="${RG_MIRRORS_AGE:-12}"
+PARALLEL="${RG_MIRRORS_PARALLEL:-10}"
+DL_TIMEOUT="${RG_MIRRORS_DOWNLOAD_TIMEOUT:-10}"
+MIN_MIRRORS="${RG_MIRRORS_MIN:-3}"
+
+WORLDWIDE=0
+USE_ARIA2=0
+
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    # `-` not `:-`: an explicitly empty RG_MIRRORS_SUDO means "run without sudo"
+    # (used by the selftest); unset falls back to sudo.
+    SUDO="${RG_MIRRORS_SUDO-sudo}"
+fi
+
+die() { printf 'rg-mirrors: %s\n' "$*" >&2; exit 1; }
+log() { printf 'rg-mirrors: %s\n' "$*" >&2; }
+
+usage() {
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+# Nanoseconds so rapid successive backups never collide on one filename.
+stamp() { date -u +%Y%m%dT%H%M%S%NZ 2>/dev/null || date +%Y%m%d-%H%M%S-$$; }
+
+backup_mirrorlist() {
+    [ -f "$MIRRORLIST" ] || { log "no current mirrorlist to back up"; return 0; }
+    $SUDO install -d -m 0755 "$BACKUP_DIR"
+    local dest="$BACKUP_DIR/mirrorlist.$(stamp)"
+    $SUDO install -m 0644 "$MIRRORLIST" "$dest"
+    log "backed up current mirrorlist -> $dest"
+}
+
+cmd_rank() {
+    command -v "$REFLECTOR" >/dev/null 2>&1 \
+        || die "reflector not found; install it (pacman -S reflector)"
+    local args=(--protocol https --sort rate --latest "$LATEST"
+        --age "$AGE_HOURS" --download-timeout "$DL_TIMEOUT")
+    if [ "$WORLDWIDE" -eq 0 ] && [ -n "$COUNTRIES" ]; then
+        args+=(--country "$COUNTRIES")
+    fi
+
+    local scope="[$COUNTRIES]"
+    [ "$WORLDWIDE" -eq 1 ] && scope="worldwide"
+    local tmp
+    tmp="$(mktemp)"
+    # shellcheck disable=SC2064
+    trap "rm -f '$tmp'" RETURN
+    log "ranking mirrors: $scope https, top $LATEST by rate, <= ${AGE_HOURS}h old"
+    if ! "$REFLECTOR" "${args[@]}" >"$tmp" 2>/dev/null; then
+        die "reflector failed; mirrorlist left unchanged"
+    fi
+    # Never install an empty or too-small list -- that would brick pacman.
+    local count
+    count="$(grep -c '^Server' "$tmp" 2>/dev/null || true)"
+    count="${count:-0}"
+    if [ "$count" -lt "$MIN_MIRRORS" ]; then
+        die "reflector returned only $count mirrors (need >= $MIN_MIRRORS); keeping current list"
+    fi
+    backup_mirrorlist
+    $SUDO install -D -m 0644 "$tmp" "$MIRRORLIST" \
+        || die "could not write $MIRRORLIST (need root?)"
+    log "installed $count ranked mirrors -> $MIRRORLIST"
+}
+
+# Ensure a `key = value` under [options]: rewrite an existing (commented or
+# live) line, else append it to the section.
+ensure_pacman_option() {
+    local key="$1" value="$2"
+    if $SUDO grep -Eq "^[#[:space:]]*${key}[[:space:]]*=" "$PACMAN_CONF"; then
+        $SUDO sed -i -E "s|^[#[:space:]]*${key}[[:space:]]*=.*|${key} = ${value}|" "$PACMAN_CONF"
+    elif $SUDO grep -Eq "^[#[:space:]]*${key}[[:space:]]*$" "$PACMAN_CONF"; then
+        $SUDO sed -i -E "s|^[#[:space:]]*${key}[[:space:]]*$|${key}|" "$PACMAN_CONF"
+    else
+        $SUDO sed -i -E "0,/^\[options\]/s//[options]\n${key}${value:+ = ${value}}/" "$PACMAN_CONF"
+    fi
+}
+
+cmd_tune() {
+    [ -f "$PACMAN_CONF" ] || die "$PACMAN_CONF not found"
+    if [ "$USE_ARIA2" -eq 1 ]; then
+        command -v aria2c >/dev/null 2>&1 || die "aria2 not installed (pacman -S aria2)"
+        # aria2 segments each file over many connections. It takes over the
+        # transfer, so pacman's own ParallelDownloads no longer applies; this
+        # is the single-large-file-fast tradeoff vs many-files-at-once.
+        local xfer='/usr/bin/aria2c --max-tries=5 --retry-wait=2 --max-connection-per-server=16 --min-split-size=1M --split=16 --allow-overwrite=true --max-file-not-found=3 --quiet=true --log-level=error --console-log-level=error -o %o %u'
+        $SUDO sed -i -E "s|^[#[:space:]]*XferCommand[[:space:]]*=.*|XferCommand = ${xfer}|" "$PACMAN_CONF" \
+            || die "could not set XferCommand"
+        $SUDO grep -q "^XferCommand" "$PACMAN_CONF" \
+            || die "XferCommand line not present to enable; add it under [options]"
+        log "enabled aria2 XferCommand (ParallelDownloads is ignored while this is set)"
+    else
+        ensure_pacman_option ParallelDownloads "$PARALLEL"
+        log "set ParallelDownloads = $PARALLEL"
+    fi
+    # Color is a flag (no value).
+    if $SUDO grep -Eq '^[#[:space:]]*Color[[:space:]]*$' "$PACMAN_CONF"; then
+        $SUDO sed -i -E 's|^[#[:space:]]*Color[[:space:]]*$|Color|' "$PACMAN_CONF"
+        log "enabled Color"
+    fi
+}
+
+cmd_keyring() {
+    # Updating the keyring package is the safe, fast path; pacman-key
+    # --refresh-keys hammers keyservers and is discouraged.
+    log "refreshing archlinux-keyring"
+    $SUDO "$PACMAN" -Sy --needed --noconfirm archlinux-keyring \
+        || die "keyring refresh failed"
+}
+
+cmd_backups() {
+    if [ -d "$BACKUP_DIR" ]; then
+        ls -1t "$BACKUP_DIR"/mirrorlist.* 2>/dev/null || log "no backups in $BACKUP_DIR"
+    else
+        log "no backup directory yet ($BACKUP_DIR)"
+    fi
+}
+
+cmd_restore() {
+    local pick="${1:-}"
+    local src
+    if [ -n "$pick" ]; then
+        src="$pick"
+        [ -f "$src" ] || src="$BACKUP_DIR/$pick"
+    else
+        src="$(ls -1t "$BACKUP_DIR"/mirrorlist.* 2>/dev/null | head -1)"
+    fi
+    [ -n "$src" ] && [ -f "$src" ] || die "no backup to restore from"
+    # Hold the chosen backup's contents before snapshotting the current list,
+    # so a same-name snapshot can never clobber what we are about to restore.
+    local hold
+    hold="$(mktemp)"
+    cp "$src" "$hold" || die "cannot read backup $src"
+    backup_mirrorlist
+    $SUDO install -D -m 0644 "$hold" "$MIRRORLIST" \
+        || { rm -f "$hold"; die "could not write $MIRRORLIST (need root?)"; }
+    rm -f "$hold"
+    log "restored mirrorlist from $src"
+}
+
+main() {
+    local cmd="${1:-all}"
+    shift || true
+    local rest=()
+    for arg in "$@"; do
+        case "$arg" in
+        --worldwide) WORLDWIDE=1 ;;
+        --aria2) USE_ARIA2=1 ;;
+        -h | --help) usage 0 ;;
+        *) rest+=("$arg") ;;
+        esac
+    done
+    case "$cmd" in
+    rank) cmd_rank ;;
+    tune) cmd_tune ;;
+    keyring) cmd_keyring ;;
+    all)
+        cmd_rank
+        cmd_tune
+        ;;
+    restore) cmd_restore "${rest[0]:-}" ;;
+    backups) cmd_backups ;;
+    -h | --help) usage 0 ;;
+    *) usage 1 ;;
+    esac
+}
+
+main "$@"
