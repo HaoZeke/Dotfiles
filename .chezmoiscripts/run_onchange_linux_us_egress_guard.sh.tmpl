@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Install the US-egress tunnel self-heal guard, its timer, and a
+# systemd-networkd rule that keeps the WireGuard tunnel and the Tailscale
+# interface unmanaged so a networkd restart cannot flush them. The guard only
+# acts once wg-quick@rg-us-egress-wg is enabled, so this install is inert
+# until the egress profile is made persistent.
+set -euo pipefail
+
+GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
+if [ ! -x "$GUARD_SRC" ]; then
+    echo "chezmoi: $GUARD_SRC missing; skipping us-egress guard install." >&2
+    exit 0
+fi
+
+install_root() {
+    local dest="$1" mode="$2" tmp
+    tmp="$(mktemp)"
+    cat >"$tmp"
+    if ! sudo test -f "$dest" || ! sudo cmp -s "$tmp" "$dest"; then
+        echo "chezmoi: updating $dest"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dest"
+    fi
+    rm -f "$tmp"
+}
+
+# Root-owned copy of the managed guard script (systemd runs it as root).
+if ! sudo cmp -s "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard 2>/dev/null; then
+    echo "chezmoi: updating /usr/local/sbin/rg-us-egress-guard"
+    sudo install -D -m 0755 -o root -g root "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
+fi
+
+install_root /etc/systemd/network/05-rg-tunnels-unmanaged.network 0644 <<'EOF'
+# Managed by chezmoi (run_onchange_linux_us_egress_guard.sh.tmpl).
+# Keep the WireGuard egress tunnel and the Tailscale interface out of
+# systemd-networkd management so a networkd restart cannot flush their
+# addresses, routes, or policy rules.
+[Match]
+Name=rg-us-egress-wg tailscale0
+
+[Link]
+Unmanaged=yes
+EOF
+
+install_root /etc/systemd/system/rg-us-egress-guard.service 0644 <<'EOF'
+[Unit]
+Description=Re-up the US-egress WireGuard tunnel if it dropped
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-us-egress-guard
+EOF
+
+install_root /etc/systemd/system/rg-us-egress-guard.timer 0644 <<'EOF'
+[Unit]
+Description=Periodic check that the US-egress tunnel stays up
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now rg-us-egress-guard.timer
+{{- end }}

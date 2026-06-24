@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Re-up the US-egress WireGuard tunnel when it has been made persistent
+# (wg-quick@<iface> enabled) but the interface is down -- e.g. after a
+# systemd-networkd restart, a resume from suspend, or a Wi-Fi flap. It does
+# nothing while the unit is disabled, so it honours the opt-in design: the
+# tunnel only self-heals once the user has chosen to make it persistent.
+#
+# The systemctl/ip/log commands are overridable so the selftest can drive the
+# decision logic without real systemd or network state.
+set -uo pipefail
+
+iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+unit="wg-quick@${iface}.service"
+SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
+IP="${RG_GUARD_IP:-ip}"
+LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
+
+# Desired-up marker: the unit is enabled. Skip entirely otherwise.
+$SYSTEMCTL is-enabled --quiet "$unit" || exit 0
+
+# Interface already present: nothing to do.
+if $IP link show "$iface" >/dev/null 2>&1; then
+    exit 0
+fi
+
+$LOG "interface $iface down while $unit enabled; re-upping"
+$SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
+if $SYSTEMCTL start "$unit"; then
+    # The route flip can drop the Control D DoH session; resettle DNS.
+    $SYSTEMCTL restart ctrld.service 2>/dev/null || true
+    $LOG "re-upped $iface"
+else
+    $LOG "failed to re-up $iface"
+fi

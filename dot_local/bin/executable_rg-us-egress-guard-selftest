@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Selftest for rg-us-egress-guard: drives the guard with mocked systemctl/ip
+# and asserts it only re-ups when the unit is enabled and the interface is
+# down. No real systemd, network, or root needed.
+set -uo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+GUARD="$SCRIPT_DIR/rg-us-egress-guard"
+[ -f "$GUARD" ] || GUARD="$SCRIPT_DIR/executable_rg-us-egress-guard"
+[ -f "$GUARD" ] || { printf 'FAIL: rg-us-egress-guard not found\n' >&2; exit 1; }
+
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# Mock systemctl: is-enabled honours $RG_TEST_ENABLED; link/start are logged.
+cat >"$tmp/systemctl.sh" <<'SC'
+#!/usr/bin/env bash
+case "$1" in
+is-enabled) [ "${RG_TEST_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
+start) printf 'start %s\n' "$2" >>"$RG_TEST_CALLS"; exit 0 ;;
+*) exit 0 ;;
+esac
+SC
+chmod +x "$tmp/systemctl.sh"
+
+# Mock ip: link show succeeds when $RG_TEST_IFACE_UP=1.
+cat >"$tmp/ip.sh" <<'IP'
+#!/usr/bin/env bash
+[ "${RG_TEST_IFACE_UP:-0}" = "1" ] && exit 0 || exit 1
+IP
+chmod +x "$tmp/ip.sh"
+
+calls="$tmp/calls"
+
+run_case() {
+    : >"$calls"
+    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_CALLS="$calls" \
+        RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
+        RG_GUARD_IP="$tmp/ip.sh" \
+        RG_GUARD_LOG="true" \
+        bash "$GUARD"
+    grep -c '^start ' "$calls" 2>/dev/null || true
+}
+
+n=$(run_case 0 0); [ "$n" = "0" ] || fail "disabled unit must not re-up (got $n)"
+n=$(run_case 1 1); [ "$n" = "0" ] || fail "up interface must not re-up (got $n)"
+n=$(run_case 1 0); [ "$n" = "1" ] || fail "enabled + down must re-up once (got $n)"
+
+printf 'ok\n'
