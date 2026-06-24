@@ -1,0 +1,24 @@
+# -*- systemd -*-
+# Managed by chezmoi (dot_config/systemd/user/rg-kanata-watchdog.service).
+#
+# Self-heals kanata. kanata 1.11.0 can wedge its evdev poll loop (EINTR)
+# while staying "active", so the kanata unit's Restart=on-failure never
+# fires and the keyboard silently drops to raw QWERTY -- which can strand
+# the user at a password prompt with no way to type. This watcher follows
+# kanata's journal and bounces it when the wedge signature appears.
+[Unit]
+Description=Watchdog that restarts kanata when its remap loop wedges
+Documentation=https://github.com/jtroo/kanata
+After=kanata.service
+Wants=kanata.service
+PartOf=sway-session.target
+
+[Service]
+ExecStart=%h/.local/bin/rg-kanata-watchdog
+Restart=always
+RestartSec=5
+OOMScoreAdjust=-400
+ManagedOOMPreference=avoid
+
+[Install]
+WantedBy=sway-session.target

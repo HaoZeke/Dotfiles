@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Selftest for rg-kanata-watchdog: drives watchdog_loop with a mocked clock
+# and restart command, asserting the wedge-signature match and the cooldown
+# collapse without touching a live kanata or systemd.
+set -uo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+WATCHDOG="$SCRIPT_DIR/rg-kanata-watchdog"
+[ -f "$WATCHDOG" ] || WATCHDOG="$SCRIPT_DIR/executable_rg-kanata-watchdog"
+[ -f "$WATCHDOG" ] || { printf 'FAIL: rg-kanata-watchdog not found\n' >&2; exit 1; }
+
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# Mock clock: pop successive values from RG_KANATA_NOWFILE (one per call).
+cat >"$tmp/now.sh" <<'NOW'
+#!/usr/bin/env bash
+f="$RG_KANATA_NOWFILE"
+read -r v <"$f"
+tail -n +2 "$f" >"$f.rest" && mv "$f.rest" "$f"
+printf '%s\n' "$v"
+NOW
+chmod +x "$tmp/now.sh"
+
+# Mock restart: append a byte per call to RG_KANATA_COUNTFILE.
+cat >"$tmp/restart.sh" <<'R'
+#!/usr/bin/env bash
+printf 'x' >>"$RG_KANATA_COUNTFILE"
+R
+chmod +x "$tmp/restart.sh"
+
+countfile="$tmp/restarts"
+nowfile="$tmp/now"
+
+# run_case NOW_VALUES <<< stdin -> echoes the restart count
+run_case() {
+    printf '%s\n' "$1" >"$nowfile"
+    : >"$countfile"
+    RG_KANATA_WATCHDOG_LIB=1 \
+        RG_KANATA_COOLDOWN=90 \
+        RG_KANATA_NOWFILE="$nowfile" \
+        RG_KANATA_COUNTFILE="$countfile" \
+        RG_KANATA_NOW_CMD="$tmp/now.sh" \
+        RG_KANATA_RESTART_CMD="$tmp/restart.sh" \
+        bash -c 'source "$0"; watchdog_loop' "$WATCHDOG"
+    wc -c <"$countfile" | tr -d ' '
+}
+
+n=$(printf 'all good\nno devices are missing, doing nothing\n' | run_case "100")
+[ "$n" = "0" ] || fail "benign lines must not restart (got $n)"
+
+n=$(printf 'failed poll: Os { code: 4, kind: Interrupted, message: "Interrupted system call" }\n' | run_case "100")
+[ "$n" = "1" ] || fail "wedge signature must restart once (got $n)"
+
+n=$(printf 'failed poll a\nfailed poll b\nfailed poll c\n' | run_case "100
+100
+250")
+[ "$n" = "2" ] || fail "cooldown must collapse a burst (expected 2, got $n)"
+
+printf 'ok\n'

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Self-heal kanata when its evdev poll loop wedges.
+#
+# kanata 1.11.0 has no sd_notify watchdog. A poll() EINTR wedge leaves the
+# process alive -- so the unit's Restart=on-failure never fires -- while it
+# silently stops remapping, dropping the keyboard back to raw QWERTY and
+# stranding the user at password prompts. Follow the kanata journal and
+# bounce the unit when the wedge signature shows up, rate-limited so a burst
+# of errors cannot turn into a restart storm.
+#
+# The journal source, restart command, and clock are overridable so the
+# selftest can drive the decision logic without a live kanata or systemd.
+set -uo pipefail
+
+UNIT="${RG_KANATA_UNIT:-kanata.service}"
+COOLDOWN="${RG_KANATA_COOLDOWN:-90}"
+RESTART_CMD="${RG_KANATA_RESTART_CMD:-systemctl --user restart $UNIT}"
+JOURNAL_CMD="${RG_KANATA_JOURNAL_CMD:-journalctl --user -u $UNIT -f -n0 -o cat}"
+NOW_CMD="${RG_KANATA_NOW_CMD:-date +%s}"
+
+# Reads journal lines on stdin and restarts the unit when a wedge signature
+# appears, honouring COOLDOWN between restarts.
+watchdog_loop() {
+    local last=0 now line
+    while IFS= read -r line; do
+        case "$line" in
+        *"failed poll"* | *"Interrupted system call"*) ;;
+        *) continue ;;
+        esac
+        now=$($NOW_CMD)
+        if [ $((now - last)) -lt "$COOLDOWN" ]; then
+            continue
+        fi
+        last=$now
+        printf 'rg-kanata-watchdog: wedge signature seen; restarting %s\n' "$UNIT" >&2
+        $RESTART_CMD || true
+    done
+}
+
+# Sourced by the selftest with RG_KANATA_WATCHDOG_LIB=1 to exercise
+# watchdog_loop directly; otherwise attach to the live journal follower.
+if [ "${RG_KANATA_WATCHDOG_LIB:-0}" != "1" ]; then
+    $JOURNAL_CMD | watchdog_loop
+fi
