@@ -289,14 +289,23 @@ apply_profile() {
 
     mkdir -p "$STATE_DIR"
     if apply_root_helper "$profile"; then
+        # The helper applied everything it can over passwordless sudo. A
+        # remaining drift triggers a best-effort retry of the privileged
+        # writes, but those use interactive sudo and cannot prompt from the
+        # systemd user service (no tty), so the block is non-fatal: its failure
+        # must not fail the unit. Some knobs always read as drift here anyway
+        # (read-only iwlwifi power_save; scx is applied further down), so
+        # gating the service on them would wedge it permanently.
         if ! profile_policy_check "$profile"; then
-            write_platform_profile "$platform"
-            write_scaling_governor "$governor"
-            write_energy_performance_preference "$epp"
-            write_hwp_dynamic_boost "$hwp"
-            write_iwl_power_save "$iwl"
-            write_zram_size "$zram"
-            apply_damon "$damon" "$damon_profile"
+            {
+                write_platform_profile "$platform"
+                write_scaling_governor "$governor"
+                write_energy_performance_preference "$epp"
+                write_hwp_dynamic_boost "$hwp"
+                write_iwl_power_save "$iwl"
+                write_zram_size "$zram"
+                apply_damon "$damon" "$damon_profile"
+            } || true
         fi
     else
         write_platform_profile "$platform"
