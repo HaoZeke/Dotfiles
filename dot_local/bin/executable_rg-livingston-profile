@@ -131,6 +131,10 @@ profile_env=(
     "RG_LOCATION_LAT=$LOCATION_LAT"
     "RG_LOCATION_LON=$LOCATION_LON"
     "RG_LOCATION_ACCURACY=$LOCATION_ACCURACY"
+    # Iris Xe (Gen12) uses the iHD VA-API driver from intel-media-driver; pin it
+    # so libva does not fall back to the legacy i965 driver, which cannot init
+    # on this GPU (vaInitialize failed).
+    "LIBVA_DRIVER_NAME=iHD"
 )
 
 print_env() {
@@ -367,7 +371,10 @@ run_browser() {
         "--lang=$BROWSER_LANG"
         "--no-first-run"
         "--no-default-browser-check"
-        "--enable-features=UseOzonePlatform,WaylandWindowDecorations"
+        "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecoder,VaapiVideoEncoder"
+        # Vulkan is not supported under the Wayland ozone backend; force the GL
+        # path so it stops warning and falls back deterministically.
+        "--disable-features=Vulkan"
         "--ozone-platform=wayland"
         "--ozone-platform-hint=auto"
         "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"
