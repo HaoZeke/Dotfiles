@@ -248,9 +248,18 @@ apply_damon() {
 }
 
 apply_scx_mode() {
-    local mode="$1"
+    local mode="$1" current
     if [ -x "$HOME/.local/bin/rg-sched-ladder" ]; then
-        "$HOME/.local/bin/rg-sched-ladder" switch "$mode" >/dev/null 2>&1 \
+        # Already in the requested mode: skip. Re-issuing a switch to the
+        # running scheduler can block on a scx_loader/polkit prompt that the
+        # systemd user service (no tty) cannot answer.
+        current="$("$HOME/.local/bin/rg-sched-ladder" current 2>/dev/null || printf 'unknown\n')"
+        if [ "$current" = "$mode" ]; then
+            return 0
+        fi
+        # Bound the switch so a stuck loader cannot hang the unit past its
+        # start timeout.
+        timeout 12 "$HOME/.local/bin/rg-sched-ladder" switch "$mode" >/dev/null 2>&1 \
             || printf 'rg-sched-ladder: could not switch to %s (boot linux-rg?)\n' "$mode" >&2
         return 0
     fi
@@ -289,24 +298,13 @@ apply_profile() {
 
     mkdir -p "$STATE_DIR"
     if apply_root_helper "$profile"; then
-        # The helper applied everything it can over passwordless sudo. A
-        # remaining drift triggers a best-effort retry of the privileged
-        # writes, but those use interactive sudo and cannot prompt from the
-        # systemd user service (no tty), so the block is non-fatal: its failure
-        # must not fail the unit. Some knobs always read as drift here anyway
-        # (read-only iwlwifi power_save; scx is applied further down), so
-        # gating the service on them would wedge it permanently.
-        if ! profile_policy_check "$profile"; then
-            {
-                write_platform_profile "$platform"
-                write_scaling_governor "$governor"
-                write_energy_performance_preference "$epp"
-                write_hwp_dynamic_boost "$hwp"
-                write_iwl_power_save "$iwl"
-                write_zram_size "$zram"
-                apply_damon "$damon" "$damon_profile"
-            } || true
-        fi
+        # Trust the helper: it applied every privileged knob over passwordless
+        # sudo. Re-doing those writes inline cannot help -- the only residual
+        # drift is unsettable (read-only iwlwifi power_save) or applied later
+        # (scx) -- and the inline writes need an interactive sudo the systemd
+        # user service (no tty) cannot satisfy, looping over every CPU until the
+        # unit's start timeout fires. Report drift and continue.
+        profile_policy_check "$profile" || true
     else
         write_platform_profile "$platform"
         write_scaling_governor "$governor"

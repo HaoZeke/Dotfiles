@@ -153,6 +153,7 @@ RG_X1GEN11_PROFILES="$profiles" \
     RG_X1GEN11_ROOT_HELPER="$tmpdir/missing-root-helper" \
     RG_X1GEN11_SUDO="$tmpdir/bin/fake-sudo" \
     RG_X1GEN11_FAKE_ROOT="$tmpdir/root" \
+    RG_SCHED_FAKE_CURRENT=rusty \
     HOME="$tmpdir/home" \
     PATH="$tmpdir/bin:$PATH" \
     "$script" apply travel >/dev/null
@@ -224,10 +225,15 @@ RG_X1GEN11_PROFILES="$profiles" \
     HOME="$tmpdir/home" \
     PATH="$tmpdir/bin:$PATH" \
     "$script" apply undocked-mixed >"$tmpdir/stale-apply.out" 2>&1
-rg -q '^low-power$' "$stale_root/sys/firmware/acpi/platform_profile" \
-    || fail "apply must correct stale root helper platform drift"
-rg -q '^0$' "$stale_root/sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost" \
-    || fail "apply must correct stale root helper HWP boost drift"
+# A successful root helper is trusted: the wrapper must not re-issue the
+# privileged writes inline (that path needs an interactive sudo the systemd
+# user service cannot satisfy). The helper's writes are therefore left as-is.
+rg -q '^balanced$' "$stale_root/sys/firmware/acpi/platform_profile" \
+    || fail "apply must trust a successful root helper and not override its platform write"
+rg -q '^1$' "$stale_root/sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost" \
+    || fail "apply must not re-issue privileged writes after a successful helper"
+test "$(cat "$stale_state/active-profile")" = undocked-mixed \
+    || fail "apply must still record the profile and exit cleanly after a trusted helper"
 
 check_state="$tmpdir/check-state"
 fake_sys="$tmpdir/check-sys"
