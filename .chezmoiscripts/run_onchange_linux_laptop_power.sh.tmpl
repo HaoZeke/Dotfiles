@@ -263,7 +263,7 @@ data = json.load(open(path, encoding="utf-8"))
 profiles = data["profiles"]
 if profile not in profiles:
     choices = "|".join(profiles)
-    print(f"usage: {sys.argv[0]} {{{choices}}}", file=sys.stderr)
+    print("usage: %s {%s}" % (sys.argv[0], choices), file=sys.stderr)
     raise SystemExit(2)
 
 spec = profiles[profile]
@@ -359,7 +359,7 @@ fs-type = swap"
     fi
     printf "%s\n" "$desired" >"$conf"
     systemctl daemon-reload
-    # A disksize left on an idle (non-swap) zram0 makes the generator's
+    # A disksize left on an idle (non-swap) zram0 makes the generator
     # comp_algorithm write fail with EBUSY; reset the device so the rebuild can
     # run. This is the state a killed restart leaves behind.
     if [ -e /sys/block/zram0/disksize ] \
