@@ -245,3 +245,12 @@ tokens:
   - first class citizen
   - table-stakes
   - table stakes
+  # (trace-review 2026-06): describe a trace plainly as "tracing the model steps",
+  # not anthropomorphic "reading its thoughts". Extends the believes/thinks block.
+  - read(ing)? (its|his|her|their|the|my) thoughts
+  - read(ing)? the model'?s thoughts
+  - its (own )?thoughts
+  # editorializing aphoristic opener ("Above all, recognize that X is not the same
+  # as Y"): state the gap concretely, do not moralize.
+  - above all,?
+  - is not the same as
