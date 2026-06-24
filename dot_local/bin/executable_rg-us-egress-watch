@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Real-time guard for the US-egress tunnel. Instead of waiting for the periodic
+# timer, react to every route/link/address change (`ip monitor`) and re-assert
+# egress the instant it is disturbed -- a flushed policy rule, a dropped
+# interface, a resume, a Wi-Fi flap. Each event runs the one-shot guard,
+# debounced so a burst (and the restart's own events) trigger at most one
+# restart per cooldown.
+#
+# The monitor source, guard, clock, and log are overridable so the selftest can
+# drive the loop without real netlink or systemd.
+set -uo pipefail
+
+GUARD="${RG_US_EGRESS_GUARD:-/usr/local/sbin/rg-us-egress-guard}"
+MONITOR="${RG_US_EGRESS_MONITOR:-ip monitor route link addr}"
+COOLDOWN="${RG_US_EGRESS_WATCH_COOLDOWN:-5}"
+NOW_CMD="${RG_US_EGRESS_NOW_CMD:-date +%s}"
+
+run_guard() { "$GUARD" >/dev/null 2>&1 || true; }
+
+# Reads netlink event lines on stdin and runs the guard, honouring COOLDOWN.
+watch_loop() {
+    local last=0 now line
+    while IFS= read -r line; do
+        now=$($NOW_CMD)
+        [ $((now - last)) -lt "$COOLDOWN" ] && continue
+        last=$now
+        run_guard
+    done
+}
+
+# Sourced by the selftest to exercise watch_loop directly.
+if [ "${RG_US_EGRESS_WATCH_LIB:-0}" != "1" ]; then
+    run_guard            # assert once at startup
+    $MONITOR 2>/dev/null | watch_loop
+fi

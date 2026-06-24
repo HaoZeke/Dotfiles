@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
-# Re-up the US-egress WireGuard tunnel when it has been made persistent
-# (wg-quick@<iface> enabled) but the interface is down -- e.g. after a
-# systemd-networkd restart, a resume from suspend, or a Wi-Fi flap. It does
-# nothing while the unit is disabled, so it honours the opt-in design: the
-# tunnel only self-heals once the user has chosen to make it persistent.
+# Keep the US-egress WireGuard tunnel actually carrying traffic. Once
+# wg-quick@<iface> is enabled it self-heals two failure modes:
+#   - the interface is gone (networkd restart, resume, Wi-Fi flap), or
+#   - the interface is up but a public probe no longer routes through it,
+#     i.e. wg-quick's policy rules were flushed underneath it (a
+#     systemd-networkd restart with ManageForeignRoutingPolicyRules=yes does
+#     exactly this, leaving egress silently back on the default route).
+# Inert while the unit is disabled, honouring the opt-in design.
 #
-# The systemctl/ip/log commands are overridable so the selftest can drive the
-# decision logic without real systemd or network state.
+# systemctl/ip/log are overridable so the selftest can drive the decision
+# logic without real systemd or network state.
 set -uo pipefail
 
 iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 unit="wg-quick@${iface}.service"
+probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
 SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
 IP="${RG_GUARD_IP:-ip}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
@@ -18,17 +22,20 @@ LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 $SYSTEMCTL is-enabled --quiet "$unit" || exit 0
 
-# Interface already present: nothing to do.
-if $IP link show "$iface" >/dev/null 2>&1; then
+# Healthy = interface present AND the public probe egresses through it.
+if $IP link show "$iface" >/dev/null 2>&1 \
+    && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
     exit 0
 fi
 
-$LOG "interface $iface down while $unit enabled; re-upping"
+$LOG "$iface not carrying egress while $unit enabled; restoring"
 $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
-if $SYSTEMCTL start "$unit"; then
+# restart (not start): re-applies wg-quick's routes and policy rules even when
+# the interface is already up but no longer routing.
+if $SYSTEMCTL restart "$unit"; then
     # The route flip can drop the Control D DoH session; resettle DNS.
     $SYSTEMCTL restart ctrld.service 2>/dev/null || true
-    $LOG "re-upped $iface"
+    $LOG "restored egress on $iface"
 else
-    $LOG "failed to re-up $iface"
+    $LOG "failed to restore $iface"
 fi

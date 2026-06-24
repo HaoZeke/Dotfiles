@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Selftest for rg-us-egress-guard: drives the guard with mocked systemctl/ip
-# and asserts it only re-ups when the unit is enabled and the interface is
-# down. No real systemd, network, or root needed.
+# Selftest for rg-us-egress-guard: drives the guard with mocked systemctl/ip and
+# asserts it restores egress when the unit is enabled and the tunnel is either
+# down or up-but-not-routing, and stays quiet otherwise. No real systemd/network.
 set -uo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -14,38 +14,51 @@ fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# Mock systemctl: is-enabled honours $RG_TEST_ENABLED; link/start are logged.
+# Mock systemctl: is-enabled honours RG_TEST_ENABLED; restart is logged.
 cat >"$tmp/systemctl.sh" <<'SC'
 #!/usr/bin/env bash
 case "$1" in
 is-enabled) [ "${RG_TEST_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
-start) printf 'start %s\n' "$2" >>"$RG_TEST_CALLS"; exit 0 ;;
+restart) printf 'restart %s\n' "$2" >>"$RG_TEST_CALLS"; exit 0 ;;
 *) exit 0 ;;
 esac
 SC
 chmod +x "$tmp/systemctl.sh"
 
-# Mock ip: link show succeeds when $RG_TEST_IFACE_UP=1.
+# Mock ip: `link show` honours RG_TEST_IFACE_UP; `route get` reports the iface
+# when RG_TEST_ROUTE_OK, else a different device.
 cat >"$tmp/ip.sh" <<'IP'
 #!/usr/bin/env bash
-[ "${RG_TEST_IFACE_UP:-0}" = "1" ] && exit 0 || exit 1
+case "$1 $2" in
+"link show") [ "${RG_TEST_IFACE_UP:-0}" = "1" ] && exit 0 || exit 1 ;;
+"route get")
+    if [ "${RG_TEST_ROUTE_OK:-0}" = "1" ]; then
+        printf '1.1.1.1 dev %s src x\n' "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+    else
+        printf '1.1.1.1 dev wlan0 src x\n'
+    fi
+    ;;
+esac
 IP
 chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
 
+# run_case ENABLED IFACE_UP ROUTE_OK -> echoes the restart count
 run_case() {
     : >"$calls"
-    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_CALLS="$calls" \
+    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_ROUTE_OK="$3" \
+        RG_TEST_CALLS="$calls" \
         RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
         RG_GUARD_IP="$tmp/ip.sh" \
         RG_GUARD_LOG="true" \
         bash "$GUARD"
-    grep -c '^start ' "$calls" 2>/dev/null || true
+    grep -c '^restart wg-quick' "$calls" 2>/dev/null || true
 }
 
-n=$(run_case 0 0); [ "$n" = "0" ] || fail "disabled unit must not re-up (got $n)"
-n=$(run_case 1 1); [ "$n" = "0" ] || fail "up interface must not re-up (got $n)"
-n=$(run_case 1 0); [ "$n" = "1" ] || fail "enabled + down must re-up once (got $n)"
+n=$(run_case 0 0 0); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
+n=$(run_case 1 1 1); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
+n=$(run_case 1 1 0); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
+n=$(run_case 1 0 0); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
 
 printf 'ok\n'

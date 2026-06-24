@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
-# Install the US-egress tunnel self-heal guard, its timer, and a
-# systemd-networkd rule that keeps the WireGuard tunnel and the Tailscale
-# interface unmanaged so a networkd restart cannot flush them. The guard only
-# acts once wg-quick@rg-us-egress-wg is enabled, so this install is inert
-# until the egress profile is made persistent.
+# Keep the US-egress WireGuard tunnel carrying traffic, defensively layered:
+#   1. networkd is told not to reap foreign routes/policy rules, so a networkd
+#      restart cannot flush wg-quick's full-tunnel routing (the root cause).
+#   2. the tunnel + tailscale interfaces are marked Unmanaged so networkd never
+#      touches them either.
+#   3. a real-time watcher reacts to every netlink change and re-asserts egress
+#      immediately.
+#   4. a periodic timer is the backstop.
+# All of it is inert until wg-quick@rg-us-egress-wg is enabled.
 set -euo pipefail
 
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
-if [ ! -x "$GUARD_SRC" ]; then
-    echo "chezmoi: $GUARD_SRC missing; skipping us-egress guard install." >&2
+WATCH_SRC="$HOME/.local/bin/rg-us-egress-watch"
+if [ ! -x "$GUARD_SRC" ] || [ ! -x "$WATCH_SRC" ]; then
+    echo "chezmoi: us-egress guard/watch scripts missing; skipping install." >&2
     exit 0
 fi
 
@@ -24,17 +29,33 @@ install_root() {
     rm -f "$tmp"
 }
 
-# Root-owned copy of the managed guard script (systemd runs it as root).
-if ! sudo cmp -s "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard 2>/dev/null; then
-    echo "chezmoi: updating /usr/local/sbin/rg-us-egress-guard"
-    sudo install -D -m 0755 -o root -g root "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
-fi
+install_bin() {
+    local src="$1" dest="$2"
+    if ! sudo cmp -s "$src" "$dest" 2>/dev/null; then
+        echo "chezmoi: updating $dest"
+        sudo install -D -m 0755 -o root -g root "$src" "$dest"
+    fi
+}
 
+# Root-owned copies of the managed scripts (systemd runs them as root).
+install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
+install_bin "$WATCH_SRC" /usr/local/sbin/rg-us-egress-watch
+
+# (1) Root cause: stop networkd reaping rules/routes it did not create.
+install_root /etc/systemd/networkd.conf.d/10-rg-keep-foreign-routes.conf 0644 <<'EOF'
+# Managed by chezmoi (run_onchange_linux_us_egress_guard.sh.tmpl).
+# Do not let systemd-networkd delete routes or routing-policy rules it did not
+# create. wg-quick installs a full-tunnel default route in table 51820 plus the
+# policy rules that steer traffic into it; with the defaults (yes) a networkd
+# restart flushes those and egress silently falls back to the main route.
+[Network]
+ManageForeignRoutes=no
+ManageForeignRoutingPolicyRules=no
+EOF
+
+# (2) Belt-and-braces: keep the tunnel + tailscale interfaces unmanaged.
 install_root /etc/systemd/network/05-rg-tunnels-unmanaged.network 0644 <<'EOF'
 # Managed by chezmoi (run_onchange_linux_us_egress_guard.sh.tmpl).
-# Keep the WireGuard egress tunnel and the Tailscale interface out of
-# systemd-networkd management so a networkd restart cannot flush their
-# addresses, routes, or policy rules.
 [Match]
 Name=rg-us-egress-wg tailscale0
 
@@ -42,9 +63,27 @@ Name=rg-us-egress-wg tailscale0
 Unmanaged=yes
 EOF
 
+# (3) Real-time watcher: react to every netlink change.
+install_root /etc/systemd/system/rg-us-egress-watch.service 0644 <<'EOF'
+[Unit]
+Description=Real-time guard for the US-egress WireGuard tunnel
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/rg-us-egress-watch
+Restart=always
+RestartSec=3
+Nice=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+# (4) Periodic backstop.
 install_root /etc/systemd/system/rg-us-egress-guard.service 0644 <<'EOF'
 [Unit]
-Description=Re-up the US-egress WireGuard tunnel if it dropped
+Description=Re-assert the US-egress WireGuard tunnel if it dropped
 After=network.target
 
 [Service]
@@ -57,14 +96,15 @@ install_root /etc/systemd/system/rg-us-egress-guard.timer 0644 <<'EOF'
 Description=Periodic check that the US-egress tunnel stays up
 
 [Timer]
-OnBootSec=30s
-OnUnitActiveSec=60s
-AccuracySec=10s
+OnBootSec=20s
+OnUnitActiveSec=30s
+AccuracySec=5s
 
 [Install]
 WantedBy=timers.target
 EOF
 
 sudo systemctl daemon-reload
+sudo systemctl enable --now rg-us-egress-watch.service
 sudo systemctl enable --now rg-us-egress-guard.timer
 {{- end }}
