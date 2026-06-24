@@ -775,7 +775,7 @@ build_kernel() {
             NINJAFLAGS="-j$jobs" \
             PKGDEST="$artifact_dir" \
             SRCDEST="$(local_build_root)/srcdest" \
-            makepkg --syncdeps --noconfirm --cleanbuild --clean --log
+            makepkg --syncdeps --noconfirm --cleanbuild --clean --force --log
     )
 
     printf 'artifacts written to %s\n' "$artifact_dir"
