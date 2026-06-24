@@ -1112,6 +1112,13 @@ fn find_dirs(home: &Path, terms: &[&str]) -> Result<Vec<PathBuf>, String> {
         OsString::from("-o"),
         OsString::from("-path"),
         home.join(".local/share/Trash").into_os_string(),
+        OsString::from("-o"),
+        OsString::from("-path"),
+        // pipx tool venvs back ~/.local/bin shims; never scan into them.
+        home.join(".local/pipx").into_os_string(),
+        OsString::from("-o"),
+        OsString::from("-path"),
+        home.join(".local/share/pipx").into_os_string(),
         OsString::from(")"),
         OsString::from("-prune"),
         OsString::from("-o"),
@@ -1364,8 +1371,13 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
     }
+    // Never remove the dirs that back installed CLI tools: ~/.local/bin and
+    // ~/.cargo/bin shims, and the pipx tool venvs they point into. Losing a
+    // pipx venv leaves a dangling ~/.local/bin symlink and an uninstalled tool.
     if entry.path.starts_with(home.join(".local/bin"))
         || entry.path.starts_with(home.join(".cargo/bin"))
+        || entry.path.starts_with(home.join(".local/pipx"))
+        || entry.path.starts_with(home.join(".local/share/pipx"))
     {
         return false;
     }
