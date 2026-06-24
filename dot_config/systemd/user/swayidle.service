@@ -16,6 +16,12 @@ Type=simple
 # caffeine health/focus indicator to an error. Auto-recover.
 Restart=on-failure
 RestartSec=2
+# swayidle has no singleton lock of its own, so a stray launch (a manual
+# start, or exec_always creeping back into the sway config) would run a second
+# instance and double-fire every timeout. Reap any stray before starting so
+# this unit is always the sole swayidle. The leading - keeps "no match"
+# non-fatal, and it runs before ExecStart so it never targets our own process.
+ExecStartPre=-/usr/bin/pkill -x swayidle
 # Idle staircase:
 #   240s   dim the display by 30% (save -> -30%); restore on activity
 #   300s   lock the screen
