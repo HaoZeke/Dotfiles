@@ -1,5 +1,5 @@
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
 #!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
 # Configure KSM for explicit MADV_MERGEABLE workloads on rgx1gen11.
 
 set -euo pipefail
