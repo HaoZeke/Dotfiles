@@ -100,6 +100,24 @@ artifact_dir() {
     printf '%s/%s\n' "$RG_KERNEL_ARTIFACT_DIR" "$RG_KERNEL_PACKAGE_BASE"
 }
 
+makepkg_config() {
+    local out
+    out="$(local_build_root)/makepkg-linux-rg.conf"
+    {
+        cat /etc/makepkg.conf
+        cat <<'EOF'
+
+DLAGENTS=('file::/usr/bin/curl -qgC - -o %o %u'
+          'ftp::/usr/bin/curl -4 -qgfC - --ftp-pasv --retry 3 --retry-delay 3 -o %o %u'
+          'http::/usr/bin/curl -4 -qgb "" -fLC - --retry 3 --retry-delay 3 -o %o %u'
+          'https::/usr/bin/curl -4 -qgb "" -fLC - --retry 3 --retry-delay 3 -o %o %u'
+          'rsync::/usr/bin/rsync --no-motd -z %u %o'
+          'scp::/usr/bin/scp -C %u %o')
+EOF
+    } >"$out"
+    printf '%s\n' "$out"
+}
+
 managed_path() {
     local path=$1
     if [ -e "$path" ]; then
@@ -757,7 +775,7 @@ import_validpgpkeys() {
 }
 
 build_kernel() {
-    local dir artifact_dir jobs
+    local dir artifact_dir jobs makepkg_conf
 
     local_preflight
     prepare_pkgbuild >/dev/null
@@ -765,6 +783,7 @@ build_kernel() {
     dir=$(build_dir)
     artifact_dir=$(artifact_dir)
     jobs=$(bounded_jobs)
+    makepkg_conf=$(makepkg_config)
     mkdir -p "$artifact_dir" "$(local_build_root)/srcdest"
 
     (
@@ -775,7 +794,7 @@ build_kernel() {
             NINJAFLAGS="-j$jobs" \
             PKGDEST="$artifact_dir" \
             SRCDEST="$(local_build_root)/srcdest" \
-            makepkg --syncdeps --noconfirm --cleanbuild --clean --force --log
+            makepkg --config "$makepkg_conf" --syncdeps --noconfirm --cleanbuild --clean --force --log
     )
 
     printf 'artifacts written to %s\n' "$artifact_dir"
