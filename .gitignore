@@ -267,3 +267,5 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.mail/stores/rgoswami.quansight/.credentials.gmailieer.json
 ~/.mail/stores/rgoswami.quansight/.gmailieer.json
 ~/.config/rg-us-egress/wireguard.conf
+~/.ssh/config
+~/.ssh/known_hosts

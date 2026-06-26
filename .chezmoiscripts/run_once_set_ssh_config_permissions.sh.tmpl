@@ -5,5 +5,8 @@
 find $HOME/.ssh/ -type f -not -name "*.pub" -exec chmod 600 {} \;;
 find $HOME/.ssh/ -type d -exec chmod 700 {} \;;
 find $HOME/.ssh/ -type f -name "*.pub" -exec chmod 644 {} \;
+# ControlMaster sockets (elja/slogin mux); runtime only, not chezmoi-managed
+mkdir -p "$HOME/.ssh/sockets"
+chmod 700 "$HOME/.ssh/sockets"
 
 {{ end }}
