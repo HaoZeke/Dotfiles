@@ -242,6 +242,18 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
     done
     set -- "${filtered[@]}"
 
+    # Already locked (an idle-timeout lock fired moments before this
+    # before-sleep hook): a swaylock holds the ext-session-lock, so a
+    # second one only stacks a redundant process. Force a live scanout so
+    # the hibernate image captures the existing lock surface, then return.
+    if pgrep -x swaylock >/dev/null 2>&1; then
+        if command -v swaymsg >/dev/null 2>&1; then
+            swaymsg "output * dpms on" >/dev/null 2>&1 || true
+            sleep 0.2
+        fi
+        exit 0
+    fi
+
     # Idle hibernate commonly starts with outputs in DPMS-off state.
     # Force a live scanout so the hibernate image captures the lock
     # surface instead of the stale frame held by the display engine.
@@ -275,6 +287,39 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
     # is several seconds, so the added latency is invisible.
     sleep 0.7
     exit 0
+fi
+
+# Is this a background (daemonized) lock? The idle-timeout lock and the
+# $mod+Escape keybind pass --daemonize; the manual hibernate path
+# (rg-lockscreen && systemctl hibernate) does not and must keep blocking
+# until the user unlocks.
+DAEMONIZE=0
+for a in "$@"; do
+    case "$a" in
+        --daemonize|-f) DAEMONIZE=1 ;;
+    esac
+done
+
+if [ "$DAEMONIZE" = "1" ]; then
+    # Idempotent lock. swaylock already owns the ext-session-lock, so a
+    # second invocation cannot lock anything new -- it only stacks another
+    # process in whoever's cgroup invoked us. For idle locks that cgroup is
+    # swayidle.service; a stack of swaylock surfaces drives it into a
+    # systemd-oomd kill, which takes swayidle down and makes Restart= re-arm
+    # the whole idle ladder -- the "random double fire". If a lock is up,
+    # this is a no-op.
+    if pgrep -x swaylock >/dev/null 2>&1; then
+        exit 0
+    fi
+
+    # Launch the lock daemon in its own transient scope so it does not
+    # inherit the caller's cgroup. Keeping swaylock out of swayidle.service
+    # means its memory never counts against that cgroup, so a heavy lock
+    # surface cannot trip oomd and cascade-kill the idle manager.
+    if command -v systemd-run >/dev/null 2>&1; then
+        exec systemd-run --user --scope --quiet --collect \
+            --unit="rg-lockscreen-$$" -- "$@"
+    fi
 fi
 
 exec "$@"
