@@ -1,0 +1,11 @@
+# /etc/systemd/system/hz-borg-backup.timer
+[Unit]
+Description=Daily Terra borg backup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=45m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+hostname=rgam5terra
+role=buildbot
+profile=rgam5terra
+board=ASRock B650I Lightning WiFi
+arch=offload-cosmolab + sccache-local + apptainer + android-ndk
+offsite=borg-on-pcloud-pattern-not-restic
+beyond_base=borg snapper sccache apptainer chezmoi zram-generator tpm2-tools jdk cargo-ndk NDK27
+cosmolab_target=rgam5terra
+no_icecc=1
+space=rg-space-sweep-via-chezmoi-user-owned
+luks=tpm2-pcr7+pass+recovery sd-encrypt rd.luks.name

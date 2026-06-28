@@ -1,0 +1,15 @@
+
+build-users-group = nixbld
+max-jobs = auto
+cores = 0
+sandbox = true
+extra-experimental-features = nix-command flakes
+experimental-features = nix-command flakes
+
+max-jobs = 4
+cores = 0
+sandbox = true
+auto-optimise-store = true
+max-substitution-jobs = 32
+builders-use-substitutes = true
+trusted-users = root rgoswami

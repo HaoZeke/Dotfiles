@@ -273,3 +273,14 @@ dot_local/share/rg-sway-route-watcher-src/target/
 # DavMail OAuth tokens — host-local only (never commit / never nimvault tokens)
 .config/davmail/*.token
 ~/.config/davmail/*.token
+
+# Terra DNS private (ControlD path tokens) — nimvault only
+.local/share/terra-dns/private/
+~/.local/share/terra-dns/private/
+dot_local/share/terra-dns/private/
+
+# Borgmatic live config — nimvault (never plain in source)
+.config/borgmatic/config.yaml
+~/.config/borgmatic/config.yaml
+~/.config/borgmatic/config.yaml
+~/.local/share/terra-dns/private/ctrld.service

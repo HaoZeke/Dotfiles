@@ -1,0 +1,16 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Cosmolab target rgam5terra relay listener
+After=network-online.target cosmolab-target-rgam5terra-et.service
+Wants=network-online.target
+Requires=cosmolab-target-rgam5terra-et.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/cosmolab/targets/rgam5terra/run-relay.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+{{- end -}}

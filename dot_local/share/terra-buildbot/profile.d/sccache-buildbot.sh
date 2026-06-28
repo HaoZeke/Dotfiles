@@ -1,0 +1,6 @@
+export SCCACHE_DIR=/var/cache/sccache
+export SCCACHE_CACHE_SIZE=50G
+export RUSTC_WRAPPER=sccache
+export CMAKE_C_COMPILER_LAUNCHER=sccache
+export CMAKE_CXX_COMPILER_LAUNCHER=sccache
+export CMAKE_CUDA_COMPILER_LAUNCHER=sccache

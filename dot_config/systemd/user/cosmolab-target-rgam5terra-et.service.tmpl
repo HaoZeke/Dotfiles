@@ -1,0 +1,15 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Cosmolab target rgam5terra cosmo-et runtime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/cosmolab/targets/rgam5terra/run-et.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+{{- end -}}

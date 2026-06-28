@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+[Unit]
+Description=Userspace tailscaled on haozeke.github (SOCKS sandbox for cross-tailnet reach to Terra; isolated from x.ai system tailscaled)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=localhost:1055 --statedir=%h/.local/share/tailscale-haozeke --socket=/tmp/ts-hz.sock
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+{{- end -}}

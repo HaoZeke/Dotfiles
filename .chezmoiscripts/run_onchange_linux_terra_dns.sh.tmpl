@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+# Terra NM dns=none + ctrld unit (private file from nimvault unseal).
+# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-dns/NetworkManager/conf.d/90-terra-dns-none.conf" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-dns/hzlinux/terra-nm-chain.conf" .chezmoi.sourceDir)) | trim }}
+set -euo pipefail
+SHARE="${HOME}/.local/share/terra-dns"
+install_as_root() {
+  local src=$1 dest=$2 mode=${3:-0644}
+  if command -v systemd-run >/dev/null 2>&1 && systemd-run --uid=0 --gid=0 --wait /bin/true >/dev/null 2>&1; then
+    systemd-run --uid=0 --gid=0 --wait /bin/install -m "$mode" "$src" "$dest"
+  elif sudo -n true 2>/dev/null; then
+    sudo install -m "$mode" "$src" "$dest"
+  else
+    echo "chezmoi: terra-dns needs root for $dest" >&2
+    return 1
+  fi
+}
+run_root() {
+  if command -v systemd-run >/dev/null 2>&1 && systemd-run --uid=0 --gid=0 --wait /bin/true >/dev/null 2>&1; then
+    systemd-run --uid=0 --gid=0 --wait "$@"
+  elif sudo -n true 2>/dev/null; then
+    sudo "$@"
+  else
+    return 1
+  fi
+}
+NM_SRC="${SHARE}/NetworkManager/conf.d/90-terra-dns-none.conf"
+if [[ ! -f "$NM_SRC" ]]; then
+  echo "chezmoi: missing $NM_SRC (chezmoi apply terra-dns share first)" >&2
+  exit 0
+fi
+echo "chezmoi: terra-dns installing NM dns=none ..."
+run_root /bin/mkdir -p /etc/NetworkManager/conf.d /etc/hzlinux
+install_as_root "$NM_SRC" /etc/NetworkManager/conf.d/90-terra-dns-none.conf 0644
+if [[ -f "${SHARE}/hzlinux/terra-nm-chain.conf" ]]; then
+  install_as_root "${SHARE}/hzlinux/terra-nm-chain.conf" /etc/hzlinux/terra-nm-chain.conf 0644
+fi
+PRIV_CTRLD="${SHARE}/private/ctrld.service"
+if [[ -f "$PRIV_CTRLD" ]]; then
+  install_as_root "$PRIV_CTRLD" /etc/systemd/system/ctrld.service 0644
+  run_root /bin/systemctl daemon-reload || true
+  run_root /bin/systemctl enable --now ctrld.service || true
+else
+  echo "chezmoi: no private ctrld.service (nimvault unseal ~/.local/share/terra-dns/private/ctrld.service)" >&2
+fi
+# Never disable NetworkManager; only dns=none so unbound can own resolv
+run_root /bin/systemctl try-reload-or-restart NetworkManager.service || true
+echo "chezmoi: terra-dns done"
+{{- end }}

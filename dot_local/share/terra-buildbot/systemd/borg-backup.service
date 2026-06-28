@@ -1,0 +1,18 @@
+# /etc/systemd/system/hz-borg-backup.service
+# Enable only after operator sets EnvironmentFile with BORG_REPO and BORG_PASSCOMMAND.
+# Do not commit real passphrases. Prefer chezmoi long-term.
+[Unit]
+Description=Terra borg backup (operator-configured)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Example EnvironmentFile=/etc/hzlinux/borg.env  (mode 600, root-owned; not in git)
+# BORG_REPO=...
+# BORG_PASSCOMMAND=pass show local/borg-pcloud | head -1
+EnvironmentFile=-/etc/hzlinux/borg.env
+ExecStart=/usr/local/lib/hzlinux/borg-backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

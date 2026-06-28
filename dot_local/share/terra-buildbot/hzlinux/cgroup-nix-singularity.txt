@@ -1,0 +1,9 @@
+cgroup v2 unified hierarchy
+buildbot.slice: CPUQuota=3000% MemoryMax=40G MemoryHigh=36G TasksMax=49152 ManagedOOMMemoryPressure=kill@60%
+buildbot-interactive.slice: CPUQuota=800% MemoryMax=12G
+Helpers: /usr/local/bin/buildbot-run  /usr/local/bin/buildbot-cgroup-status
+Polkit: /etc/polkit-1/rules.d/50-buildbot-systemd-run.rules (rgoswami manage-units)
+sysctl: fs.inotify.max_user_watches=1048576 vm.max_map_count=2147483642 vm.swappiness=10
+Nix: multi-user nix-daemon (Arch package); nixpkgs-unstable channel; flakes+nix-command enabled
+Apptainer 1.5.2 = singularity CLI (symlink); sessiondir max 2048; cache /var/lib/apptainer-cache
+TMPDIR default /var/lib/builds/tmp on @builds subvol
