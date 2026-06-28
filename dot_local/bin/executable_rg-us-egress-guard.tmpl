@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Hostname gate: laptop DNS/network mutators must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
 # Keep the US-egress WireGuard tunnel actually carrying traffic. Once
 # wg-quick@<iface> is enabled it self-heals two failure modes:
 #   - the interface is gone (networkd restart, resume, Wi-Fi flap), or

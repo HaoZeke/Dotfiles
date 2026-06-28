@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Hostname gate: laptop DNS/network mutators must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
 set -Eeuo pipefail
 
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then

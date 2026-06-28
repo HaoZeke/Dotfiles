@@ -43,6 +43,16 @@ if [[ -f "$PRIV_CTRLD" ]]; then
 else
   echo "chezmoi: no private ctrld.service (nimvault unseal ~/.local/share/terra-dns/private/ctrld.service)" >&2
 fi
+# Unbound: forward most queries to ctrld on 127.0.0.1:5354 (safe snippet)
+UNBOUND_SNIP="${SHARE}/unbound.conf.d/terra-nm-chain.conf"
+if [[ -f "$UNBOUND_SNIP" ]]; then
+  run_root /bin/mkdir -p /etc/unbound/unbound.conf.d
+  install_as_root "$UNBOUND_SNIP" /etc/unbound/unbound.conf.d/terra-nm-chain.conf 0644
+  run_root /bin/systemctl try-reload-or-restart unbound.service || true
+else
+  echo "chezmoi: missing $UNBOUND_SNIP" >&2
+fi
+
 # Never disable NetworkManager; only dns=none so unbound can own resolv
 run_root /bin/systemctl try-reload-or-restart NetworkManager.service || true
 echo "chezmoi: terra-dns done"
