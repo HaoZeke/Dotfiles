@@ -8,13 +8,14 @@ if [[ ! -d "$SHARE/bin" ]]; then
   exit 0
 fi
 chmod +x "$SHARE/bin/"* 2>/dev/null || true
+# bins rendered by chezmoi from .tmpl on this host only
 mkdir -p "${HOME}/.config/terra-observability"
 if [[ ! -f "${HOME}/.config/terra-observability/env" && -f "$SHARE/env.example" ]]; then
   install -m 0600 "$SHARE/env.example" "${HOME}/.config/terra-observability/env"
   echo "chezmoi: wrote env.example → ~/.config/terra-observability/env (fill tokens; nimvault seal)"
 fi
 systemctl --user daemon-reload 2>/dev/null || true
-systemctl --user enable --now terra-canary-dns.timer terra-canary-heartbeat.timer 2>/dev/null \
+systemctl --user enable --now terra-canary-dns.timer terra-canary-heartbeat.timer borgmatic.timer 2>/dev/null \
   || echo "chezmoi: enable canary timers failed (units missing until apply)" >&2
 echo "chezmoi: terra-observability done"
 {{- end }}

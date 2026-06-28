@@ -1,0 +1,13 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Run borgmatic daily on Terra
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+Unit=borgmatic.service
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

@@ -1,0 +1,12 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=borgmatic backup (Terra) with off-box success/failure signals
+OnFailure=terra-notify-failure@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/terra-observability/env
+ExecStart=/usr/bin/borgmatic --verbosity -1 --syslog-verbosity 1
+# Success ping (Healthchecks-style URL); failure uses OnFailure Telegram
+ExecStartPost=/bin/bash -c 'u="${TERRA_BORG_HEARTBEAT_URL:-${TERRA_HEARTBEAT_URL:-}}"; [[ -z "$u" ]] && exit 0; curl -fsS -o /dev/null --connect-timeout 5 "$u"'
+{{- end -}}

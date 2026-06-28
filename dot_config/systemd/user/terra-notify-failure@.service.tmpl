@@ -1,0 +1,10 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Terra off-box notify for failed unit %i
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/terra-observability/env
+ExecStart=%h/.local/share/terra-observability/bin/terra-notify-telegram "terra OnFailure: %i on %H"
+{{- end -}}

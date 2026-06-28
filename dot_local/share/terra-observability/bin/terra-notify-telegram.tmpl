@@ -1,3 +1,4 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
 #!/usr/bin/env bash
 # Generic off-box notify (used by OnFailure= and canaries).
 set -euo pipefail
@@ -9,3 +10,4 @@ MSG=${1:-terra notify}
 curl -fsS -X POST "https://api.telegram.org/bot${TERRA_TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${TERRA_TELEGRAM_CHAT_ID}" \
   --data-urlencode "text=$MSG" >/dev/null || true
+{{- end -}}

@@ -1,3 +1,4 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
 #!/usr/bin/env bash
 # DNS canary for Terra resolver chain (unbound :53). Failure → Telegram (off-box).
 set -euo pipefail
@@ -34,3 +35,4 @@ if [[ -n "${TERRA_HEARTBEAT_URL:-}" ]]; then
   curl -fsS -o /dev/null --connect-timeout 5 "${TERRA_HEARTBEAT_URL}" || fail "heartbeat GET failed"
 fi
 exit 0
+{{- end -}}
