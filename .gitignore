@@ -284,3 +284,10 @@ dot_local/share/terra-dns/private/
 ~/.config/borgmatic/config.yaml
 ~/.config/borgmatic/config.yaml
 ~/.local/share/terra-dns/private/ctrld.service
+
+# Agent/LLM configs with API keys — live paths only via nimvault unseal (~/.omp, ~/.codex, ~/.claude).
+# Do NOT commit private_* copies in chezmoi source (private_ is mode 600, NOT encryption).
+private_dot_omp/agent/private_models.yml
+private_dot_codex/private_config.toml
+dot_claude/private_claude-mcp-servers.json
+**/private_models.yml
