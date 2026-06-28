@@ -1,0 +1,14 @@
+# Lighter interactive/debug jobs (compilers in a shell, not full -j32 farms)
+[Unit]
+Description=Terra buildbot interactive / debug
+Before=slices.target
+
+[Slice]
+CPUWeight=100
+CPUQuota=800%
+MemoryMax=12G
+MemoryHigh=10G
+TasksMax=8192
+IOWeight=100
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=70%

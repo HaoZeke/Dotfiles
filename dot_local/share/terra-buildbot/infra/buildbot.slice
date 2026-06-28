@@ -1,0 +1,19 @@
+# /etc/systemd/system/buildbot.slice
+# Parent slice for all heavy builds on rgam5terra (cgroup v2).
+[Unit]
+Description=Terra buildbot workloads
+Before=slices.target
+
+[Slice]
+# 9950X = 32 threads; leave headroom for sshd/netdata/kernel
+CPUWeight=200
+CPUQuota=3000%
+# ~40G of 46G — leave room for OS + sccache daemon + desktop-less services
+MemoryMax=40G
+MemoryHigh=36G
+MemorySwapMax=8G
+TasksMax=49152
+IOWeight=200
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=60%
+ManagedOOMPreference=none

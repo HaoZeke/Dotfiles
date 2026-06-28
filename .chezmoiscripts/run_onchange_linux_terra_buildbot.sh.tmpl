@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
-# Terra buildbot profile, caches, optional sshd/nix fragments.
-# hash: {{ output "bash" "-lc" (printf "cat %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-buildbot/hzlinux/buildbot-profile" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/profile.d/sccache-buildbot.sh" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/nix/nix.conf.snippet" .chezmoi.sourceDir)) | trim }}
+# Terra buildbot profile + cgroup infra (slices, buildbot-run, sysctl, tmpfiles, oomd, polkit).
+# hash: {{ output "bash" "-lc" (printf "cat %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-buildbot/infra/buildbot.slice" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/infra/buildbot-run" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/hzlinux/buildbot-profile" .chezmoi.sourceDir)) | trim }}
 set -euo pipefail
 SHARE="${HOME}/.local/share/terra-buildbot"
+INFRA="${SHARE}/infra"
 install_as_root() {
   local src=$1 dest=$2 mode=${3:-0644}
   if command -v systemd-run >/dev/null 2>&1 && systemd-run --uid=0 --gid=0 --wait /bin/true >/dev/null 2>&1; then
@@ -29,25 +30,27 @@ if [[ ! -d "$SHARE/hzlinux" ]]; then
   exit 0
 fi
 echo "chezmoi: terra-buildbot installing ..."
-run_root /bin/mkdir -p /etc/hzlinux /etc/profile.d /etc/ssh/sshd_config.d /etc/nix
+run_root /bin/mkdir -p /etc/hzlinux /etc/profile.d /etc/ssh/sshd_config.d /etc/nix \
+  /etc/systemd/system /etc/systemd/oomd.conf.d /etc/sysctl.d /etc/tmpfiles.d \
+  /etc/polkit-1/rules.d /usr/local/bin /etc/hzlinux/systemd
+
 install_as_root "$SHARE/hzlinux/buildbot-profile" /etc/hzlinux/buildbot-profile 0644
 install_as_root "$SHARE/hzlinux/cgroup-nix-singularity.txt" /etc/hzlinux/cgroup-nix-singularity.txt 0644
 install_as_root "$SHARE/hzlinux/borg.env.example" /etc/hzlinux/borg.env.example 0644
 for f in sccache-buildbot.sh ccache-buildbot.sh 99-buildbot-env.sh 99-buildbot-optimal.sh; do
   [[ -f "$SHARE/profile.d/$f" ]] && install_as_root "$SHARE/profile.d/$f" "/etc/profile.d/$f" 0644
 done
+# Prefer unified env from infra if present
+[[ -f "$INFRA/99-buildbot-env.sh" ]] && install_as_root "$INFRA/99-buildbot-env.sh" /etc/profile.d/99-buildbot-env.sh 0644
 for f in 00-hardening.conf 99-hardening.conf; do
   [[ -f "$SHARE/sshd_config.d/$f" ]] && install_as_root "$SHARE/sshd_config.d/$f" "/etc/ssh/sshd_config.d/$f" 0644
 done
-# Optional system borg timer units under /etc/hzlinux/systemd (operator enables)
 if [[ -d "$SHARE/systemd" ]]; then
-  run_root /bin/mkdir -p /etc/hzlinux/systemd
   for f in "$SHARE/systemd"/*; do
     [[ -f "$f" ]] || continue
     install_as_root "$f" "/etc/hzlinux/systemd/$(basename "$f")" 0644
   done
 fi
-# Nix: merge snippet only if not already present (append unique lines)
 if [[ -f "$SHARE/nix/nix.conf.snippet" && -f /etc/nix/nix.conf ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" || "$line" =~ ^# ]] && continue
@@ -56,6 +59,23 @@ if [[ -f "$SHARE/nix/nix.conf.snippet" && -f /etc/nix/nix.conf ]]; then
     fi
   done < "$SHARE/nix/nix.conf.snippet"
 fi
-# borgmatic config is user-level (nimvault unseal to ~/.config/borgmatic/config.yaml)
+
+# --- cgroup / buildbot-run depth stack ---
+if [[ -d "$INFRA" ]]; then
+  install_as_root "$INFRA/buildbot.slice" /etc/systemd/system/buildbot.slice 0644
+  install_as_root "$INFRA/buildbot-interactive.slice" /etc/systemd/system/buildbot-interactive.slice 0644
+  install_as_root "$INFRA/buildbot-run" /usr/local/bin/buildbot-run 0755
+  install_as_root "$INFRA/buildbot-cgroup-status" /usr/local/bin/buildbot-cgroup-status 0755
+  install_as_root "$INFRA/99-buildbot-oomd.conf" /etc/systemd/oomd.conf.d/99-buildbot.conf 0644
+  install_as_root "$INFRA/99-buildbot-sysctl.conf" /etc/sysctl.d/99-buildbot.conf 0644
+  install_as_root "$INFRA/buildbot-tmpfiles.conf" /etc/tmpfiles.d/buildbot.conf 0644
+  install_as_root "$INFRA/50-buildbot-systemd-run.rules" /etc/polkit-1/rules.d/50-buildbot-systemd-run.rules 0644
+  run_root /usr/bin/systemd-tmpfiles --create /etc/tmpfiles.d/buildbot.conf || true
+  run_root /usr/sbin/sysctl --system >/dev/null 2>&1 || run_root /usr/sbin/sysctl -p /etc/sysctl.d/99-buildbot.conf || true
+  run_root /bin/systemctl daemon-reload || true
+  run_root /bin/systemctl restart systemd-oomd || true
+  run_root /bin/systemctl start buildbot.slice buildbot-interactive.slice || true
+  run_root /bin/systemctl reload polkit 2>/dev/null || run_root /bin/systemctl restart polkit || true
+fi
 echo "chezmoi: terra-buildbot done"
 {{- end }}

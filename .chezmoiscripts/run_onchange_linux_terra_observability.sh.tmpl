@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
-# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-observability/bin/terra-canary-dns.tmpl" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/terra-canary-dns.timer.tmpl" .chezmoi.sourceDir)) | trim }}
+# hash: {{ output "bash" "-lc" (printf "cat %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-observability/bin/terra-canary-dns.tmpl" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-observability/bin/terra-canary-hermetic.tmpl" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/terra-canary-hermetic.timer.tmpl" .chezmoi.sourceDir)) | trim }}
 set -euo pipefail
 SHARE="${HOME}/.local/share/terra-observability"
 if [[ ! -d "$SHARE/bin" ]]; then
@@ -8,7 +8,7 @@ if [[ ! -d "$SHARE/bin" ]]; then
   exit 0
 fi
 # Applied targets (chezmoi renders .tmpl → these paths on rgam5terra only)
-for b in terra-canary-dns terra-canary-heartbeat terra-notify-telegram; do
+for b in terra-canary-dns terra-canary-heartbeat terra-canary-hermetic terra-notify-telegram; do
   f="${SHARE}/bin/${b}"
   [[ -f "$f" ]] && chmod +x "$f"
 done
@@ -18,8 +18,10 @@ if [[ ! -f "${HOME}/.config/terra-observability/env" && -f "$SHARE/env.example" 
   echo "chezmoi: wrote env.example → ~/.config/terra-observability/env (fill tokens; nimvault seal)"
 fi
 systemctl --user daemon-reload 2>/dev/null || true
-systemctl --user enable --now terra-canary-dns.timer terra-canary-heartbeat.timer borgmatic.timer 2>/dev/null \
+systemctl --user enable --now \
+  terra-canary-dns.timer terra-canary-heartbeat.timer terra-canary-hermetic.timer borgmatic.timer 2>/dev/null \
   || echo "chezmoi: enable timers failed (run chezmoi apply for unit tmpls first)" >&2
-systemctl --user is-enabled terra-canary-dns.timer terra-canary-heartbeat.timer borgmatic.timer 2>/dev/null || true
+systemctl --user is-enabled \
+  terra-canary-dns.timer terra-canary-heartbeat.timer terra-canary-hermetic.timer borgmatic.timer 2>/dev/null || true
 echo "chezmoi: terra-observability done"
 {{- end }}

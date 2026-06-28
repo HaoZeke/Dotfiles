@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Terra hermetic buildbot canary (nix+apptainer via buildbot-run)
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/terra-observability/env
+ExecStart=%h/.local/share/terra-observability/bin/terra-canary-hermetic
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target
+{{- end -}}

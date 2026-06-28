@@ -1,0 +1,7 @@
+{
+  "remote_exec_wrapper": "/usr/local/bin/buildbot-run",
+  "exec_prefix": [
+    "/usr/local/bin/buildbot-run",
+    "--"
+  ]
+}

@@ -1,0 +1,67 @@
+#!/bin/bash
+# Run a command inside buildbot.slice with job logs under /var/lib/builds/logs.
+# Usage: buildbot-run [--interactive] [--memory=16G] [--cpus=8] [--dry-run] -- cmd args...
+set -euo pipefail
+SLICE=buildbot.slice
+MEM=
+CPU=
+DRY=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --interactive|-i) SLICE=buildbot-interactive.slice; shift ;;
+    --memory=*) MEM="${1#*=}"; shift ;;
+    --cpus=*) CPU="${1#*=}"; shift ;;
+    --dry-run) DRY=1; shift ;;
+    --) shift; break ;;
+    -h|--help)
+      echo "Usage: buildbot-run [--interactive] [--memory=N] [--cpus=N] [--dry-run] -- command..."
+      exit 0 ;;
+    *) break ;;
+  esac
+done
+[[ $# -gt 0 ]] || { echo "buildbot-run: need command (use -- before cmd if flags)" >&2; exit 2; }
+
+BUILDS_ROOT="${BUILDS_ROOT:-/var/lib/builds}"
+LOG_ROOT="${BUILDS_LOG_ROOT:-$BUILDS_ROOT/logs}"
+export SCCACHE_DIR="${SCCACHE_DIR:-/var/cache/sccache}"
+export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-50G}"
+export APPTAINER_CACHEDIR="${APPTAINER_CACHEDIR:-/var/lib/apptainer-cache}"
+export SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR:-$APPTAINER_CACHEDIR}"
+export TMPDIR="${TMPDIR:-$BUILDS_ROOT/tmp}"
+mkdir -p "$TMPDIR" "$LOG_ROOT" 2>/dev/null || true
+
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+JOB_ID="${BUILDBOT_JOB_ID:-$$-$STAMP}"
+LOG_FILE="$LOG_ROOT/${JOB_ID}.log"
+IDENT="buildbot-run/${JOB_ID}"
+
+args=(--slice="$SLICE" --same-dir --uid="$(id -u)" --gid="$(id -g)" --wait --collect --quiet)
+[[ -n "$MEM" ]] && args+=(--property="MemoryMax=$MEM")
+[[ -n "$CPU" ]] && args+=(--property="CPUQuota=${CPU}00%")
+
+if [[ "$DRY" -eq 1 ]]; then
+  printf 'DRY slice=%s mem=%s cpu=%s log=%s ident=%s cmd=%s\n' \
+    "$SLICE" "${MEM:-}" "${CPU:-}" "$LOG_FILE" "$IDENT" "$*"
+  exit 0
+fi
+
+# Tee journal (systemd-cat) and file log
+if command -v systemd-cat >/dev/null 2>&1; then
+  {
+    echo "=== buildbot-run start $STAMP slice=$SLICE ==="
+    echo "cmd: $*"
+    echo "cwd: $(pwd)"
+  } | tee -a "$LOG_FILE" | systemd-cat -t "$IDENT" || true
+  # shellcheck disable=SC2086
+  exec systemd-run "${args[@]}" -- /bin/bash -c \
+    "set -o pipefail; \"\$@\" 2>&1 | tee -a $(printf %q "$LOG_FILE") | systemd-cat -t $(printf %q "$IDENT"); exit \${PIPESTATUS[0]}" \
+    bash "$@"
+else
+  {
+    echo "=== buildbot-run start $STAMP slice=$SLICE (no systemd-cat) ==="
+    echo "cmd: $*"
+  } >> "$LOG_FILE"
+  exec systemd-run "${args[@]}" -- /bin/bash -c \
+    "set -o pipefail; \"\$@\" 2>&1 | tee -a $(printf %q "$LOG_FILE"); exit \${PIPESTATUS[0]}" \
+    bash "$@"
+fi

@@ -1,0 +1,13 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Daily Terra hermetic buildbot canary
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30min
+Unit=terra-canary-hermetic.service
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

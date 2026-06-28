@@ -1,0 +1,34 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+#!/usr/bin/env bash
+# Hermetic buildbot readiness: nix + apptainer via buildbot-run; off-box notify on fail.
+set -euo pipefail
+ENV_FILE="${HOME}/.config/terra-observability/env"
+# shellcheck disable=SC1090
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
+BB="${BUILDBOT_RUN:-/usr/local/bin/buildbot-run}"
+fail() {
+  local msg=$1
+  echo "terra-canary-hermetic: $msg" >&2
+  if [[ -n "${TERRA_TELEGRAM_BOT_TOKEN:-}" && -n "${TERRA_TELEGRAM_CHAT_ID:-}" ]]; then
+    curl -fsS -X POST "https://api.telegram.org/bot${TERRA_TELEGRAM_BOT_TOKEN}/sendMessage" \
+      --data-urlencode "chat_id=${TERRA_TELEGRAM_CHAT_ID}" \
+      --data-urlencode "text=terra-canary-hermetic FAIL $(hostname -s 2>/dev/null || echo terra): $msg" >/dev/null || true
+  fi
+  exit 1
+}
+command -v "$BB" >/dev/null 2>&1 || fail "buildbot-run missing at $BB"
+# Nix smoke
+if command -v nix-shell >/dev/null 2>&1 || command -v nix >/dev/null 2>&1; then
+  "$BB" -- /bin/bash -c 'command -v nix-shell >/dev/null && nix-shell -p hello --run hello || nix run nixpkgs#hello --' \
+    || fail "nix hello via buildbot-run failed"
+else
+  fail "nix/nix-shell not installed"
+fi
+# Apptainer / singularity smoke
+APPT=apptainer
+command -v apptainer >/dev/null 2>&1 || APPT=singularity
+command -v "$APPT" >/dev/null 2>&1 || fail "apptainer/singularity missing"
+"$BB" -- "$APPT" exec docker://alpine:3.19 echo ok \
+  || fail "apptainer alpine exec via buildbot-run failed"
+exit 0
+{{- end -}}
