@@ -7,8 +7,11 @@ if [[ ! -d "$SHARE/bin" ]]; then
   echo "chezmoi: missing $SHARE (apply share first)" >&2
   exit 0
 fi
-chmod +x "$SHARE/bin/"* 2>/dev/null || true
-# bins rendered by chezmoi from .tmpl on this host only
+# Applied targets (chezmoi renders .tmpl → these paths on rgam5terra only)
+for b in terra-canary-dns terra-canary-heartbeat terra-notify-telegram; do
+  f="${SHARE}/bin/${b}"
+  [[ -f "$f" ]] && chmod +x "$f"
+done
 mkdir -p "${HOME}/.config/terra-observability"
 if [[ ! -f "${HOME}/.config/terra-observability/env" && -f "$SHARE/env.example" ]]; then
   install -m 0600 "$SHARE/env.example" "${HOME}/.config/terra-observability/env"
@@ -16,6 +19,7 @@ if [[ ! -f "${HOME}/.config/terra-observability/env" && -f "$SHARE/env.example" 
 fi
 systemctl --user daemon-reload 2>/dev/null || true
 systemctl --user enable --now terra-canary-dns.timer terra-canary-heartbeat.timer borgmatic.timer 2>/dev/null \
-  || echo "chezmoi: enable canary timers failed (units missing until apply)" >&2
+  || echo "chezmoi: enable timers failed (run chezmoi apply for unit tmpls first)" >&2
+systemctl --user is-enabled terra-canary-dns.timer terra-canary-heartbeat.timer borgmatic.timer 2>/dev/null || true
 echo "chezmoi: terra-observability done"
 {{- end }}
