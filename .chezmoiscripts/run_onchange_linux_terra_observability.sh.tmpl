@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
-# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-observability/bin/terra-canary-dns" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/terra-canary-dns.timer.tmpl" .chezmoi.sourceDir)) | trim }}
+# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-observability/bin/terra-canary-dns.tmpl" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/terra-canary-dns.timer.tmpl" .chezmoi.sourceDir)) | trim }}
 set -euo pipefail
 SHARE="${HOME}/.local/share/terra-observability"
 if [[ ! -d "$SHARE/bin" ]]; then
