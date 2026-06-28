@@ -269,3 +269,7 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/rg-us-egress/wireguard.conf
 ~/.ssh/config
 ~/.ssh/known_hosts
+
+# DavMail OAuth tokens — host-local only (never commit / never nimvault tokens)
+.config/davmail/*.token
+~/.config/davmail/*.token

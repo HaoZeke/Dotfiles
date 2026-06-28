@@ -1,0 +1,20 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=DavMail Exchange gateway (%i)
+Documentation=https://davmail.sourceforge.net/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/davmail %h/.config/davmail/%i.properties
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=120
+StartLimitBurst=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+{{- end -}}

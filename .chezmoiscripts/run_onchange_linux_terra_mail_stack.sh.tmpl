@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+# Terra mail stack: dovecot 2.4 + davmail user units.
+# Safe configs live under ~/.local/share/terra-mail/ (chezmoi-managed).
+# Secrets: davmail *.properties via nimvault unseal; OAuth tokens host-local (gitignored).
+# SSL private key: generated on host if missing (never committed).
+# hash: {{ output "bash" "-lc" (printf "cat %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-mail/dovecot/local.conf" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-mail/dovecot/dovecot.conf" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/davmail@.service.tmpl" .chezmoi.sourceDir)) | trim }}
+
+set -euo pipefail
+
+SHARE="${HOME}/.local/share/terra-mail/dovecot"
+DOVECOT_LOCAL="${SHARE}/local.conf"
+DOVECOT_MAIN="${SHARE}/dovecot.conf"
+
+if [[ ! -f "$DOVECOT_LOCAL" || ! -f "$DOVECOT_MAIN" ]]; then
+  echo "chezmoi: terra-mail dovecot sources missing under $SHARE; skip." >&2
+  exit 0
+fi
+
+install_as_root() {
+  local src=$1 dest=$2 mode=${3:-0644}
+  if command -v systemd-run >/dev/null 2>&1 && systemd-run --uid=0 --gid=0 --wait /bin/true >/dev/null 2>&1; then
+    systemd-run --uid=0 --gid=0 --wait /bin/install -m "$mode" "$src" "$dest"
+  elif sudo -n true 2>/dev/null; then
+    sudo install -m "$mode" "$src" "$dest"
+  else
+    echo "chezmoi: need root to install $dest (systemd-run uid=0 or passwordless sudo)" >&2
+    return 1
+  fi
+}
+
+run_root() {
+  if command -v systemd-run >/dev/null 2>&1 && systemd-run --uid=0 --gid=0 --wait /bin/true >/dev/null 2>&1; then
+    systemd-run --uid=0 --gid=0 --wait "$@"
+  elif sudo -n true 2>/dev/null; then
+    sudo "$@"
+  else
+    echo "chezmoi: need root for: $*" >&2
+    return 1
+  fi
+}
+
+echo "chezmoi: installing dovecot configs on rgam5terra ..."
+run_root /bin/mkdir -p /etc/dovecot
+install_as_root "$DOVECOT_MAIN" /etc/dovecot/dovecot.conf 0644
+install_as_root "$DOVECOT_LOCAL" /etc/dovecot/local.conf 0644
+
+# Self-signed cert if missing (private key stays on host only)
+if [[ ! -f /etc/dovecot/ssl-cert.pem || ! -f /etc/dovecot/ssl-key.pem ]]; then
+  echo "chezmoi: generating dovecot self-signed TLS material on host ..."
+  tmp=$(mktemp -d)
+  openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+    -keyout "$tmp/ssl-key.pem" -out "$tmp/ssl-cert.pem" \
+    -subj "/CN=rgam5terra/O=hzlinux/OU=mail" >/dev/null 2>&1
+  install_as_root "$tmp/ssl-cert.pem" /etc/dovecot/ssl-cert.pem 0644
+  install_as_root "$tmp/ssl-key.pem" /etc/dovecot/ssl-key.pem 0600
+  rm -rf "$tmp"
+fi
+
+if command -v doveconf >/dev/null 2>&1; then
+  doveconf -n >/dev/null
+fi
+
+if systemctl restart dovecot 2>/dev/null; then
+  systemctl is-active dovecot >/dev/null
+  echo "chezmoi: dovecot active"
+else
+  echo "chezmoi: could not restart dovecot (permissions?)" >&2
+fi
+
+# DavMail user instances (properties from nimvault unseal / existing files)
+systemctl --user daemon-reload 2>/dev/null || true
+for inst in rog32hi queensu epfl; do
+  props="${HOME}/.config/davmail/${inst}.properties"
+  if [[ -f "$props" ]]; then
+    systemctl --user enable --now "davmail@${inst}.service" 2>/dev/null || \
+      echo "chezmoi: enable davmail@${inst} failed (unit or davmail missing?)" >&2
+  else
+    echo "chezmoi: missing $props (run nimvault unseal); skip davmail@${inst}" >&2
+  fi
+done
+
+echo "chezmoi: terra mail stack apply done"
+{{- end }}
