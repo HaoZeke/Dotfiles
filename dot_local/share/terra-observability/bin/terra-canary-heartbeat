@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Dead-man success ping only (pair with external HC/Zazu watching the URL).
+set -euo pipefail
+ENV_FILE="${HOME}/.config/terra-observability/env"
+# shellcheck disable=SC1090
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
+[[ -n "${TERRA_HEARTBEAT_URL:-}" ]] || exit 0
+curl -fsS -o /dev/null --connect-timeout 5 "${TERRA_HEARTBEAT_URL}"

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# DNS canary for Terra resolver chain (unbound :53). Failure → Telegram (off-box).
+set -euo pipefail
+ENV_FILE="${HOME}/.config/terra-observability/env"
+# shellcheck disable=SC1090
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
+
+fail() {
+  local msg=$1
+  echo "terra-canary-dns: $msg" >&2
+  if [[ -n "${TERRA_TELEGRAM_BOT_TOKEN:-}" && -n "${TERRA_TELEGRAM_CHAT_ID:-}" ]]; then
+    curl -fsS -X POST "https://api.telegram.org/bot${TERRA_TELEGRAM_BOT_TOKEN}/sendMessage" \
+      --data-urlencode "chat_id=${TERRA_TELEGRAM_CHAT_ID}" \
+      --data-urlencode "text=terra-canary-dns FAIL $(hostname): $msg" >/dev/null || true
+  fi
+  exit 1
+}
+
+# Prefer dig; fallback getent
+if command -v dig >/dev/null 2>&1; then
+  dig +time=3 +tries=1 @127.0.0.1 crates.io A >/dev/null 2>&1 || fail "dig crates.io @127.0.0.1 failed"
+else
+  getent hosts crates.io >/dev/null 2>&1 || fail "getent crates.io failed"
+fi
+
+# External reachability (IPv4) — not only local stub
+if command -v curl >/dev/null 2>&1; then
+  curl -4 -fsS -o /dev/null --connect-timeout 5 -I https://cache.nixos.org/ 2>/dev/null \
+    || fail "curl -4 cache.nixos.org failed"
+fi
+
+# Optional success heartbeat (Healthchecks.io or any GET URL Zazu can also watch)
+if [[ -n "${TERRA_HEARTBEAT_URL:-}" ]]; then
+  curl -fsS -o /dev/null --connect-timeout 5 "${TERRA_HEARTBEAT_URL}" || fail "heartbeat GET failed"
+fi
+exit 0

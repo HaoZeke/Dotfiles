@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Run Terra DNS canary every 10 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Persistent=true
+Unit=terra-canary-dns.service
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

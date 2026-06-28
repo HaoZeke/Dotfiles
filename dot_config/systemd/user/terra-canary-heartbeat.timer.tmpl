@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Terra heartbeat every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=terra-canary-heartbeat.service
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

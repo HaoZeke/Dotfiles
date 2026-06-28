@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+# hash: {{ output "bash" "-lc" (printf "cat %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-observability/bin/terra-canary-dns" .chezmoi.sourceDir) (printf "%s/dot_config/systemd/user/terra-canary-dns.timer.tmpl" .chezmoi.sourceDir)) | trim }}
+set -euo pipefail
+SHARE="${HOME}/.local/share/terra-observability"
+if [[ ! -d "$SHARE/bin" ]]; then
+  echo "chezmoi: missing $SHARE (apply share first)" >&2
+  exit 0
+fi
+chmod +x "$SHARE/bin/"* 2>/dev/null || true
+mkdir -p "${HOME}/.config/terra-observability"
+if [[ ! -f "${HOME}/.config/terra-observability/env" && -f "$SHARE/env.example" ]]; then
+  install -m 0600 "$SHARE/env.example" "${HOME}/.config/terra-observability/env"
+  echo "chezmoi: wrote env.example → ~/.config/terra-observability/env (fill tokens; nimvault seal)"
+fi
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable --now terra-canary-dns.timer terra-canary-heartbeat.timer 2>/dev/null \
+  || echo "chezmoi: enable canary timers failed (units missing until apply)" >&2
+echo "chezmoi: terra-observability done"
+{{- end }}

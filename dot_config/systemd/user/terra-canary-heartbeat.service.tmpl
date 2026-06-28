@@ -1,0 +1,13 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Terra success heartbeat GET (dead-man for external HC/Zazu)
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/terra-observability/env
+ExecStart=%h/.local/share/terra-observability/bin/terra-canary-heartbeat
+
+[Install]
+WantedBy=default.target
+{{- end -}}
