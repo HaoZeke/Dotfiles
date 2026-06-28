@@ -1,0 +1,9 @@
+# Merge into /etc/netdata/netdata.conf [web] on rgam5terra (LAN + Tailscale 100.x + localhost tunnel).
+# Avoids Netdata v3 "Do you trust this URL?" blocking when allow dashboard was localhost-only heuristic.
+allow connections from = localhost 127.* 10.* 192.168.* 172.16.* 172.17.* 172.18.* 172.19.* 172.20.* 172.21.* 172.22.* 172.23.* 172.24.* 172.25.* 172.26.* 172.27.* 172.28.* 172.29.* 172.30.* 172.31.* 100.*
+allow connections by dns = no
+allow dashboard from = localhost 127.* 10.* 192.168.* 172.16.* 172.17.* 172.18.* 172.19.* 172.20.* 172.21.* 172.22.* 172.23.* 172.24.* 172.25.* 172.26.* 172.27.* 172.28.* 172.29.* 172.30.* 172.31.* 100.*
+allow dashboard by dns = no
+allow management from = localhost 127.* 192.168.* 100.*
+allow management by dns = no
+bind to = 127.0.0.1 192.168.68.65 100.119.130.84
