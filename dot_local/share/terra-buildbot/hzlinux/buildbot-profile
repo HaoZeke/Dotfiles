@@ -15,3 +15,5 @@ space=rg-space-sweep-via-chezmoi-user-owned
 luks=tpm2-pcr7+pass+recovery sd-encrypt rd.luks.name
 job_default_headroom=nproc-4_cap28
 linux_rg_profile=rgam5terra
+gpu_driver=nvidia-open-dkms
+gpu_driver_note=Blackwell RTX 5070 requires open GPU kernel modules; proprietary nvidia-dkms is wrong-layer here
