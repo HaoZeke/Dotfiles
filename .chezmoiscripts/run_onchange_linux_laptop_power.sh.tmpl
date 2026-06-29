@@ -538,6 +538,19 @@ RouteMetric=600
 UseDNS=no
 '
 
+IWD_MAIN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# iwd handles Wi-Fi authentication only. systemd-networkd owns IP/routing
+# (/etc/systemd/network/20-wlan.network); systemd-resolved owns DNS.
+# EnableNetworkConfiguration MUST stay false: with it true iwd runs a second
+# DHCP client, producing a duplicate lease and default route and re-injecting
+# the access point DNS, which defeats the local unbound/ControlD chain.
+[General]
+EnableNetworkConfiguration=false
+
+[Network]
+NameResolvingService=systemd
+'
+
 UNBOUND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 server:
     interface: 127.0.0.1
@@ -832,6 +845,7 @@ JOURNALD_CHANGED=0
 UNBOUND_CHANGED=0
 RESOLVED_CHANGED=0
 NETWORKD_CHANGED=0
+IWD_CHANGED=0
 TAILSCALED_TEMPLATE_CHANGED=0
 CTRLD_CHANGED=0
 
@@ -847,6 +861,7 @@ write_if_diff /etc/NetworkManager/conf.d/99-wlan0-unmanaged.conf "$NM_WLAN_UNMAN
 write_if_diff /etc/systemd/network/20-ethernet.network "$NETWORKD_ETHERNET_CONTENT" && NETWORKD_CHANGED=1 || true
 write_if_diff /etc/systemd/network/20-wwan.network     "$NETWORKD_WWAN_CONTENT"     && NETWORKD_CHANGED=1 || true
 write_if_diff /etc/systemd/network/20-wlan.network     "$NETWORKD_WLAN_CONTENT"     && NETWORKD_CHANGED=1 || true
+write_if_diff /etc/iwd/main.conf                        "$IWD_MAIN_CONTENT"          && IWD_CHANGED=1 || true
 write_if_diff /etc/unbound/unbound.conf                  "$UNBOUND_MAIN_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/unbound/unbound.conf.d/rg-local.conf  "$UNBOUND_CONTENT" && UNBOUND_CHANGED=1 || true
 write_if_diff /etc/unbound/rg-forward-zones.conf         "$UNBOUND_FORWARD_ZONES_CONTENT" && UNBOUND_CHANGED=1 || true
@@ -1065,7 +1080,8 @@ if sudo systemctl is-enabled power-profiles-daemon.service >/dev/null 2>&1; then
     sudo systemctl disable --now power-profiles-daemon.service
 fi
 
-# iwd/iwctl owns Wi-Fi and iwd provides IP/DNS through systemd-resolved.
+# iwd/iwctl owns Wi-Fi authentication only; systemd-networkd owns IP/routing
+# and systemd-resolved owns DNS (see /etc/iwd/main.conf above).
 # NetworkManager's iwd backend registers competing Wi-Fi/netconfig state
 # and prevents iwd from completing connection setup on wlan0.
 if ! sudo systemctl is-enabled iwd.service >/dev/null 2>&1; then
@@ -1073,6 +1089,15 @@ if ! sudo systemctl is-enabled iwd.service >/dev/null 2>&1; then
     sudo systemctl enable --now iwd.service
 elif ! sudo systemctl is-active iwd.service >/dev/null 2>&1; then
     sudo systemctl start iwd.service
+fi
+
+# A changed iwd main.conf (e.g. flipping EnableNetworkConfiguration) only takes
+# effect on restart; reconfigure wlan0 afterwards so networkd re-leases cleanly.
+if [ "$IWD_CHANGED" = "1" ]; then
+    echo "chezmoi: iwd main.conf changed; restarting iwd (Wi-Fi auth-only)"
+    sudo systemctl restart iwd.service
+    sleep 2
+    sudo networkctl reconfigure wlan0 || true
 fi
 
 disable_networkmanager_for_iwd
