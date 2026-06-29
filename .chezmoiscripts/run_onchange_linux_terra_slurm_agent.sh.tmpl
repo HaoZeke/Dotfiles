@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+# hash: terra-slurm-agent-v1
+set -euo pipefail
+SHARE="${HOME}/.local/share/terra-slurm"
+chmod +x "$SHARE/bin/"* 2>/dev/null || true
+# User timer for zazu-agent (binary in ~/bin)
+systemctl --user daemon-reload 2>/dev/null || true
+if [[ -x "${HOME}/bin/zazu-agent" ]]; then
+  systemctl --user enable --now zazu-agent-push.timer 2>/dev/null || true
+fi
+echo "chezmoi: terra-slurm share ready; run $SHARE/bin/apply-terra-slurm.sh in tsetup (sudo) for daemons"
+{{- end }}

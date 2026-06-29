@@ -1,0 +1,14 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+[Unit]
+Description=Push light host gauges via zazu-agent (proc/sysfs/apps-lite, heed on Zazu)
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/.config/zazu-hm.env
+ExecStart=%h/bin/zazu-agent push
+Nice=10
+
+[Install]
+WantedBy=default.target
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+[Unit]
+Description=Timer for zazu-agent host metrics push
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Persistent=true
+Unit=zazu-agent-push.service
+
+[Install]
+WantedBy=timers.target
+{{- end }}
