@@ -23,6 +23,16 @@ probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
 SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
 IP="${RG_GUARD_IP:-ip}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
+CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
+HZ_MARK="${RG_HZ_MARK:-0x5151}"
+
+# Re-apply the haozeke carve-out so rg.terra stays reachable. A bare wg-quick
+# restart re-installs the 0/0 route but NOT the carve-out, which would leave the
+# terra tailnet dark; this re-asserts the cgroup mark + peer /32 backstops.
+reassert_carveout() {
+    [ -x "$CARVEOUT" ] && "$CARVEOUT" up >/dev/null 2>&1 || true
+}
+carveout_present() { $IP rule show 2>/dev/null | grep -q "fwmark $HZ_MARK"; }
 
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 $SYSTEMCTL is-enabled --quiet "$unit" || exit 0
@@ -30,6 +40,9 @@ $SYSTEMCTL is-enabled --quiet "$unit" || exit 0
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
     && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
+    # Egress is fine, but the carve-out can be missing on its own (e.g. the
+    # tunnel was restarted directly); re-assert it so rg.terra is not dark.
+    carveout_present || { $LOG "egress up but haozeke carve-out missing; re-applying"; reassert_carveout; }
     exit 0
 fi
 
@@ -40,6 +53,8 @@ $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
 if $SYSTEMCTL restart "$unit"; then
     # The route flip can drop the Control D DoH session; resettle DNS.
     $SYSTEMCTL restart ctrld.service 2>/dev/null || true
+    # wg-quick restart does not re-apply the carve-out; do it so terra survives.
+    reassert_carveout
     $LOG "restored egress on $iface"
 else
     $LOG "failed to restore $iface"
