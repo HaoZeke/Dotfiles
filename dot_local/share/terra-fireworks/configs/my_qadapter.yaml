@@ -1,0 +1,21 @@
+# FireWorks SLURM queue adapter for rg.terra (partitions: cpu / gpu / long)
+_fw_name: CommonAdapter
+_fw_q_type: SLURM
+rocket_launch: rlaunch -c /home/rgoswami/Git/tmp/fw-mongo/configs singleshot
+nnodes: 1
+ntasks: 1
+cpus_per_task: 4
+ntasks_per_node: 1
+walltime: '24:00:00'
+queue: cpu
+account: null
+job_name: terra_fw
+pre_rocket: |
+  export SLURM_CONF=/etc/slurm-llnl/slurm.conf
+  export FW_CONFIG_FILE=/home/rgoswami/Git/tmp/fw-mongo/configs/FW_config.yaml
+  export PATH=/home/rgoswami/Git/tmp/fw-mongo/fw_venv/bin:$PATH
+  export PYTHONPATH=${AMSEL_REPO:-$HOME/Git/tmp/amsel-md-parity}/scripts/fireworks:${PYTHONPATH:-}
+  export TMPDIR=${TMPDIR:-$HOME/Git/tmp/tmp}
+  mkdir -p "$TMPDIR"
+post_rocket: null
+logdir: /home/rgoswami/Git/tmp/fw-mongo/logs

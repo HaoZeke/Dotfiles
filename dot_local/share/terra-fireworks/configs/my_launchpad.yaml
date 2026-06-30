@@ -1,0 +1,8 @@
+# LaunchPad — Mongo on rg.terra (podman amsel-fw-mongo). Do not move DB off-host.
+host: 127.0.0.1
+port: 27017
+name: amsel_fw
+username: null
+password: null
+logdir: /home/rgoswami/Git/tmp/fw-mongo/logs
+strm_lvl: INFO
