@@ -11,6 +11,7 @@ iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 runtime_conf="/etc/wireguard/${iface}.conf"
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
+hz_carveout="${RG_HZ_CARVEOUT_SCRIPT:-$script_dir/rg-haozeke-tunnel-carveout}"
 tmp_conf=""
 activation_started=0
 
@@ -47,6 +48,9 @@ delete_rules_for_table() {
 }
 
 cleanup_us_egress_state() {
+    # Drop the haozeke carve-out first so its policy rule/table never outlive
+    # the tunnel it bypasses.
+    "$hz_carveout" down >/dev/null 2>&1 || true
     systemctl stop "wg-quick@${iface}.service" >/dev/null 2>&1 || true
     wg-quick down "$iface" >/dev/null 2>&1 || true
     delete_rules_for_table -4 51820
@@ -211,7 +215,12 @@ disable_networkmanager_for_iwd
 printf '\n== install wg-quick runtime config ==\n'
 install -d -m 0700 /etc/wireguard
 tmp_conf="$(mktemp)"
-awk '
+# A conservative MTU lets WireGuard data survive carriers (mobile hotspots) that
+# pass the small handshake but silently drop full ~1420-byte payloads. Precedence:
+# RG_US_EGRESS_MTU env > explicit MTU in the source conf > 1280 default.
+conf_mtu="$(awk -F= '/^[[:space:]]*MTU[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' "$conf")"
+egress_mtu="${RG_US_EGRESS_MTU:-${conf_mtu:-1280}}"
+awk -v mtu="$egress_mtu" '
     BEGIN { injected = 0 }
     function inject_hooks() {
         if (injected == 0) {
@@ -223,6 +232,8 @@ awk '
         }
     }
     /^[[:space:]]*DNS[[:space:]]*=/ { next }
+    /^[[:space:]]*MTU[[:space:]]*=/ { next }
+    /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
     /^[[:space:]]*\[Peer\][[:space:]]*$/ { inject_hooks() }
     { print }
     END { inject_hooks() }
@@ -238,6 +249,20 @@ systemctl daemon-reload
 systemctl reset-failed "wg-quick@${iface}.service" >/dev/null 2>&1 || true
 systemctl start "wg-quick@${iface}.service"
 systemctl is-active --quiet "wg-quick@${iface}.service"
+
+printf '\n== carve the haozeke userspace tailscaled out of the tunnel (keep rg.terra) ==\n'
+# Policy-route the haozeke daemon's traffic around the full tunnel so rg.terra
+# stays reachable. Best-effort: a carve-out failure must not abort egress, but
+# it is logged loudly so the coexist check can catch a dark terra and revert.
+if [ -x "$hz_carveout" ]; then
+    if "$hz_carveout" up; then
+        :
+    else
+        printf 'WARNING: haozeke carve-out failed; rg.terra may be unreachable while egress is up\n' >&2
+    fi
+else
+    printf 'WARNING: haozeke carve-out helper not found at %s; rg.terra may go dark\n' "$hz_carveout" >&2
+fi
 
 printf '\n== settle resolver after route change ==\n'
 sleep 2

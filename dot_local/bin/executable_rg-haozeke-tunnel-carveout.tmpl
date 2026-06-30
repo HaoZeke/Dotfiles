@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Policy-route the haozeke USERSPACE tailscaled's traffic AROUND the US-egress
+# WireGuard full tunnel, so rg.terra stays reachable while 0.0.0.0/0 egress is up.
+#
+# Why this is needed: the system tailscale (tailscale0, x.ai) gets a table-52
+# carve-out from rg-us-egress-up, but the haozeke daemon is userspace-networking
+# (no interface, socks5 on :1055). With 0.0.0.0/0 up its packets to rg.terra get
+# swallowed into the tunnel: the direct path's source IP flips to the egress exit
+# and dies, DERP-through-tunnel is unreliable, and rg.terra goes dark.
+#
+# Mechanism (source/daemon based, NOT destination based):
+#   1. nftables marks egress packets owned by the daemon's *cgroup* (discovered
+#      from /proc/<pid>/cgroup, so it targets only the service -- not uid 1001,
+#      which the Livingston browser also shares and which MUST stay tunneled).
+#   2. an ip rule routes that fwmark via a private table holding the LAN default,
+#      at a priority above wg-quick's suppress/tunnel rules, so the daemon's
+#      traffic egresses on the hotspot uplink and bypasses the tunnel entirely.
+#
+# Hostname gate: laptop-only mutator.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+set -uo pipefail
+
+MARK="${RG_HZ_MARK:-0x5151}"
+TABLE="${RG_HZ_TABLE:-5151}"
+PREF="${RG_HZ_PREF:-5190}"          # above wg-quick rules (~32764), distinct from tailscale (5210+)
+NFT_TABLE="rg_hz_carveout"           # family inet, isolated from any host firewall
+SVC_MATCH="${RG_HZ_SVC_MATCH:-ts-hz.sock}"   # uniquely identifies the userspace tailscaled
+
+die(){ printf 'rg-haozeke-carveout: %s\n' "$*" >&2; exit 1; }
+need_root(){ [ "$(id -u)" -eq 0 ] || die "run as root"; }
+
+discover_cgroup(){
+    local pid cg
+    pid="$(pgrep -f "tailscaled.*${SVC_MATCH}" | head -n1)"
+    [ -n "$pid" ] || return 1
+    cg="$(awk -F'::' '/^0::/{print $2}' "/proc/$pid/cgroup" 2>/dev/null)"
+    cg="${cg#/}"
+    [ -n "$cg" ] || return 1
+    printf '%s' "$cg"
+}
+
+lan_default4(){ ip -4 route show default | awk '$1=="default"{print $3" "$5; exit}'; }   # "gw dev"
+lan_default6(){ ip -6 route show default 2>/dev/null | awk '$1=="default"{print $3" "$5; exit}'; }
+
+up(){
+    need_root
+    local cg level gw dev gw6 dev6
+    cg="$(discover_cgroup)" || die "haozeke tailscaled not running (no '${SVC_MATCH}' process); start tailscale-haozeke.service first"
+    level="$(awk -F/ '{print NF}' <<<"$cg")"
+
+    # (1) mark the daemon's egress packets so the kernel re-evaluates routing.
+    nft list table inet "${NFT_TABLE}" >/dev/null 2>&1 && nft delete table inet "${NFT_TABLE}" 2>/dev/null || true
+    nft -f - <<EOF || die "nft load failed (cgroupv2 match unsupported?)"
+table inet ${NFT_TABLE} {
+    chain out {
+        type route hook output priority mangle; policy accept;
+        socket cgroupv2 level ${level} "${cg}" meta mark set ${MARK}
+    }
+}
+EOF
+
+    # (2) IPv4: route the mark via the LAN default, bypassing the wg tunnel table.
+    read -r gw dev <<<"$(lan_default4)"
+    [ -n "${gw:-}" ] && [ -n "${dev:-}" ] || die "no IPv4 LAN default route to bypass through"
+    ip -4 route replace default via "$gw" dev "$dev" table "$TABLE"
+    ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+    ip -4 rule add fwmark "$MARK" table "$TABLE" pref "$PREF"
+
+    # IPv6: only carve if the LAN actually has a v6 default (else leave v6
+    # unmarked rather than risk blackholing it into an empty table).
+    read -r gw6 dev6 <<<"$(lan_default6)"
+    if [ -n "${gw6:-}" ] && [ -n "${dev6:-}" ]; then
+        ip -6 route replace default via "$gw6" dev "$dev6" table "$TABLE"
+        ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+        ip -6 rule add fwmark "$MARK" table "$TABLE" pref "$PREF"
+    fi
+
+    printf 'rg-haozeke-carveout up: cg=%s level=%s mark=%s table=%s via %s dev %s%s\n' \
+        "$cg" "$level" "$MARK" "$TABLE" "$gw" "$dev" \
+        "$( [ -n "${gw6:-}" ] && printf ' (+v6 %s %s)' "$gw6" "$dev6" || true )"
+}
+
+down(){
+    need_root
+    ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+    ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+    ip -4 route flush table "$TABLE" 2>/dev/null || true
+    ip -6 route flush table "$TABLE" 2>/dev/null || true
+    nft delete table inet "${NFT_TABLE}" 2>/dev/null || true
+    printf 'rg-haozeke-carveout down\n'
+}
+
+status(){
+    echo "== nft mark rule =="; nft list table inet "${NFT_TABLE}" 2>/dev/null || echo "  (absent)"
+    echo "== ip rules =="; ip -4 rule show | grep -E "fwmark ${MARK}|lookup ${TABLE}" || echo "  (v4 absent)"; ip -6 rule show 2>/dev/null | grep -E "fwmark ${MARK}|lookup ${TABLE}" || echo "  (v6 absent)"
+    echo "== table ${TABLE} =="; ip -4 route show table "$TABLE" 2>/dev/null || echo "  (v4 empty)"; ip -6 route show table "$TABLE" 2>/dev/null || true
+    echo "== daemon cgroup =="; discover_cgroup || echo "  (daemon not running)"
+}
+
+case "${1:-}" in
+    up) up ;;
+    down) down ;;
+    status) status ;;
+    *) echo "usage: $0 {up|down|status}" >&2; exit 2 ;;
+esac
