@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=terra-cpu
-#SBATCH --partition=local
+#SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
