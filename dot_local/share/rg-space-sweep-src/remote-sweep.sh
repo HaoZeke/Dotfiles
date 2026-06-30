@@ -1,4 +1,19 @@
 SCRIPT_VERSION='space-sweep-remote-v1'
+
+narrow_roots_to_projects() {
+  # When ROOTS is exactly $HOME (or empty fallback), prefer code-ish subdirs for speed.
+  local -a preferred=()
+  local name candidate
+  for name in Git git src code Code projects Projects work Work dev Dev repos Repos workspace Workspace lab Lab; do
+    candidate="$HOME_DIR/$name"
+    [[ -d "$candidate" ]] && preferred+=("$candidate")
+  done
+  [[ -d "$HOME_DIR/.local/share" ]] && preferred+=("$HOME_DIR/.local/share")
+  if ((${#preferred[@]} > 0)) && ((${#ROOTS[@]} == 1)) && [[ "${ROOTS[0]}" == "$HOME_DIR" ]]; then
+    ROOTS=("${preferred[@]}")
+  fi
+}
+
 CANDIDATES="$(mktemp)"
 SIZES="$(mktemp)"
 SORTED="$(mktemp)"
@@ -97,28 +112,21 @@ find_path() {
   find_dirs -path "$1"
 }
 
-find_python_caches() {
-  local root
+find_named_any() {
+  # One walk for all requested directory names (OR).
+  local names=("$@")
+  [[ ${#names[@]} -gt 0 ]] || return 0
+  local root name_args=() name
+  for name in "${names[@]}"; do
+    if [[ ${#name_args[@]} -eq 0 ]]; then
+      name_args=(-name "$name")
+    else
+      name_args+=(-o -name "$name")
+    fi
+  done
   for root in "${ROOTS[@]}"; do
     [[ -d "$root" ]] || continue
-    find "$root" -xdev \
-      \( -path "$HOME_DIR/.cache" \
-      -o -path "$HOME_DIR/.cargo" \
-      -o -path "$HOME_DIR/.local/share/containers" \
-      -o -path "$HOME_DIR/.local/share/Trash" \
-      -o -name .git \
-      -o -name .direnv \
-      -o -name .pixi \
-      -o -name .nox \
-      -o -name __pycache__ \
-      -o -name target \
-      -o -name node_modules \
-      -o -name .venv \
-      -o -name .tox \) -prune \
-      -o -type d \( -name .pytest_cache \
-      -o -name .mypy_cache \
-      -o -name .ruff_cache \
-      -o -name .hypothesis \) -prune -print 2>/dev/null || true
+    find_dirs_in_root "$root" \( "${name_args[@]}" \)
   done
 }
 
@@ -131,75 +139,147 @@ has_cargo_parent() {
 
 looks_like_rust_target() {
   local path="$1"
-  [[ -d "$path/debug" || -d "$path/release" || -d "$path/.fingerprint" || -e "$path/.rustc_info.json" ]]
+  [[ -d "$path/debug" || -d "$path/release" || -d "$path/.fingerprint" || -e "$path/.rustc_info.json" || -f "$path/CACHEDIR.TAG" ]]
 }
 
-collect_category() {
+add_fixed() {
   local category="$1"
+  shift
   local path
-  case "$category" in
-    rust)
-      while IFS= read -r path; do
-        if has_cargo_parent "$path" && looks_like_rust_target "$path"; then
-          add_candidate rust "$path"
-        fi
-      done < <(find_named target)
-      add_candidate rust "$HOME_DIR/.cargo/registry/cache"
-      add_candidate rust "$HOME_DIR/.cargo/git/db"
-      ;;
-    python)
-      while IFS= read -r path; do
-        add_candidate python "$path"
-      done < <(find_python_caches)
-      add_candidate python "$HOME_DIR/.cache/pip"
-      add_candidate python "$HOME_DIR/.cache/uv"
-      add_candidate python "$HOME_DIR/.cache/pre-commit"
-      add_candidate python "$HOME_DIR/.local/share/hatch"
-      ;;
-    pixi)
-      add_candidate pixi "$HOME_DIR/.cache/rattler/cache"
-      ;;
-    tox)
-      while IFS= read -r path; do
-        add_candidate tox "$path"
-      done < <(find_named .tox)
-      ;;
-    venv)
-      while IFS= read -r path; do
-        add_candidate venv "$path"
-      done < <(find_named .venv)
-      ;;
-    js)
-      while IFS= read -r path; do
-        add_candidate js "$path"
-      done < <(find_path "*/node_modules/.cache")
-      add_candidate js "$HOME_DIR/.npm"
-      ;;
-    *)
-      echo "unknown category in remote script: $category" >&2
-      exit 64
-      ;;
-  esac
+  for path in "$@"; do
+    add_candidate "$category" "$path"
+  done
 }
 
 collect_candidates() {
-  local category
+  narrow_roots_to_projects
+  local category names=() need_js=0
   for category in $CATEGORIES; do
-    collect_category "$category"
+    case "$category" in
+      rust)
+        add_fixed rust \
+          "$HOME_DIR/.cargo/registry/cache" \
+          "$HOME_DIR/.cargo/registry/src" \
+          "$HOME_DIR/.cargo/git/db" \
+          "$HOME_DIR/.cache/sccache" \
+          "$HOME_DIR/.cache/ccache"
+        names+=(target target-nomount)
+        ;;
+      python)
+        add_fixed python \
+          "$HOME_DIR/.cache/pip" \
+          "$HOME_DIR/.cache/uv" \
+          "$HOME_DIR/.cache/pre-commit" \
+          "$HOME_DIR/.local/share/hatch"
+        names+=(.pytest_cache .mypy_cache .ruff_cache .hypothesis)
+        ;;
+      pixi)
+        add_fixed pixi "$HOME_DIR/.cache/rattler/cache"
+        ;;
+      tox)
+        names+=(.tox)
+        ;;
+      venv)
+        names+=(.venv)
+        ;;
+      js)
+        need_js=1
+        add_fixed js "$HOME_DIR/.npm"
+        ;;
+      go)
+        add_fixed go "$HOME_DIR/.cache/go-build" "$HOME_DIR/.cache/go-mod"
+        ;;
+      java)
+        add_fixed java "$HOME_DIR/.gradle/caches" "$HOME_DIR/.m2/repository"
+        ;;
+      *)
+        echo "unknown category in remote script: $category" >&2
+        exit 64
+        ;;
+    esac
   done
+
+  if ((${#names[@]} > 0)); then
+    local -A seen_name=()
+    local deduped=() n
+    for n in "${names[@]}"; do
+      [[ -n "${seen_name[$n]:-}" ]] && continue
+      seen_name[$n]=1
+      deduped+=("$n")
+    done
+    local path name
+    while IFS= read -r path; do
+      [[ -n "$path" ]] || continue
+      name="$(basename "$path")"
+      case "$name" in
+        target|target-nomount)
+          if has_cargo_parent "$path" && looks_like_rust_target "$path"; then
+            add_candidate rust "$path"
+          fi
+          ;;
+        .pytest_cache|.mypy_cache|.ruff_cache|.hypothesis)
+          add_candidate python "$path"
+          ;;
+        .tox)
+          add_candidate tox "$path"
+          ;;
+        .venv)
+          add_candidate venv "$path"
+          ;;
+      esac
+    done < <(find_named_any "${deduped[@]}")
+  fi
+
+  if [[ "$need_js" == "1" ]]; then
+    local path
+    while IFS= read -r path; do
+      add_candidate js "$path"
+    done < <(find_path "*/node_modules/.cache")
+  fi
+
   sort -u "$CANDIDATES" -o "$CANDIDATES"
 }
 
 size_candidates() {
   local category path size
   : > "$SIZES"
+  local paths=() cats=()
   while IFS=$'\t' read -r category path; do
     [[ -n "${category:-}" && -n "${path:-}" ]] || continue
-    size="$(du -s --block-size=1 "$path" 2>/dev/null | awk '{print $1}')" || continue
-    [[ -n "$size" ]] || continue
-    printf '%s\t%s\t%s\n' "$size" "$category" "$path" >> "$SIZES"
+    paths+=("$path")
+    cats+=("$category")
   done < "$CANDIDATES"
-  sort -rn "$SIZES" > "$SORTED"
+
+  local i=0 n=${#paths[@]} chunk=200 end j
+  while (( i < n )); do
+    end=$((i + chunk))
+    (( end > n )) && end=$n
+    local -a args=()
+    for (( j = i; j < end; j++ )); do
+      args+=("${paths[j]}")
+    done
+    local idx=0 line
+    local chunk_ok=1
+    while IFS= read -r line; do
+      [[ -n "$line" ]] || continue
+      size="$(awk '{print $1}' <<<"$line")"
+      printf '%s\t%s\t%s\n' "$size" "${cats[i + idx]}" "${paths[i + idx]}" >> "$SIZES"
+      idx=$((idx + 1))
+    done < <(du -s --block-size=1 -- "${args[@]}" 2>/dev/null || true)
+    if (( idx != end - i )); then
+      chunk_ok=0
+    fi
+    if [[ "$chunk_ok" != "1" ]]; then
+      for (( j = i; j < end; j++ )); do
+        size="$(du -s --block-size=1 "${paths[j]}" 2>/dev/null | awk '{print $1}')" || continue
+        [[ -n "$size" ]] || continue
+        printf '%s\t%s\t%s\n' "$size" "${cats[j]}" "${paths[j]}" >> "$SIZES"
+      done
+    fi
+    i=$end
+  done
+  # Keep first line per path (stable after sort -rn prefers larger if dups slipped in).
+  sort -rn "$SIZES" | awk -F '\t' '!seen[$3]++ { print }' > "$SORTED"
 }
 
 print_report_text() {
@@ -274,10 +354,10 @@ safe_to_remove() {
   [[ "$path" != "$HOME_DIR" ]] || return 1
   path_is_excluded "$path" && return 1
   case "$path" in
-    "$HOME_DIR/.local/bin"|"$HOME_DIR/.local/bin/"*|"$HOME_DIR/.cargo/bin"|"$HOME_DIR/.cargo/bin/"*)
+    "$HOME_DIR/.local/bin"|"$HOME_DIR/.local/bin/"*|"$HOME_DIR/.cargo/bin"|"$HOME_DIR/.cargo/bin/"*|"$HOME_DIR/.local/pipx"|"$HOME_DIR/.local/pipx/"*|"$HOME_DIR/.local/share/pipx"|"$HOME_DIR/.local/share/pipx/"*)
       return 1
       ;;
-    "$HOME_DIR/.cargo/registry/cache"|"$HOME_DIR/.cargo/git/db"|"$HOME_DIR/.cache/pip"|"$HOME_DIR/.cache/uv"|"$HOME_DIR/.cache/rattler/cache"|"$HOME_DIR/.cache/pre-commit"|"$HOME_DIR/.local/share/hatch"|"$HOME_DIR/.npm")
+    "$HOME_DIR/.cargo/registry/cache"|"$HOME_DIR/.cargo/registry/src"|"$HOME_DIR/.cargo/git/db"|"$HOME_DIR/.cache/pip"|"$HOME_DIR/.cache/uv"|"$HOME_DIR/.cache/rattler/cache"|"$HOME_DIR/.cache/pre-commit"|"$HOME_DIR/.cache/sccache"|"$HOME_DIR/.cache/ccache"|"$HOME_DIR/.cache/go-build"|"$HOME_DIR/.cache/go-mod"|"$HOME_DIR/.local/share/hatch"|"$HOME_DIR/.npm"|"$HOME_DIR/.gradle/caches"|"$HOME_DIR/.m2/repository")
       return 0
       ;;
   esac
@@ -285,7 +365,7 @@ safe_to_remove() {
   name="${path##*/}"
   case "$category" in
     rust)
-      [[ "$name" == "target" ]] && has_cargo_parent "$path" && looks_like_rust_target "$path"
+      [[ "$name" == "target" || "$name" == "target-nomount" ]] && has_cargo_parent "$path" && looks_like_rust_target "$path"
       ;;
     python)
       [[ "$name" == ".pytest_cache" || "$name" == ".mypy_cache" || "$name" == ".ruff_cache" || "$name" == ".hypothesis" ]]
@@ -302,6 +382,12 @@ safe_to_remove() {
     js)
       parent="$(basename "$(dirname "$path")")"
       [[ "$name" == ".cache" && "$parent" == "node_modules" ]]
+      ;;
+    go)
+      [[ "$path" == "$HOME_DIR/.cache/go-build" || "$path" == "$HOME_DIR/.cache/go-mod" ]]
+      ;;
+    java)
+      [[ "$path" == "$HOME_DIR/.gradle/caches" || "$path" == "$HOME_DIR/.m2/repository" ]]
       ;;
     *)
       return 1

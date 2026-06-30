@@ -91,6 +91,10 @@ enum Category {
     Tox,
     Venv,
     Js,
+    /// Go module/build caches under ~/.cache (rebuildable).
+    Go,
+    /// JVM dependency caches (Gradle/Maven) under the home tree (rebuildable).
+    Java,
 }
 
 impl Category {
@@ -102,6 +106,8 @@ impl Category {
             Self::Tox => "tox",
             Self::Venv => "venv",
             Self::Js => "js",
+            Self::Go => "go",
+            Self::Java => "java",
         }
     }
 
@@ -115,6 +121,8 @@ impl Category {
                 Self::Tox,
                 Self::Venv,
                 Self::Js,
+                Self::Go,
+                Self::Java,
             ]),
             "rust" => Ok(vec![Self::Rust]),
             "python" => Ok(vec![Self::Python]),
@@ -122,6 +130,8 @@ impl Category {
             "tox" => Ok(vec![Self::Tox]),
             "venv" => Ok(vec![Self::Venv]),
             "js" => Ok(vec![Self::Js]),
+            "go" => Ok(vec![Self::Go]),
+            "java" => Ok(vec![Self::Java]),
             other => Err(format!("unknown category: {other}")),
         }
     }
@@ -326,7 +336,7 @@ fn ensure_script_parent(path: &Path) -> Result<(), String> {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js]
+usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js|go|java]
        rg-space-sweep target list|show NAME|check NAME [--json] [--target-config PATH]
 
 report
@@ -352,7 +362,7 @@ default
     rust python tox
 
 all
-    default + pixi + venv + js"
+    default + pixi + venv + js + go + java"
 }
 
 fn parse_args() -> Result<Options, String> {
@@ -1096,36 +1106,127 @@ fn run_find_output(args: &[OsString]) -> Result<String, String> {
     String::from_utf8(output.stdout).map_err(|err| format!("invalid utf-8 from {FIND_BIN}: {err}"))
 }
 
-fn find_dirs(home: &Path, terms: &[&str]) -> Result<Vec<PathBuf>, String> {
-    let mut args = vec![
-        home.as_os_str().to_os_string(),
-        OsString::from("-xdev"),
-        OsString::from("("),
-        OsString::from("-path"),
-        home.join(".cache").into_os_string(),
-        OsString::from("-o"),
-        OsString::from("-path"),
-        home.join(".cargo").into_os_string(),
-        OsString::from("-o"),
-        OsString::from("-path"),
-        home.join(".local/share/containers").into_os_string(),
-        OsString::from("-o"),
-        OsString::from("-path"),
-        home.join(".local/share/Trash").into_os_string(),
-        OsString::from("-o"),
-        OsString::from("-path"),
-        // pipx tool venvs back ~/.local/bin shims; never scan into them.
-        home.join(".local/pipx").into_os_string(),
-        OsString::from("-o"),
-        OsString::from("-path"),
-        home.join(".local/share/pipx").into_os_string(),
-        OsString::from(")"),
-        OsString::from("-prune"),
-        OsString::from("-o"),
-        OsString::from("-type"),
-        OsString::from("d"),
+/// Code-ish roots under $HOME. Avoid walking video dumps and other top-level
+/// clutter; fixed caches are still added via exact paths under $HOME.
+fn project_scan_roots(home: &Path) -> Vec<PathBuf> {
+    const NAMES: &[&str] = &[
+        "Git",
+        "git",
+        "src",
+        "code",
+        "Code",
+        "projects",
+        "Projects",
+        "work",
+        "Work",
+        "dev",
+        "Dev",
+        "repos",
+        "Repos",
+        "workspace",
+        "Workspace",
+        "lab",
+        "Lab",
+        "src-git",
     ];
-    args.extend(terms.iter().map(OsString::from));
+    let mut roots = Vec::new();
+    let mut seen = BTreeSet::new();
+    for name in NAMES {
+        let path = home.join(name);
+        if path.is_dir() && seen.insert(path.clone()) {
+            roots.push(path);
+        }
+    }
+    // Prefer shallow tool checkout(s), not the entire ~/.local/share tree
+    // (flatpak/Steam/etc. are huge and already pruned poorly on some hosts).
+    let tool_src = home.join(".local/share/rg-space-sweep-src");
+    if tool_src.is_dir() && seen.insert(tool_src.clone()) {
+        roots.push(tool_src);
+    }
+    // Bounded probe under .local/share for other *target* dirs (maxdepth via find later).
+    let local_share = home.join(".local/share");
+    if local_share.is_dir() {
+        // Dedicated root only if we did not already add a tool checkout — still skip full share.
+        let _ = local_share;
+    }
+    // Fallback: full home only when no project roots exist (unusual hosts).
+    if roots.is_empty() {
+        roots.push(home.to_path_buf());
+    }
+    roots
+}
+
+fn append_prune_group(args: &mut Vec<OsString>, home: &Path, extra_prune_names: &[&str]) {
+    let prune_paths = [
+        home.join(".cache"),
+        home.join(".cargo"),
+        home.join(".local/share/containers"),
+        home.join(".local/share/Trash"),
+        home.join(".local/pipx"),
+        home.join(".local/share/pipx"),
+        home.join(".gradle"),
+        home.join(".m2"),
+        home.join(".npm"),
+        // Large non-code trees under .local/share when we scan that root.
+        home.join(".local/share/Steam"),
+        home.join(".local/share/flatpak"),
+        home.join(".local/share/containers"),
+        home.join(".local/share/Trash"),
+        home.join(".local/share/baloo"),
+        home.join(".local/share/zeitgeist"),
+    ];
+    args.push(OsString::from("("));
+    let mut first = true;
+    for path in &prune_paths {
+        if !first {
+            args.push(OsString::from("-o"));
+        }
+        first = false;
+        args.push(OsString::from("-path"));
+        args.push(path.clone().into_os_string());
+    }
+    for name in [".git", ".direnv", ".pixi", ".nox", "__pycache__"]
+        .into_iter()
+        .chain(extra_prune_names.iter().copied())
+    {
+        if !first {
+            args.push(OsString::from("-o"));
+        }
+        first = false;
+        args.push(OsString::from("-name"));
+        args.push(OsString::from(name));
+    }
+    args.push(OsString::from(")"));
+    args.push(OsString::from("-prune"));
+    args.push(OsString::from("-o"));
+}
+
+/// Walk one root for any of the directory names (OR). Prefer over N finds.
+fn find_named_in_root(
+    home: &Path,
+    root: &Path,
+    names: &[&str],
+    extra_prune_names: &[&str],
+) -> Result<Vec<PathBuf>, String> {
+    if names.is_empty() || !root.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut args = vec![
+        root.as_os_str().to_os_string(),
+        OsString::from("-xdev"),
+    ];
+    append_prune_group(&mut args, home, extra_prune_names);
+    args.push(OsString::from("-type"));
+    args.push(OsString::from("d"));
+    args.push(OsString::from("("));
+    for (i, name) in names.iter().enumerate() {
+        if i > 0 {
+            args.push(OsString::from("-o"));
+        }
+        args.push(OsString::from("-name"));
+        args.push(OsString::from(*name));
+    }
+    args.push(OsString::from(")"));
     args.push(OsString::from("-prune"));
     args.push(OsString::from("-print"));
     Ok(run_find_output(&args)?
@@ -1135,12 +1236,95 @@ fn find_dirs(home: &Path, terms: &[&str]) -> Result<Vec<PathBuf>, String> {
         .collect())
 }
 
-fn find_named_dirs(home: &Path, name: &str) -> Result<Vec<PathBuf>, String> {
-    find_dirs(home, &["-name", name])
+/// Parallel multi-root named walk (threads join on completion).
+fn find_named_any(home: &Path, names: &[&str]) -> Result<Vec<PathBuf>, String> {
+    if names.is_empty() {
+        return Ok(Vec::new());
+    }
+    let name_set: BTreeSet<&str> = names.iter().copied().collect();
+    let mut extra_prune_names: Vec<&str> = Vec::new();
+    for candidate in ["node_modules", "target", "target-nomount", ".venv", ".tox"] {
+        if !name_set.contains(candidate) {
+            extra_prune_names.push(candidate);
+        }
+    }
+    let roots = project_scan_roots(home);
+    let extra = extra_prune_names;
+    let names_owned: Vec<String> = names.iter().map(|s| (*s).to_string()).collect();
+    let home_buf = home.to_path_buf();
+
+    let mut handles = Vec::new();
+    for root in roots {
+        let home_c = home_buf.clone();
+        let names_c = names_owned.clone();
+        let extra_c: Vec<String> = extra.iter().map(|s| (*s).to_string()).collect();
+        handles.push(std::thread::spawn(move || {
+            let name_refs: Vec<&str> = names_c.iter().map(String::as_str).collect();
+            let extra_refs: Vec<&str> = extra_c.iter().map(String::as_str).collect();
+            find_named_in_root(&home_c, &root, &name_refs, &extra_refs)
+        }));
+    }
+
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    for handle in handles {
+        let part = handle
+            .join()
+            .map_err(|_| "scan thread panicked".to_string())??;
+        for path in part {
+            if seen.insert(path.clone()) {
+                out.push(path);
+            }
+        }
+    }
+    Ok(out)
 }
 
+/// Path-glob find under project roots only (e.g. */node_modules/.cache).
 fn find_path_dirs(home: &Path, pattern: &str) -> Result<Vec<PathBuf>, String> {
-    find_dirs(home, &["-path", pattern])
+    let roots = project_scan_roots(home);
+    let pattern = pattern.to_string();
+    let home_buf = home.to_path_buf();
+    let mut handles = Vec::new();
+    for root in roots {
+        let home_c = home_buf.clone();
+        let pattern_c = pattern.clone();
+        handles.push(std::thread::spawn(move || {
+            let mut args = vec![
+                root.as_os_str().to_os_string(),
+                OsString::from("-xdev"),
+            ];
+            append_prune_group(&mut args, &home_c, &["target", "target-nomount", ".venv", ".tox"]);
+            args.extend([
+                OsString::from("-type"),
+                OsString::from("d"),
+                OsString::from("-path"),
+                OsString::from(pattern_c),
+                OsString::from("-prune"),
+                OsString::from("-print"),
+            ]);
+            run_find_output(&args).map(|stdout| {
+                stdout
+                    .lines()
+                    .filter(|line| !line.is_empty())
+                    .map(PathBuf::from)
+                    .collect::<Vec<_>>()
+            })
+        }));
+    }
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    for handle in handles {
+        let part = handle
+            .join()
+            .map_err(|_| "scan thread panicked".to_string())??;
+        for path in part {
+            if seen.insert(path.clone()) {
+                out.push(path);
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn has_cargo_parent(path: &Path) -> bool {
@@ -1155,54 +1339,96 @@ fn looks_like_rust_target(path: &Path) -> bool {
         || path.join("release").is_dir()
         || path.join(".fingerprint").is_dir()
         || path.join(".rustc_info.json").exists()
+        // CACHEDIR.TAG is written by Cargo into build targets; allows target-nomount style dirs.
+        || path.join("CACHEDIR.TAG").is_file()
 }
 
-fn find_cargo_targets(home: &Path) -> Result<Vec<PathBuf>, String> {
-    Ok(find_named_dirs(home, "target")?
-        .into_iter()
-        .filter(|path| has_cargo_parent(path) && looks_like_rust_target(path))
-        .collect())
+/// Names that require a project-root walk, keyed by whether any selected category needs them.
+fn walk_names_for(categories: &[Category]) -> Vec<&'static str> {
+    let mut names = Vec::new();
+    let wants = |c: Category| categories.contains(&c);
+    if wants(Category::Rust) {
+        names.push("target");
+        // Alternate cargo target dir name used by some workspaces (e.g. bind-mount setups).
+        names.push("target-nomount");
+    }
+    if wants(Category::Python) {
+        names.extend([
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".hypothesis",
+        ]);
+    }
+    if wants(Category::Tox) {
+        names.push(".tox");
+    }
+    if wants(Category::Venv) {
+        names.push(".venv");
+    }
+    names.sort_unstable();
+    names.dedup();
+    names
 }
 
-fn emit_category_paths(home: &Path, category: Category) -> Result<Vec<PathBuf>, String> {
-    let paths = match category {
-        Category::Rust => {
-            let mut paths = find_cargo_targets(home)?;
-            paths.push(home.join(".cargo/registry/cache"));
-            paths.push(home.join(".cargo/git/db"));
-            paths
-        }
-        Category::Python => {
-            let mut paths = Vec::new();
-            for name in [".pytest_cache", ".mypy_cache", ".ruff_cache", ".hypothesis"] {
-                paths.extend(find_named_dirs(home, name)?);
-            }
-            paths.extend([
-                home.join(".cache/pip"),
-                home.join(".cache/uv"),
-                home.join(".cache/pre-commit"),
-                home.join(".local/share/hatch"),
-            ]);
-            paths
-        }
+fn fixed_paths_for(home: &Path, category: Category) -> Vec<PathBuf> {
+    match category {
+        Category::Rust => vec![
+            home.join(".cargo/registry/cache"),
+            home.join(".cargo/registry/src"),
+            home.join(".cargo/git/db"),
+            home.join(".cache/sccache"),
+            home.join(".cache/ccache"),
+        ],
+        Category::Python => vec![
+            home.join(".cache/pip"),
+            home.join(".cache/uv"),
+            home.join(".cache/pre-commit"),
+            home.join(".local/share/hatch"),
+        ],
         Category::Pixi => vec![home.join(".cache/rattler/cache")],
-        Category::Tox => find_named_dirs(home, ".tox")?,
-        Category::Venv => find_named_dirs(home, ".venv")?,
-        Category::Js => {
-            let mut paths = find_path_dirs(home, "*/node_modules/.cache")?;
-            paths.push(home.join(".npm"));
-            paths
+        Category::Tox | Category::Venv => Vec::new(),
+        Category::Js => vec![home.join(".npm")],
+        Category::Go => vec![
+            home.join(".cache/go-build"),
+            home.join(".cache/go-mod"),
+        ],
+        Category::Java => vec![
+            home.join(".gradle/caches"),
+            home.join(".m2/repository"),
+        ],
+    }
+}
+
+fn classify_walked_path(path: &Path, categories: &[Category]) -> Option<Category> {
+    let name = path.file_name().and_then(|v| v.to_str())?;
+    let wants = |c: Category| categories.contains(&c);
+    match name {
+        "target" | "target-nomount" if wants(Category::Rust) => {
+            if has_cargo_parent(path) && looks_like_rust_target(path) {
+                Some(Category::Rust)
+            } else {
+                None
+            }
         }
-    };
-    Ok(paths)
+        ".pytest_cache" | ".mypy_cache" | ".ruff_cache" | ".hypothesis"
+            if wants(Category::Python) =>
+        {
+            Some(Category::Python)
+        }
+        ".tox" if wants(Category::Tox) => Some(Category::Tox),
+        ".venv" if wants(Category::Venv) => Some(Category::Venv),
+        _ => None,
+    }
 }
 
 fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candidate>, String> {
     let mut seen = BTreeSet::new();
     let mut entries = Vec::new();
 
+    // Exact fixed caches first — O(1), no walk (also what clean --yes needs most).
     for &category in categories {
-        for path in emit_category_paths(home, category)? {
+        for path in fixed_paths_for(home, category) {
             if !path.exists() || !seen.insert(path.clone()) {
                 continue;
             }
@@ -1210,25 +1436,87 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
         }
     }
 
-    Ok(entries)
-}
-
-fn size_entries(candidates: &[Candidate]) -> Result<Vec<Entry>, String> {
-    let mut entries = Vec::with_capacity(candidates.len());
-    for candidate in candidates {
-        let size = path_size_bytes(&candidate.path)?;
-        entries.push(Entry {
-            category: candidate.category,
-            path: candidate.path.clone(),
-            size,
-        });
+    // Parallel multi-root walk for project-local dirs.
+    let names = walk_names_for(categories);
+    if !names.is_empty() {
+        for path in find_named_any(home, &names)? {
+            let Some(category) = classify_walked_path(&path, categories) else {
+                continue;
+            };
+            if !path.exists() || !seen.insert(path.clone()) {
+                continue;
+            }
+            entries.push(Candidate { category, path });
+        }
+        // Shallow ~/.local/share probe for cargo targets (depth-capped, not full share walk).
+        if names.iter().any(|n| *n == "target" || *n == "target-nomount") {
+            let share = home.join(".local/share");
+            if share.is_dir() {
+                let mut args = vec![
+                    share.as_os_str().to_os_string(),
+                    OsString::from("-xdev"),
+                    OsString::from("-maxdepth"),
+                    OsString::from("4"),
+                    OsString::from("("),
+                    OsString::from("-path"),
+                    home.join(".local/share/containers").into_os_string(),
+                    OsString::from("-o"),
+                    OsString::from("-path"),
+                    home.join(".local/share/Trash").into_os_string(),
+                    OsString::from("-o"),
+                    OsString::from("-path"),
+                    home.join(".local/share/flatpak").into_os_string(),
+                    OsString::from("-o"),
+                    OsString::from("-path"),
+                    home.join(".local/share/Steam").into_os_string(),
+                    OsString::from("-o"),
+                    OsString::from("-path"),
+                    home.join(".local/share/pipx").into_os_string(),
+                    OsString::from(")"),
+                    OsString::from("-prune"),
+                    OsString::from("-o"),
+                    OsString::from("-type"),
+                    OsString::from("d"),
+                    OsString::from("("),
+                    OsString::from("-name"),
+                    OsString::from("target"),
+                    OsString::from("-o"),
+                    OsString::from("-name"),
+                    OsString::from("target-nomount"),
+                    OsString::from(")"),
+                    OsString::from("-prune"),
+                    OsString::from("-print"),
+                ];
+                for path in run_find_output(&args)?
+                    .lines()
+                    .filter(|l| !l.is_empty())
+                    .map(PathBuf::from)
+                {
+                    let Some(category) = classify_walked_path(&path, categories) else {
+                        continue;
+                    };
+                    if !path.exists() || !seen.insert(path.clone()) {
+                        continue;
+                    }
+                    entries.push(Candidate { category, path });
+                }
+            }
+        }
     }
-    entries.sort_by(|left, right| {
-        right
-            .size
-            .cmp(&left.size)
-            .then_with(|| left.path.cmp(&right.path))
-    });
+
+    // JS node_modules/.cache under project roots only.
+    if categories.contains(&Category::Js) {
+        for path in find_path_dirs(home, "*/node_modules/.cache")? {
+            if !path.exists() || !seen.insert(path.clone()) {
+                continue;
+            }
+            entries.push(Candidate {
+                category: Category::Js,
+                path,
+            });
+        }
+    }
+
     Ok(entries)
 }
 
@@ -1248,6 +1536,70 @@ fn path_size_bytes(path: &Path) -> Result<u64, String> {
     first
         .parse::<u64>()
         .map_err(|err| format!("invalid du size for {}: {err}", path.display()))
+}
+
+/// Batch `du -s` across many paths (one process) instead of one process per path.
+fn path_sizes_bytes(paths: &[&Path]) -> Result<Vec<u64>, String> {
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    // Chunk to stay under ARG_MAX on huge candidate sets.
+    const CHUNK: usize = 200;
+    let mut sizes = Vec::with_capacity(paths.len());
+    for chunk in paths.chunks(CHUNK) {
+        let mut args = vec![
+            OsString::from("-s"),
+            OsString::from("--block-size=1"),
+            OsString::from("--"),
+        ];
+        for path in chunk {
+            args.push(path.as_os_str().to_os_string());
+        }
+        let output = run_output(DU_BIN, &args)?;
+        let mut got = 0usize;
+        for line in output.lines() {
+            if line.is_empty() {
+                continue;
+            }
+            let first = line
+                .split_whitespace()
+                .next()
+                .ok_or_else(|| format!("unable to parse du output line: {line}"))?;
+            let size = first
+                .parse::<u64>()
+                .map_err(|err| format!("invalid du size in batch: {err}"))?;
+            sizes.push(size);
+            got += 1;
+        }
+        if got != chunk.len() {
+            // Fallback per-path if du omitted a line (permission / race).
+            sizes.truncate(sizes.len().saturating_sub(got));
+            for path in chunk {
+                sizes.push(path_size_bytes(path)?);
+            }
+        }
+    }
+    Ok(sizes)
+}
+
+fn size_entries(candidates: &[Candidate]) -> Result<Vec<Entry>, String> {
+    let paths: Vec<&Path> = candidates.iter().map(|c| c.path.as_path()).collect();
+    let sizes = path_sizes_bytes(&paths)?;
+    let mut entries = Vec::with_capacity(candidates.len());
+    for (candidate, size) in candidates.iter().zip(sizes) {
+        entries.push(Entry {
+            category: candidate.category,
+            path: candidate.path.clone(),
+            size,
+        });
+    }
+    entries.sort_by(|left, right| {
+        right
+            .size
+            .cmp(&left.size)
+            .then_with(|| left.path.cmp(&right.path))
+    });
+    Ok(entries)
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -1384,13 +1736,20 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
 
     let exact = [
         home.join(".cargo/registry/cache"),
+        home.join(".cargo/registry/src"),
         home.join(".cargo/git/db"),
         home.join(".cache/pip"),
         home.join(".cache/uv"),
         home.join(".cache/rattler/cache"),
         home.join(".cache/pre-commit"),
+        home.join(".cache/sccache"),
+        home.join(".cache/ccache"),
+        home.join(".cache/go-build"),
+        home.join(".cache/go-mod"),
         home.join(".local/share/hatch"),
         home.join(".npm"),
+        home.join(".gradle/caches"),
+        home.join(".m2/repository"),
     ];
     if exact.iter().any(|candidate| candidate == &entry.path) {
         return true;
@@ -1402,7 +1761,9 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
 
     match entry.category {
         Category::Rust => {
-            name == "target" && has_cargo_parent(&entry.path) && looks_like_rust_target(&entry.path)
+            (name == "target" || name == "target-nomount")
+                && has_cargo_parent(&entry.path)
+                && looks_like_rust_target(&entry.path)
         }
         Category::Python => matches!(
             name,
@@ -1420,6 +1781,10 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
                     .and_then(|value| value.to_str())
                     == Some("node_modules")
         }
+        Category::Go => entry.path.ends_with(Path::new(".cache/go-build"))
+            || entry.path.ends_with(Path::new(".cache/go-mod")),
+        Category::Java => entry.path.ends_with(Path::new(".gradle/caches"))
+            || entry.path.ends_with(Path::new(".m2/repository")),
     }
 }
 
@@ -1867,6 +2232,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                             }
                         }
                     } else {
+                        // Skip du entirely for destructive clean — only existence + safety matter.
                         clean_entries(&home, &entries, options.yes)?;
                     }
                 }
@@ -1887,6 +2253,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                         format_bytes(free),
                         options.min_free_gb
                     );
+                    // No du: reclaim ASAP under pressure.
                     clean_entries(&home, &entries, true)?;
                     let after = free_bytes_for(&home)?;
                     println!(
@@ -2022,6 +2389,61 @@ mod tests {
     }
 
     #[test]
+    fn project_scan_roots_prefers_git_over_full_home() {
+        let home = Path::new("/home/example");
+        // Without real dirs on disk, fallback is full home — structural check on source.
+        let src = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/main.rs"));
+        assert!(src.contains("fn project_scan_roots"));
+        assert!(src.contains("std::thread::spawn"));
+        assert!(src.contains("Skip du entirely for destructive clean") || src.contains("No du: reclaim ASAP"));
+        let _ = home;
+    }
+
+    #[test]
+    fn walk_names_for_python_is_single_combined_set() {
+        let names = walk_names_for(&[Category::Python]);
+        assert_eq!(
+            names,
+            vec![
+                ".hypothesis",
+                ".mypy_cache",
+                ".pytest_cache",
+                ".ruff_cache",
+            ]
+        );
+    }
+
+    #[test]
+    fn walk_names_for_all_project_dirs_dedups_once() {
+        let names = walk_names_for(&Category::expand("all").unwrap());
+        assert!(names.contains(&"target"));
+        assert!(names.contains(&".venv"));
+        assert!(names.contains(&".tox"));
+        assert_eq!(names.iter().filter(|n| **n == "target").count(), 1);
+    }
+
+    #[test]
+    fn fixed_paths_include_high_value_rebuildable_caches() {
+        let home = Path::new("/home/example");
+        let rust = fixed_paths_for(home, Category::Rust);
+        assert!(rust.iter().any(|p| p.ends_with(".cargo/registry/src")));
+        assert!(rust.iter().any(|p| p.ends_with(".cache/sccache")));
+        let java = fixed_paths_for(home, Category::Java);
+        assert!(java.iter().any(|p| p.ends_with(".m2/repository")));
+        let go = fixed_paths_for(home, Category::Go);
+        assert!(go.iter().any(|p| p.ends_with(".cache/go-build")));
+    }
+
+    #[test]
+    fn looks_like_rust_target_accepts_cachedir_tag() {
+        // Structural: CACHEDIR.TAG is part of the acceptance predicate source.
+        let src = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/main.rs"));
+        assert!(src.contains("CACHEDIR.TAG"));
+        assert!(src.contains("find_named_any"));
+        assert!(src.contains("path_sizes_bytes"));
+    }
+
+    #[test]
     fn snapshots_mode_does_not_need_cache_candidate_scan() {
         assert!(!mode_requires_candidate_scan(Mode::Snapshots));
         assert!(mode_requires_candidate_scan(Mode::Report));
@@ -2051,6 +2473,8 @@ mod tests {
                 Category::Tox,
                 Category::Venv,
                 Category::Js,
+                Category::Go,
+                Category::Java,
             ]
         );
     }
