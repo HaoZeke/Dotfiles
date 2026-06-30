@@ -291,8 +291,8 @@ rg -q '/etc/rg-tailnets' "$laptop_script" \
     || fail "tailnet instance env directory is not managed"
 rg -q -- '--tun=userspace-networking' "$laptop_script" \
     || fail "secondary tailnet template does not use userspace networking"
-rg -q -- '--accept-dns=false' "$laptop_script" \
-    || fail "Tailscale DNS ownership is not disabled"
+rg -q -- '--accept-dns=true' "$laptop_script" \
+    || fail "Tailscale accept-dns is not enabled for x.ai split-DNS"
 rg -q 'XF86RFKill.*rg-airplane toggle' "$sway_config" \
     || fail "Sway does not bind the RFKill key to airplane mode"
 rg -q 'XF86Bluetooth.*rg-airplane bluetooth toggle' "$sway_config" \

@@ -602,8 +602,9 @@ include: "/etc/unbound/unbound.conf.d/*.conf"
 
 UNBOUND_FORWARD_ZONES_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # Add explicit tailnet/private split-DNS zones here when they have unique
-# suffixes and a reachable nameserver. Keep Tailscale accept-dns disabled
-# so no tailnet daemon rewrites system DNS.
+# suffixes and a reachable nameserver. Tailscale accept-dns is enabled (for the
+# x.ai tailnet split-DNS); it only adds specific suffixes, the Global ~. stays
+# pinned to the local unbound chain, so no tailnet daemon owns the default.
 #
 # Example:
 # forward-zone:
@@ -1102,9 +1103,16 @@ fi
 
 disable_networkmanager_for_iwd
 
+# Enable accept-dns so the x.ai tailnet's split-DNS works (it routes
+# *.teachx.ai / *.xai-enterprise.com to the app-connector resolvers, which is
+# how Starfleet and friends are reached). This does NOT hijack the default
+# resolver: the tailnet publishes split-DNS routes only (no global override),
+# and the resolved drop-in pins Global to 127.0.0.1 with Domains=~., so only
+# those specific suffixes go to Tailscale while everything else stays on the
+# local unbound -> ControlD chain. Leaving it false silently breaks Starfleet.
 if command -v tailscale >/dev/null 2>&1 \
    && systemctl is-active tailscaled.service >/dev/null 2>&1; then
-    tailscale set --accept-dns=false >/dev/null 2>&1 || true
+    tailscale set --accept-dns=true >/dev/null 2>&1 || true
 fi
 
 # Enable TLP's own units explicitly. tlp-stat checks for tlp.service by
