@@ -40,10 +40,12 @@ sed -e "s/CPUs=32/CPUs=${CPUS}/" \
     -e "s|SlurmdPidFile=.*|SlurmdPidFile=/run/slurm/slurmd.pid|" \
     "$SHARE/etc/slurm.conf" > "$TMP"
 
-# Ensure localhost addrs for single-node (avoid DNS SRV)
+# Ensure a localhost controller addr for single-node (avoid DNS SRV lookups).
+# Note: SlurmdAddr is NOT a valid slurm.conf key (removed in modern Slurm); node
+# addresses belong on NodeName via NodeAddr. Injecting it makes the whole config
+# fail to parse, which silently drops Slurm back to the DNS SRV config source.
 grep -q '^SlurmctldAddr=' "$TMP" || sed -i "/^SlurmctldHost=/a\\
-SlurmctldAddr=127.0.0.1\\
-SlurmdAddr=127.0.0.1" "$TMP"
+SlurmctldAddr=127.0.0.1" "$TMP"
 
 sudo install -m 644 -o root -g root "$TMP" "$ETC/slurm.conf"
 sudo install -m 644 -o root -g root "$SHARE/etc/gres.conf" "$ETC/gres.conf"
@@ -55,10 +57,9 @@ if [[ ! -e /etc/slurm ]]; then
   sudo ln -sfn slurm-llnl /etc/slurm
 fi
 
-# Validate config before start
-if ! /usr/bin/slurmctld -C 2>&1 | tee /tmp/slurmctld-C.out; then
-  echo "WARN: slurmctld -C reported issues (see /tmp/slurmctld-C.out)"
-fi
+# Print detected node hardware for sanity (slurmd -C, not slurmctld -C, is the
+# node-detection flag in modern Slurm; slurmctld -C just prints usage).
+/usr/bin/slurmd -C 2>&1 | tee /tmp/slurmd-C.out || echo "WARN: slurmd -C failed (see /tmp/slurmd-C.out)"
 
 sudo systemctl daemon-reload
 sudo systemctl reset-failed slurmctld.service slurmd.service 2>/dev/null || true
