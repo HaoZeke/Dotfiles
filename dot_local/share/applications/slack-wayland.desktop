@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Slack Wayland
+Comment=Slack with Wayland flags
+Exec=slack --enable-features=UseOzonePlatform --ozone-platform=wayland --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations %U
+Terminal=false
+Icon=slack
+StartupWMClass=Slack
+Categories=Network;InstantMessaging;
+MimeType=x-scheme-handler/slack;
