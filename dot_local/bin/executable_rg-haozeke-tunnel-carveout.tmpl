@@ -28,9 +28,18 @@ TABLE="${RG_HZ_TABLE:-5151}"
 PREF="${RG_HZ_PREF:-5190}"          # above wg-quick rules (~32764), distinct from tailscale (5210+)
 NFT_TABLE="rg_hz_carveout"           # family inet, isolated from any host firewall
 SVC_MATCH="${RG_HZ_SVC_MATCH:-ts-hz.sock}"   # uniquely identifies the userspace tailscaled
+TS_SOCK="${RG_HZ_TS_SOCK:-/tmp/ts-hz.sock}"  # haozeke userspace tailscaled control socket
+STATE="${RG_HZ_STATE:-/run/rg-hz-carveout.endpoints}"  # /32 backstops we installed
 
 die(){ printf 'rg-haozeke-carveout: %s\n' "$*" >&2; exit 1; }
 need_root(){ [ "$(id -u)" -eq 0 ] || die "run as root"; }
+
+# The daemon's CURRENT direct peer endpoints (real IPs it sends WireGuard to).
+peer_endpoints4(){
+    tailscale --socket="$TS_SOCK" status 2>/dev/null \
+        | grep -oE 'direct [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:' \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -u
+}
 
 discover_cgroup(){
     local pid cg
@@ -78,13 +87,35 @@ EOF
         ip -6 rule add fwmark "$MARK" table "$TABLE" pref "$PREF"
     fi
 
-    printf 'rg-haozeke-carveout up: cg=%s level=%s mark=%s table=%s via %s dev %s%s\n' \
+    # (3) Cache-immune backstop: the cgroup mark above only fires on a fresh
+    # route lookup, but UDP sockets cache their route, so an already-established
+    # daemon->terra flow can keep using a stale (tunnel) route. Pin the daemon's
+    # current direct peer endpoints as /32s in the MAIN table; a /32 wins over
+    # wg-quick's 0/0 via its `suppress_prefixlength 0` rule, so every packet to
+    # those peers egresses on the LAN regardless of socket caching.
+    : > "$STATE"
+    local ep
+    for ep in $(peer_endpoints4); do
+        ip -4 route replace "${ep}/32" via "$gw" dev "$dev"
+        printf '%s\n' "$ep" >> "$STATE"
+    done
+
+    printf 'rg-haozeke-carveout up: cg=%s level=%s mark=%s table=%s via %s dev %s%s; pinned %s peer /32(s)\n' \
         "$cg" "$level" "$MARK" "$TABLE" "$gw" "$dev" \
-        "$( [ -n "${gw6:-}" ] && printf ' (+v6 %s %s)' "$gw6" "$dev6" || true )"
+        "$( [ -n "${gw6:-}" ] && printf ' (+v6 %s %s)' "$gw6" "$dev6" || true )" \
+        "$(wc -l < "$STATE" 2>/dev/null || echo 0)"
 }
 
 down(){
     need_root
+    # Remove the /32 peer backstops we installed in main.
+    if [ -f "$STATE" ]; then
+        local ep
+        while read -r ep; do
+            [ -n "$ep" ] && ip -4 route del "${ep}/32" 2>/dev/null || true
+        done < "$STATE"
+        rm -f "$STATE"
+    fi
     ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
     ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
     ip -4 route flush table "$TABLE" 2>/dev/null || true

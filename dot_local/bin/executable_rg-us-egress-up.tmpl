@@ -251,15 +251,14 @@ systemctl start "wg-quick@${iface}.service"
 systemctl is-active --quiet "wg-quick@${iface}.service"
 
 printf '\n== carve the haozeke userspace tailscaled out of the tunnel (keep rg.terra) ==\n'
-# Policy-route the haozeke daemon's traffic around the full tunnel so rg.terra
-# stays reachable. Best-effort: a carve-out failure must not abort egress, but
-# it is logged loudly so the coexist check can catch a dark terra and revert.
+# Run AFTER the tunnel (loading it before perturbs the system tailscaled's
+# table-52 rebuild). The /32 peer backstops are destination routes in the main
+# table, which are cache-immune: installing them flushes the route cache, so the
+# daemon's already-established flow to rg.terra re-resolves onto the LAN and
+# wins over wg-quick's 0/0 via its suppress_prefixlength 0 rule. Best-effort:
+# a failure must not abort egress, but is logged so the coexist check can revert.
 if [ -x "$hz_carveout" ]; then
-    if "$hz_carveout" up; then
-        :
-    else
-        printf 'WARNING: haozeke carve-out failed; rg.terra may be unreachable while egress is up\n' >&2
-    fi
+    "$hz_carveout" up || printf 'WARNING: haozeke carve-out failed; rg.terra may be unreachable while egress is up\n' >&2
 else
     printf 'WARNING: haozeke carve-out helper not found at %s; rg.terra may go dark\n' "$hz_carveout" >&2
 fi
@@ -296,7 +295,10 @@ printf 'Lean release host resolves via local DNS\n'
 
 printf '\n== route checks ==\n'
 verify_route_uses_interface "IPv4 default egress" 1.1.1.1 "$iface"
-verify_route_uses_tailscale "Tailscale DNS" 100.100.100.100
+# Bringing up the 0/0 tunnel triggers a network-change in the system tailscaled,
+# which briefly rebuilds its route table 52; retry so the check waits for that
+# re-population instead of racing it.
+retry_cmd "Tailscale DNS routes via table 52" verify_route_uses_tailscale "Tailscale DNS" 100.100.100.100
 verify_tailscale_probe_name
 ip -6 route get 2606:4700:4700::1111 || true
 
