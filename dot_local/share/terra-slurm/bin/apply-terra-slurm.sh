@@ -1,34 +1,76 @@
 #!/usr/bin/env bash
 # Apply Terra single-node Slurm from ~/.local/share/terra-slurm (chezmoi).
-# Run in tsetup tmux with sudo password available.
+# Arch Linux package slurm-llnl reads /etc/slurm-llnl/slurm.conf (NOT /etc/slurm/).
+# Run with sudo in tsetup tmux.
 set -euo pipefail
 SHARE="${HOME}/.local/share/terra-slurm"
-[[ -d "$SHARE/etc" ]] || { echo "missing $SHARE/etc — chezmoi apply first"; exit 1; }
-echo "Installing packages (slurm-llnl)…"
-sudo pacman -S --needed --noconfirm slurm-llnl || sudo pacman -S --needed --noconfirm slurm
-# Detect CPUs / mem for node line
+[[ -d "$SHARE/etc" ]] || { echo "missing $SHARE/etc — sync chezmoi share first"; exit 1; }
+
+echo "Installing packages (slurm-llnl + munge)…"
+sudo pacman -S --needed --noconfirm slurm-llnl munge || true
+
 CPUS=$(nproc)
 MEM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
-sudo mkdir -p /etc/slurm /var/spool/slurmd /var/spool/slurmctld /var/log/slurm
-# Ensure slurm user
-id slurm >/dev/null 2>&1 || sudo useradd -r -s /usr/bin/nologin slurm
-sudo chown slurm:slurm /var/spool/slurmctld || true
-sudo chown root:root /var/spool/slurmd || true
-# Render node memory/cpu into conf
+HN=$(hostname -s)
+
+# Arch paths
+ETC=/etc/slurm-llnl
+sudo mkdir -p "$ETC" /var/spool/slurmd /var/spool/slurmctld /var/log/slurm
+id slurm >/dev/null 2>&1 || sudo useradd -r -s /usr/bin/nologin -d /var/lib/slurm -M slurm
+sudo chown -R slurm:slurm /var/spool/slurmctld
+sudo chown root:root /var/spool/slurmd
+sudo chmod 755 /var/spool/slurmd /var/spool/slurmctld
+
+# Munge key if missing
+if [[ ! -f /etc/munge/munge.key ]]; then
+  sudo mkdir -p /etc/munge
+  sudo dd if=/dev/urandom of=/etc/munge/munge.key bs=1 count=1024 status=none
+  sudo chown munge:munge /etc/munge/munge.key
+  sudo chmod 400 /etc/munge/munge.key
+fi
+sudo systemctl enable --now munge.service
+
 TMP=$(mktemp)
-sed -e "s/CPUs=32/CPUs=${CPUS}/" -e "s/RealMemory=128000/RealMemory=${MEM_MB}/" \
-  -e "s/SlurmctldHost=rgam5terra/SlurmctldHost=$(hostname -s)/" \
-  -e "s/NodeName=rgam5terra/NodeName=$(hostname -s)/" \
-  "$SHARE/etc/slurm.conf" > "$TMP"
-sudo install -m 644 "$TMP" /etc/slurm/slurm.conf
-sudo install -m 644 "$SHARE/etc/gres.conf" /etc/slurm/gres.conf
-sudo install -m 644 "$SHARE/etc/cgroup.conf" /etc/slurm/cgroup.conf
+sed -e "s/CPUs=32/CPUs=${CPUS}/" \
+    -e "s/RealMemory=[0-9]*/RealMemory=${MEM_MB}/" \
+    -e "s/SlurmctldHost=.*/SlurmctldHost=${HN}/" \
+    -e "s/NodeName=[^ ]*/NodeName=${HN}/" \
+    -e "s/Nodes=rgam5terra/Nodes=${HN}/" \
+    -e "s|SlurmctldPidFile=.*|SlurmctldPidFile=/run/slurmctld/slurmctld.pid|" \
+    -e "s|SlurmdPidFile=.*|SlurmdPidFile=/run/slurm/slurmd.pid|" \
+    "$SHARE/etc/slurm.conf" > "$TMP"
+
+# Ensure localhost addrs for single-node (avoid DNS SRV)
+grep -q '^SlurmctldAddr=' "$TMP" || sed -i "/^SlurmctldHost=/a\\
+SlurmctldAddr=127.0.0.1\\
+SlurmdAddr=127.0.0.1" "$TMP"
+
+sudo install -m 644 -o root -g root "$TMP" "$ETC/slurm.conf"
+sudo install -m 644 -o root -g root "$SHARE/etc/gres.conf" "$ETC/gres.conf"
+sudo install -m 644 -o root -g root "$SHARE/etc/cgroup.conf" "$ETC/cgroup.conf"
 rm -f "$TMP"
-sudo systemctl enable --now slurmctld.service slurmd.service || {
-  echo "systemd enable failed — try: sudo slurmctld -D & sudo slurmd -D &"
-}
+
+# Compat symlink if anything still looks under /etc/slurm
+if [[ ! -e /etc/slurm ]]; then
+  sudo ln -sfn slurm-llnl /etc/slurm
+fi
+
+# Validate config before start
+if ! /usr/bin/slurmctld -C 2>&1 | tee /tmp/slurmctld-C.out; then
+  echo "WARN: slurmctld -C reported issues (see /tmp/slurmctld-C.out)"
+fi
+
+sudo systemctl daemon-reload
+sudo systemctl reset-failed slurmctld.service slurmd.service 2>/dev/null || true
+sudo systemctl enable slurmctld.service slurmd.service
+sudo systemctl restart slurmctld.service
 sleep 2
+sudo systemctl restart slurmd.service
+sleep 2
+
+echo "=== status ==="
+systemctl is-active munge slurmctld slurmd || true
 scontrol ping || true
 sinfo || true
-echo "Slurm apply done. Templates: $SHARE/job-templates"
+echo "Templates: $SHARE/job-templates"
 echo "Example: sbatch $SHARE/job-templates/cpu-job.sh"

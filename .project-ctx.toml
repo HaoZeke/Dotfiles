@@ -15,8 +15,8 @@ test_patterns = ["dot_local/bin/executable_*selftest"]
 rules = [
   "Use vissue with project chezmoi for follow-up tracking.",
   "Keep source-checkout-only metadata out of chezmoi target application via .chezmoiignore.",
-  "Use local builds and tests with bounded resource use.",
-  "Do not add remote-builder workflows while remote buildbot access is unavailable.",
+  "Local builds/tests at or below 50% of machine resources; offload to rg.terra.",
+  "Prefer rg.terra (always-reachable; rg.cosmolab is gone) over ad-hoc SSH for remote work.",
   "Apply changed helpers with chezmoi apply before validating live behavior.",
 ]
 
