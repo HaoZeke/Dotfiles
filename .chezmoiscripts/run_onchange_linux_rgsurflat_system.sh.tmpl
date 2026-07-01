@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
+# rgSURFLat system-level provisioning: greeter, unbound DNS stack, uinput for
+# kanata, bluetooth. Hand-built during first setup; tracked here so a re-apply
+# (or a rebuild) reproduces it. Secrets (SURF VPN cert/key) are handled
+# separately via the sealed vault, not here.
+set -euo pipefail
+
+write_if_diff() {
+    local dst="$1" mode="$2" content="$3"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# --- greeter: greetd + tuigreet -> start-sway (VT1) -----------------------
+GREETD_CONF='[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --remember --asterisks --cmd /usr/local/bin/start-sway"
+user = "greeter"
+'
+write_if_diff /etc/greetd/config.toml 0644 "$GREETD_CONF" || true
+sudo gpasswd -a greeter video >/dev/null 2>&1 || true
+sudo systemctl enable greetd >/dev/null 2>&1 || true
+
+# --- DNS: unbound is the primary resolver. ts.net -> tailscale MagicDNS;
+#     everything else -> public fallbacks. ControlD (:5354) is prepended to
+#     the "." forward-zone once ctrld is provisioned (sealed token). ----------
+UNBOUND_CONF='server:
+    interface: 127.0.0.1
+    port: 53
+    access-control: 127.0.0.0/8 allow
+    do-ip6: no
+    prefer-ip6: no
+    hide-identity: yes
+    hide-version: yes
+    harden-glue: yes
+    qname-minimisation: yes
+    prefetch: yes
+    do-not-query-localhost: no
+    num-threads: 2
+    msg-cache-size: 32m
+    rrset-cache-size: 64m
+    private-address: 10.0.0.0/8
+    private-address: 172.16.0.0/12
+    private-address: 192.168.0.0/16
+    private-address: fd00::/8
+    private-address: fe80::/10
+forward-zone:
+    name: "ts.net."
+    forward-addr: 100.100.100.100
+forward-zone:
+    name: "."
+    forward-addr: 1.1.1.1
+    forward-addr: 9.9.9.9
+'
+if write_if_diff /etc/unbound/unbound.conf 0644 "$UNBOUND_CONF"; then
+    sudo systemctl restart unbound 2>/dev/null || true
+fi
+sudo systemctl enable unbound >/dev/null 2>&1 || true
+
+# resolved is the stub (127.0.0.53) with unbound as its only upstream; NM hands
+# DNS to resolved. tailscale runs --accept-dns=false so it never claims "."
+RESOLVED_DROPIN='[Resolve]
+DNS=127.0.0.1
+Domains=~.
+FallbackDNS=
+'
+write_if_diff /etc/systemd/resolved.conf.d/10-unbound.conf 0644 "$RESOLVED_DROPIN" || true
+sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf 2>/dev/null || true
+NM_DNS='[main]
+dns=systemd-resolved
+'
+write_if_diff /etc/NetworkManager/conf.d/10-dns-resolved.conf 0644 "$NM_DNS" || true
+sudo systemctl enable systemd-resolved >/dev/null 2>&1 || true
+
+# --- uinput for kanata (colemak) ------------------------------------------
+UINPUT_RULE='KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+'
+if write_if_diff /etc/udev/rules.d/99-uinput.rules 0644 "$UINPUT_RULE"; then
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    sudo udevadm trigger 2>/dev/null || true
+fi
+write_if_diff /etc/modules-load.d/uinput.conf 0644 'uinput
+' || true
+if ! id -nG "{{ .chezmoi.username }}" | tr ' ' '\n' | grep -qx input; then
+    sudo usermod -aG input "{{ .chezmoi.username }}"
+    echo "chezmoi: added {{ .chezmoi.username }} to input (re-login for kanata)"
+fi
+
+# --- bluetooth ------------------------------------------------------------
+sudo systemctl enable bluetooth >/dev/null 2>&1 || true
+{{- end }}
