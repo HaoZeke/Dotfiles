@@ -21,4 +21,11 @@ export CARGO_BUILD_JOBS=4
 
 echo "chezmoi: installing rg-wob-bridge via cargo install ..."
 cargo install --path "$SRC" --root "$HOME/.local" --force --locked
+
+# Wire the sway-session notification + overlay services to autostart. Use plain
+# enable (never --now): apply must not block on a graphical session or a busy
+# user manager. They start via sway-session.target on the next login/reload.
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user enable dunst.service wob.service >/dev/null 2>&1 || true
+fi
 {{- end }}
