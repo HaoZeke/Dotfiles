@@ -84,6 +84,7 @@ private_dot_omp/
 CLAUDE.md
 .claude/
 dot_claude/
+dot_grok/
 .chezmoiscripts/*setup*.tmpl
 ~/.codex/AGENTS.md
 ~/.codex/config.toml
@@ -291,3 +292,4 @@ private_dot_omp/agent/private_models.yml
 private_dot_codex/private_config.toml
 dot_claude/private_claude-mcp-servers.json
 **/private_models.yml
+~/.grok/AGENTS.md

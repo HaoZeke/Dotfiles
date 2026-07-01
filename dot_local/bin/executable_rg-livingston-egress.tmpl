@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Split-tunnel egress for the Livingston browser profile.
+#
+# The Livingston Vivaldi profile proxies through socks5://...@socks-us.windscribe.com:1080.
+# Mobile carriers block port 1080 (and the in-browser SOCKS dies), so the only
+# thing that genuinely needs WireGuard is *reaching the Windscribe SOCKS server*.
+# This routes ONLY the SOCKS endpoint IPs through the same Windscribe WG tunnel
+# (UDP 443 + MTU 1280 survives carrier filtering) and leaves the default route
+# on the LAN. Consequence: the SOCKS path is tunnelled (Livingston gets its US
+# exit) while curl / rg.terra / tailscale stay on the local uplink and NEVER die
+# if the tunnel flaps -- no more `wg-quick down` to get connectivity back.
+#
+# Unlike rg-us-egress-up (0.0.0.0/0 full tunnel) this needs no fwmark policy
+# routing and no haozeke carve-out: the default route is untouched.
+#
+#   sudo rg-livingston-egress up | down | status
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+set -uo pipefail
+
+BASE_CONF="${RG_LIV_BASE_CONF:-$HOME/.config/rg-us-egress/wireguard.conf}"
+IFACE="${RG_LIV_IFACE:-rg-liv-wg}"   # must be <=15 chars (IFNAMSIZ)
+RUNTIME="/etc/wireguard/${IFACE}.conf"
+SOCKS_HOST="${RG_LIV_SOCKS_HOST:-socks-us.windscribe.com}"
+MTU="${RG_LIV_MTU:-1280}"
+STATE="${RG_LIV_STATE:-/run/rg-livingston-egress.ips}"
+
+die(){ printf 'rg-livingston-egress: %s\n' "$*" >&2; exit 1; }
+need_root(){ [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0 $*"; }
+resolve_socks(){ getent ahostsv4 "$SOCKS_HOST" 2>/dev/null | awk '{print $1}' | sort -u; }
+
+up(){
+    need_root
+    [ -r "$BASE_CONF" ] || die "base WireGuard conf not readable: $BASE_CONF"
+    local ips allowed
+    ips="$(resolve_socks)"
+    [ -n "$ips" ] || die "cannot resolve $SOCKS_HOST (DNS down?)"
+    allowed="$(printf '%s\n' "$ips" | sed 's#$#/32#' | paste -sd, -)"
+
+    install -d -m 0700 /etc/wireguard
+    # Build a split runtime conf: AllowedIPs = just the SOCKS endpoints, a low
+    # MTU, and no DNS= (keep the local resolver chain). Table stays auto so
+    # wg-quick installs ONLY those /32 routes -- the default route is untouched.
+    awk -v allowed="$allowed" -v mtu="$MTU" '
+        /^[[:space:]]*DNS[[:space:]]*=/        { next }
+        /^[[:space:]]*MTU[[:space:]]*=/        { next }
+        /^[[:space:]]*AllowedIPs[[:space:]]*=/ { print "AllowedIPs = " allowed; next }
+        /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
+        { print }
+    ' "$BASE_CONF" > "$RUNTIME"
+    chmod 600 "$RUNTIME"
+
+    wg-quick down "$IFACE" >/dev/null 2>&1 || true
+    wg-quick up "$RUNTIME" || die "wg-quick up failed"
+    printf '%s\n' "$ips" > "$STATE"
+
+    printf 'rg-livingston-egress up: %s -> %s via %s (default route on LAN, untouched)\n' \
+        "$SOCKS_HOST" "$allowed" "$IFACE"
+}
+
+down(){
+    need_root
+    wg-quick down "$IFACE" >/dev/null 2>&1 || true
+    ip link delete "$IFACE" >/dev/null 2>&1 || true
+    rm -f "$STATE" "$RUNTIME" 2>/dev/null || true
+    printf 'rg-livingston-egress down\n'
+}
+
+status(){
+    echo "== interface =="; ip -br link show "$IFACE" 2>/dev/null || echo "  (down)"
+    echo "== SOCKS endpoints routed via tunnel =="
+    if [ -f "$STATE" ]; then
+        while read -r ip; do [ -n "$ip" ] && ip route get "$ip" 2>/dev/null | head -1; done < "$STATE"
+    else echo "  (none)"; fi
+    echo "== default route (must be LAN, NOT $IFACE) =="; ip -4 route show default | head -1
+    echo "== handshake =="; wg show "$IFACE" latest-handshakes 2>/dev/null || echo "  (no tunnel)"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+    up) up ;;
+    down) down ;;
+    status) status ;;
+    *) echo "usage: $0 {up|down|status}" >&2; exit 2 ;;
+esac
