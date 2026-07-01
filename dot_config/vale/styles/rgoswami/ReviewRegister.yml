@@ -1,7 +1,7 @@
 extends: existence
 message: "'%s' is a review-grading register tell (academic, sports, LinkedIn, or AI-grader). Rewrite plain."
 ignorecase: true
-level: warning
+level: error
 tokens:
   # Academic: "axis" used for ranking criteria. Bare words banned outright in review prose.
   - axis
@@ -75,6 +75,9 @@ tokens:
   # "ship/ships/shipped" marketing-delivery verb (use includes/adds/provides/has);
   # word-bounded so it never fires inside relationship/membership/township.
   - \bship(s|ped|ping)?\b
+  # "stamp/stamps/stamped" AI-tell verb (clang stamps optnone -> clang marks /
+  # adds / sets); word-bounded so it never fires inside e.g. timestamp.
+  - \bstamp(s|ed|ing)?\b
   # "on spec" / "feature on spec" filler
   - on spec
   - on-spec
@@ -254,3 +257,24 @@ tokens:
   # as Y"): state the gap concretely, do not moralize.
   - above all,?
   - is not the same as
+  # (2026-06-30) AI-compound / marketing / sportscaster tells that slipped the gate.
+  # These are grader-flourish, NOT the blunt descriptive voice (lazy, cop-out,
+  # papered over, made up, fabricated stay -- those describe the model plainly).
+  - byte-identical
+  - byte identical
+  - \bnails? it\b
+  - \bnailed it\b
+  - green-?light(s|ed|ing)?
+  - best-in-class
+  - best in class
+  - \bseamless(ly)?\b
+  - a testament to
+  - moves? the needle
+  - needle-moving
+  - knocks? it out of the park
+  - crushes? it
+  - \bshowcase(s|d)?\b
+  - \bunlocks?\b
+  - \bsupercharge(s|d)?\b
+  - game-changer
+  - game changer
