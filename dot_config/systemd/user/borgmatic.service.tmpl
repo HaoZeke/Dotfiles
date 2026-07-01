@@ -5,6 +5,12 @@ OnFailure=terra-notify-failure@%n.service
 
 [Service]
 Type=oneshot
+# Borg repo passphrase as a TPM/host-key-encrypted user credential, decrypted
+# only at service runtime (no gpg-agent/pinentry on headless Terra). Create
+# once: pass show local/borg-pcloud | head -n1 | systemd-creds encrypt --user
+#   --name=borg-passphrase - %h/.config/credstore.encrypted/borg-passphrase
+# borgmatic config: encryption_passcommand: "cat ${CREDENTIALS_DIRECTORY}/borg-passphrase"
+LoadCredentialEncrypted=borg-passphrase:%h/.config/credstore.encrypted/borg-passphrase
 EnvironmentFile=-%h/.config/terra-observability/env
 ExecStart=/usr/bin/borgmatic --verbosity -1 --syslog-verbosity 1
 # Success ping (Healthchecks-style URL); failure uses OnFailure Telegram
