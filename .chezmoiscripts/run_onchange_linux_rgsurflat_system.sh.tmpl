@@ -71,12 +71,18 @@ sudo systemctl enable unbound >/dev/null 2>&1 || true
 
 # resolved is the stub (127.0.0.53) with unbound as its only upstream; NM hands
 # DNS to resolved. tailscale runs --accept-dns=false so it never claims "."
+# LLMNR + MulticastDNS off: no link-local name broadcast on the corp/campus LAN
+# (leaks hostname, and a spoofer can answer). DNSSEC left to unbound upstream.
 RESOLVED_DROPIN='[Resolve]
 DNS=127.0.0.1
 Domains=~.
 FallbackDNS=
+LLMNR=no
+MulticastDNS=no
 '
-write_if_diff /etc/systemd/resolved.conf.d/10-unbound.conf 0644 "$RESOLVED_DROPIN" || true
+if write_if_diff /etc/systemd/resolved.conf.d/10-unbound.conf 0644 "$RESOLVED_DROPIN"; then
+    sudo systemctl restart systemd-resolved 2>/dev/null || true
+fi
 sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf 2>/dev/null || true
 NM_DNS='[main]
 dns=systemd-resolved
