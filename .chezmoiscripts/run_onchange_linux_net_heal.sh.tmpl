@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Install rg-net-heal as a root timer: keeps the x.ai tailscale up (Starfleet +
+# grok models) and the landsbankinn.is /24 carved direct out of the US egress,
+# re-asserted every 30s so it survives network roams.
+set -euo pipefail
+
+HEAL_SRC="$HOME/.local/bin/rg-net-heal"
+if [ ! -x "$HEAL_SRC" ]; then
+    echo "chezmoi: rg-net-heal missing; skipping install." >&2
+    exit 0
+fi
+
+install_bin() {
+    if ! sudo cmp -s "$1" "$2" 2>/dev/null; then
+        echo "chezmoi: updating $2"
+        sudo install -D -m 0755 -o root -g root "$1" "$2"
+    fi
+}
+install_root() {
+    local dest="$1" tmp
+    tmp="$(mktemp)"
+    cat >"$tmp"
+    if ! sudo test -f "$dest" || ! sudo cmp -s "$tmp" "$dest"; then
+        echo "chezmoi: updating $dest"
+        sudo install -D -m 0644 -o root -g root "$tmp" "$dest"
+    fi
+    rm -f "$tmp"
+}
+
+install_bin "$HEAL_SRC" /usr/local/sbin/rg-net-heal
+
+install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
+[Unit]
+Description=Heal x.ai tailscale + landsbankinn.is direct carve-out
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-net-heal
+EOF
+
+install_root /etc/systemd/system/rg-net-heal.timer <<'EOF'
+[Unit]
+Description=Periodic rg-net-heal (x.ai tailscale + bank carve-out)
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=30
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now rg-net-heal.timer
+sudo systemctl start rg-net-heal.service || true
+echo "chezmoi: rg-net-heal timer enabled"
+{{- end }}

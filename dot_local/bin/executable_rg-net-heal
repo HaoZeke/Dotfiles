@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# rg-net-heal: automated companion to rg-net-doctor (which only audits).
+# Runs as root from rg-net-heal.timer + on network-online. Idempotent, quiet.
+#
+#   1. x.ai system tailscale (Starfleet / experimental grok models): keep the
+#      daemon running + connected. Auto-recover a Stopped state; on a real logout
+#      (auth expiry) notify the desktop -- re-login needs a human, so never block
+#      on an interactive `tailscale up`.
+#   2. landsbankinn.is carve-out: the bank times out through the Windscribe US
+#      (Houston) egress, so keep its /24 routed DIRECT via the current LAN
+#      default. rule 5208 ("lookup main suppress_prefixlength 0") consults main
+#      for specific routes before the egress rule, so a /24 in main suffices.
+#      Re-asserted each run -> survives network roams with no baked-in gateway.
+set -uo pipefail
+
+log() { logger -t rg-net-heal -- "$1"; }
+notify() {
+    local bus="/run/user/1001/bus"
+    [ -S "$bus" ] && sudo -u rgoswami DBUS_SESSION_BUS_ADDRESS="unix:path=$bus" \
+        notify-send -u critical "net-heal" "$1" >/dev/null 2>&1 || true
+    log "$1"
+}
+
+# --- 1. x.ai tailscale ----------------------------------------------------
+systemctl is-active --quiet tailscaled.service || { systemctl start tailscaled.service >/dev/null 2>&1 || true; sleep 2; }
+ts_state="$(tailscale status --json 2>/dev/null \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin).get("BackendState",""))' 2>/dev/null || true)"
+case "$ts_state" in
+    Running) : ;;
+    Stopped) tailscale up --accept-dns=true >/dev/null 2>&1 || notify "x.ai tailscale stuck Stopped; run: sudo tailscale up" ;;
+    NeedsLogin|NoState|"") notify "x.ai tailscale logged out -> Starfleet + grok models down. Re-login: sudo tailscale up --accept-dns=true" ;;
+esac
+
+# --- 2. landsbankinn.is direct carve-out (roam-proof) ---------------------
+BANK="${RG_BANK_DIRECT:-89.104.148.0/24}"
+read -r gw dev < <(ip -4 route show table main | awk '/^default via/{print $3, $5; exit}')
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    if ! ip route show table main "$BANK" 2>/dev/null | grep -q "via $gw"; then
+        ip route replace "$BANK" via "$gw" dev "$dev" table main 2>/dev/null \
+            && log "bank carve-out re-asserted: $BANK via $gw dev $dev"
+    fi
+else
+    log "no LAN default route; cannot assert bank carve-out"
+fi

@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# Live audit of the multi-path stack on rgx1gen11:
+#   wlan + SURF OpenVPN (tun0) + system tailscale (x.ai) + US WG full tunnel
+#   + haozeke userspace tailscale SOCKS :1055 (rg.terra path).
+set -uo pipefail
+
+HZ_SOCK="${RG_HZ_TS_SOCK:-/tmp/ts-hz.sock}"
+HZ_MARK="${RG_HZ_MARK:-0x5151}"
+HZ_TABLE="${RG_HZ_TABLE:-5151}"
+TERRA_IP="${RG_TERRA_IP:-100.119.130.84}"
+SOCKS="${RG_HZ_SOCKS:-127.0.0.1:1055}"
+pass=0; fail=0; warn=0
+
+ok(){ printf '  OK  %s\n' "$*"; pass=$((pass+1)); }
+bad(){ printf '  BAD %s\n' "$*"; fail=$((fail+1)); }
+wrn(){ printf '  WRN %s\n' "$*"; warn=$((warn+1)); }
+
+printf '== host ==\n'
+printf '  %s  %s\n' "$(hostname)" "$(date -Is)"
+
+printf '== uplinks ==\n'
+ip -br addr show wlan0 tailscale0 rg-us-egress-wg tun0 2>/dev/null || true
+printf '  default(main): %s\n' "$(ip -4 route show default | head -1)"
+printf '  1.1.1.1 via:   %s\n' "$(ip route get 1.1.1.1 2>/dev/null | head -1)"
+
+printf '== system tailscale (x.ai) ==\n'
+if systemctl is-active --quiet tailscaled.service; then
+  ok "tailscaled.service active ($(tailscale status --self 2>/dev/null | awk '{print $1,$2}' | head -1))"
+else
+  bad "tailscaled.service not active"
+fi
+
+printf '== haozeke userspace (terra path) ==\n'
+if systemctl --user is-active --quiet tailscale-haozeke.service; then
+  ok "tailscale-haozeke.service active"
+else
+  bad "tailscale-haozeke.service not active — systemctl --user start tailscale-haozeke"
+fi
+if ss -ltn sport = :1055 2>/dev/null | grep -q LISTEN; then
+  ok "SOCKS listening on ${SOCKS}"
+else
+  bad "SOCKS not listening on ${SOCKS}"
+fi
+if [ -S "$HZ_SOCK" ]; then
+  ok "control socket $HZ_SOCK"
+  # Peer map can lag a few seconds after restart.
+  st=""
+  for _ in 1 2 3 4 5 6 7 8; do
+    st=$(tailscale --socket="$HZ_SOCK" status 2>/dev/null | grep -E "rgam5terra|${TERRA_IP}" | head -1) && [ -n "$st" ] && break
+    sleep 1
+  done
+  if [ -n "$st" ]; then
+    case "$st" in
+      *active*|*direct*|*idle*|*relay*) ok "peer terra: $st" ;;
+      *offline*) bad "peer terra offline: $st" ;;
+      *) wrn "peer terra: $st" ;;
+    esac
+  else
+    bad "rgam5terra not in haozeke status (wrong tailnet or still starting)"
+  fi
+else
+  bad "missing $HZ_SOCK"
+fi
+
+printf '== haozeke carve-out (bypass US full-tunnel for daemon UDP) ==\n'
+rule=$(ip rule show 2>/dev/null | grep "fwmark $HZ_MARK" || true)
+tab=$(ip route show table "$HZ_TABLE" 2>/dev/null | grep '^default ' || true)
+nft_ok=0
+nft list table inet rg_hz_carveout >/dev/null 2>&1 && nft_ok=1
+if [ -n "$rule" ]; then ok "ip rule: $rule"; else bad "ip rule for fwmark $HZ_MARK missing"; fi
+if [ -n "$tab" ]; then ok "table $HZ_TABLE: $tab"; else bad "table $HZ_TABLE has no default (stale carve-out)"; fi
+if [ "$nft_ok" -eq 1 ]; then ok "nft table inet rg_hz_carveout present"
+else bad "nft rg_hz_carveout ABSENT — haozeke UDP likely hairpins via US WG; run: sudo rg-haozeke-tunnel-carveout up"; fi
+
+ep_route=$(ip route get 153.92.128.58 2>/dev/null | head -1 || true)
+if echo "$ep_route" | grep -q 'rg-us-egress-wg'; then
+  wrn "terra public endpoint routes via US WG (expected when carve-out broken): $ep_route"
+elif echo "$ep_route" | grep -qE 'wlan0|dev eth'; then
+  ok "terra public endpoint on LAN uplink: $ep_route"
+else
+  wrn "terra endpoint route: $ep_route"
+fi
+
+printf '== SOCKS reachability to terra:22 ==\n'
+socks_host="${SOCKS%:*}"
+socks_port="${SOCKS##*:}"
+banner=$(timeout 15 bash -c "echo | /usr/bin/nc -w 10 -X 5 -x ${socks_host}:${socks_port} ${TERRA_IP} 22" 2>/dev/null | tr -d '\r' | head -1 || true)
+case "$banner" in
+  SSH-*) ok "SOCKS ${SOCKS} -> ${TERRA_IP}:22 ($banner)" ;;
+  *)
+    # Fall back to a real ssh BatchMode probe (same path as agents use).
+    if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra true 2>/dev/null; then
+      ok "SOCKS path ok via ssh rg.terra (banner probe empty: ${banner:-none})"
+    else
+      bad "cannot reach ${TERRA_IP}:22 via SOCKS (banner=${banner:-none})"
+    fi
+    ;;
+esac
+
+printf '== ssh rg.terra ==\n'
+if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra true 2>/dev/null; then
+  ok "ssh rg.terra BatchMode true"
+else
+  bad "ssh rg.terra failed"
+fi
+
+printf '== DNS chain ==\n'
+if systemctl is-active --quiet unbound.service; then ok "unbound active"; else wrn "unbound inactive"; fi
+if systemctl is-active --quiet systemd-resolved.service; then ok "resolved active"; else bad "resolved inactive"; fi
+if systemctl is-active --quiet ctrld.service; then
+  wrn "ctrld active on :5354 (Control D) — upstream timeouts common on full-tunnel; not on main resolved path if DNS=127.0.0.1/unbound"
+fi
+if dig +time=2 +tries=1 +short google.com @127.0.0.1 >/dev/null 2>&1; then ok "dig @127.0.0.1 ok"; else bad "dig @127.0.0.1 failed"; fi
+
+printf '== SURF OpenVPN ==\n'
+if systemctl is-active --quiet 'openvpn-client@surf-split.service'; then
+  ok "openvpn-client@surf-split active (split routes on tun0)"
+else
+  wrn "openvpn-client@surf-split inactive"
+fi
+
+printf '== US egress WG ==\n'
+if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
+  ok "wg-quick@rg-us-egress-wg active (full-tunnel table 51820)"
+  if systemctl is-active --quiet rg-us-egress-guard.timer 2>/dev/null || systemctl is-enabled --quiet rg-us-egress-guard.timer 2>/dev/null; then
+    ok "rg-us-egress-guard timer present"
+  else
+    wrn "rg-us-egress-guard.timer not enabled — carve-out may rot after networkd restart"
+  fi
+else
+  wrn "US egress WG not active (terra path simpler when down)"
+fi
+
+printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
+if [ "$fail" -gt 0 ]; then
+  printf 'Fix order:\n'
+  printf '  1) systemctl --user restart tailscale-haozeke\n'
+  printf '  2) sudo rg-haozeke-tunnel-carveout up\n'
+  printf '  3) sudo systemctl restart rg-us-egress-guard.timer  # if unit exists\n'
+  exit 1
+fi
+exit 0
