@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
+# Seed SSH host keys so git-over-SSH (github insteadOf, incl the ssh.github.com:443
+# fallback used when :22 is blocked) works non-interactively for paru/-git builds.
+set -euo pipefail
+mkdir -p "$HOME/.ssh"; touch "$HOME/.ssh/known_hosts"; chmod 600 "$HOME/.ssh/known_hosts"
+for hp in "github.com" "ssh.github.com" "gitlab.com"; do
+    ssh-keyscan -t ed25519,rsa "$hp" 2>/dev/null >> "$HOME/.ssh/known_hosts" || true
+done
+# ssh.github.com on 443 (the HTTPS-port SSH fallback)
+ssh-keyscan -p 443 -t ed25519,rsa ssh.github.com 2>/dev/null >> "$HOME/.ssh/known_hosts" || true
+sort -u "$HOME/.ssh/known_hosts" -o "$HOME/.ssh/known_hosts"
+{{- end }}
