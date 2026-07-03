@@ -293,3 +293,7 @@ private_dot_codex/private_config.toml
 dot_claude/private_claude-mcp-servers.json
 **/private_models.yml
 ~/.grok/AGENTS.md
+~/.ssh/cua_ed25519
+~/.ssh/cua_ed25519.pub
+~/.ssh/cua_nopass
+~/.ssh/cua_nopass.pub
