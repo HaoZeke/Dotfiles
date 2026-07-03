@@ -104,6 +104,12 @@ if ! id -nG "{{ .chezmoi.username }}" | tr ' ' '\n' | grep -qx input; then
     echo "chezmoi: added {{ .chezmoi.username }} to input (re-login for kanata)"
 fi
 
+# --- timezone: NL work laptop -> Europe/Amsterdam -------------------------
+if [ "$(timedatectl show -p Timezone --value 2>/dev/null)" != "Europe/Amsterdam" ]; then
+    sudo timedatectl set-timezone Europe/Amsterdam 2>/dev/null || true
+    echo "chezmoi: timezone -> Europe/Amsterdam"
+fi
+
 # --- bluetooth ------------------------------------------------------------
 sudo systemctl enable bluetooth >/dev/null 2>&1 || true
 
