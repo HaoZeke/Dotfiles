@@ -104,7 +104,37 @@ AccuracySec=5s
 WantedBy=timers.target
 EOF
 
+# (5) Boot-time bring-up: run the full rg-us-egress-up (tunnel + DNS resettle +
+# carve-outs) at boot so the Houston egress is up without a manual step. The
+# guard/watch above keep it healthy afterwards.
+install_root /etc/systemd/system/rg-us-egress.service 0644 <<'EOF'
+[Unit]
+Description=rg US (Houston) full-tunnel egress
+Wants=network-online.target
+After=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=RG_US_EGRESS_CONF={{ .chezmoi.homeDir }}/.config/rg-us-egress/wireguard.conf
+ExecStart={{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-up
+ExecStop=/usr/bin/wg-quick down rg-us-egress-wg
+TimeoutStartSec=150
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Keyboard: kanata is the single Colemak source (runs via user-linger, so it is
+# active even at the greeter). Keep the console/greeter keymap on plain "us" so
+# it does not re-map kanata's already-Colemak output -- that double pass was the
+# "colemak on colemak" scramble at the login greeter.
+if [ "$(localectl status 2>/dev/null | awk '/VC Keymap/{print $NF}')" != "us" ]; then
+    sudo localectl set-keymap us && echo "chezmoi: VC keymap -> us (kanata provides Colemak)"
+fi
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now rg-us-egress-watch.service
 sudo systemctl enable --now rg-us-egress-guard.timer
+sudo systemctl enable rg-us-egress.service
 {{- end }}
