@@ -1,12 +1,24 @@
 [Unit]
 Description=Userspace tailscaled on haozeke.github (SOCKS sandbox for cross-tailnet reach to Terra; isolated from x.ai system tailscaled)
+Documentation=https://tailscale.com/kb/1112/userspace-networking/
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=8
 
 [Service]
-ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=localhost:1055 --port=0 --statedir=%h/.local/share/tailscale-haozeke --socket=/tmp/ts-hz.sock
+Type=simple
+# Bind SOCKS to IPv4 loopback only — "localhost" can resolve to ::1 and break
+# OpenBSD nc -x 127.0.0.1:1055 clients after dual-stack flaps.
+# Socket path /tmp/ts-hz.sock is part of the public contract (carveout SVC_MATCH,
+# doctor, coexist-test); do not rename without a coordinated bump.
+ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=127.0.0.1:1055 --port=0 --statedir=%h/.local/share/tailscale-haozeke --socket=/tmp/ts-hz.sock
+# Clear ambient proxies so DERP/control never inherit a broken session proxy.
+Environment=ALL_PROXY= HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= HTTPS_PROXY= all_proxy=
 Restart=always
 RestartSec=5
+# Cap runaway memory without killing normal magicsock buffers.
+MemoryMax=384M
 
 [Install]
 WantedBy=default.target

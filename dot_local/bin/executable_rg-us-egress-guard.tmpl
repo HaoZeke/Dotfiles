@@ -32,7 +32,19 @@ HZ_MARK="${RG_HZ_MARK:-0x5151}"
 reassert_carveout() {
     [ -x "$CARVEOUT" ] && "$CARVEOUT" up >/dev/null 2>&1 || true
 }
-carveout_present() { $IP rule show 2>/dev/null | grep -q "fwmark $HZ_MARK"; }
+# Healthy carve-out needs (a) policy rule, (b) nft cgroup mark table, and
+# (c) a default route in table 5151. A stale rule alone is a common failure mode
+# after resume/networkd restarts and leaves haozeke UDP hairpinning through WG.
+carveout_present() {
+    $IP rule show 2>/dev/null | grep -q "fwmark $HZ_MARK" || return 1
+    # nft list needs root; when unprivileged, treat rule+table default as enough
+    # only if table has a default — empty table 5151 is broken.
+    $IP route show table "${RG_HZ_TABLE:-5151}" 2>/dev/null | grep -q '^default ' || return 1
+    if [ "$(id -u)" -eq 0 ] || command -v nft >/dev/null 2>&1; then
+        nft list table inet rg_hz_carveout >/dev/null 2>&1 || return 1
+    fi
+    return 0
+}
 
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 $SYSTEMCTL is-enabled --quiet "$unit" || exit 0

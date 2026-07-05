@@ -8,11 +8,17 @@
 # a doubled-Colemak scramble at login. The user service starts only
 # after sway-session.target (post-login), leaving the greeter with
 # raw QWERTY physical input and a single greeter-side Colemak pass.
+#
+# With linger, default.target can pull in kanshi/foot-server (stale
+# enablement) which BindsTo=sway-session.target and starts kanata at
+# the greetd greeter. ConditionEnvironment blocks that path: vconsole
+# colemak alone at the greeter, kanata only once Wayland is up.
 [Unit]
 Description=Kanata keyboard remapper
 Documentation=https://github.com/jtroo/kanata
 After=sway-session.target
 PartOf=sway-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 ExecStart=/usr/bin/kanata -c %h/.config/kanata/config.kbd
