@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# Hostname gate: laptop-only network mutator; must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+# Route ALL Akamai edge prefixes around the US-egress WireGuard full tunnel, so
+# Akamai-fronted sites exit on the local (NL) uplink instead of the Houston
+# datacenter IP.
+#
+# Why: with 0.0.0.0/0 up, every flow leaves from a US hosting IP. Consumer sites
+# behind Akamai (bol.com and many NL shops) reputation-block datacenter/VPN
+# ranges, so they must appear from the residential/mobile NL uplink. This is
+# prefix based: an Akamai CIDR in the MAIN table wins over wg-quick's 0/0
+# (table 51820) via its `suppress_prefixlength 0` rule, so packets to Akamai
+# egress on the LAN. Cloudflare-fronted traffic (104.16.0.0/13) is NOT Akamai
+# and stays on the US egress -- this carve-out never touches it.
+#
+# Source of prefixes: ipverse per-ASN aggregated lists over HTTPS (reliable
+# through the tunnel), with RADB whois (`-i origin ASxxxx`) as a fallback. The
+# union is cached; a partial/failed fetch keeps the last good set (sanity floor)
+# so a network blip can never wipe a working carve-out.
+#
+# Reserved/private/CGNAT/tailscale ranges are never installed.
+set -uo pipefail
+
+IFACE="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+STATE="${RG_AKAMAI_CARVEOUT_STATE:-/run/rg-tunnel-akamai-carveout.routes}"
+CACHE4="${RG_AKAMAI_CACHE4:-/var/lib/rg-akamai-carveout/prefixes.v4}"
+CACHE6="${RG_AKAMAI_CACHE6:-/var/lib/rg-akamai-carveout/prefixes.v6}"
+IPVERSE="${RG_AKAMAI_IPVERSE_BASE:-https://raw.githubusercontent.com/ipverse/asn-ip/master/as}"
+FLOOR="${RG_AKAMAI_MIN_PREFIXES:-500}"   # below this, treat the fetch as failed
+RESOLVER="${RG_AKAMAI_RESOLVER:-127.0.0.1}"
+MAXAGE_MIN="${RG_AKAMAI_CACHE_MAXAGE_MIN:-720}"   # refetch prefixes if cache older than this
+FORCE_REFRESH=0
+
+# Akamai edge/delivery ASNs. Deliberately excludes AS63949 (Linode cloud, now
+# Akamai-owned) -- that is hosting, not CDN edge, and should stay tunneled.
+AKAMAI_ASNS="20940 16625 32787 35994 21342 21357 12222 16702 18680 20189 22452 23454 23455 24319 26008 31107 31108 31109 31110 31377 33047 33905 34164 35204 35993 36183 39836 43639 55409 55770 63986"
+
+die(){ printf 'rg-akamai-carveout: %s\n' "$*" >&2; exit 1; }
+need_root(){ [ "$(id -u)" -eq 0 ] || die "run as root"; }
+
+lan_default4(){ ip -4 route show default | awk '$1=="default"{print $3" "$5; exit}'; }   # "gw dev"
+lan_default6(){ ip -6 route show default 2>/dev/null | awk '$1=="default"{print $3" "$5; exit}'; }
+
+# Public, routable IPv4 CIDR only: reject 0/8 10/8 127/8 169.254 172.16-31
+# 192.168 100.64/10 and 224.0.0.0+.
+is_public4(){
+    case "${1%%/*}" in
+        0.*|10.*|127.*|169.254.*|192.168.*) return 1 ;;
+        172.1[6-9].*|172.2[0-9].*|172.3[01].*) return 1 ;;
+        100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*) return 1 ;;
+        22[4-9].*|23[0-9].*|24[0-9].*|25[0-5].*) return 1 ;;
+        *.*.*.*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+is_public6(){
+    case "${1%%/*}" in
+        ::1|fe8*|fe9*|fea*|feb*|f[cd]*|ff*) return 1 ;;
+        *:*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+fetch_ipverse(){   # $1=asn $2=v4|v6
+    local asn="$1" fam="$2" file
+    [ "$fam" = v4 ] && file=ipv4-aggregated.txt || file=ipv6-aggregated.txt
+    curl -fsS --max-time 15 "${IPVERSE}/${asn}/${file}" 2>/dev/null | grep -vE '^\s*#'
+}
+fetch_radb4(){     # $1=asn -- fallback when ipverse is empty
+    whois -h whois.radb.net -- "-i origin AS$1" 2>/dev/null | awk '/^route:/{print $2}'
+}
+
+# Emit the deduped, filtered Akamai prefix set to stdout as "4 CIDR" / "6 CIDR".
+build_prefix_set(){
+    local asn line
+    for asn in $AKAMAI_ASNS; do
+        local v4; v4="$(fetch_ipverse "$asn" v4)"
+        [ -n "$v4" ] || v4="$(fetch_radb4 "$asn")"
+        while read -r line; do
+            [ -n "$line" ] && is_public4 "$line" && printf '4 %s\n' "$line"
+        done <<<"$v4"
+        while read -r line; do
+            [ -n "$line" ] && is_public6 "$line" && printf '6 %s\n' "$line"
+        done <<<"$(fetch_ipverse "$asn" v6)"
+    done | sort -u
+}
+
+# Refresh the on-disk cache only if the fresh fetch clears the sanity floor.
+refresh_cache(){
+    local tmp cnt
+    tmp="$(mktemp)"
+    build_prefix_set >"$tmp"
+    cnt="$(grep -c . "$tmp" 2>/dev/null || echo 0)"
+    if [ "$cnt" -lt "$FLOOR" ]; then
+        printf 'rg-akamai-carveout: fetch returned only %s prefixes (< floor %s); keeping cache\n' "$cnt" "$FLOOR" >&2
+        rm -f "$tmp"
+        return 1
+    fi
+    install -d -m 0755 "$(dirname "$CACHE4")"
+    awk '$1=="4"{print $2}' "$tmp" >"$CACHE4"
+    awk '$1=="6"{print $2}' "$tmp" >"$CACHE6"
+    rm -f "$tmp"
+    printf 'rg-akamai-carveout: cache refreshed (%s prefixes)\n' "$cnt"
+    return 0
+}
+
+# Cache is usable if it exists and is younger than MAXAGE_MIN.
+cache_fresh(){ [ -f "$CACHE4" ] && [ -z "$(find "$CACHE4" -mmin +"$MAXAGE_MIN" 2>/dev/null)" ]; }
+
+# Desired set from cache (refreshing it first); "4 CIDR" / "6 CIDR" lines.
+desired_from_cache(){
+    { [ -f "$CACHE4" ] && awk 'NF{print "4 "$0}' "$CACHE4"
+      [ -f "$CACHE6" ] && awk 'NF{print "6 "$0}' "$CACHE6"
+    } | sort -u
+}
+
+up(){
+    need_root
+    ip link show "$IFACE" >/dev/null 2>&1 || { printf 'rg-akamai-carveout: tunnel %s down; removing carve-out\n' "$IFACE"; down; return 0; }
+
+    local gw dev gw6 dev6
+    read -r gw dev <<<"$(lan_default4)"
+    [ -n "${gw:-}" ] && [ -n "${dev:-}" ] || die "no IPv4 LAN default route to bypass through"
+    read -r gw6 dev6 <<<"$(lan_default6)"
+
+    # Only pay the ~31 HTTPS fetches when forced or the cache is stale/absent, so
+    # boot-time egress bring-up (which calls `up`) stays fast on a warm cache.
+    if [ "$FORCE_REFRESH" = 1 ] || ! cache_fresh; then
+        refresh_cache || true   # best-effort; falls back to existing cache below
+    fi
+
+    local desired want have
+    desired="$(desired_from_cache)"
+    if [ -z "$desired" ]; then
+        printf 'rg-akamai-carveout: no cached prefixes and fetch failed; leaving state untouched\n' >&2
+        return 0
+    fi
+    want="$(mktemp)"; have="$(mktemp)"
+    printf '%s\n' "$desired" >"$want"
+    { [ -f "$STATE" ] && cat "$STATE"; } | grep -E '.' | sort -u >"$have" || true
+
+    # Batch-remove stale routes (in state, no longer desired).
+    local del4 del6 add4 add6
+    del4="$(mktemp)"; del6="$(mktemp)"; add4="$(mktemp)"; add6="$(mktemp)"
+    comm -23 "$have" "$want" | while read -r fam cidr; do
+        [ "$fam" = 4 ] && echo "route del $cidr" >>"$del4"
+        [ "$fam" = 6 ] && echo "route del $cidr" >>"$del6"
+    done
+    # Batch-add desired routes into MAIN so they beat the 0/0 tunnel route.
+    while read -r fam cidr; do
+        [ -n "$cidr" ] || continue
+        if [ "$fam" = 4 ]; then
+            echo "route replace $cidr via $gw dev $dev" >>"$add4"
+        elif [ "$fam" = 6 ] && [ -n "${gw6:-}" ] && [ -n "${dev6:-}" ]; then
+            echo "route replace $cidr via $gw6 dev $dev6" >>"$add6"
+        fi
+    done <"$want"
+
+    [ -s "$del4" ] && ip -4 -force -batch "$del4" || true
+    [ -s "$del6" ] && ip -6 -force -batch "$del6" || true
+    [ -s "$add4" ] && ip -4 -force -batch "$add4" || true
+    [ -s "$add6" ] && ip -6 -force -batch "$add6" || true
+
+    install -m 0644 "$want" "$STATE"
+    rm -f "$want" "$have" "$del4" "$del6" "$add4" "$add6"
+    printf 'rg-akamai-carveout up: %s Akamai prefix(es) via %s dev %s (v6 gw %s)\n' \
+        "$(grep -c . "$STATE" 2>/dev/null || echo 0)" "$gw" "$dev" "${gw6:-none}"
+}
+
+down(){
+    need_root
+    [ -f "$STATE" ] || { printf 'rg-akamai-carveout: no state; nothing to remove\n'; return 0; }
+    local del4 del6
+    del4="$(mktemp)"; del6="$(mktemp)"
+    while read -r fam cidr; do
+        [ "$fam" = 4 ] && echo "route del $cidr" >>"$del4"
+        [ "$fam" = 6 ] && echo "route del $cidr" >>"$del6"
+    done <"$STATE"
+    [ -s "$del4" ] && ip -4 -force -batch "$del4" || true
+    [ -s "$del6" ] && ip -6 -force -batch "$del6" || true
+    rm -f "$del4" "$del6" "$STATE"
+    printf 'rg-akamai-carveout down\n'
+}
+
+status(){
+    echo "== tunnel =="; ip link show "$IFACE" >/dev/null 2>&1 && echo "  $IFACE up" || echo "  $IFACE down"
+    echo "== cached prefixes =="; printf '  v4=%s v6=%s\n' \
+        "$( [ -f "$CACHE4" ] && grep -c . "$CACHE4" || echo 0)" \
+        "$( [ -f "$CACHE6" ] && grep -c . "$CACHE6" || echo 0)"
+    echo "== installed (state) =="; printf '  %s route(s)\n' "$( [ -f "$STATE" ] && grep -c . "$STATE" || echo 0)"
+    echo "== live route for www.bol.com =="
+    local ip; ip="$(dig @"$RESOLVER" +short www.bol.com A 2>/dev/null | grep -E '^[0-9]' | head -n1)"
+    [ -n "$ip" ] && ip route get "$ip" 2>/dev/null || echo "  (www.bol.com did not resolve to an A record)"
+}
+
+case "${1:-}" in
+    up) up ;;
+    refresh) FORCE_REFRESH=1; up ;;
+    down) down ;;
+    status) status ;;
+    *) echo "usage: $0 {up|refresh|down|status}" >&2; exit 2 ;;
+esac

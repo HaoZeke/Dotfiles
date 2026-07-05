@@ -12,6 +12,7 @@ runtime_conf="/etc/wireguard/${iface}.conf"
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
 hz_carveout="${RG_HZ_CARVEOUT_SCRIPT:-$script_dir/rg-haozeke-tunnel-carveout}"
+akamai_carveout="${RG_AKAMAI_CARVEOUT_SCRIPT:-$script_dir/rg-tunnel-akamai-carveout}"
 tmp_conf=""
 activation_started=0
 
@@ -261,6 +262,16 @@ if [ -x "$hz_carveout" ]; then
     "$hz_carveout" up || printf 'WARNING: haozeke carve-out failed; rg.terra may be unreachable while egress is up\n' >&2
 else
     printf 'WARNING: haozeke carve-out helper not found at %s; rg.terra may go dark\n' "$hz_carveout" >&2
+fi
+
+printf '\n== carve Akamai edge prefixes onto the local uplink (NL egress for CDN sites) ==\n'
+# Akamai-fronted consumer sites reputation-block the US datacenter exit IP; a
+# warm-cache `up` reroutes them to the LAN in one netlink batch. Best-effort and
+# fast (cached prefixes) so it never delays or aborts egress bring-up.
+if [ -x "$akamai_carveout" ]; then
+    "$akamai_carveout" up || printf 'WARNING: Akamai carve-out failed; Akamai sites will exit via the US tunnel\n' >&2
+else
+    printf 'NOTE: Akamai carve-out helper not found at %s; skipping\n' "$akamai_carveout" >&2
 fi
 
 printf '\n== settle resolver after route change ==\n'

@@ -13,6 +13,7 @@ set -euo pipefail
 
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 WATCH_SRC="$HOME/.local/bin/rg-us-egress-watch"
+AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
 if [ ! -x "$GUARD_SRC" ] || [ ! -x "$WATCH_SRC" ]; then
     echo "chezmoi: us-egress guard/watch scripts missing; skipping install." >&2
     exit 0
@@ -40,6 +41,7 @@ install_bin() {
 # Root-owned copies of the managed scripts (systemd runs them as root).
 install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
 install_bin "$WATCH_SRC" /usr/local/sbin/rg-us-egress-watch
+[ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
 
 # (1) Root cause: stop networkd reaping rules/routes it did not create.
 install_root /etc/systemd/networkd.conf.d/10-rg-keep-foreign-routes.conf 0644 <<'EOF'
@@ -125,6 +127,34 @@ TimeoutStartSec=150
 WantedBy=multi-user.target
 EOF
 
+# (6) Akamai carve-out refresh: keep the cached Akamai prefix set current so
+# CDN-fronted NL sites keep egressing on the local uplink (not the US exit IP).
+# rg-us-egress-up runs `up` on bring-up from a warm cache; this timer refetches.
+install_root /etc/systemd/system/rg-akamai-carveout-refresh.service 0644 <<'EOF'
+[Unit]
+Description=Refresh Akamai prefix carve-out around the US-egress tunnel
+After=network-online.target rg-us-egress.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-tunnel-akamai-carveout refresh
+EOF
+
+install_root /etc/systemd/system/rg-akamai-carveout-refresh.timer 0644 <<'EOF'
+[Unit]
+Description=Periodically refresh the Akamai carve-out prefix set
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=12h
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 # Keyboard: kanata is the single Colemak source (runs via user-linger, so it is
 # active even at the greeter). Keep the console/greeter keymap on plain "us" so
 # it does not re-map kanata's already-Colemak output -- that double pass was the
@@ -137,4 +167,5 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now rg-us-egress-watch.service
 sudo systemctl enable --now rg-us-egress-guard.timer
 sudo systemctl enable rg-us-egress.service
+[ -x /usr/local/sbin/rg-tunnel-akamai-carveout ] && sudo systemctl enable --now rg-akamai-carveout-refresh.timer
 {{- end }}
