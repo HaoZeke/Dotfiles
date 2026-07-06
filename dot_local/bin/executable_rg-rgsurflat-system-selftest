@@ -38,5 +38,25 @@ fi
 if rg -n 'glam\.service|/usr/local/bin/glam|GLAM_UNIT' "$rgsurflat_system"; then
     fail "rgSURFLat provisioning must not manage glam; eduVPN CLI owns SURF institute access"
 fi
+rg -q '49-rg-eduvpn-networkmanager.rules' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not install the eduVPN NetworkManager polkit rule"
+rg -q 'org.freedesktop.NetworkManager.settings.modify.system' "$rgsurflat_system" \
+    || fail "eduVPN polkit rule does not allow replacing the system VPN profile"
+rg -q 'rg-eduvpn-ensure' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not install the eduVPN ensure helper"
+rg -q 'cli="\$home_dir/.local/bin/eduvpn-cli"' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not use the official CLI path"
+rg -q '"\$cli" connect --tcp -n 1' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not reconnect through the official CLI"
+rg -q 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$uid/bus' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not target the user session bus"
+rg -q 'nmcli connection up eduVPN' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not fall back to the existing NetworkManager profile"
+rg -q 'rg-eduvpn-ensure.timer' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not install the eduVPN keepalive timer"
+rg -q 'OnUnitActiveSec=120s' "$rgsurflat_system" \
+    || fail "eduVPN keepalive timer cadence is not managed"
+rg -q 'Amsterdam Science Park" connection.autoconnect no' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not disable Amsterdam Science Park autoconnect"
 
 printf 'ok\n'

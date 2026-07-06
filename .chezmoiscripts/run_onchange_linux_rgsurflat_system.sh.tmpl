@@ -96,6 +96,87 @@ dns=systemd-resolved
 write_if_diff /etc/NetworkManager/conf.d/10-dns-resolved.conf 0644 "$NM_DNS" || true
 sudo systemctl enable systemd-resolved >/dev/null 2>&1 || true
 
+# --- eduVPN: SURF Institute Access via official CLI + NetworkManager -------
+if command -v nmcli >/dev/null 2>&1; then
+    sudo nmcli connection modify "Amsterdam Science Park" connection.autoconnect no connection.autoconnect-priority -999 >/dev/null 2>&1 || true
+    sudo nmcli connection modify "The Fairphone (Gen. 6)" connection.autoconnect yes connection.autoconnect-priority 100 >/dev/null 2>&1 || true
+fi
+
+EDUVPN_POLKIT='polkit.addRule(function(action, subject) {
+    var allowed = [
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.settings.modify.own",
+        "org.freedesktop.NetworkManager.settings.modify.system"
+    ];
+
+    if (subject.user == "{{ .chezmoi.username }}" && allowed.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+});
+'
+if write_if_diff /etc/polkit-1/rules.d/49-rg-eduvpn-networkmanager.rules 0644 "$EDUVPN_POLKIT"; then
+    sudo systemctl reload polkit.service 2>/dev/null || sudo systemctl restart polkit.service 2>/dev/null || true
+fi
+
+EDUVPN_ENSURE='#!/usr/bin/env bash
+set -euo pipefail
+
+user="{{ .chezmoi.username }}"
+home_dir="$(getent passwd "$user" | cut -d: -f6)"
+uid="$(id -u "$user")"
+cli="$home_dir/.local/bin/eduvpn-cli"
+
+active() {
+    nmcli -t -f NAME,TYPE,STATE connection show --active 2>/dev/null \
+        | grep -Fx "eduVPN:vpn:activated" >/dev/null 2>&1
+}
+
+active && exit 0
+[ -x "$cli" ] || exit 0
+systemctl is-active --quiet NetworkManager.service || exit 0
+
+runuser -u "$user" -- env \
+    HOME="$home_dir" \
+    XDG_RUNTIME_DIR="/run/user/$uid" \
+    DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
+    "$cli" connect --tcp -n 1 >/dev/null 2>&1 || true
+
+active && exit 0
+nmcli connection show eduVPN >/dev/null 2>&1 || exit 0
+nmcli connection up eduVPN >/dev/null 2>&1 || true
+'
+write_if_diff /usr/local/sbin/rg-eduvpn-ensure 0755 "$EDUVPN_ENSURE" || true
+
+EDUVPN_ENSURE_UNIT='[Unit]
+Description=Keep SURF eduVPN active on rgSURFLat
+Wants=NetworkManager.service
+After=NetworkManager.service
+ConditionPathExists=/home/{{ .chezmoi.username }}/.config/eduvpn/state.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-eduvpn-ensure
+'
+write_if_diff /etc/systemd/system/rg-eduvpn-ensure.service 0644 "$EDUVPN_ENSURE_UNIT" || true
+
+EDUVPN_ENSURE_TIMER='[Unit]
+Description=Run rgSURFLat eduVPN keepalive
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=120s
+AccuracySec=15s
+Unit=rg-eduvpn-ensure.service
+
+[Install]
+WantedBy=timers.target
+'
+if write_if_diff /etc/systemd/system/rg-eduvpn-ensure.timer 0644 "$EDUVPN_ENSURE_TIMER"; then
+    sudo systemctl daemon-reload
+fi
+sudo systemctl enable --now rg-eduvpn-ensure.timer >/dev/null 2>&1 || true
+sudo systemctl start rg-eduvpn-ensure.service >/dev/null 2>&1 || true
+
 # --- uinput for kanata (colemak) ------------------------------------------
 UINPUT_RULE='KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
 '
