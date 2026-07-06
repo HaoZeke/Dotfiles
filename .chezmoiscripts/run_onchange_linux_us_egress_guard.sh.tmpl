@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
-# Keep the US-egress WireGuard tunnel carrying traffic, defensively layered:
+# Install US-egress WireGuard helpers without making base networking depend on
+# the full-tunnel path. Deliberate autostart is controlled by
+# RG_US_EGRESS_AUTOSTART=1 in chezmoi's environment:
 #   1. networkd is told not to reap foreign routes/policy rules, so a networkd
-#      restart cannot flush wg-quick's full-tunnel routing (the root cause).
+#      restart cannot flush wg-quick's full-tunnel routing.
 #   2. the tunnel + tailscale interfaces are marked Unmanaged so networkd never
 #      touches them either.
-#   3. a real-time watcher reacts to every netlink change and re-asserts egress
-#      immediately.
-#   4. a periodic timer is the backstop.
-# All of it is inert until wg-quick@rg-us-egress-wg is enabled.
+#   3. a manual activation unit runs the tunnel + DNS resettle + carve-outs.
+#   4. watchdog units exist for explicit autostart, but stay disabled by default.
 set -euo pipefail
 
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
@@ -106,9 +106,9 @@ AccuracySec=5s
 WantedBy=timers.target
 EOF
 
-# (5) Boot-time bring-up: run the full rg-us-egress-up (tunnel + DNS resettle +
-# carve-outs) at boot so the Houston egress is up without a manual step. The
-# guard/watch above keep it healthy afterwards.
+# (5) Manual activation unit: run the full rg-us-egress-up (tunnel + DNS
+# resettle + carve-outs) when the unit is explicitly started. The unit has an
+# [Install] section so RG_US_EGRESS_AUTOSTART=1 can opt into boot activation.
 install_root /etc/systemd/system/rg-us-egress.service 0644 <<'EOF'
 [Unit]
 Description=rg US (Houston) full-tunnel egress
@@ -120,7 +120,7 @@ Type=oneshot
 RemainAfterExit=yes
 Environment=RG_US_EGRESS_CONF={{ .chezmoi.homeDir }}/.config/rg-us-egress/wireguard.conf
 ExecStart={{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-up
-ExecStop=/usr/bin/wg-quick down rg-us-egress-wg
+ExecStop=/bin/sh -c '/usr/bin/wg-quick down rg-us-egress-wg 2>/dev/null || true'
 TimeoutStartSec=150
 
 [Install]
@@ -164,8 +164,17 @@ if [ "$(localectl status 2>/dev/null | awk '/VC Keymap/{print $NF}')" != "us" ];
 fi
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now rg-us-egress-watch.service
-sudo systemctl enable --now rg-us-egress-guard.timer
-sudo systemctl enable rg-us-egress.service
-[ -x /usr/local/sbin/rg-tunnel-akamai-carveout ] && sudo systemctl enable --now rg-akamai-carveout-refresh.timer
+sudo systemctl disable --now rg-us-egress-watch.service rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer >/dev/null 2>&1 || true
+sudo systemctl stop wg-quick@rg-us-egress-wg.service >/dev/null 2>&1 || true
+if [ -x /usr/local/sbin/rg-tunnel-akamai-carveout ]; then
+    sudo /usr/local/sbin/rg-tunnel-akamai-carveout down >/dev/null 2>&1 || true
+fi
+if [ "${RG_US_EGRESS_AUTOSTART:-0}" = "1" ]; then
+    sudo systemctl enable --now rg-us-egress-watch.service
+    sudo systemctl enable --now rg-us-egress-guard.timer
+    sudo systemctl enable --now rg-us-egress.service
+    [ -x /usr/local/sbin/rg-tunnel-akamai-carveout ] && sudo systemctl enable --now rg-akamai-carveout-refresh.timer
+else
+    echo "chezmoi: US egress services installed; autostart disabled (set RG_US_EGRESS_AUTOSTART=1 to opt in)"
+fi
 {{- end }}

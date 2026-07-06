@@ -8,13 +8,33 @@ fail() {
     exit 1
 }
 
+tmp_selftest=$(mktemp -d)
+trap 'rm -rf "$tmp_selftest"' EXIT
+
+resolve_helper() {
+    local path="$1" out
+    if [ -r "$path" ]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    if [ -r "$path.tmpl" ]; then
+        out="$tmp_selftest/$(basename "$path")"
+        chezmoi --source "$repo" --no-tty --refresh-externals=never execute-template <"$path.tmpl" >"$out"
+        chmod +x "$out"
+        printf '%s\n' "$out"
+        return 0
+    fi
+    printf '%s\n' "$path"
+}
+
 airplane="$repo/dot_local/bin/executable_rg-airplane"
 network_json="$repo/dot_local/bin/executable_rg-network-status-json"
 weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
-fix_local_dns="$repo/dot_local/bin/executable_rg-fix-local-dns"
-fix_nm_ctrld="$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld"
+fix_local_dns="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-local-dns")"
+fix_nm_ctrld="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld")"
 profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
-us_egress_up="$repo/dot_local/bin/executable_rg-us-egress-up"
+us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
+us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
 bottom_bar="$repo/dot_config/i3rust/i3_bottom.toml.tmpl"
@@ -27,6 +47,7 @@ test -r "$fix_local_dns" || fail "missing local DNS repair helper"
 test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
+test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
 test -r "$bottom_bar" || fail "missing bottom i3status-rs config"
@@ -206,6 +227,14 @@ rg -F -q 'systemctl start "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not start WireGuard under systemd ownership"
 rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not verify the WireGuard unit remains active"
+rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
+    || fail "US egress provisioning lacks an explicit autostart opt-in"
+rg -q 'disable --now rg-us-egress-watch.service rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
+    || fail "US egress provisioning does not disable boot-time full-tunnel services by default"
+! rg -q '^sudo systemctl enable --now rg-us-egress-watch.service$' "$us_egress_guard_script" \
+    || fail "US egress watcher is still unconditionally enabled at boot"
+! rg -q '^sudo systemctl enable rg-us-egress.service$' "$us_egress_guard_script" \
+    || fail "US egress full-tunnel service is still unconditionally enabled at boot"
 cleanup_call_line=$(rg -n '^cleanup_us_egress_state$' "$us_egress_up" | head -n 1 | cut -d: -f1)
 dns_fix_call_line=$(rg -n '^if command -v "\$dns_fix"' "$us_egress_up" | cut -d: -f1)
 test -n "$cleanup_call_line" && test -n "$dns_fix_call_line" && test "$cleanup_call_line" -lt "$dns_fix_call_line" \
