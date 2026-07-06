@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
-Name=Enpass Wayland
-Exec=env QT_QPA_PLATFORM=xcb QT_SCALE_FACTOR=1.5 DISPLAY=:0 WAYLAND_DISPLAY=wayland-1 enpass
+Name=Enpass
+Exec=env QT_QPA_PLATFORM=xcb QT_SCALE_FACTOR=1.5 enpass
 Icon=enpass

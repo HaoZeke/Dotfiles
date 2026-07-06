@@ -21,8 +21,12 @@ fail() {
 
 sway_launcher="$REPO/.chezmoiscripts/run_onchange_linux_sway_launcher.sh.tmpl"
 rgsurflat_system="$REPO/.chezmoiscripts/run_onchange_linux_rgsurflat_system.sh.tmpl"
+sway_config="$REPO/dot_config/sway/config.tmpl"
+enpass_desktop="$REPO/dot_local/share/applications/enpass-wayland.desktop"
 test -r "$sway_launcher" || fail "missing managed sway launcher installer"
 test -r "$rgsurflat_system" || fail "missing rgSURFLat system provisioning script"
+test -r "$sway_config" || fail "missing managed sway config"
+test -r "$enpass_desktop" || fail "missing managed Enpass desktop entry"
 rg -q '/usr/local/bin/start-sway' "$sway_launcher" \
     || fail "sway launcher installer does not manage /usr/local/bin/start-sway"
 if rg -n 'WLR_RENDERER=pixman' "$sway_launcher"; then
@@ -35,6 +39,16 @@ rg -q 'export QT_QPA_PLATFORM="wayland;xcb"' "$sway_launcher" \
     || fail "sway launcher does not let Qt fall back to Xwayland"
 rg -q 'xorg-xwayland' "$rgsurflat_system" \
     || fail "rgSURFLat provisioning does not install Xwayland for xcb-only Qt apps"
+rg -q 'dbus-update-activation-environment --systemd DISPLAY SWAYSOCK WAYLAND_DISPLAY' "$sway_config" \
+    || fail "sway config does not export DISPLAY/SWAYSOCK to dbus activation"
+if rg -n 'WAYLAND_DISPLAY=wayland-[0-9]+' "$enpass_desktop"; then
+    fail "Enpass desktop entry pins a stale Wayland display name"
+fi
+if rg -n 'DISPLAY=:[0-9]+' "$enpass_desktop"; then
+    fail "Enpass desktop entry pins a stale X display name"
+fi
+rg -q 'Exec=env QT_QPA_PLATFORM=xcb QT_SCALE_FACTOR=1.5 enpass' "$enpass_desktop" \
+    || fail "Enpass desktop entry does not force xcb without hard-coded display names"
 rg -q 'for group in render video' "$sway_launcher" \
     || fail "sway launcher installer does not ensure GPU access groups"
 
