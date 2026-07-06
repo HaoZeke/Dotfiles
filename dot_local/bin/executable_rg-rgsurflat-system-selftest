@@ -35,5 +35,8 @@ fi
 if rg -n 'enable --now glam\.service|restart=always' "$rgsurflat_system"; then
     fail "rgSURFLat provisioning must not auto-start glam while route safety is manual"
 fi
+if rg -n 'glam\.service|/usr/local/bin/glam|GLAM_UNIT' "$rgsurflat_system"; then
+    fail "rgSURFLat provisioning must not manage glam; eduVPN CLI owns SURF institute access"
+fi
 
 printf 'ok\n'

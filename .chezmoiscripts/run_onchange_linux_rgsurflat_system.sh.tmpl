@@ -118,28 +118,4 @@ fi
 
 # --- bluetooth ------------------------------------------------------------
 sudo systemctl enable bluetooth >/dev/null 2>&1 || true
-
-# --- glam: native SURF eduVPN autoconnect (WireGuard + proxyguard) ---------
-# The binary is built on the remote builder and installed to /usr/local/bin
-# separately (it is not a dotfile). This unit is declarative; it is only
-# enabled once the binary AND a token store exist, so it never fail-loops
-# before the one-time interactive `sudo glam auth <org-id>`.
-GLAM_UNIT='[Unit]
-Description=glam SURF eduVPN autoconnect (WireGuard + proxyguard)
-Wants=network-online.target nss-lookup.target
-After=network-online.target nss-lookup.target
-
-[Service]
-Type=exec
-ExecStart=/usr/local/bin/glam connect
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-'
-if write_if_diff /etc/systemd/system/glam.service 0644 "$GLAM_UNIT"; then
-    sudo systemctl daemon-reload 2>/dev/null || true
-fi
-echo "chezmoi: glam.service installed; start it explicitly after route verification"
 {{- end }}
