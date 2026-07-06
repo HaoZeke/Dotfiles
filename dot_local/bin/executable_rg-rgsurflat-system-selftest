@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-rgsurflat-system-selftest).
+
+set -euo pipefail
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-rgsurflat-system-selftest [chezmoi-source]\n' >&2
+    exit 2
+fi
+
+if [ $# -eq 1 ]; then
+    REPO="$1"
+else
+    REPO="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+rgsurflat_system="$REPO/.chezmoiscripts/run_onchange_linux_rgsurflat_system.sh.tmpl"
+test -r "$rgsurflat_system" || fail "missing rgSURFLat system provisioning script"
+
+rg -q 'chmod 711 "\$HOME"' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not keep home traversable for browser and Electron helpers"
+if rg -n 'chmod 75[0-9] "\$HOME"|chmod 7[0-9]5 "\$HOME"' "$rgsurflat_system"; then
+    fail "rgSURFLat provisioning must not make home listable"
+fi
+
+printf 'ok\n'

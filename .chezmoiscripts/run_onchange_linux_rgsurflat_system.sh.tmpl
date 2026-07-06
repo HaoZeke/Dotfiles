@@ -33,6 +33,11 @@ write_if_diff /etc/greetd/config.toml 0644 "$GREETD_CONF" || true
 sudo gpasswd -a greeter video >/dev/null 2>&1 || true
 sudo systemctl enable greetd >/dev/null 2>&1 || true
 
+# --- user home: explicit XDG paths for sandboxed desktop apps -------------
+# Browser, Electron, and portal helpers need path traversal to selected files
+# under $HOME. Execute-only group/other bits allow traversal without listing.
+chmod 711 "$HOME"
+
 # --- Xwayland: xcb-only desktop apps under sway ---------------------------
 if ! command -v Xwayland >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm xorg-xwayland
