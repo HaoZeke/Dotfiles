@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+pixi_bin="${PIXI_BIN:-$HOME/.pixi/bin/pixi}"
+
+if [ ! -x "$pixi_bin" ]; then
+    printf 'pixi: expected executable at %s\n' "$pixi_bin" >&2
+    exit 127
+fi
+
+exec "$pixi_bin" "$@"
