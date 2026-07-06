@@ -52,10 +52,26 @@ rg -q 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$uid/bus' "$rgsurflat_syste
     || fail "eduVPN ensure helper does not target the user session bus"
 rg -q 'nmcli connection up eduVPN' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not fall back to the existing NetworkManager profile"
+rg -q 'health()' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not have an end-to-end health check"
+rg -q 'ip route get "\$ip"' "$rgsurflat_system" \
+    || fail "eduVPN health check does not verify SURF routes"
+rg -q ' dev tun0 ' "$rgsurflat_system" \
+    || fail "eduVPN health check does not require SURF routes through tun0"
+rg -q 'curl -k -L --connect-timeout 4 --max-time 8' "$rgsurflat_system" \
+    || fail "eduVPN health check does not verify an HTTPS internal canary"
+rg -q 'nmcli connection down eduVPN' "$rgsurflat_system" \
+    || fail "eduVPN repair does not reset stale active VPN state before reconnect"
+rg -q 'rg-eduvpn-ensure:' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not emit useful journal messages"
 rg -q 'rg-eduvpn-ensure.timer' "$rgsurflat_system" \
     || fail "rgSURFLat provisioning does not install the eduVPN keepalive timer"
 rg -q 'OnUnitActiveSec=120s' "$rgsurflat_system" \
     || fail "eduVPN keepalive timer cadence is not managed"
+rg -q 'Persistent=true' "$rgsurflat_system" \
+    || fail "eduVPN keepalive timer does not catch up after missed runs"
+rg -q 'TimeoutStartSec=60' "$rgsurflat_system" \
+    || fail "eduVPN keepalive service is not timeout-bounded"
 rg -q 'Amsterdam Science Park" connection.autoconnect no' "$rgsurflat_system" \
     || fail "rgSURFLat provisioning does not disable Amsterdam Science Park autoconnect"
 

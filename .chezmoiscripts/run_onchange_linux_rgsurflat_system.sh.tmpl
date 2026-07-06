@@ -125,25 +125,69 @@ user="{{ .chezmoi.username }}"
 home_dir="$(getent passwd "$user" | cut -d: -f6)"
 uid="$(id -u "$user")"
 cli="$home_dir/.local/bin/eduvpn-cli"
+surf_route_ips="145.101.122.98 145.101.122.34 145.100.43.11"
+surf_canary_hosts="confluence.ia.surf.nl jira.ia.surf.nl git.ia.surf.nl"
+
+log() {
+    printf "rg-eduvpn-ensure: %s\n" "$*"
+}
 
 active() {
     nmcli -t -f NAME,TYPE,STATE connection show --active 2>/dev/null \
         | grep -Fx "eduVPN:vpn:activated" >/dev/null 2>&1
 }
 
-active && exit 0
-[ -x "$cli" ] || exit 0
-systemctl is-active --quiet NetworkManager.service || exit 0
+has_default_route() {
+    ip route show default 2>/dev/null | grep -q .
+}
 
-runuser -u "$user" -- env \
-    HOME="$home_dir" \
-    XDG_RUNTIME_DIR="/run/user/$uid" \
-    DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
-    "$cli" connect --tcp -n 1 >/dev/null 2>&1 || true
+routes_ok() {
+    local ip
+    for ip in $surf_route_ips; do
+        ip route get "$ip" 2>/dev/null | grep -q " dev tun0 " || return 1
+    done
+}
 
-active && exit 0
+https_canary_ok() {
+    local host
+    for host in $surf_canary_hosts; do
+        if curl -k -L --connect-timeout 4 --max-time 8 \
+            -o /dev/null -sS "https://$host/" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+health() {
+    active && routes_ok && https_canary_ok
+}
+
+connect_with_cli() {
+    runuser -u "$user" -- env \
+        HOME="$home_dir" \
+        XDG_RUNTIME_DIR="/run/user/$uid" \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
+        "$cli" connect --tcp -n 1 >/dev/null 2>&1
+}
+
+health && { log "healthy"; exit 0; }
+[ -x "$cli" ] || { log "missing $cli"; exit 0; }
+systemctl is-active --quiet NetworkManager.service || { log "NetworkManager inactive"; exit 0; }
+has_default_route || { log "no default route"; exit 0; }
+
+log "repairing eduVPN"
+nmcli connection down eduVPN >/dev/null 2>&1 || true
+
+connect_with_cli || log "official CLI reconnect failed; trying existing NetworkManager profile"
+
+health && { log "healthy after CLI reconnect"; exit 0; }
+
 nmcli connection show eduVPN >/dev/null 2>&1 || exit 0
 nmcli connection up eduVPN >/dev/null 2>&1 || true
+health && { log "healthy after NetworkManager profile reconnect"; exit 0; }
+log "unhealthy after repair"
+exit 1
 '
 write_if_diff /usr/local/sbin/rg-eduvpn-ensure 0755 "$EDUVPN_ENSURE" || true
 
@@ -155,6 +199,7 @@ ConditionPathExists=/home/{{ .chezmoi.username }}/.config/eduvpn/state.json
 
 [Service]
 Type=oneshot
+TimeoutStartSec=60
 ExecStart=/usr/local/sbin/rg-eduvpn-ensure
 '
 write_if_diff /etc/systemd/system/rg-eduvpn-ensure.service 0644 "$EDUVPN_ENSURE_UNIT" || true
@@ -166,6 +211,7 @@ Description=Run rgSURFLat eduVPN keepalive
 OnBootSec=45s
 OnUnitActiveSec=120s
 AccuracySec=15s
+Persistent=true
 Unit=rg-eduvpn-ensure.service
 
 [Install]
