@@ -141,9 +141,5 @@ WantedBy=multi-user.target
 if write_if_diff /etc/systemd/system/glam.service 0644 "$GLAM_UNIT"; then
     sudo systemctl daemon-reload 2>/dev/null || true
 fi
-if [ -x /usr/local/bin/glam ] && sudo test -f /var/lib/glam/glam.json; then
-    sudo systemctl enable --now glam.service >/dev/null 2>&1 || true
-else
-    echo "chezmoi: glam.service installed; run 'sudo glam auth <org-id>' then 'sudo systemctl enable --now glam'"
-fi
+echo "chezmoi: glam.service installed; start it explicitly after route verification"
 {{- end }}

@@ -32,5 +32,8 @@ rg -q 'Domains=~ts\.net' "$rgsurflat_system" \
 if rg -n 'Domains=~\.|name: "\."|forward-addr: 1\.1\.1\.1|forward-addr: 9\.9\.9\.9' "$rgsurflat_system"; then
     fail "rgSURFLat DNS must not force all domains through local unbound or public forwarders"
 fi
+if rg -n 'enable --now glam\.service|restart=always' "$rgsurflat_system"; then
+    fail "rgSURFLat provisioning must not auto-start glam while route safety is manual"
+fi
 
 printf 'ok\n'
