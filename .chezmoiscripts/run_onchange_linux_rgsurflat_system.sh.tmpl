@@ -33,6 +33,11 @@ write_if_diff /etc/greetd/config.toml 0644 "$GREETD_CONF" || true
 sudo gpasswd -a greeter video >/dev/null 2>&1 || true
 sudo systemctl enable greetd >/dev/null 2>&1 || true
 
+# --- Xwayland: xcb-only desktop apps under sway ---------------------------
+if ! command -v Xwayland >/dev/null 2>&1; then
+    sudo pacman -S --needed --noconfirm xorg-xwayland
+fi
+
 # --- DNS: unbound is the primary resolver. ts.net -> tailscale MagicDNS;
 #     everything else -> public fallbacks. ControlD (:5354) is prepended to
 #     the "." forward-zone once ctrld is provisioned (sealed token). ----------

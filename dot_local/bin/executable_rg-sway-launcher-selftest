@@ -20,7 +20,9 @@ fail() {
 }
 
 sway_launcher="$REPO/.chezmoiscripts/run_onchange_linux_sway_launcher.sh.tmpl"
+rgsurflat_system="$REPO/.chezmoiscripts/run_onchange_linux_rgsurflat_system.sh.tmpl"
 test -r "$sway_launcher" || fail "missing managed sway launcher installer"
+test -r "$rgsurflat_system" || fail "missing rgSURFLat system provisioning script"
 rg -q '/usr/local/bin/start-sway' "$sway_launcher" \
     || fail "sway launcher installer does not manage /usr/local/bin/start-sway"
 if rg -n 'WLR_RENDERER=pixman' "$sway_launcher"; then
@@ -31,6 +33,8 @@ if rg -n 'export QT_QPA_PLATFORM=wayland$' "$sway_launcher"; then
 fi
 rg -q 'export QT_QPA_PLATFORM="wayland;xcb"' "$sway_launcher" \
     || fail "sway launcher does not let Qt fall back to Xwayland"
+rg -q 'xorg-xwayland' "$rgsurflat_system" \
+    || fail "rgSURFLat provisioning does not install Xwayland for xcb-only Qt apps"
 rg -q 'for group in render video' "$sway_launcher" \
     || fail "sway launcher installer does not ensure GPU access groups"
 
