@@ -1,5 +1,9 @@
 ;; Colemak + Extend + AltGr (Icelandic) for Sway/Wayland
 ;; Replaces klfc-generated XKB layout
+{{- if eq .chezmoi.hostname "rgSURFLat" }}
+;; Dell Latitude firmware does not expose the Fn key as a Linux input key.
+;; Kanata cannot remap a key event that is not emitted by the keyboard.
+{{- end }}
 ;;
 ;; Layers:
 ;;   colemak  -- base Colemak with CapsLock as tap-Backspace / hold-Extend
