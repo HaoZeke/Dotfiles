@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-sway-launcher-selftest).
+
+set -euo pipefail
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-sway-launcher-selftest [chezmoi-source]\n' >&2
+    exit 2
+fi
+
+if [ $# -eq 1 ]; then
+    REPO="$1"
+else
+    REPO="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+fi
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+sway_launcher="$REPO/.chezmoiscripts/run_onchange_linux_sway_launcher.sh.tmpl"
+test -r "$sway_launcher" || fail "missing managed sway launcher installer"
+rg -q '/usr/local/bin/start-sway' "$sway_launcher" \
+    || fail "sway launcher installer does not manage /usr/local/bin/start-sway"
+if rg -n 'WLR_RENDERER=pixman' "$sway_launcher"; then
+    fail "sway launcher forces the pixman renderer"
+fi
+if rg -n 'export QT_QPA_PLATFORM=wayland$' "$sway_launcher"; then
+    fail "sway launcher pins Qt to Wayland without Xwayland fallback"
+fi
+rg -q 'export QT_QPA_PLATFORM="wayland;xcb"' "$sway_launcher" \
+    || fail "sway launcher does not let Qt fall back to Xwayland"
+rg -q 'for group in render video' "$sway_launcher" \
+    || fail "sway launcher installer does not ensure GPU access groups"
+
+printf 'ok\n'
