@@ -27,5 +27,10 @@ rg -q 'chmod 711 "\$HOME"' "$rgsurflat_system" \
 if rg -n 'chmod 75[0-9] "\$HOME"|chmod 7[0-9]5 "\$HOME"' "$rgsurflat_system"; then
     fail "rgSURFLat provisioning must not make home listable"
 fi
+rg -q 'Domains=~ts\.net' "$rgsurflat_system" \
+    || fail "rgSURFLat DNS must route only Tailscale names to local unbound"
+if rg -n 'Domains=~\.|name: "\."|forward-addr: 1\.1\.1\.1|forward-addr: 9\.9\.9\.9' "$rgsurflat_system"; then
+    fail "rgSURFLat DNS must not force all domains through local unbound or public forwarders"
+fi
 
 printf 'ok\n'

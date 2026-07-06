@@ -43,9 +43,9 @@ if ! command -v Xwayland >/dev/null 2>&1; then
     sudo pacman -S --needed --noconfirm xorg-xwayland
 fi
 
-# --- DNS: unbound is the primary resolver. ts.net -> tailscale MagicDNS;
-#     everything else -> public fallbacks. ControlD (:5354) is prepended to
-#     the "." forward-zone once ctrld is provisioned (sealed token). ----------
+# --- DNS: route only Tailscale names through local unbound ----------------
+# NetworkManager supplies per-link DNS for ordinary names; that keeps captive,
+# campus, and VPN-adjacent networks usable when public resolvers are blocked.
 UNBOUND_CONF='server:
     interface: 127.0.0.1
     port: 53
@@ -69,23 +69,19 @@ UNBOUND_CONF='server:
 forward-zone:
     name: "ts.net."
     forward-addr: 100.100.100.100
-forward-zone:
-    name: "."
-    forward-addr: 1.1.1.1
-    forward-addr: 9.9.9.9
 '
 if write_if_diff /etc/unbound/unbound.conf 0644 "$UNBOUND_CONF"; then
     sudo systemctl restart unbound 2>/dev/null || true
 fi
 sudo systemctl enable unbound >/dev/null 2>&1 || true
 
-# resolved is the stub (127.0.0.53) with unbound as its only upstream; NM hands
-# DNS to resolved. tailscale runs --accept-dns=false so it never claims "."
+# resolved is the stub (127.0.0.53); unbound handles only Tailscale suffixes.
+# NM hands active-link DNS to resolved. tailscale runs --accept-dns=false.
 # LLMNR + MulticastDNS off: no link-local name broadcast on the corp/campus LAN
-# (leaks hostname, and a spoofer can answer). DNSSEC left to unbound upstream.
+# (leaks hostname, and a spoofer can answer).
 RESOLVED_DROPIN='[Resolve]
 DNS=127.0.0.1
-Domains=~.
+Domains=~ts.net
 FallbackDNS=
 LLMNR=no
 MulticastDNS=no
