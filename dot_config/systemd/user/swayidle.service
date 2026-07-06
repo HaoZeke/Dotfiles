@@ -16,6 +16,7 @@ Type=simple
 # caffeine health/focus indicator to an error. Auto-recover.
 Restart=on-failure
 RestartSec=2
+RestartPreventExitStatus=SIGKILL
 # swayidle has no singleton lock of its own, so a stray launch (a manual
 # start, or exec_always creeping back into the sway config) would run a second
 # instance and double-fire every timeout. Reap any stray before starting so

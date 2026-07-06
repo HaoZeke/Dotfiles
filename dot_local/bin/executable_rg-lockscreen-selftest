@@ -67,6 +67,65 @@ assert_not_contains "$out" "--screenshots" "screenshot mode by default"
 assert_contains "$out" "$tmp_home/.local/share/rg-theme/palettes/catppuccin/light/swaylock.conf" "theme config path"
 assert_contains "$out" "--daemonize" "daemonize passthrough"
 
+fake_bin="$tmp_home/bin"
+log="$tmp_home/daemonize.log"
+pidfile="$tmp_home/fake-swaylock.pid"
+mkdir -p "$fake_bin"
+
+cat > "$fake_bin/systemd-run" <<'EOF'
+#!/usr/bin/env bash
+{
+    printf 'systemd-run'
+    printf ' %q' "$@"
+    printf '\n'
+} >> "$RG_TEST_LOG"
+sleep 30 &
+printf '%s\n' "$!" > "$RG_TEST_PIDFILE"
+exit 0
+EOF
+chmod +x "$fake_bin/systemd-run"
+
+cat > "$fake_bin/pgrep" <<'EOF'
+#!/usr/bin/env bash
+{
+    printf 'pgrep'
+    printf ' %q' "$@"
+    printf '\n'
+} >> "$RG_TEST_LOG"
+cat "$RG_TEST_PIDFILE"
+EOF
+chmod +x "$fake_bin/pgrep"
+
+cat > "$fake_bin/cat" <<'EOF'
+#!/usr/bin/env bash
+case "$1" in
+    /proc/*/wchan)
+        printf 'poll_schedule_timeout\n'
+        ;;
+    *)
+        /usr/bin/cat "$@"
+        ;;
+esac
+EOF
+chmod +x "$fake_bin/cat"
+
+PATH="$fake_bin:$PATH" \
+HOME="$tmp_home" \
+XDG_CONFIG_HOME="$tmp_home/.config" \
+XDG_DATA_HOME="$tmp_home/.local/share" \
+XDG_STATE_HOME="$tmp_home/.local/state" \
+WAYLAND_DISPLAY=wayland-1 \
+RG_TEST_LOG="$log" \
+RG_TEST_PIDFILE="$pidfile" \
+RG_LOCKSCREEN_READY_TIMEOUT=1 \
+    "$SCRIPT" --daemonize
+if [ -r "$pidfile" ]; then
+    kill "$(cat "$pidfile")" 2>/dev/null || true
+fi
+daemon_log="$(cat "$log")"
+assert_contains "$daemon_log" "systemd-run --user" "daemon lock transient scope"
+assert_contains "$daemon_log" "pgrep -n -x swaylock" "daemon lock readiness wait"
+
 out=$(
     HOME="$tmp_home" \
     XDG_CONFIG_HOME="$tmp_home/.config" \

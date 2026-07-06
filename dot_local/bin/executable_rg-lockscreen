@@ -125,6 +125,26 @@ add_arg() {
     fi
 }
 
+wait_for_swaylock_ready() {
+    local timeout deadline pid wchan
+    timeout="${RG_LOCKSCREEN_READY_TIMEOUT:-3}"
+    case "$timeout" in
+        ''|*[!0-9]*) timeout=3 ;;
+    esac
+    deadline=$(( SECONDS + timeout ))
+    while [ "$SECONDS" -lt "$deadline" ]; do
+        pid="$(pgrep -n -x swaylock 2>/dev/null || true)"
+        if [ -n "$pid" ]; then
+            wchan="$(cat "/proc/$pid/wchan" 2>/dev/null || true)"
+            case "$wchan" in
+                *select*|*poll*|*epoll*) return 0 ;;
+            esac
+        fi
+        sleep 0.05
+    done
+    return 0
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run)
@@ -317,8 +337,13 @@ if [ "$DAEMONIZE" = "1" ]; then
     # means its memory never counts against that cgroup, so a heavy lock
     # surface cannot trip oomd and cascade-kill the idle manager.
     if command -v systemd-run >/dev/null 2>&1; then
-        exec systemd-run --user --scope --quiet --collect \
-            --unit="rg-lockscreen-$$" -- "$@"
+        if systemd-run --user --scope --quiet --collect \
+            --unit="rg-lockscreen-$$" -- "$@"; then
+            # swayidle -w keeps the idle ladder stable only when this
+            # wrapper stays alive until swaylock is running.
+            wait_for_swaylock_ready
+            exit 0
+        fi
     fi
 fi
 
