@@ -19,6 +19,7 @@ set -uo pipefail
 
 iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 unit="wg-quick@${iface}.service"
+managed_unit="rg-us-egress.service"
 probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
 quality_url="${RG_US_EGRESS_QUALITY_URL:-https://api.x.ai/v1/models}"
 quality_max_ms="${RG_US_EGRESS_QUALITY_MAX_MS:-3000}"
@@ -145,8 +146,12 @@ restore_egress() {
     fi
 }
 
+egress_desired() {
+    $SYSTEMCTL is-enabled --quiet "$unit" || $SYSTEMCTL is-enabled --quiet "$managed_unit"
+}
+
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
-$SYSTEMCTL is-enabled --quiet "$unit" || exit 0
+egress_desired || exit 0
 reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local uplink"
 
 # Healthy = interface present AND the public probe egresses through it.

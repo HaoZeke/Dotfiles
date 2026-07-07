@@ -19,11 +19,18 @@ if [ ! -f "$GUARD" ]; then
     chezmoi execute-template <"$guard_template" >"$GUARD"
 fi
 
-# Mock systemctl: is-enabled honours RG_TEST_ENABLED; restart is logged.
+# Mock systemctl: is-enabled honours RG_TEST_WG_ENABLED/RG_TEST_SERVICE_ENABLED;
+# restart is logged.
 cat >"$tmp/systemctl.sh" <<'SC'
 #!/usr/bin/env bash
 case "$1" in
-is-enabled) [ "${RG_TEST_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
+is-enabled)
+    case "$3" in
+    wg-quick@*) [ "${RG_TEST_WG_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
+    rg-us-egress.service) [ "${RG_TEST_SERVICE_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
+    *) exit 1 ;;
+    esac
+    ;;
 restart) printf 'restart %s\n' "$2" >>"$RG_TEST_CALLS"; exit 0 ;;
 *) exit 0 ;;
 esac
@@ -80,10 +87,10 @@ chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
 
-# run_case ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
+# run_case WG_ENABLED SERVICE_ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
 run_case() {
     : >"$calls"
-    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_ROUTE_OK="$3" RG_TEST_QUALITY="$4" \
+    RG_TEST_WG_ENABLED="$1" RG_TEST_SERVICE_ENABLED="$2" RG_TEST_IFACE_UP="$3" RG_TEST_ROUTE_OK="$4" RG_TEST_QUALITY="$5" \
         RG_TEST_CALLS="$calls" \
         RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
         RG_GUARD_IP="$tmp/ip.sh" \
@@ -94,15 +101,18 @@ run_case() {
     grep -c '^restart wg-quick' "$calls" 2>/dev/null || true
 }
 
-n=$(run_case 0 0 0 fail); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
+n=$(run_case 0 0 0 0 fail); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
 test "$(grep -c '^route replace' "$calls" 2>/dev/null || true)" = "0" \
     || fail "disabled unit must not alter Control D routes"
-n=$(run_case 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
+n=$(run_case 1 0 1 1 ok); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
 test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
     || fail "healthy tunnel must keep Control D upstreams on the local uplink"
-n=$(run_case 1 1 1 slow); [ "${n:-0}" = "1" ] || fail "slow x.ai quality probe must restart (got $n)"
-n=$(run_case 1 1 1 fail); [ "${n:-0}" = "1" ] || fail "failing x.ai quality probe must restart (got $n)"
-n=$(run_case 1 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
-n=$(run_case 1 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
+n=$(run_case 0 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "managed egress service marker must not restart a healthy tunnel (got $n)"
+test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
+    || fail "managed egress service marker must keep Control D upstreams on the local uplink"
+n=$(run_case 1 0 1 1 slow); [ "${n:-0}" = "1" ] || fail "slow x.ai quality probe must restart (got $n)"
+n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "1" ] || fail "failing x.ai quality probe must restart (got $n)"
+n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
+n=$(run_case 1 0 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
 
 printf 'ok\n'
