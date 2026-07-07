@@ -1,0 +1,90 @@
+#+TITLE: meetrec local workflow
+#+OPTIONS: toc:nil num:nil ^:nil
+
+* Mental model
+
+=meetrec= is a local capture command.  There is no meetrec systemd service.
+Recording runs on the machine that is in the meeting.  ASR and DeepFilter
+enhancement are optional one-shot workers on =rg.terra=, reached through SSH.
+
+Capture hosts:
+
+- This laptop: use =meetrec= directly.
+- =rg.surf=: use =meetrec= directly in an interactive shell, or from here with
+  =ssh rg.surf 'bash -lc "meetrec doctor"'.  Plain non-interactive SSH can have a
+  smaller PATH, so =bash -lc= is the reliable remote wrapper.
+
+* Readiness
+
+#+begin_src bash
+meetrec doctor
+meetrec devices
+#+end_src
+
+=meetrec doctor= checks local capture tools, the output directory, the personal
+config, and the on-demand =rg.terra= ASR/enhance worker paths.  =meetrec devices=
+shows microphone sources and remote/system monitor sources.  Use it when Teams,
+the browser, or Bluetooth audio is routed somewhere unexpected.
+
+* Recording
+
+#+begin_src bash
+meetrec record
+meetrec record --duration 3600
+meetrec record --segment-secs 1800
+meetrec record --remote NAME
+meetrec record --denoise afftdn
+#+end_src
+
+The default capture writes separate microphone, remote/system, and mixed tracks
+under =~/Recordings/meetrec=.  The mixed track is the one to listen to when both
+sides matter.  The separate stems are useful when one side needs cleanup.
+
+For long meetings, prefer =--segment-secs 1800= so a crash loses at most one
+segment.  Stop an open-ended recording with =Ctrl+C= in the terminal running it.
+
+* Live Session Checks
+
+#+begin_src bash
+pgrep -af 'meetrec record'
+meetrec latest
+meetrec sessions --limit 10
+#+end_src
+
+=meetrec latest= prints the newest mic, remote, mixed, and transcript paths.
+=meetrec sessions= lists recent session stems.  These commands do not stop an
+active recording.
+
+* Processing
+
+#+begin_src bash
+meetrec enhance latest
+meetrec enhance latest --backend ffmpeg
+meetrec transcribe latest
+meetrec transcribe latest --engine parakeet
+meetrec transcribe latest --engine canary
+meetrec transcribe latest --engine voicenotes --from-transcript
+meetrec reindex
+meetrec search --reindex "action items"
+meetrec ui
+#+end_src
+
+=enhance= is optional.  The default backend uses DeepFilterNet on =rg.terra=.
+=--backend ffmpeg= stays local and uses lighter filtering.
+
+=transcribe= is optional and defaults to =whisper-turbo= on =rg.terra=.  Use
+=parakeet= or =canary= when accuracy matters more than consistency with the
+default Whisper path.  Use the Voicenotes mode only for creating a note from an
+existing transcript unless the browser upload flow is intentionally being tested.
+
+=reindex= refreshes local BM25 search over transcripts.  =search --reindex= is
+the shortest reliable command after adding a new transcript.
+
+* Failure Notes
+
+- If the remote side is silent, run =meetrec devices= and re-record with the
+  monitor source carrying the call audio.
+- If a remote command says =meetrec: command not found=, use
+  =ssh rg.surf 'bash -lc "meetrec doctor"'= or call =~/.local/bin/meetrec=.
+- If =doctor= reports =rg.terra= SSH failure, recording still works; only
+  =enhance= and =transcribe= need the remote worker.

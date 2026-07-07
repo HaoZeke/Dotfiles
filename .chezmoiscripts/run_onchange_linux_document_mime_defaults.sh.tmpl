@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Keep document formats on keyboard-first desktop viewers when available.
+
+set -euo pipefail
+
+if command -v xdg-mime >/dev/null 2>&1; then
+    mime_tool=xdg
+elif command -v gio >/dev/null 2>&1; then
+    mime_tool=gio
+else
+    exit 0
+fi
+
+desktop_exists() {
+    local desktop=$1
+    [ -r "$HOME/.local/share/applications/$desktop" ] \
+        || [ -r "/usr/share/applications/$desktop" ] \
+        || [ -r "/var/lib/flatpak/exports/share/applications/$desktop" ] \
+        || [ -r "$HOME/.local/share/flatpak/exports/share/applications/$desktop" ]
+}
+
+set_default() {
+    local desktop=$1
+    local mime=$2
+    local current
+
+    if ! desktop_exists "$desktop"; then
+        printf 'chezmoi: %s missing; leaving %s default unchanged\n' "$desktop" "$mime" >&2
+        return 0
+    fi
+
+    case "$mime_tool" in
+        xdg) current=$(xdg-mime query default "$mime" 2>/dev/null || true) ;;
+        gio) current=$(gio mime "$mime" 2>/dev/null | awk -F': ' '/^Default application/ {found=$2} END {print found}') ;;
+    esac
+    if [ "$current" = "$desktop" ]; then
+        return 0
+    fi
+
+    case "$mime_tool" in
+        xdg) xdg-mime default "$desktop" "$mime" ;;
+        gio) gio mime "$mime" "$desktop" >/dev/null ;;
+    esac
+    printf 'chezmoi: %s default -> %s\n' "$mime" "$desktop"
+}
+
+set_default org.pwmt.zathura-pdf-mupdf.desktop application/pdf
+set_default org.pwmt.zathura-pdf-mupdf.desktop application/epub+zip
+set_default org.pwmt.zathura-djvu.desktop image/vnd.djvu
+set_default org.pwmt.zathura-djvu.desktop image/vnd.djvu+multipage
+set_default org.pwmt.zathura-ps.desktop application/postscript
+set_default org.pwmt.zathura-cb.desktop application/vnd.comicbook+zip
+set_default org.pwmt.zathura-cb.desktop application/vnd.comicbook-rar
+{{- end }}

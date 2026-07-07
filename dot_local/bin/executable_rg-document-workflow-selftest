@@ -48,6 +48,8 @@ done
 
 rg -Fq 'xdg-mime default "$desktop" "$mime"' "$mime_script" \
     || fail "MIME default script must use xdg-mime"
+rg -Fq 'gio mime "$mime" "$desktop"' "$mime_script" \
+    || fail "MIME default script must fall back to gio"
 rg -Fq 'desktop_exists "$desktop"' "$mime_script" \
     || fail "MIME default script must skip missing desktop files"
 
