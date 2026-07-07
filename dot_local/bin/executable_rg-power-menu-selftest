@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-power-menu-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+script="$repo/dot_local/bin/executable_rg-power-menu"
+sway_config="$repo/dot_config/sway/config.tmpl"
+sway_readme="$repo/dot_config/sway/readme.org"
+
+test -x "$script" || fail "rg-power-menu script is missing or not executable"
+test -r "$sway_config" || fail "missing sway config"
+test -r "$sway_readme" || fail "missing sway readme"
+
+top="$("$script" --print-menu top)"
+profiles="$("$script" --print-menu profiles)"
+power="$("$script" --print-menu power)"
+
+for label in "Profiles / modes" "Power / session"; do
+    printf '%s\n' "$top" | rg -Fq "$label" \
+        || fail "top menu missing $label"
+done
+
+for label in \
+    "Awake toggle" \
+    "Boost toggle" \
+    "Focus toggle" \
+    "Awake 2h" \
+    "Awake off" \
+    "Profile: balanced" \
+    "Profile: focus" \
+    "Profile: travel" \
+    "Profile: build-heavy" \
+    "Airplane toggle" \
+    "Bluetooth toggle"
+do
+    printf '%s\n' "$profiles" | rg -Fq "$label" \
+        || fail "profiles menu missing $label"
+done
+
+for label in \
+    "Lock" \
+    "Suspend" \
+    "Suspend then hibernate" \
+    "Hibernate" \
+    "Reboot" \
+    "Power off" \
+    "Exit sway"
+do
+    printf '%s\n' "$power" | rg -Fq "$label" \
+        || fail "power menu missing $label"
+done
+
+assert_command() {
+    local key=$1 needle=$2 out
+    out="$("$script" --print-command "$key")"
+    printf '%s\n' "$out" | rg -Fq "$needle" \
+        || fail "$key command missing $needle"
+}
+
+assert_command awake-toggle 'rg-caffeine toggle'
+assert_command boost-toggle 'rg-caffeine performance-toggle'
+assert_command focus-toggle 'rg-caffeine focus-toggle'
+assert_command awake-2h 'rg-caffeine timed 2h'
+assert_command profile-balanced 'rg-x1gen11-profile apply undocked-mixed'
+assert_command profile-travel 'rg-x1gen11-profile apply travel'
+assert_command airplane-toggle 'rg-airplane toggle'
+assert_command bluetooth-toggle 'rg-airplane bluetooth toggle'
+assert_command suspend 'rg-lockscreen --prepare-sleep'
+assert_command suspend 'systemctl suspend'
+assert_command suspend-then-hibernate 'systemctl suspend-then-hibernate'
+assert_command hibernate 'systemctl hibernate'
+
+rg -Fq "bindsym --no-repeat \$mod+Shift+Escape exec '\$HOME/.local/bin/rg-power-menu'" "$sway_config" \
+    || fail "sway does not bind mod+Shift+Escape to rg-power-menu"
+rg -Fq "bindsym \$mod+Ctrl+Shift+Escape exec '\$HOME/.local/bin/rg-lockscreen && systemctl hibernate'" "$repo/dot_config/sway/conf.d/power-thinkpad.tmpl" \
+    || fail "explicit hibernate shortcut is missing"
+rg -Fq 'Profiles / modes' "$sway_readme" \
+    || fail "sway readme does not document the profile submenu"
+rg -Fq 'Power / session' "$sway_readme" \
+    || fail "sway readme does not document the power submenu"
+
+printf 'ok\n'
