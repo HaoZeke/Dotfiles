@@ -11,6 +11,12 @@
 #      default. rule 5208 ("lookup main suppress_prefixlength 0") consults main
 #      for specific routes before the egress rule, so a /24 in main suffices.
 #      Re-asserted each run -> survives network roams with no baked-in gateway.
+#   3. eduVPN (SURF) server endpoint carve-out: the openvpn-client@surf-split
+#      control channel must reach its server on the LOCAL uplink; with the US
+#      0/0 tunnel up, the handshake packets exit the US IP and TLS negotiation
+#      dies. Resolve the config's remote host(s) and pin their /32(s) direct so
+#      a specific main route beats wg-quick's 0/0 (same suppress_prefixlength
+#      mechanism as the bank). Re-resolved each run -> survives endpoint changes.
 set -uo pipefail
 
 log() { logger -t rg-net-heal -- "$1"; }
@@ -41,4 +47,19 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     fi
 else
     log "no LAN default route; cannot assert bank carve-out"
+fi
+
+# --- 3. eduVPN (SURF) server endpoint carve-out ---------------------------
+EDUVPN_CONF="${RG_EDUVPN_CONF:-/etc/openvpn/client/surf-split.conf}"
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ] && [ -r "$EDUVPN_CONF" ]; then
+    awk '/^[[:space:]]*remote[[:space:]]/{print $2}' "$EDUVPN_CONF" | sort -u | while read -r host; do
+        [ -n "$host" ] || continue
+        getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
+            case "$ip" in ''|*[!0-9.]*) continue ;; esac
+            if ! ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw"; then
+                ip route replace "$ip/32" via "$gw" dev "$dev" table main 2>/dev/null \
+                    && log "eduVPN endpoint carve-out re-asserted: $ip via $gw dev $dev"
+            fi
+        done
+    done
 fi
