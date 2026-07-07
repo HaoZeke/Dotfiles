@@ -29,13 +29,23 @@ ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
 SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
 IP="${RG_GUARD_IP:-ip}"
 CURL="${RG_GUARD_CURL:-curl}"
+FLOCK="${RG_GUARD_FLOCK:-flock}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
 CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
+# Mutual-exclusion lock: the periodic timer and the real-time watch both run this
+# script, so serialize them (set to "none" to disable, e.g. under test).
+LOCK="${RG_GUARD_LOCK:-/run/rg-us-egress-guard.lock}"
+# Consecutive x.ai probe failures before a restart is warranted, and where the
+# count is persisted between guard ticks.
+quality_state="${RG_US_EGRESS_QUALITY_STATE:-/run/rg-us-egress-guard.quality-fails}"
+quality_fail_threshold="${RG_US_EGRESS_QUALITY_FAIL_THRESHOLD:-3}"
 
 case "$quality_max_ms" in ''|*[!0-9]*) quality_max_ms=3000 ;; esac
 case "$quality_attempts" in ''|*[!0-9]*) quality_attempts=2 ;; esac
 [ "$quality_attempts" -gt 0 ] || quality_attempts=1
+case "$quality_fail_threshold" in ''|*[!0-9]*) quality_fail_threshold=3 ;; esac
+[ "$quality_fail_threshold" -gt 0 ] || quality_fail_threshold=1
 
 # Re-apply the haozeke carve-out so rg.terra stays reachable. A bare wg-quick
 # restart re-installs the 0/0 route but NOT the carve-out, which would leave the
@@ -61,20 +71,20 @@ quality_probe_once() {
     [ "$quality_probe" = "0" ] && return 0
     command -v "$CURL" >/dev/null 2>&1 || return 0
 
-    local result code seconds
+    local result code
     result="$($CURL -4 -sS --connect-timeout 4 --max-time 8 -o /dev/null \
         -w '%{http_code} %{time_total} %{local_ip}\n' "$quality_url" 2>/dev/null)" || return 1
     set -- $result
     code="${1:-000}"
-    seconds="${2:-999}"
 
+    # Reachable through the tunnel = healthy. Latency does NOT gate the restart
+    # decision: a slow-but-answered probe still proves the tunnel is carrying
+    # traffic, and tearing it down for slowness caused the restart storm. Only an
+    # unreachable endpoint (no HTTP status) counts as a failure.
     case "$code" in
-    [23][0-9][0-9]|401|403) ;;
+    [23][0-9][0-9]|401|403) return 0 ;;
     *) return 1 ;;
     esac
-
-    awk -v seconds="$seconds" -v max_ms="$quality_max_ms" \
-        'BEGIN { exit !(seconds >= 0 && seconds * 1000 <= max_ms) }'
 }
 
 quality_ok() {
@@ -152,12 +162,45 @@ egress_desired() {
 
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 egress_desired || exit 0
+
+# Serialize every mutation. The periodic timer and the real-time watch both run
+# this script; two concurrent `systemctl restart wg-quick` calls make systemd
+# cancel one mid-flight, leaving the interface up but its 0/0 route half-applied
+# -- a total blackhole until reboot. A non-blocking lock makes a second instance
+# skip instead of colliding, so a restart's own netlink churn can never trigger a
+# racing restart.
+if [ "$LOCK" != "none" ]; then
+    if { exec 9>"$LOCK"; } 2>/dev/null; then
+        "$FLOCK" -n 9 2>/dev/null || { $LOG "another rg-us-egress-guard holds $LOCK; skipping"; exit 0; }
+    else
+        # Better to guard unserialized than to never guard; log and continue.
+        $LOG "cannot open lock $LOCK; proceeding without serialization"
+    fi
+fi
+
 reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local uplink"
 
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
     && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
-    quality_ok || { restore_egress "$iface x.ai quality probe degraded while $unit enabled; restoring"; exit 0; }
+    if quality_ok; then
+        # Reachable through the tunnel: clear the consecutive-failure counter.
+        : >"$quality_state" 2>/dev/null || true
+    else
+        # One slow/failed x.ai probe is not proof the tunnel is dead (transient
+        # upstream jitter looks identical); only restart after N consecutive
+        # misses so a healthy-but-slow tunnel is never needlessly torn down.
+        fails="$(cat "$quality_state" 2>/dev/null || echo 0)"
+        case "$fails" in ''|*[!0-9]*) fails=0 ;; esac
+        fails=$((fails + 1))
+        printf '%s\n' "$fails" >"$quality_state" 2>/dev/null || true
+        if [ "$fails" -ge "$quality_fail_threshold" ]; then
+            : >"$quality_state" 2>/dev/null || true
+            restore_egress "$iface x.ai quality probe degraded ${fails}x while $unit enabled; restoring"
+            exit 0
+        fi
+        $LOG "$iface x.ai quality probe degraded (${fails}/${quality_fail_threshold}); not restoring yet"
+    fi
     # Egress is fine, but the carve-out can be missing on its own (e.g. the
     # tunnel was restarted directly); re-assert it so rg.terra is not dark.
     carveout_present || { $LOG "egress up but haozeke carve-out missing; re-applying"; reassert_carveout; }

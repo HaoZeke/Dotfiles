@@ -37,6 +37,13 @@ esac
 SC
 chmod +x "$tmp/systemctl.sh"
 
+cat >"$tmp/flock.sh" <<'FLOCK'
+#!/usr/bin/env bash
+[ "${RG_TEST_LOCKED:-0}" = "1" ] && exit 1
+exit 0
+FLOCK
+chmod +x "$tmp/flock.sh"
+
 # Mock curl: quality probes return a fast 401, a slow 401, or transport failure.
 cat >"$tmp/curl.sh" <<'CURL'
 #!/usr/bin/env bash
@@ -86,6 +93,7 @@ IP
 chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
+quality_state="$tmp/quality-state"
 
 # run_case WG_ENABLED SERVICE_ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
 run_case() {
@@ -95,6 +103,11 @@ run_case() {
         RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
         RG_GUARD_IP="$tmp/ip.sh" \
         RG_GUARD_CURL="$tmp/curl.sh" \
+        RG_GUARD_FLOCK="$tmp/flock.sh" \
+        RG_GUARD_LOCK="$tmp/guard.lock" \
+        RG_TEST_LOCKED="${RG_TEST_LOCKED:-0}" \
+        RG_US_EGRESS_QUALITY_STATE="$quality_state" \
+        RG_US_EGRESS_QUALITY_FAIL_THRESHOLD=2 \
         RG_US_EGRESS_QUALITY_ATTEMPTS=1 \
         RG_GUARD_LOG="true" \
         bash "$GUARD"
@@ -110,8 +123,15 @@ test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 
 n=$(run_case 0 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "managed egress service marker must not restart a healthy tunnel (got $n)"
 test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
     || fail "managed egress service marker must keep Control D upstreams on the local uplink"
-n=$(run_case 1 0 1 1 slow); [ "${n:-0}" = "1" ] || fail "slow x.ai quality probe must restart (got $n)"
-n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "1" ] || fail "failing x.ai quality probe must restart (got $n)"
+RG_TEST_LOCKED=1 n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "0" ] || fail "locked guard must not restart (got $n)"
+test "$(grep -c '^route replace' "$calls" 2>/dev/null || true)" = "0" \
+    || fail "locked guard must not alter Control D routes"
+unset RG_TEST_LOCKED
+rm -f "$quality_state"
+n=$(run_case 1 0 1 1 slow); [ "${n:-0}" = "0" ] || fail "slow successful x.ai probe must not restart (got $n)"
+n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "first failing x.ai quality probe must not restart (got $n)"
+n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "1" ] || fail "persistent failing x.ai quality probe must restart (got $n)"
+rm -f "$quality_state"
 n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
 n=$(run_case 1 0 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
 
