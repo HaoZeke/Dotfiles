@@ -73,9 +73,18 @@ assert_command profile-travel 'rg-x1gen11-profile apply travel'
 assert_command airplane-toggle 'rg-airplane toggle'
 assert_command bluetooth-toggle 'rg-airplane bluetooth toggle'
 assert_command suspend 'rg-lockscreen --prepare-sleep'
-assert_command suspend 'systemctl suspend'
-assert_command suspend-then-hibernate 'systemctl suspend-then-hibernate'
-assert_command hibernate 'systemctl hibernate'
+assert_command suspend 'rg-power-menu --systemctl suspend'
+assert_command suspend-then-hibernate 'rg-power-menu --systemctl suspend-then-hibernate'
+assert_command hibernate 'rg-power-menu --systemctl hibernate'
+assert_command reboot 'rg-power-menu --systemctl reboot'
+assert_command poweroff 'rg-power-menu --systemctl poweroff'
+rg -Fq 'pkexec "$SYSTEMCTL"' "$script" \
+    || fail "systemctl fallback must use pkexec"
+
+missing_profiles="$(RG_POWER_MENU_PROFILE=/tmp/rg-power-menu-missing "$script" --print-menu profiles)"
+if printf '%s\n' "$missing_profiles" | rg -Fq 'Profile:'; then
+    fail "profile entries must be hidden when rg-x1gen11-profile is absent"
+fi
 
 rg -Fq "bindsym --no-repeat \$mod+Shift+Escape exec '\$HOME/.local/bin/rg-power-menu'" "$sway_config" \
     || fail "sway does not bind mod+Shift+Escape to rg-power-menu"

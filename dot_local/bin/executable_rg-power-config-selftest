@@ -61,6 +61,10 @@ rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$laptop_script" \
     || fail "TLP AC platform profile must match the undocked-mixed profile"
 rg -q 'PLATFORM_PROFILE_ON_BAT=low-power' "$laptop_script" \
     || fail "TLP battery platform profile must match the undocked-mixed profile"
+rg -q 'START_CHARGE_THRESH_BAT0=90' "$laptop_script" \
+    || fail "battery charge start threshold must favor useful runtime"
+rg -q 'STOP_CHARGE_THRESH_BAT0=98' "$laptop_script" \
+    || fail "battery charge stop threshold must allow near-full runtime"
 rg -q 'HandleLidSwitch=suspend' "$laptop_script" \
     || fail "lid close must use fast suspend"
 rg -q 'HandleLidSwitchExternalPower=suspend' "$laptop_script" \
