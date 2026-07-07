@@ -46,14 +46,33 @@ chmod +x "$tmp/curl.sh"
 # when RG_TEST_ROUTE_OK, else a different device.
 cat >"$tmp/ip.sh" <<'IP'
 #!/usr/bin/env bash
-case "$1 $2" in
+if [ "${1:-}" = "-4" ]; then
+    shift
+fi
+case "${1:-} ${2:-}" in
 "link show") [ "${RG_TEST_IFACE_UP:-0}" = "1" ] && exit 0 || exit 1 ;;
+"route show")
+    case "$*" in
+    "route show default table main")
+        printf 'default via 10.81.17.39 dev wlan0 proto dhcp src 10.81.17.57 metric 600\n'
+        ;;
+    "route show table 5151")
+        printf 'default via 10.81.17.39 dev wlan0\n'
+        ;;
+    esac
+    ;;
+"route replace")
+    printf '%s\n' "$*" >>"$RG_TEST_CALLS"
+    ;;
 "route get")
     if [ "${RG_TEST_ROUTE_OK:-0}" = "1" ]; then
         printf '1.1.1.1 dev %s src x\n' "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
     else
         printf '1.1.1.1 dev wlan0 src x\n'
     fi
+    ;;
+"rule show")
+    printf '5190:\tfrom all fwmark 0x5151 lookup 5151\n'
     ;;
 esac
 IP
@@ -76,7 +95,11 @@ run_case() {
 }
 
 n=$(run_case 0 0 0 fail); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
+test "$(grep -c '^route replace' "$calls" 2>/dev/null || true)" = "0" \
+    || fail "disabled unit must not alter Control D routes"
 n=$(run_case 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
+test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
+    || fail "healthy tunnel must keep Control D upstreams on the local uplink"
 n=$(run_case 1 1 1 slow); [ "${n:-0}" = "1" ] || fail "slow x.ai quality probe must restart (got $n)"
 n=$(run_case 1 1 1 fail); [ "${n:-0}" = "1" ] || fail "failing x.ai quality probe must restart (got $n)"
 n=$(run_case 1 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"

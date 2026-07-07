@@ -13,6 +13,7 @@ script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
 hz_carveout="${RG_HZ_CARVEOUT_SCRIPT:-$script_dir/rg-haozeke-tunnel-carveout}"
 akamai_carveout="${RG_AKAMAI_CARVEOUT_SCRIPT:-$script_dir/rg-tunnel-akamai-carveout}"
+ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
 tmp_conf=""
 activation_started=0
 
@@ -162,6 +163,79 @@ verify_route_uses_interface() {
     return 1
 }
 
+verify_route_avoids_interface() {
+    local label="$1" target="$2" blocked="$3" route
+    route="$(ip route get "$target" 2>/dev/null || true)"
+    if [ -z "$route" ]; then
+        printf 'no route found for %s (%s)\n' "$target" "$label" >&2
+        return 1
+    fi
+    printf '%s route: %s\n' "$label" "$route"
+    case "$route" in
+        *" dev ${blocked} "*|*" dev ${blocked}")
+            printf '%s routes through %s\n' "$label" "$blocked" >&2
+            return 1
+            ;;
+    esac
+    return 0
+}
+
+main_ipv4_default() {
+    ip -4 route show default table main 2>/dev/null |
+        awk -v tunnel="$iface" '
+            $1 == "default" {
+                dev = ""; via = "-"; src = "-"
+                for (i = 1; i <= NF; i++) {
+                    if ($i == "dev") dev = $(i + 1)
+                    else if ($i == "via") via = $(i + 1)
+                    else if ($i == "src") src = $(i + 1)
+                }
+                if (dev != "" && dev != tunnel) {
+                    print dev, via, src
+                    exit
+                }
+            }
+        '
+}
+
+reassert_ctrld_carveout() {
+    local dev via src upstream
+    read -r dev via src <<EOF
+$(main_ipv4_default)
+EOF
+    [ -n "${dev:-}" ] || { printf 'no IPv4 local default route for Control D carve-out\n' >&2; return 1; }
+
+    for upstream in $ctrld_upstreams; do
+        case "$upstream" in
+        ''|*[!0-9.]*)
+            continue
+            ;;
+        esac
+
+        if [ "$via" != "-" ] && [ "$src" != "-" ]; then
+            ip -4 route replace "$upstream/32" via "$via" dev "$dev" src "$src" metric 40
+        elif [ "$via" != "-" ]; then
+            ip -4 route replace "$upstream/32" via "$via" dev "$dev" metric 40
+        elif [ "$src" != "-" ]; then
+            ip -4 route replace "$upstream/32" dev "$dev" src "$src" metric 40
+        else
+            ip -4 route replace "$upstream/32" dev "$dev" metric 40
+        fi
+    done
+}
+
+verify_ctrld_carveout() {
+    local upstream
+    for upstream in $ctrld_upstreams; do
+        case "$upstream" in
+        ''|*[!0-9.]*)
+            continue
+            ;;
+        esac
+        verify_route_avoids_interface "Control D upstream $upstream" "$upstream" "$iface"
+    done
+}
+
 verify_tailscale_probe_name() {
     local name="${RG_TAILSCALE_ROUTE_PROBE_NAME:-}" addr found=0
     [ -n "$name" ] || return 0
@@ -274,6 +348,10 @@ else
     printf 'NOTE: Akamai carve-out helper not found at %s; skipping\n' "$akamai_carveout" >&2
 fi
 
+printf '\n== carve Control D upstreams onto the local uplink (DNS stays outside tunnel) ==\n'
+reassert_ctrld_carveout
+verify_ctrld_carveout
+
 printf '\n== settle resolver after route change ==\n'
 sleep 2
 systemctl restart ctrld.service
@@ -306,6 +384,7 @@ printf 'Lean release host resolves via local DNS\n'
 
 printf '\n== route checks ==\n'
 verify_route_uses_interface "IPv4 default egress" 1.1.1.1 "$iface"
+verify_ctrld_carveout
 # Bringing up the 0/0 tunnel triggers a network-change in the system tailscaled,
 # which briefly rebuilds its route table 52; retry so the check waits for that
 # re-population instead of racing it.

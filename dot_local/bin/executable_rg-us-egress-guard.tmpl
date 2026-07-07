@@ -24,6 +24,7 @@ quality_url="${RG_US_EGRESS_QUALITY_URL:-https://api.x.ai/v1/models}"
 quality_max_ms="${RG_US_EGRESS_QUALITY_MAX_MS:-3000}"
 quality_attempts="${RG_US_EGRESS_QUALITY_ATTEMPTS:-2}"
 quality_probe="${RG_US_EGRESS_QUALITY_PROBE:-1}"
+ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
 SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
 IP="${RG_GUARD_IP:-ip}"
 CURL="${RG_GUARD_CURL:-curl}"
@@ -84,6 +85,50 @@ quality_ok() {
     return 1
 }
 
+main_ipv4_default() {
+    $IP -4 route show default table main 2>/dev/null |
+        awk -v tunnel="$iface" '
+            $1 == "default" {
+                dev = ""; via = "-"; src = "-"
+                for (i = 1; i <= NF; i++) {
+                    if ($i == "dev") dev = $(i + 1)
+                    else if ($i == "via") via = $(i + 1)
+                    else if ($i == "src") src = $(i + 1)
+                }
+                if (dev != "" && dev != tunnel) {
+                    print dev, via, src
+                    exit
+                }
+            }
+        '
+}
+
+reassert_ctrld_carveout() {
+    local dev via src upstream
+    read -r dev via src <<EOF
+$(main_ipv4_default)
+EOF
+    [ -n "${dev:-}" ] || return 0
+
+    for upstream in $ctrld_upstreams; do
+        case "$upstream" in
+        ''|*[!0-9.]*)
+            continue
+            ;;
+        esac
+
+        if [ "$via" != "-" ] && [ "$src" != "-" ]; then
+            $IP -4 route replace "$upstream/32" via "$via" dev "$dev" src "$src" metric 40 >/dev/null 2>&1 || return 1
+        elif [ "$via" != "-" ]; then
+            $IP -4 route replace "$upstream/32" via "$via" dev "$dev" metric 40 >/dev/null 2>&1 || return 1
+        elif [ "$src" != "-" ]; then
+            $IP -4 route replace "$upstream/32" dev "$dev" src "$src" metric 40 >/dev/null 2>&1 || return 1
+        else
+            $IP -4 route replace "$upstream/32" dev "$dev" metric 40 >/dev/null 2>&1 || return 1
+        fi
+    done
+}
+
 restore_egress() {
     $LOG "$1"
     $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
@@ -102,6 +147,7 @@ restore_egress() {
 
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 $SYSTEMCTL is-enabled --quiet "$unit" || exit 0
+reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local uplink"
 
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
