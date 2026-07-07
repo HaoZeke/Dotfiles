@@ -61,6 +61,18 @@ rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$laptop_script" \
     || fail "TLP AC platform profile must match the undocked-mixed profile"
 rg -q 'PLATFORM_PROFILE_ON_BAT=low-power' "$laptop_script" \
     || fail "TLP battery platform profile must match the undocked-mixed profile"
+rg -q 'HandleLidSwitch=suspend' "$laptop_script" \
+    || fail "lid close must use fast suspend"
+rg -q 'HandleLidSwitchExternalPower=suspend' "$laptop_script" \
+    || fail "lid close on AC must use fast suspend"
+rg -q 'HandlePowerKey=suspend' "$laptop_script" \
+    || fail "power key must use fast suspend"
+rg -q 'AllowSuspend=yes' "$laptop_script" \
+    || fail "plain suspend must be enabled"
+! rg -q 'AllowSuspend=no' "$laptop_script" \
+    || fail "plain suspend must not be disabled"
+rg -q 'HibernateDelaySec=180min' "$laptop_script" \
+    || fail "suspend-then-hibernate must keep a long fast-wake window"
 rg -q 'iwd.service' "$laptop_script" \
     || fail "iwd service is not managed"
 rg -q 'disable --now NetworkManager.service NetworkManager-dispatcher.service' "$laptop_script" \
