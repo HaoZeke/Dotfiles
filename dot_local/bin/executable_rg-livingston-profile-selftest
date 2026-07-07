@@ -31,6 +31,17 @@ assert_contains() {
     esac
 }
 
+assert_not_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*)
+            echo "FAIL: unexpected ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
 
@@ -133,6 +144,24 @@ assert_contains "$out" "env TZ=America/Chicago" "vivaldi env"
 assert_contains "$out" "vivaldi" "vivaldi executable"
 assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi" "vivaldi profile dir"
 assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    "$SCRIPT" --dry-run slack
+)
+assert_contains "$out" "--start-maximized" "slack maximized launch"
+assert_contains "$out" "--app=https://app.slack.com/client/T061A7A7K0U" "slack app mode"
+assert_not_contains "$out" "about:blank" "slack fallback tab"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    "$SCRIPT" --dry-run slack https://app.slack.com/client/T061A7A7K0U/C0BBTSBGW6P
+)
+assert_contains "$out" "--app=https://app.slack.com/client/T061A7A7K0U/C0BBTSBGW6P" "custom slack app url"
 
 out=$(
     HOME="$tmp_home" \

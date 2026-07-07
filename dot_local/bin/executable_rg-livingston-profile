@@ -31,6 +31,7 @@ Commands:
   chromium [URL]      Launch Chromium with an isolated Livingston profile.
   chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
   vivaldi [URL]       Launch Vivaldi with an isolated Livingston profile.
+  slack [URL]         Launch Slack in a Vivaldi app window.
 
 Options:
   --proxy URL      Pass URL to Chromium as --proxy-server=URL.
@@ -83,6 +84,7 @@ pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
 pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
+slack_url_default="${RG_LIVINGSTON_SLACK_URL:-https://app.slack.com/client/T061A7A7K0U}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -331,16 +333,22 @@ JSON
 run_browser() {
     local browser_name="$1" browser_bin profile_dir url
     local -a browser_args extra_browser_args
+    local append_default_url
     shift
 
     load_proxy_from_pass
     browser_bin="$(resolve_browser "$browser_name")" || die "cannot locate $browser_name"
     profile_dir="$profile_root/$browser_name"
-    url="about:blank"
+    url=""
     extra_browser_args=()
+    append_default_url=1
 
     while [ $# -gt 0 ]; do
         case "$1" in
+            --rg-no-default-url)
+                append_default_url=0
+                shift
+                ;;
             --)
                 shift
                 extra_browser_args+=("$@")
@@ -365,6 +373,10 @@ run_browser() {
         seed_chromium_preferences "$profile_dir"
     fi
 
+    if [ -z "$url" ] && [ "$append_default_url" -eq 1 ]; then
+        url="about:blank"
+    fi
+
     browser_args=(
         "$browser_bin"
         "--user-data-dir=$profile_dir"
@@ -387,11 +399,25 @@ run_browser() {
     fi
 
     browser_args+=("${extra_browser_args[@]}")
-    browser_args+=("$url" "$@")
+    if [ -n "$url" ]; then
+        browser_args+=("$url")
+    fi
+    browser_args+=("$@")
     if [ "$dry_run" -eq 0 ]; then
         warn_egress_location
     fi
     run_cmd "${browser_args[@]}"
+}
+
+run_slack() {
+    local slack_url="$slack_url_default"
+
+    if [ $# -gt 0 ]; then
+        slack_url="$1"
+        shift
+    fi
+
+    run_browser vivaldi --rg-no-default-url --start-maximized "--app=$slack_url" "$@"
 }
 
 current_timezone() {
@@ -642,6 +668,9 @@ dispatch_command() {
         ;;
     vivaldi | vivaldi-stable)
         run_browser vivaldi "$@"
+        ;;
+    slack)
+        run_slack "$@"
         ;;
     *)
         die "unknown command: $dispatch_cmd"

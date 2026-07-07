@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Slack Livingston
+Exec=rg-livingston-profile slack
+Icon=slack
+Categories=Network;InstantMessaging;
+Terminal=false
