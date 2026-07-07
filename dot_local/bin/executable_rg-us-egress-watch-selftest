@@ -4,15 +4,20 @@
 # run per cooldown.
 set -uo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-WATCH="$SCRIPT_DIR/rg-us-egress-watch"
-[ -f "$WATCH" ] || WATCH="$SCRIPT_DIR/executable_rg-us-egress-watch"
-[ -f "$WATCH" ] || { printf 'FAIL: rg-us-egress-watch not found\n' >&2; exit 1; }
-
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+WATCH="$SCRIPT_DIR/rg-us-egress-watch"
+if [ ! -f "$WATCH" ]; then
+    watch_template="$SCRIPT_DIR/executable_rg-us-egress-watch.tmpl"
+    [ -f "$watch_template" ] || watch_template="$SCRIPT_DIR/../bin/executable_rg-us-egress-watch.tmpl"
+    [ -f "$watch_template" ] || fail "rg-us-egress-watch template not found"
+    WATCH="$tmp/rg-us-egress-watch"
+    chezmoi execute-template <"$watch_template" >"$WATCH"
+fi
 
 # Mock guard: append a byte per call.
 cat >"$tmp/guard.sh" <<'G'
