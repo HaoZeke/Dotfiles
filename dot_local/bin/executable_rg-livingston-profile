@@ -27,6 +27,7 @@ Commands:
   env                 Print the Livingston environment values.
   run -- CMD ...      Run a command with the Livingston process environment.
   doctor              Print profile, system, browser, and egress diagnostics.
+  repair-vivaldi      Normalize saved Vivaldi window placement for this profile.
   system COMMAND ...  Set the system timezone for COMMAND, then restore it.
   chromium [URL]      Launch Chromium with an isolated Livingston profile.
   chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
@@ -85,6 +86,9 @@ pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
 slack_url_default="${RG_LIVINGSTON_SLACK_URL:-https://app.slack.com/client/T061A7A7K0U}"
+browser_window_width="${RG_LIVINGSTON_BROWSER_WIDTH:-1920}"
+browser_window_height="${RG_LIVINGSTON_BROWSER_HEIGHT:-1200}"
+slack_zoom_level="${RG_LIVINGSTON_SLACK_ZOOM_LEVEL:--0.5778829311823857}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -330,6 +334,63 @@ JSON
     fi
 }
 
+repair_vivaldi_preferences() {
+    local profile_dir prefs_file tmp_file
+    profile_dir="$profile_root/vivaldi"
+    prefs_file="$profile_dir/Default/Preferences"
+
+    seed_chromium_preferences "$profile_dir"
+    command -v "$jq_bin" >/dev/null 2>&1 || return 0
+
+    tmp_file="${TMPDIR:-/tmp}/rg-livingston-profile.Preferences.$$"
+    "$jq_bin" \
+        --argjson width "$browser_window_width" \
+        --argjson height "$browser_window_height" \
+        --argjson slack_zoom "$slack_zoom_level" \
+        '
+        def placement:
+            .left = 0
+            | .top = 0
+            | .right = $width
+            | .bottom = $height
+            | .work_area_left = 0
+            | .work_area_top = 0
+            | .work_area_right = $width
+            | .work_area_bottom = $height
+            | .maximized = true;
+
+        .browser = (.browser // {})
+        | .browser.window_placement = ((.browser.window_placement // {}) | placement)
+        | .browser.window_placement_popup = ((.browser.window_placement_popup // {}) | placement)
+        | .browser.app_window_placement = (.browser.app_window_placement // {})
+        | .browser.app_window_placement["app.slack.com_/client/T061A7A7K0U"] =
+            ((.browser.app_window_placement["app.slack.com_/client/T061A7A7K0U"] // {}) | placement)
+        | .vivaldi = (.vivaldi // {})
+        | .vivaldi.settings = (.vivaldi.settings // {})
+        | .vivaldi.settings.size = ((.vivaldi.settings.size // {})
+            | .left = 0
+            | .top = 0
+            | .width = $width
+            | .height = $height)
+        | .partition = (.partition // {})
+        | .partition.per_host_zoom_levels = (.partition.per_host_zoom_levels // {})
+        | .partition.per_host_zoom_levels.x = (.partition.per_host_zoom_levels.x // {})
+        | .partition.per_host_zoom_levels.x["app.slack.com"] =
+            ((.partition.per_host_zoom_levels.x["app.slack.com"] // {}) | .zoom_level = $slack_zoom)
+        ' "$prefs_file" >"$tmp_file" \
+        && "$mv_bin" -f "$tmp_file" "$prefs_file" \
+        || {
+            rm -f "$tmp_file"
+            return 1
+        }
+}
+
+repair_vivaldi_command() {
+    repair_vivaldi_preferences
+    printf 'vivaldi_profile=%s\n' "$profile_root/vivaldi"
+    printf 'vivaldi_window=%sx%s\n' "$browser_window_width" "$browser_window_height"
+}
+
 run_browser() {
     local browser_name="$1" browser_bin profile_dir url
     local -a browser_args extra_browser_args
@@ -370,7 +431,11 @@ run_browser() {
         [ -d "$extension_dir" ] || die "missing extension directory: $extension_dir"
         [ -f "$extension_dir/manifest.json" ] || die "missing extension manifest: $extension_dir/manifest.json"
         [ -f "$extension_dir/content.js" ] || die "missing extension script: $extension_dir/content.js"
-        seed_chromium_preferences "$profile_dir"
+        if [ "$browser_name" = "vivaldi" ]; then
+            repair_vivaldi_preferences
+        else
+            seed_chromium_preferences "$profile_dir"
+        fi
     fi
 
     if [ -z "$url" ] && [ "$append_default_url" -eq 1 ]; then
@@ -660,6 +725,9 @@ dispatch_command() {
         ;;
     doctor)
         print_doctor
+        ;;
+    repair-vivaldi)
+        repair_vivaldi_command
         ;;
     system)
         run_system_profile "$@"

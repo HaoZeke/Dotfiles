@@ -209,6 +209,51 @@ out=$(
 )
 assert_contains "$(cat "$curl_args")" "--proxy socks5h://wind-user:wind-pass@us.windscribe.example:1080" "proxied egress check"
 
+prefs_file="$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi/Default/Preferences"
+mkdir -p "$(dirname -- "$prefs_file")"
+cat >"$prefs_file" <<'JSON'
+{
+  "browser": {
+    "app_window_placement": {
+      "app.slack.com_/client/T061A7A7K0U": {
+        "bottom": 1124,
+        "left": 0,
+        "right": 948,
+        "top": 0
+      }
+    },
+    "window_placement": {
+      "bottom": 1124,
+      "left": 0,
+      "maximized": false,
+      "right": 949,
+      "top": 0
+    }
+  },
+  "vivaldi": {
+    "settings": {
+      "size": {
+        "height": 1124,
+        "left": 0,
+        "top": 0,
+        "width": 948
+      }
+    }
+  }
+}
+JSON
+HOME="$tmp_home" \
+XDG_DATA_HOME="$tmp_home/.local/share" \
+XDG_STATE_HOME="$tmp_home/.local/state" \
+RG_LIVINGSTON_BROWSER_WIDTH=1920 \
+RG_LIVINGSTON_BROWSER_HEIGHT=1200 \
+"$SCRIPT" repair-vivaldi >/dev/null
+layout="$(jq -r '[.browser.window_placement.right, .browser.window_placement.bottom, .browser.window_placement.maximized, .browser.app_window_placement["app.slack.com_/client/T061A7A7K0U"].right, .vivaldi.settings.size.width, .partition.per_host_zoom_levels.x["app.slack.com"].zoom_level] | @tsv' "$prefs_file")"
+if [ "$layout" != "$(printf '1920\t1200\ttrue\t1920\t1920\t-0.5778829311823857')" ]; then
+    echo "FAIL: vivaldi layout was not repaired: $layout" >&2
+    exit 1
+fi
+
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
