@@ -144,6 +144,7 @@ assert_contains "$out" "env TZ=America/Chicago" "vivaldi env"
 assert_contains "$out" "vivaldi" "vivaldi executable"
 assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi" "vivaldi profile dir"
 assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
+assert_contains "$out" "--start-maximized" "vivaldi maximized launch"
 
 out=$(
     HOME="$tmp_home" \

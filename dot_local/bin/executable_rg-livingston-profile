@@ -398,6 +398,10 @@ run_browser() {
         browser_args+=("--proxy-server=$proxy")
     fi
 
+    if [ "$browser_name" = "vivaldi" ]; then
+        browser_args+=("--start-maximized")
+    fi
+
     browser_args+=("${extra_browser_args[@]}")
     if [ -n "$url" ]; then
         browser_args+=("$url")
