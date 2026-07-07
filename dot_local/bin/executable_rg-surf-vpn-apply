@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# rg-surf-vpn-apply: install the newest eduVPN (SURF medewerkers-split) OpenVPN
+# profile exported from the portal, then (re)start the split-VPN client. Run this
+# after logging in at https://surf.eduvpn.nl/portal/home and downloading a config
+# (the UDP export already carries both remotes: udp primary, tcp fallback). The
+# server endpoint carve-out that keeps the control channel off the US egress is
+# maintained by rg-net-heal; this script only swaps the profile and bounces the
+# service. Self-elevates via sudo.
+set -uo pipefail
+
+DL="${RG_SURF_DL_DIR:-/home/rgoswami/Downloads}"
+DEST="${RG_SURF_OVPN:-/etc/openvpn/client/surf-split.conf}"
+UNIT="openvpn-client@surf-split.service"
+
+log() { printf 'rg-surf-vpn-apply: %s\n' "$*"; }
+
+[ "$(id -u)" -eq 0 ] || exec sudo -- "$0" "$@"
+
+# Newest UDP export (carries both remotes); fall back to any medewerkers-split export.
+src="$(ls -t "$DL"/surf.eduvpn.nl_*_openvpn_udp.ovpn 2>/dev/null | head -1)"
+[ -n "$src" ] || src="$(ls -t "$DL"/surf.eduvpn.nl_*_openvpn_*.ovpn 2>/dev/null | head -1)"
+[ -n "$src" ] || { log "no eduVPN export found in $DL"; exit 1; }
+
+grep -q '^remote ' "$src" || { log "$src has no 'remote' line; not an OpenVPN profile"; exit 1; }
+
+# Cert sanity: warn (do not block) if the exported client cert is already expired.
+cert="$(awk '/<cert>/{f=1;next}/<\/cert>/{f=0}f' "$src")"
+enddate="$(printf '%s\n' "$cert" | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
+if [ -n "$cert" ] && ! printf '%s\n' "$cert" | openssl x509 -checkend 0 -noout >/dev/null 2>&1; then
+    log "WARNING: client cert already expired (${enddate:-unknown}); download a fresh profile"
+fi
+
+install -m 0600 -o root -g root "$src" "$DEST" || { log "install to $DEST failed"; exit 1; }
+log "installed $(basename "$src") -> $DEST (cert expires ${enddate:-unknown})"
+
+systemctl restart "$UNIT" || { log "failed to restart $UNIT"; exit 1; }
+
+# Wait for the tunnel to actually come up before declaring success.
+up=0
+for _ in $(seq 1 20); do
+    if journalctl -u "$UNIT" -n 5 --no-pager -o cat 2>/dev/null | grep -q 'Initialization Sequence Completed'; then
+        up=1; break
+    fi
+    sleep 1
+done
+if [ "$up" = 1 ] && ip link show tun0 >/dev/null 2>&1; then
+    log "tunnel up: tun0 $(ip -4 -br addr show tun0 2>/dev/null | awk '{print $3}')"
+    log "SURF split VPN active until ${enddate:-unknown}"
+else
+    log "WARNING: tunnel did not report 'Initialization Sequence Completed'; check: journalctl -u $UNIT"
+    exit 1
+fi
