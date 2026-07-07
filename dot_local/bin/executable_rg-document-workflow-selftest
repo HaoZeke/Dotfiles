@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-document-workflow-selftest).
+
+set -euo pipefail
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-document-workflow-selftest [chezmoi-source]\n' >&2
+    exit 2
+fi
+
+repo=${1:-${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+meetrec_doc="$repo/dot_config/meetrec/readme.org"
+mime_script="$repo/.chezmoiscripts/run_onchange_linux_document_mime_defaults.sh.tmpl"
+
+test -r "$meetrec_doc" || fail "meetrec local documentation is missing"
+test -r "$mime_script" || fail "document MIME default script is missing"
+
+for needle in \
+    'meetrec doctor' \
+    'meetrec devices' \
+    'meetrec record' \
+    'meetrec latest' \
+    'meetrec enhance latest' \
+    'meetrec transcribe latest' \
+    'meetrec reindex' \
+    'rg.surf' \
+    'no meetrec systemd service'
+do
+    rg -Fq "$needle" "$meetrec_doc" \
+        || fail "meetrec documentation missing: $needle"
+done
+
+for pair in \
+    'org.pwmt.zathura-pdf-mupdf.desktop application/pdf' \
+    'org.pwmt.zathura-pdf-mupdf.desktop application/epub+zip' \
+    'org.pwmt.zathura-djvu.desktop image/vnd.djvu' \
+    'org.pwmt.zathura-ps.desktop application/postscript'
+do
+    rg -Fq "$pair" "$mime_script" \
+        || fail "MIME default script missing: $pair"
+done
+
+rg -Fq 'xdg-mime default "$desktop" "$mime"' "$mime_script" \
+    || fail "MIME default script must use xdg-mime"
+rg -Fq 'desktop_exists "$desktop"' "$mime_script" \
+    || fail "MIME default script must skip missing desktop files"
+
+printf 'ok\n'
