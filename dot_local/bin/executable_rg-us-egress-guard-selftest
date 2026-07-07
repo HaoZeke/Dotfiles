@@ -4,15 +4,20 @@
 # down or up-but-not-routing, and stays quiet otherwise. No real systemd/network.
 set -uo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-GUARD="$SCRIPT_DIR/rg-us-egress-guard"
-[ -f "$GUARD" ] || GUARD="$SCRIPT_DIR/executable_rg-us-egress-guard"
-[ -f "$GUARD" ] || { printf 'FAIL: rg-us-egress-guard not found\n' >&2; exit 1; }
-
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+GUARD="$SCRIPT_DIR/rg-us-egress-guard"
+if [ ! -f "$GUARD" ]; then
+    guard_template="$SCRIPT_DIR/executable_rg-us-egress-guard.tmpl"
+    [ -f "$guard_template" ] || guard_template="$SCRIPT_DIR/../bin/executable_rg-us-egress-guard.tmpl"
+    [ -f "$guard_template" ] || fail "rg-us-egress-guard template not found"
+    GUARD="$tmp/rg-us-egress-guard"
+    chezmoi execute-template <"$guard_template" >"$GUARD"
+fi
 
 # Mock systemctl: is-enabled honours RG_TEST_ENABLED; restart is logged.
 cat >"$tmp/systemctl.sh" <<'SC'
@@ -24,6 +29,18 @@ restart) printf 'restart %s\n' "$2" >>"$RG_TEST_CALLS"; exit 0 ;;
 esac
 SC
 chmod +x "$tmp/systemctl.sh"
+
+# Mock curl: quality probes return a fast 401, a slow 401, or transport failure.
+cat >"$tmp/curl.sh" <<'CURL'
+#!/usr/bin/env bash
+case "${RG_TEST_QUALITY:-ok}" in
+ok) printf '401 0.250000 100.83.241.81\n'; exit 0 ;;
+slow) printf '401 7.500000 100.83.241.81\n'; exit 0 ;;
+fail) exit 28 ;;
+*) exit 64 ;;
+esac
+CURL
+chmod +x "$tmp/curl.sh"
 
 # Mock ip: `link show` honours RG_TEST_IFACE_UP; `route get` reports the iface
 # when RG_TEST_ROUTE_OK, else a different device.
@@ -44,21 +61,25 @@ chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
 
-# run_case ENABLED IFACE_UP ROUTE_OK -> echoes the restart count
+# run_case ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
 run_case() {
     : >"$calls"
-    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_ROUTE_OK="$3" \
+    RG_TEST_ENABLED="$1" RG_TEST_IFACE_UP="$2" RG_TEST_ROUTE_OK="$3" RG_TEST_QUALITY="$4" \
         RG_TEST_CALLS="$calls" \
         RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
         RG_GUARD_IP="$tmp/ip.sh" \
+        RG_GUARD_CURL="$tmp/curl.sh" \
+        RG_US_EGRESS_QUALITY_ATTEMPTS=1 \
         RG_GUARD_LOG="true" \
         bash "$GUARD"
     grep -c '^restart wg-quick' "$calls" 2>/dev/null || true
 }
 
-n=$(run_case 0 0 0); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
-n=$(run_case 1 1 1); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
-n=$(run_case 1 1 0); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
-n=$(run_case 1 0 0); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
+n=$(run_case 0 0 0 fail); [ "${n:-0}" = "0" ] || fail "disabled unit must not act (got $n)"
+n=$(run_case 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "healthy tunnel must not restart (got $n)"
+n=$(run_case 1 1 1 slow); [ "${n:-0}" = "1" ] || fail "slow x.ai quality probe must restart (got $n)"
+n=$(run_case 1 1 1 fail); [ "${n:-0}" = "1" ] || fail "failing x.ai quality probe must restart (got $n)"
+n=$(run_case 1 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
+n=$(run_case 1 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
 
 printf 'ok\n'

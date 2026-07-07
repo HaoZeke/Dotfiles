@@ -20,11 +20,20 @@ set -uo pipefail
 iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 unit="wg-quick@${iface}.service"
 probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
+quality_url="${RG_US_EGRESS_QUALITY_URL:-https://api.x.ai/v1/models}"
+quality_max_ms="${RG_US_EGRESS_QUALITY_MAX_MS:-3000}"
+quality_attempts="${RG_US_EGRESS_QUALITY_ATTEMPTS:-2}"
+quality_probe="${RG_US_EGRESS_QUALITY_PROBE:-1}"
 SYSTEMCTL="${RG_GUARD_SYSTEMCTL:-systemctl}"
 IP="${RG_GUARD_IP:-ip}"
+CURL="${RG_GUARD_CURL:-curl}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
 CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
+
+case "$quality_max_ms" in ''|*[!0-9]*) quality_max_ms=3000 ;; esac
+case "$quality_attempts" in ''|*[!0-9]*) quality_attempts=2 ;; esac
+[ "$quality_attempts" -gt 0 ] || quality_attempts=1
 
 # Re-apply the haozeke carve-out so rg.terra stays reachable. A bare wg-quick
 # restart re-installs the 0/0 route but NOT the carve-out, which would leave the
@@ -46,28 +55,62 @@ carveout_present() {
     return 0
 }
 
+quality_probe_once() {
+    [ "$quality_probe" = "0" ] && return 0
+    command -v "$CURL" >/dev/null 2>&1 || return 0
+
+    local result code seconds
+    result="$($CURL -4 -sS --connect-timeout 4 --max-time 8 -o /dev/null \
+        -w '%{http_code} %{time_total} %{local_ip}\n' "$quality_url" 2>/dev/null)" || return 1
+    set -- $result
+    code="${1:-000}"
+    seconds="${2:-999}"
+
+    case "$code" in
+    [23][0-9][0-9]|401|403) ;;
+    *) return 1 ;;
+    esac
+
+    awk -v seconds="$seconds" -v max_ms="$quality_max_ms" \
+        'BEGIN { exit !(seconds >= 0 && seconds * 1000 <= max_ms) }'
+}
+
+quality_ok() {
+    local attempt=1
+    while [ "$attempt" -le "$quality_attempts" ]; do
+        quality_probe_once && return 0
+        attempt=$((attempt + 1))
+    done
+    return 1
+}
+
+restore_egress() {
+    $LOG "$1"
+    $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
+    # restart (not start): re-applies wg-quick's routes and policy rules even when
+    # the interface is already up but no longer routing.
+    if $SYSTEMCTL restart "$unit"; then
+        # The route flip can drop the Control D DoH session; resettle DNS.
+        $SYSTEMCTL restart ctrld.service 2>/dev/null || true
+        # wg-quick restart does not re-apply the carve-out; do it so terra survives.
+        reassert_carveout
+        $LOG "restored egress on $iface"
+    else
+        $LOG "failed to restore $iface"
+    fi
+}
+
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 $SYSTEMCTL is-enabled --quiet "$unit" || exit 0
 
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
     && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
+    quality_ok || { restore_egress "$iface x.ai quality probe degraded while $unit enabled; restoring"; exit 0; }
     # Egress is fine, but the carve-out can be missing on its own (e.g. the
     # tunnel was restarted directly); re-assert it so rg.terra is not dark.
     carveout_present || { $LOG "egress up but haozeke carve-out missing; re-applying"; reassert_carveout; }
     exit 0
 fi
 
-$LOG "$iface not carrying egress while $unit enabled; restoring"
-$SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
-# restart (not start): re-applies wg-quick's routes and policy rules even when
-# the interface is already up but no longer routing.
-if $SYSTEMCTL restart "$unit"; then
-    # The route flip can drop the Control D DoH session; resettle DNS.
-    $SYSTEMCTL restart ctrld.service 2>/dev/null || true
-    # wg-quick restart does not re-apply the carve-out; do it so terra survives.
-    reassert_carveout
-    $LOG "restored egress on $iface"
-else
-    $LOG "failed to restore $iface"
-fi
+restore_egress "$iface not carrying egress while $unit enabled; restoring"
