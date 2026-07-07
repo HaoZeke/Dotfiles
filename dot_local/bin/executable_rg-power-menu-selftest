@@ -78,7 +78,7 @@ assert_command suspend-then-hibernate 'rg-power-menu --systemctl suspend-then-hi
 assert_command hibernate 'rg-power-menu --systemctl hibernate'
 assert_command reboot 'rg-power-menu --systemctl reboot'
 assert_command poweroff 'rg-power-menu --systemctl poweroff'
-rg -Fq 'pkexec "$SYSTEMCTL"' "$script" \
+rg -Fq '"$PKEXEC" "$SYSTEMCTL"' "$script" \
     || fail "systemctl fallback must use pkexec"
 
 missing_profiles="$(RG_POWER_MENU_PROFILE=/tmp/rg-power-menu-missing "$script" --print-menu profiles)"

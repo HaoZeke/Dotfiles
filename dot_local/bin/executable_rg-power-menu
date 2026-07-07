@@ -4,10 +4,12 @@
 set -euo pipefail
 
 ROFI_BIN=${RG_POWER_MENU_ROFI:-rofi}
-LOCK="$HOME/.local/bin/rg-lockscreen"
-CAFFEINE="$HOME/.local/bin/rg-caffeine"
-PROFILE="$HOME/.local/bin/rg-x1gen11-profile"
-AIRPLANE="$HOME/.local/bin/rg-airplane"
+LOCK="${RG_POWER_MENU_LOCK:-$HOME/.local/bin/rg-lockscreen}"
+CAFFEINE="${RG_POWER_MENU_CAFFEINE:-$HOME/.local/bin/rg-caffeine}"
+PROFILE="${RG_POWER_MENU_PROFILE:-$HOME/.local/bin/rg-x1gen11-profile}"
+AIRPLANE="${RG_POWER_MENU_AIRPLANE:-$HOME/.local/bin/rg-airplane}"
+SYSTEMCTL="${RG_POWER_MENU_SYSTEMCTL:-systemctl}"
+PKEXEC="${RG_POWER_MENU_PKEXEC:-pkexec}"
 
 usage() {
     cat <<'EOF'
@@ -31,12 +33,16 @@ print_menu() {
             "Boost toggle" \
             "Focus toggle" \
             "Awake 2h" \
-            "Awake off" \
+            "Awake off"
+        if [ -x "$PROFILE" ]; then
+            printf '%s\n' \
             "Profile: balanced" \
             "Profile: focus" \
             "Profile: travel" \
             "Profile: build-heavy" \
-            "Profile: docked-office" \
+                "Profile: docked-office"
+        fi
+        printf '%s\n' \
             "Airplane toggle" \
             "Bluetooth toggle" \
             "Back"
@@ -103,11 +109,11 @@ command_for_key() {
     airplane-toggle) printf '%q toggle\n' "$AIRPLANE" ;;
     bluetooth-toggle) printf '%q bluetooth toggle\n' "$AIRPLANE" ;;
     lock) printf '%q --daemonize\n' "$LOCK" ;;
-    suspend) printf '%q --prepare-sleep && systemctl suspend\n' "$LOCK" ;;
-    suspend-then-hibernate) printf '%q --prepare-sleep && systemctl suspend-then-hibernate\n' "$LOCK" ;;
-    hibernate) printf '%q --prepare-sleep && systemctl hibernate\n' "$LOCK" ;;
-    reboot) printf 'systemctl reboot\n' ;;
-    poweroff) printf 'systemctl poweroff\n' ;;
+    suspend) printf '%q --prepare-sleep && %q --systemctl suspend\n' "$LOCK" "$0" ;;
+    suspend-then-hibernate) printf '%q --prepare-sleep && %q --systemctl suspend-then-hibernate\n' "$LOCK" "$0" ;;
+    hibernate) printf '%q --prepare-sleep && %q --systemctl hibernate\n' "$LOCK" "$0" ;;
+    reboot) printf '%q --systemctl reboot\n' "$0" ;;
+    poweroff) printf '%q --systemctl poweroff\n' "$0" ;;
     exit-sway) printf 'swaymsg exit\n' ;;
     *)
         printf 'rg-power-menu: unknown action key: %s\n' "$1" >&2
@@ -138,6 +144,18 @@ run_key() {
     bash -lc "$cmd"
 }
 
+run_systemctl() {
+    local verb=$1
+    if "$SYSTEMCTL" "$verb"; then
+        return 0
+    fi
+    if command -v "$PKEXEC" >/dev/null 2>&1; then
+        "$PKEXEC" "$SYSTEMCTL" "$verb"
+        return $?
+    fi
+    return 1
+}
+
 main() {
     local menu=top selection key
     case "${1:-}" in
@@ -150,6 +168,11 @@ main() {
         [ -n "${2:-}" ] || { usage >&2; exit 2; }
         command_for_key "$2"
         exit 0
+        ;;
+    --systemctl)
+        [ -n "${2:-}" ] || { usage >&2; exit 2; }
+        run_systemctl "$2"
+        exit $?
         ;;
     -h|--help)
         usage

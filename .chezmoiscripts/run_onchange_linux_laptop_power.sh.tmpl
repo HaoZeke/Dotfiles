@@ -7,8 +7,8 @@
 #   * BFQ on NVMe/SATA for interactive latency under I/O pressure
 #   * fast suspend for everyday lid/power-key sleep, with explicit hibernate
 #     left available for long carry/travel
-#   * TLP with Intel + ThinkPad charge thresholds (75/80) to extend battery
-#     health on a laptop that already shows 81% design capacity.
+#   * TLP with Intel + ThinkPad charge thresholds (90/98) for useful runtime
+#     while avoiding the harshest always-at-100% storage state.
 #
 # Separate from the memory-tuning script so a desktop host (no battery,
 # no lid) can disable just this part via chezmoi data.
@@ -792,10 +792,10 @@ SATA_LINKPWR_ON_BAT=min_power
 # USB autosuspend with keyboard/mouse exclusions handled by TLPs defaults.
 USB_AUTOSUSPEND=1
 
-# ThinkPad battery care: charge 75 -> 80 on BAT0 to slow degradation.
-# Design is 3956 mAh but last-full already dropped to 3235 mAh (81%).
-START_CHARGE_THRESH_BAT0=75
-STOP_CHARGE_THRESH_BAT0=80
+# ThinkPad battery care: charge 90 -> 98 on BAT0. This keeps near-full runtime
+# without holding the pack at a constant 100%.
+START_CHARGE_THRESH_BAT0=90
+STOP_CHARGE_THRESH_BAT0=98
 RESTORE_THRESHOLDS_ON_BAT=1
 '
 
