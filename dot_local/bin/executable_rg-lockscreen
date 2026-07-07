@@ -137,7 +137,7 @@ wait_for_swaylock_ready() {
         if [ -n "$pid" ]; then
             wchan="$(cat "/proc/$pid/wchan" 2>/dev/null || true)"
             case "$wchan" in
-                *select*|*poll*|*epoll*) return 0 ;;
+                *select*|*poll*) return 0 ;;
             esac
         fi
         sleep 0.05
