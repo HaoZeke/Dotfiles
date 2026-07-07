@@ -60,9 +60,15 @@ up(){
     cg="$(discover_cgroup)" || die "haozeke tailscaled not running (no '${SVC_MATCH}' process); start tailscale-haozeke.service first"
     level="$(awk -F/ '{print NF}' <<<"$cg")"
 
-    # (1) mark the daemon's egress packets so the kernel re-evaluates routing.
+    # (1) Mark the daemon's egress packets so the kernel re-evaluates routing.
+    # Best-effort: on kernels / nft builds where the cgroupv2 socket match will
+    # not load, DO NOT abort -- fall through to the /32 peer backstops below,
+    # which are the reliable, cache-immune carve-out (a peer /32 in main beats
+    # wg-quick's 0/0 via its suppress_prefixlength 0 rule). Aborting here left the
+    # tunnel un-carved and sent rg.terra / rg.surf traffic out the US exit.
+    local nft_ok=1
     nft list table inet "${NFT_TABLE}" >/dev/null 2>&1 && nft delete table inet "${NFT_TABLE}" 2>/dev/null || true
-    nft -f - <<EOF || die "nft load failed (cgroupv2 match unsupported?)"
+    if ! nft -f - <<EOF 2>/dev/null
 table inet ${NFT_TABLE} {
     chain out {
         type route hook output priority mangle; policy accept;
@@ -70,6 +76,10 @@ table inet ${NFT_TABLE} {
     }
 }
 EOF
+    then
+        nft_ok=0
+        printf 'rg-haozeke-carveout: nft cgroup-mark unavailable; relying on /32 peer backstops\n' >&2
+    fi
 
     # (2) IPv4: route the mark via the LAN default, bypassing the wg tunnel table.
     read -r gw dev <<<"$(lan_default4)"
