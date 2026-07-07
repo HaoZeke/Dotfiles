@@ -5,8 +5,8 @@
 # thresholds, TLP, or lid-handler changes.
 #
 #   * BFQ on NVMe/SATA for interactive latency under I/O pressure
-#   * direct hibernate for deliberate sleep paths; firmware only offers
-#     s2idle for suspend, and hibernate is the reliable state-preserving path
+#   * fast suspend for everyday lid/power-key sleep, with explicit hibernate
+#     left available for long carry/travel
 #   * TLP with Intel + ThinkPad charge thresholds (75/80) to extend battery
 #     health on a laptop that already shows 81% design capacity.
 #
@@ -435,14 +435,9 @@ volume /btrfs
 '
 
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Policy: on AC the laptop never goes to sleep on its own. Lid close,
-# idle timeout, Fn+Suspend, Fn+Hibernate -- all ignored. The only
-# sanctioned sleep paths on AC are the power button (HandlePowerKey
-# below) and the explicit sway keybindings, all of which hibernate.
-#
-# On battery, lid-close hibernates directly. The kernel exposes only
-# s2idle for suspend on this host, so mem sleep is not a reliable
-# recovery boundary.
+# Policy: lid close and the physical power key use fast suspend. This keeps
+# daily wake/unlock latency low and matches the rg.surf operating model.
+# Explicit hibernate remains available from the sway ThinkPad binding.
 #
 # Idle suspend is disabled here unconditionally (IdleAction=ignore).
 # Battery idle hibernation is moved entirely into user-space so it
@@ -450,26 +445,25 @@ LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_
 # at 2700s, which checks /sys/class/power_supply/A{C,DP}*/online and
 # hibernates only when unplugged.
 #
-# HandlePowerKey hibernates so a press of the physical power button on
-# either power source is the manual sleep trigger.
 [Login]
-HandleLidSwitch=hibernate
+HandleLidSwitch=suspend
 HandleLidSwitchDocked=ignore
-HandleLidSwitchExternalPower=ignore
+HandleLidSwitchExternalPower=suspend
 IdleAction=ignore
 IdleActionSec=45min
-HandlePowerKey=hibernate
-HandleSuspendKey=ignore
-HandleHibernateKey=ignore
+HandlePowerKey=suspend
+HandleSuspendKey=suspend
+HandleHibernateKey=hibernate
 '
 
 SLEEP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# Hibernate is the only enabled sleep state on rgx1gen11. Plain suspend
-# writes "mem", which maps to s2idle on this firmware.
+# Fast suspend is the default sleep path. Hibernate remains enabled for explicit
+# long-carry commands and for suspend-then-hibernate callers.
 [Sleep]
-AllowSuspend=no
-AllowSuspendThenHibernate=no
+AllowSuspend=yes
+AllowSuspendThenHibernate=yes
 AllowHybridSleep=no
+HibernateDelaySec=180min
 '
 
 JOURNALD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -1019,7 +1013,7 @@ MSG
     # user the lid behavior will be live after the next reboot.
     echo "chezmoi: logind drop-in updated."
     echo "  Live until next reboot: the active HandleLidSwitch value remains in effect."
-    echo "  Effective after reboot: HandleLidSwitch=hibernate."
+    echo "  Effective after reboot: HandleLidSwitch=suspend."
     echo "  If you need it live immediately, run 'sudo systemctl restart systemd-logind'"
     echo "  manually and accept the risk that sway sessions can drop."
 fi
