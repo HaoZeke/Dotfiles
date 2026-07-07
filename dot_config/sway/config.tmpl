@@ -133,15 +133,7 @@ default_floating_border pixel 2
     # Lock screen
     # After scu-enable-now swayidle.target
     bindsym --no-repeat $mod+Escape exec '$HOME/.local/bin/rg-lockscreen --daemonize'
-
-{{- if eq .chezmoi.hostname "rgx1gen11" }}
-    # Lock + hibernate. Plain suspend uses s2idle on this host.
-    bindsym --no-repeat $mod+Shift+Escape exec '$HOME/.local/bin/rg-lockscreen && systemctl hibernate'
-{{- else }}
-    # Lock + suspend-then-hibernate (auto-hibernates after HibernateDelaySec
-    # configured in /etc/systemd/sleep.conf.d/50-hibernate.conf).
-    bindsym --no-repeat $mod+Shift+Escape exec '$HOME/.local/bin/rg-lockscreen && systemctl suspend-then-hibernate'
-{{- end }}
+    bindsym --no-repeat $mod+Shift+Escape exec '$HOME/.local/bin/rg-power-menu'
 
     # Session modes:
     #   caffeine: block idle sleep, keep lock behavior

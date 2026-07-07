@@ -98,6 +98,7 @@ if command -v shellcheck >/dev/null 2>&1; then
         "$REPO/dot_local/bin/executable_get_patched_font.sh" \
         "$REPO/dot_local/bin/executable_ghcoauthby" \
         "$REPO/dot_local/bin/executable_rg-lockscreen" \
+        "$REPO/dot_local/bin/executable_rg-power-menu" \
         "$REPO/dot_local/bin/executable_rg-vale-project-vocab" \
         "$REPO/dot_local/bin/executable_rg-vale-project-vocab-selftest" \
         "$REPO/dot_local/bin/executable_vault-tools" \

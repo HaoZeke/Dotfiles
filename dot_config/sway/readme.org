@@ -69,8 +69,22 @@ Mouse actions on that block:
 | =$mod+Shift+/= | open the desktop control/help palette |
 | =$mod+Ctrl+F12= | re-arm Sway pointer, touchpad, and keyboard input |
 | =$mod+Escape= | lock now |
-| =$mod+Shift+Escape= | lock, then hibernate on rgx1gen11; suspend-then-hibernate elsewhere |
+| =$mod+Shift+Escape= | open the rofi power/profile menu |
 | =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
+
+* Power Menu
+
+=~/.local/bin/rg-power-menu= opens on =$mod+Shift+Escape=. It has two
+submenus:
+
+- =Profiles / modes=: =AWAKE=, =BOOST=, =FOCUS=, timed awake, profile presets,
+  airplane mode, and Bluetooth.
+- =Power / session=: lock, suspend, suspend-then-hibernate, hibernate, reboot,
+  power off, and exit sway.
+
+The suspend and hibernate entries run =~/.local/bin/rg-lockscreen
+--prepare-sleep= before calling =systemctl= so the sleep transition captures a
+locked screen. Reboot, power off, and sway exit ask for confirmation in rofi.
 
 * Workspaces
 
@@ -164,6 +178,7 @@ The current behavior is wired primarily through:
 - =~/.config/systemd/user/wob.service=
 - =~/.config/i3rust/i3_top.toml=
 - =~/.local/bin/rg-caffeine=
+- =~/.local/bin/rg-power-menu=
 - =~/.local/bin/rg-desktop-help=
 - =~/.local/bin/rg-tmux-role=
 - =~/.local/bin/rg-wob-bridge=

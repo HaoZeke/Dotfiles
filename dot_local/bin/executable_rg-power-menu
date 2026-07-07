@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-power-menu).
+
+set -euo pipefail
+
+ROFI_BIN=${RG_POWER_MENU_ROFI:-rofi}
+LOCK="$HOME/.local/bin/rg-lockscreen"
+CAFFEINE="$HOME/.local/bin/rg-caffeine"
+PROFILE="$HOME/.local/bin/rg-x1gen11-profile"
+AIRPLANE="$HOME/.local/bin/rg-airplane"
+
+usage() {
+    cat <<'EOF'
+usage: rg-power-menu [--print-menu top|profiles|power] [--print-command KEY]
+
+Open the rofi power/profile menu. The print options are for selftests and do
+not execute any action.
+EOF
+}
+
+print_menu() {
+    case "${1:-top}" in
+    top)
+        printf '%s\n' \
+            "Profiles / modes" \
+            "Power / session"
+        ;;
+    profiles)
+        printf '%s\n' \
+            "Awake toggle" \
+            "Boost toggle" \
+            "Focus toggle" \
+            "Awake 2h" \
+            "Awake off" \
+            "Profile: balanced" \
+            "Profile: focus" \
+            "Profile: travel" \
+            "Profile: build-heavy" \
+            "Profile: docked-office" \
+            "Airplane toggle" \
+            "Bluetooth toggle" \
+            "Back"
+        ;;
+    power)
+        printf '%s\n' \
+            "Lock" \
+            "Suspend" \
+            "Suspend then hibernate" \
+            "Hibernate" \
+            "Reboot" \
+            "Power off" \
+            "Exit sway" \
+            "Back"
+        ;;
+    *)
+        printf 'rg-power-menu: unknown menu: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+}
+
+key_for_label() {
+    local menu=$1 label=$2
+    case "$menu:$label" in
+    top:"Profiles / modes") printf 'profiles\n' ;;
+    top:"Power / session") printf 'power\n' ;;
+    profiles:"Awake toggle") printf 'awake-toggle\n' ;;
+    profiles:"Boost toggle") printf 'boost-toggle\n' ;;
+    profiles:"Focus toggle") printf 'focus-toggle\n' ;;
+    profiles:"Awake 2h") printf 'awake-2h\n' ;;
+    profiles:"Awake off") printf 'awake-off\n' ;;
+    profiles:"Profile: balanced") printf 'profile-balanced\n' ;;
+    profiles:"Profile: focus") printf 'profile-focus\n' ;;
+    profiles:"Profile: travel") printf 'profile-travel\n' ;;
+    profiles:"Profile: build-heavy") printf 'profile-build-heavy\n' ;;
+    profiles:"Profile: docked-office") printf 'profile-docked-office\n' ;;
+    profiles:"Airplane toggle") printf 'airplane-toggle\n' ;;
+    profiles:"Bluetooth toggle") printf 'bluetooth-toggle\n' ;;
+    power:"Lock") printf 'lock\n' ;;
+    power:"Suspend") printf 'suspend\n' ;;
+    power:"Suspend then hibernate") printf 'suspend-then-hibernate\n' ;;
+    power:"Hibernate") printf 'hibernate\n' ;;
+    power:"Reboot") printf 'reboot\n' ;;
+    power:"Power off") printf 'poweroff\n' ;;
+    power:"Exit sway") printf 'exit-sway\n' ;;
+    *:"Back") printf 'top\n' ;;
+    *) return 1 ;;
+    esac
+}
+
+command_for_key() {
+    case "$1" in
+    awake-toggle) printf '%q toggle\n' "$CAFFEINE" ;;
+    boost-toggle) printf '%q performance-toggle\n' "$CAFFEINE" ;;
+    focus-toggle) printf '%q focus-toggle\n' "$CAFFEINE" ;;
+    awake-2h) printf '%q timed 2h\n' "$CAFFEINE" ;;
+    awake-off) printf '%q off\n' "$CAFFEINE" ;;
+    profile-balanced) printf '%q apply undocked-mixed\n' "$PROFILE" ;;
+    profile-focus) printf '%q apply focus\n' "$PROFILE" ;;
+    profile-travel) printf '%q apply travel\n' "$PROFILE" ;;
+    profile-build-heavy) printf '%q apply build-heavy\n' "$PROFILE" ;;
+    profile-docked-office) printf '%q apply docked-office\n' "$PROFILE" ;;
+    airplane-toggle) printf '%q toggle\n' "$AIRPLANE" ;;
+    bluetooth-toggle) printf '%q bluetooth toggle\n' "$AIRPLANE" ;;
+    lock) printf '%q --daemonize\n' "$LOCK" ;;
+    suspend) printf '%q --prepare-sleep && systemctl suspend\n' "$LOCK" ;;
+    suspend-then-hibernate) printf '%q --prepare-sleep && systemctl suspend-then-hibernate\n' "$LOCK" ;;
+    hibernate) printf '%q --prepare-sleep && systemctl hibernate\n' "$LOCK" ;;
+    reboot) printf 'systemctl reboot\n' ;;
+    poweroff) printf 'systemctl poweroff\n' ;;
+    exit-sway) printf 'swaymsg exit\n' ;;
+    *)
+        printf 'rg-power-menu: unknown action key: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+}
+
+choose() {
+    local prompt=$1
+    print_menu "$2" | "$ROFI_BIN" -dmenu -i -p "$prompt"
+}
+
+confirm() {
+    local label=$1 selection
+    selection="$(printf '%s\n' "No" "Yes" | "$ROFI_BIN" -dmenu -i -p "$label?")" || return 1
+    [ "$selection" = "Yes" ]
+}
+
+run_key() {
+    local key=$1 cmd
+    case "$key" in
+    reboot|poweroff|exit-sway)
+        confirm "$key" || exit 0
+        ;;
+    esac
+    cmd="$(command_for_key "$key")"
+    bash -lc "$cmd"
+}
+
+main() {
+    local menu=top selection key
+    case "${1:-}" in
+    --print-menu)
+        [ -n "${2:-}" ] || { usage >&2; exit 2; }
+        print_menu "$2"
+        exit 0
+        ;;
+    --print-command)
+        [ -n "${2:-}" ] || { usage >&2; exit 2; }
+        command_for_key "$2"
+        exit 0
+        ;;
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    "")
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+
+    while true; do
+        selection="$(choose "rg power" "$menu")" || exit 0
+        [ -n "$selection" ] || exit 0
+        key="$(key_for_label "$menu" "$selection")" || exit 0
+        case "$key" in
+        top|profiles|power)
+            menu="$key"
+            ;;
+        *)
+            run_key "$key"
+            exit 0
+            ;;
+        esac
+    done
+}
+
+main "$@"
