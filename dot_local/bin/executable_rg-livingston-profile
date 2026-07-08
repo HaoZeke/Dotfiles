@@ -488,7 +488,7 @@ run_slack() {
         shift
     fi
 
-    run_browser vivaldi --rg-no-default-url --start-maximized "--app=$slack_url" "$@"
+    run_browser vivaldi --rg-no-default-url "--app=$slack_url" "$@"
 }
 
 run_grok() {
@@ -499,7 +499,7 @@ run_grok() {
         shift
     fi
 
-    run_browser vivaldi --rg-no-default-url --start-maximized "--app=$grok_url" "$@"
+    run_browser vivaldi --rg-no-default-url "--app=$grok_url" "$@"
 }
 
 current_timezone() {
