@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+set -euo pipefail
+
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable terra-mail-tunnel.service >/dev/null 2>&1 || true
+
+listeners="$(ss -ltn '( sport = :1143 )' 2>/dev/null || true)"
+if ! grep -q '127\.0\.0\.1:1143' <<<"$listeners" || ! grep -q '\[::1\]:1143' <<<"$listeners"; then
+  systemctl --user restart terra-mail-tunnel.service 2>/dev/null || true
+fi
+{{- end }}

@@ -4,14 +4,15 @@ Description=DavMail Exchange gateway (%i)
 Documentation=https://davmail.sourceforge.net/
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 Type=simple
+Environment="BASE_JAVA_OPTS=-Xmx256M -Dsun.net.inetaddr.ttl=60"
 ExecStart=/usr/bin/davmail %h/.config/davmail/%i.properties
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=120
-StartLimitBurst=5
 StandardOutput=journal
 StandardError=journal
 
