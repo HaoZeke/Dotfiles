@@ -168,6 +168,24 @@ out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
     XDG_STATE_HOME="$tmp_home/.local/state" \
+    "$SCRIPT" --dry-run grok
+)
+assert_contains "$out" "--start-maximized" "grok maximized launch"
+assert_contains "$out" "--app=https://grok.com/" "grok app mode"
+assert_not_contains "$out" "about:blank" "grok fallback tab"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    "$SCRIPT" --dry-run grok https://grok.com/chat
+)
+assert_contains "$out" "--app=https://grok.com/chat" "custom grok app url"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
     RG_LIVINGSTON_PREVIOUS_TZ=Europe/Zurich \
     "$SCRIPT" --dry-run system vivaldi https://example.com
 )
