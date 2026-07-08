@@ -70,7 +70,7 @@ fi
 
 # DavMail user instances (properties from nimvault unseal / existing files)
 systemctl --user daemon-reload 2>/dev/null || true
-for inst in rog32hi queensu epfl; do
+for inst in rog32hi queensu epfl surf; do
   props="${HOME}/.config/davmail/${inst}.properties"
   if [[ -f "$props" ]]; then
     systemctl --user enable --now "davmail@${inst}.service" 2>/dev/null || \

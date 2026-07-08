@@ -252,6 +252,7 @@ dot_local/share/rg-sway-route-watcher-src/target/
 ~/.config/davmail/epfl.properties
 ~/.config/davmail/queensu.properties
 ~/.config/davmail/rog32hi.properties
+~/.config/davmail/surf.properties
 ~/.config/isyncrc
 ~/.davmail.properties
 ~/.mail/.gitattributes

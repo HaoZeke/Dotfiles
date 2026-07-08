@@ -13,3 +13,6 @@ Hostname gate: **`rgam5terra`** only applies system pieces via
 | `/etc/dovecot/ssl-cert.pem` | Public | Optional copy in `dovecot/ssl-cert.pem` |
 
 On a new Terra: `nimvault unseal` (chezmoi source) then `chezmoi apply`.
+
+DavMail user instances are enabled from sealed properties when they exist:
+`rog32hi`, `queensu`, `epfl`, and `surf`.
