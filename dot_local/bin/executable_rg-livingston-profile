@@ -33,6 +33,7 @@ Commands:
   chrome [URL]        Launch Google Chrome with an isolated Livingston profile.
   vivaldi [URL]       Launch Vivaldi with an isolated Livingston profile.
   slack [URL]         Launch Slack in a Vivaldi app window.
+  grok [URL]          Launch Grok in a Vivaldi app window.
 
 Options:
   --proxy URL      Pass URL to Chromium as --proxy-server=URL.
@@ -86,6 +87,7 @@ pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
 slack_url_default="${RG_LIVINGSTON_SLACK_URL:-https://app.slack.com/client/T061A7A7K0U}"
+grok_url_default="${RG_LIVINGSTON_GROK_URL:-https://grok.com/}"
 browser_window_width="${RG_LIVINGSTON_BROWSER_WIDTH:-1920}"
 browser_window_height="${RG_LIVINGSTON_BROWSER_HEIGHT:-1200}"
 slack_zoom_level="${RG_LIVINGSTON_SLACK_ZOOM_LEVEL:--0.5778829311823857}"
@@ -489,6 +491,17 @@ run_slack() {
     run_browser vivaldi --rg-no-default-url --start-maximized "--app=$slack_url" "$@"
 }
 
+run_grok() {
+    local grok_url="$grok_url_default"
+
+    if [ $# -gt 0 ]; then
+        grok_url="$1"
+        shift
+    fi
+
+    run_browser vivaldi --rg-no-default-url --start-maximized "--app=$grok_url" "$@"
+}
+
 current_timezone() {
     "$timedatectl_bin" show -p Timezone --value
 }
@@ -743,6 +756,9 @@ dispatch_command() {
         ;;
     slack)
         run_slack "$@"
+        ;;
+    grok)
+        run_grok "$@"
         ;;
     *)
         die "unknown command: $dispatch_cmd"

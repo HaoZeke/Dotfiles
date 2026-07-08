@@ -132,6 +132,10 @@ for_window {
       fullscreen enable
   }
 
+  [app_id="vivaldi-app.grok.com.*-Default"] {
+      fullscreen enable
+  }
+
   [app_id="vivaldi-stable" title=".*TeachxAI - Sla.* - Vivaldi$"] {
       fullscreen enable
   }
