@@ -226,14 +226,10 @@ rg -q 'Amsterdam Science Park" connection.autoconnect no' "$net_recover" \
     || fail "rgSURFLat recovery must disable Amsterdam Science Park autoconnect"
 rg -q 'ip route get 100\.119\.130\.84' "$net_recover" \
     || fail "rgSURFLat recovery must verify the local Terra route without contacting Terra"
-rg -q 'tailscale status --json' "$net_heal" \
-    || fail "periodic network heal helper must inspect Tailscale peer transport endpoints"
-rg -q 'controlplane\.tailscale\.com log\.tailscale\.com login\.tailscale\.com' "$net_heal" \
-    || fail "periodic network heal helper must carve Tailscale control hosts off the US egress"
-rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal" \
-    || fail "periodic network heal helper must route Tailscale underlay endpoints via the LAN gateway"
-rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \
-    || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
+! rg -q 'tailscale_underlay|controlplane\.tailscale\.com|log\.tailscale\.com|login\.tailscale\.com' "$net_heal" \
+    || fail "periodic network heal helper must leave x.ai tailnet transport on the US egress"
+! rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal" \
+    || fail "periodic network heal helper must not route x.ai tailnet public endpoints via the LAN gateway"
 rg -q 'ensure_hosts_record 104\.18\.19\.80 api\.x\.ai' "$net_heal" \
     || fail "periodic network heal helper must pin api.x.ai without restarting DNS"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
