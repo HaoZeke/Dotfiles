@@ -80,5 +80,8 @@ for inst in rog32hi queensu epfl surf; do
   fi
 done
 
+systemctl --user enable --now rgsurf-mbsync.timer 2>/dev/null || \
+  echo "chezmoi: enable rgsurf-mbsync.timer failed (unit or mbsync missing?)" >&2
+
 echo "chezmoi: terra mail stack apply done"
 {{- end }}

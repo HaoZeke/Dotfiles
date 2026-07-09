@@ -1,0 +1,11 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Sync SURF mail archive via mbsync
+Wants=network-online.target davmail@surf.service
+After=network-online.target davmail@surf.service
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/test -f %h/.config/isyncrc
+ExecStart=/usr/bin/flock -n %t/rgsurf-mbsync.lock /usr/bin/mbsync rgsurf
+{{- end -}}
