@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Managed by chezmoi. Security hardening: auto-logout idle root/privileged
+# shells after a fixed idle window (bash/zsh TMOUT). Applied on every machine.
+# run_onchange: re-applies only when this script's rendered content changes.
+#
+# Scope guard is baked into the installed snippet itself: it acts only for
+# uid 0 and only in interactive shells, and sets TMOUT read-only so it cannot
+# be silently unset within a session. It never touches non-root user shells.
+
+set -u
+
+TIMEOUT=1800   # seconds (30 min)
+
+SNIP="# security (chezmoi): auto-logout idle root shells after ${TIMEOUT}s inactivity
+if [ \"\$(id -u)\" = \"0\" ]; then case \"\$-\" in *i*) if [ -z \"\${TMOUT:-}\" ]; then export TMOUT=${TIMEOUT}; readonly TMOUT; fi ;; esac; fi"
+
+MARKER="auto-logout idle root shells"
+
+# Elevation: root writes directly, otherwise sudo; if neither works, skip
+# cleanly so `chezmoi apply` never fails on a box without sudo.
+if [ "$(id -u)" = "0" ]; then
+  SUDO=""
+elif command -v sudo >/dev/null 2>&1; then
+  SUDO="sudo"
+else
+  echo "harden-root-shell-idle-timeout: no root and no sudo; skipping" >&2
+  exit 0
+fi
+
+write_file() {  # overwrite a dedicated drop-in
+  printf '%s\n' "$SNIP" | $SUDO tee "$1" >/dev/null && $SUDO chmod 644 "$1"
+}
+
+append_guarded() {  # append once to a shared init file, keyed by MARKER
+  local f="$1"
+  $SUDO test -f "$f" 2>/dev/null || return 0
+  $SUDO grep -q "$MARKER" "$f" 2>/dev/null && return 0
+  printf '\n%s\n' "$SNIP" | $SUDO tee -a "$f" >/dev/null
+}
+
+{{ if eq .chezmoi.os "linux" -}}
+# Login root shells (su -, sudo -i) read /etc/profile.d; non-login interactive
+# root shells (sudo su) read /etc/bash.bashrc.
+write_file /etc/profile.d/00-root-tmout.sh
+append_guarded /etc/bash.bashrc
+{{ else if eq .chezmoi.os "darwin" -}}
+# macOS: root's interactive shell is usually zsh (also cover bash/login).
+append_guarded /etc/zshrc
+append_guarded /etc/bashrc
+append_guarded /etc/profile
+{{ end -}}
+
+echo "harden-root-shell-idle-timeout: root shells idle-timeout = ${TIMEOUT}s"
