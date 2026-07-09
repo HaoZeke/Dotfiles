@@ -50,7 +50,7 @@ json_get() {
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-mkdir -p "$tmp_dir/Default" "$tmp_dir/Profile 1" "$tmp_dir/Profile 2" "$tmp_dir/Profile 3"
+mkdir -p "$tmp_dir/Default" "$tmp_dir/Profile 1" "$tmp_dir/Profile 2" "$tmp_dir/Profile 3" "$tmp_dir/Profile 4"
 
 cat >"$tmp_dir/Default/Preferences" <<'JSON'
 {
@@ -151,11 +151,15 @@ cat >"$tmp_dir/Profile 3/Preferences" <<'JSON'
 }
 JSON
 
+compact_noop='{"profile":{"name":"CompactNoop"},"extensions":{"settings":{"notes":{"manifest":{"name":"Notes"},"preferences":{"color":"blue"}}}}}'
+printf '%s\n' "$compact_noop" >"$tmp_dir/Profile 4/Preferences"
+
 out="$("$SCRIPT" --root "$tmp_dir" --dry-run)"
 assert_contains "$out" "Person 1" "dry-run fixed proxy profile"
 assert_contains "$out" "NLme" "dry-run rules profile"
 assert_not_contains "$out" "would-update	Direct" "dry-run direct proxy profile"
 assert_not_contains "$out" "would-update	NoProxy" "dry-run no-proxy profile"
+assert_not_contains "$out" "would-update	CompactNoop" "dry-run compact no-op profile"
 
 "$SCRIPT" --root "$tmp_dir" >/tmp/rg-vivaldi-surf-bypass-selftest.out
 out="$(cat /tmp/rg-vivaldi-surf-bypass-selftest.out)"
@@ -164,6 +168,7 @@ assert_contains "$out" "updated" "update output"
 default_prefs="$tmp_dir/Default/Preferences"
 profile1_prefs="$tmp_dir/Profile 1/Preferences"
 profile2_prefs="$tmp_dir/Profile 2/Preferences"
+profile4_prefs="$tmp_dir/Profile 4/Preferences"
 
 bypass="$(json_get "$default_prefs" '.extensions.settings.proton.preferences.proxy.bypass_list')"
 assert_contains "$bypass" "*.ia.surf.nl" "ia.surf wildcard in internal bypass"
@@ -188,6 +193,12 @@ assert_contains "$rules" "surfsara.nl" "surfsara apex in rules bypass"
 
 [ "$(json_get "$profile2_prefs" '.extensions.settings.direct.preferences.proxy.mode')" = direct ] || {
     echo "FAIL: direct proxy profile was changed unexpectedly" >&2
+    exit 1
+}
+
+[ "$(cat "$profile4_prefs")" = "$compact_noop" ] || {
+    echo "FAIL: compact no-op profile was rewritten" >&2
+    cat "$profile4_prefs" >&2
     exit 1
 }
 

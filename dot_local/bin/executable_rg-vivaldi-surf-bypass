@@ -132,29 +132,36 @@ profile_name() {
 }
 
 patch_preferences() {
-    local prefs="$1" tmp name
+    local prefs="$1" tmp normalized name
 
     tmp="$(mktemp)"
-    if ! jq --argjson surf_bypass "$surf_bypass_json" "$jq_filter" "$prefs" >"$tmp"; then
-        rm -f "$tmp"
+    normalized="$(mktemp)"
+    if ! jq -c --argjson surf_bypass "$surf_bypass_json" "$jq_filter" "$prefs" >"$tmp"; then
+        rm -f "$tmp" "$normalized"
+        echo "rg-vivaldi-surf-bypass: invalid JSON: $prefs" >&2
+        return 1
+    fi
+    if ! jq -c '.' "$prefs" >"$normalized"; then
+        rm -f "$tmp" "$normalized"
         echo "rg-vivaldi-surf-bypass: invalid JSON: $prefs" >&2
         return 1
     fi
 
     name="$(profile_name "$prefs")"
-    if cmp -s "$prefs" "$tmp"; then
-        rm -f "$tmp"
+    if cmp -s "$normalized" "$tmp"; then
+        rm -f "$tmp" "$normalized"
         printf 'already-ok\t%s\t%s\n' "$name" "$prefs"
         return 0
     fi
 
     if [ "$dry_run" -eq 1 ]; then
-        rm -f "$tmp"
+        rm -f "$tmp" "$normalized"
         printf 'would-update\t%s\t%s\n' "$name" "$prefs"
         return 0
     fi
 
     mv "$tmp" "$prefs"
+    rm -f "$normalized"
     printf 'updated\t%s\t%s\n' "$name" "$prefs"
 }
 
