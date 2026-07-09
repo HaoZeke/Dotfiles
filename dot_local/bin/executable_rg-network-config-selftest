@@ -210,6 +210,20 @@ rg -q 'https://api.x.ai/v1/models' "$net_recover" \
     || fail "network recovery helper must probe the x.ai API path"
 rg -q 'systemctl restart rg-us-egress-guard.timer' "$net_recover" \
     || fail "network recovery helper must leave the periodic guard active"
+rg -q 'recover_rgx1gen11()' "$net_recover" \
+    || fail "network recovery helper must keep rgx1gen11 recovery isolated"
+rg -q 'recover_rgsurflat()' "$net_recover" \
+    || fail "network recovery helper must provide rgSURFLat recovery"
+rg -F -q 'rgSURFLat)' "$net_recover" \
+    || fail "network recovery helper must dispatch rgSURFLat by hostname"
+rg -F -q 'rgam5terra|rg.terra|terra*)' "$net_recover" \
+    || fail "network recovery helper must not mutate Terra hosts"
+rg -q 'rg-eduvpn-ensure.service' "$net_recover" \
+    || fail "rgSURFLat recovery must include the managed eduVPN ensure service"
+rg -q 'Amsterdam Science Park" connection.autoconnect no' "$net_recover" \
+    || fail "rgSURFLat recovery must disable Amsterdam Science Park autoconnect"
+rg -q 'ip route get 100\.119\.130\.84' "$net_recover" \
+    || fail "rgSURFLat recovery must verify the local Terra route without contacting Terra"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
