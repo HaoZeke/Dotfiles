@@ -35,6 +35,7 @@ fix_nm_ctrld="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-networkman
 profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
 us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
 net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
+net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
 net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
 us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
@@ -50,6 +51,7 @@ test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$net_recover" || fail "missing one-shot network recovery helper"
+test -r "$net_heal" || fail "missing periodic network heal helper"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
@@ -224,6 +226,14 @@ rg -q 'Amsterdam Science Park" connection.autoconnect no' "$net_recover" \
     || fail "rgSURFLat recovery must disable Amsterdam Science Park autoconnect"
 rg -q 'ip route get 100\.119\.130\.84' "$net_recover" \
     || fail "rgSURFLat recovery must verify the local Terra route without contacting Terra"
+rg -q 'tailscale status --json' "$net_heal" \
+    || fail "periodic network heal helper must inspect Tailscale peer transport endpoints"
+rg -q 'controlplane\.tailscale\.com log\.tailscale\.com login\.tailscale\.com' "$net_heal" \
+    || fail "periodic network heal helper must carve Tailscale control hosts off the US egress"
+rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal" \
+    || fail "periodic network heal helper must route Tailscale underlay endpoints via the LAN gateway"
+rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \
+    || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
