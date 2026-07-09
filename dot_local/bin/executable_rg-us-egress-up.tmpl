@@ -296,7 +296,7 @@ tmp_conf="$(mktemp)"
 conf_mtu="$(awk -F= '/^[[:space:]]*MTU[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' "$conf")"
 egress_mtu="${RG_US_EGRESS_MTU:-${conf_mtu:-1280}}"
 awk -v mtu="$egress_mtu" '
-    BEGIN { injected = 0 }
+    BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
     function inject_hooks() {
         if (injected == 0) {
             print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
@@ -306,12 +306,19 @@ awk -v mtu="$egress_mtu" '
             injected = 1
         }
     }
+    function finish_peer() {
+        if (peer_seen == 1 && keepalive_seen == 0) {
+            print "PersistentKeepalive = 25"
+        }
+    }
     /^[[:space:]]*DNS[[:space:]]*=/ { next }
     /^[[:space:]]*MTU[[:space:]]*=/ { next }
+    /^[[:space:]]*PersistentKeepalive[[:space:]]*=/ { keepalive_seen = 1; print "PersistentKeepalive = 25"; next }
     /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
-    /^[[:space:]]*\[Peer\][[:space:]]*$/ { inject_hooks() }
+    /^[[:space:]]*\[Peer\][[:space:]]*$/ { finish_peer(); peer_seen = 1; keepalive_seen = 0; inject_hooks() }
+    /^[[:space:]]*\[/ { finish_peer(); peer_seen = 0; keepalive_seen = 0 }
     { print }
-    END { inject_hooks() }
+    END { finish_peer(); inject_hooks() }
 ' "$conf" >"$tmp_conf"
 install -m 0600 "$tmp_conf" "$runtime_conf"
 

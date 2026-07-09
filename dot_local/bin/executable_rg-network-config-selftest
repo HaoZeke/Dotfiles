@@ -274,6 +274,8 @@ rg -F -q 'systemctl start "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not start WireGuard under systemd ownership"
 rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_up" \
     || fail "US egress helper does not verify the WireGuard unit remains active"
+rg -q 'PersistentKeepalive = 25' "$us_egress_up" \
+    || fail "US egress helper must keep the Houston WireGuard NAT binding warm"
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"
 rg -q 'disable --now rg-us-egress-watch.service rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
