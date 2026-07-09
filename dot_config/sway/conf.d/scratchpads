@@ -25,7 +25,7 @@ for_window [app_id="subFloat"] {
 }
 bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || $start_sf, $sf_pos
 
-# Fractal has no tray mode; keep it alive in the scratchpad for notifications.
+# Fractal has no tray mode; keep the interactive window easy to summon.
 for_window [app_id="org.gnome.Fractal"] {
     move to scratchpad
     floating enable

@@ -1,0 +1,17 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-matrix-notifier.service).
+
+[Unit]
+Description=Matrix desktop notifier
+After=graphical-session.target network-online.target dunst.service
+PartOf=sway-session.target
+Wants=dunst.service
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/rg-matrix-notifier run
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=sway-session.target

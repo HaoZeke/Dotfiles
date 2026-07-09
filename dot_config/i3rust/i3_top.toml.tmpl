@@ -33,12 +33,15 @@ format = "$1m"
 
 [[block]]
 block = "custom"
-command = "~/.local/bin/rg-fractal-toggle status-json"
+command = "~/.local/bin/rg-matrix-notifier status-json"
 json = true
 interval = 30
 [[block.click]]
 button = "left"
 cmd = "~/.local/bin/rg-fractal-toggle toggle"
+[[block.click]]
+button = "right"
+cmd = "systemctl --user restart rg-matrix-notifier.service"
 
 [[block]]
 block = "custom"

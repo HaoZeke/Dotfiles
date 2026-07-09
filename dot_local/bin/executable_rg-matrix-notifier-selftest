@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-matrix-notifier-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+src="$repo/dot_local/share/rg-matrix-notifier-src"
+unit="$repo/dot_config/systemd/user/rg-matrix-notifier.service"
+i3top="$repo/dot_config/i3rust/i3_top.toml.tmpl"
+scratchpads="$repo/dot_config/sway/conf.d/scratchpads"
+config="$repo/dot_config/rg-matrix-notifier/config.toml"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *)
+            printf 'FAIL: missing %s: %s\n' "$label" "$needle" >&2
+            printf '%s\n' "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+assert_not_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*)
+            printf 'FAIL: unexpected %s: %s\n' "$label" "$needle" >&2
+            printf '%s\n' "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+test -r "$src/Cargo.toml" || fail "missing rg-matrix-notifier Cargo.toml"
+test -r "$src/main.rs" || fail "missing rg-matrix-notifier main.rs"
+test -r "$unit" || fail "missing rg-matrix-notifier.service"
+test -r "$i3top" || fail "missing i3status-rs top config"
+test -r "$scratchpads" || fail "missing scratchpad config"
+test -r "$config" || fail "missing rg-matrix-notifier config"
+
+rg -q 'PartOf=sway-session.target' "$unit" \
+    || fail "notifier must stop with the Sway session"
+rg -q 'WantedBy=sway-session.target' "$unit" \
+    || fail "notifier must be wanted by the Sway session"
+rg -q 'rg-matrix-notifier status-json' "$i3top" \
+    || fail "top bar must read Matrix notifier status"
+rg -q 'rg-fractal-toggle toggle' "$i3top" \
+    || fail "top bar click should still open Fractal UI"
+rg -q 'name = "rg-matrix-notifier"' "$src/Cargo.toml" \
+    || fail "crate must build rg-matrix-notifier"
+rg -q 'serde_json' "$src/Cargo.toml" \
+    || fail "crate must use structured JSON handling"
+rg -q 'ureq' "$src/Cargo.toml" \
+    || fail "crate must own Matrix sync HTTP"
+rg -q 'access_token_command' "$config" \
+    || fail "config must use an external access token provider"
+if rg -q '^access_token\s*=' "$config"; then
+    fail "config must not contain a raw access token"
+fi
+if rg -q 'keep it alive.*notifications' "$scratchpads"; then
+    fail "scratchpad config must not treat Fractal as the notification backend"
+fi
+
+script="${RG_MATRIX_NOTIFIER_BIN:-}"
+if [ -z "$script" ]; then
+    printf 'ok\n'
+    exit 0
+fi
+test -x "$script" || fail "RG_MATRIX_NOTIFIER_BIN is not executable: $script"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+sink="$tmpdir/sink"
+cat >"$sink" <<'SH'
+#!/usr/bin/env bash
+cat >>"$RG_MATRIX_NOTIFIER_TEST_LOG"
+printf '\n' >>"$RG_MATRIX_NOTIFIER_TEST_LOG"
+SH
+chmod +x "$sink"
+
+config="$tmpdir/config.toml"
+cat >"$config" <<EOF
+user_id = "@me:example.org"
+body_max_chars = 18
+
+[sink]
+backend = "command"
+command = ["$sink"]
+EOF
+
+fixture="$tmpdir/sync.json"
+cat >"$fixture" <<'JSON'
+{
+  "next_batch": "s456",
+  "rooms": {
+    "join": {
+      "!room:example.org": {
+        "state": {
+          "events": [
+            {
+              "type": "m.room.name",
+              "content": {"name": "Ops Room"}
+            }
+          ]
+        },
+        "timeline": {
+          "events": [
+            {
+              "type": "m.room.message",
+              "event_id": "$own",
+              "sender": "@me:example.org",
+              "origin_server_ts": 1,
+              "content": {"msgtype": "m.text", "body": "self message"}
+            },
+            {
+              "type": "m.room.message",
+              "event_id": "$other",
+              "sender": "@alice:example.org",
+              "origin_server_ts": 2,
+              "content": {"msgtype": "m.text", "body": "hello from a backend agnostic notifier"}
+            },
+            {
+              "type": "m.room.encrypted",
+              "event_id": "$secret",
+              "sender": "@bob:example.org",
+              "origin_server_ts": 3,
+              "content": {}
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+JSON
+
+log="$tmpdir/events.jsonl"
+RG_MATRIX_NOTIFIER_TEST_LOG="$log" \
+    "$script" --config "$config" --state-dir "$tmpdir/state" process-sync "$fixture"
+
+events=$(cat "$log")
+assert_contains "$events" '"event_id":"$other"' "message event"
+assert_contains "$events" '"room_name":"Ops Room"' "room name"
+assert_contains "$events" '"body":"hello from a backe"' "body truncation"
+assert_contains "$events" '"backend":"matrix"' "normalized backend marker"
+assert_contains "$events" '"event_id":"$secret"' "encrypted event"
+assert_contains "$events" '"body":"Encrypted Matrix message"' "encrypted placeholder"
+assert_not_contains "$events" '"event_id":"$own"' "own message"
+
+RG_MATRIX_NOTIFIER_TEST_LOG="$log" \
+    "$script" --config "$config" --state-dir "$tmpdir/state" process-sync "$fixture"
+lines=$(wc -l <"$log")
+[ "$lines" -eq 2 ] || fail "dedup should keep command sink at two emitted events, got $lines lines"
+
+status=$("$script" --config "$config" --state-dir "$tmpdir/state" status-json)
+assert_contains "$status" '"state":"Good"' "status after sync"
+assert_contains "$status" '"short_text":"Mx"' "status short text"
+
+printf 'ok\n'

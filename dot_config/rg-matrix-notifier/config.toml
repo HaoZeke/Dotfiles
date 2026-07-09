@@ -1,0 +1,13 @@
+user_id = ""
+homeserver = ""
+body_max_chars = 160
+timeout_ms = 30000
+retry_seconds = 30
+sync_limit = 20
+
+[auth]
+access_token_command = ["pass", "show", "matrix/rg-matrix-notifier/access-token"]
+
+[sink]
+backend = "notify-send"
+urgency = "normal"

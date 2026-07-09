@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (ne .display_manager "none") }}
+# Rebuild rg-matrix-notifier whenever its chezmoi-managed Rust source changes.
+# hash: {{ output "bash" "-lc" (printf "find %q -maxdepth 1 -type f \\( -name 'Cargo.toml' -o -name 'Cargo.lock' -o -name '*.rs' \\) -print0 | sort -z | xargs -0 cat | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-matrix-notifier-src" .chezmoi.sourceDir)) | trim }}
+
+set -euo pipefail
+
+SRC="$HOME/.local/share/rg-matrix-notifier-src"
+
+if [ ! -d "$SRC" ]; then
+    echo "chezmoi: rg-matrix-notifier source missing at $SRC; skipping install." >&2
+    exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "chezmoi: cargo not found; skipping rg-matrix-notifier build." >&2
+    exit 0
+fi
+
+export CARGO_BUILD_JOBS=4
+
+echo "chezmoi: installing rg-matrix-notifier via cargo install ..."
+cargo install --path "$SRC" --root "$HOME/.local" --force --locked
+
+systemctl --user daemon-reload >/dev/null 2>&1 || true
+systemctl --user enable rg-matrix-notifier.service >/dev/null 2>&1 || true
+{{- end }}
