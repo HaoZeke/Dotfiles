@@ -234,6 +234,8 @@ rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal"
     || fail "periodic network heal helper must route Tailscale underlay endpoints via the LAN gateway"
 rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \
     || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
+rg -q 'ensure_hosts_record 104\.18\.19\.80 api\.x\.ai' "$net_heal" \
+    || fail "periodic network heal helper must pin api.x.ai without restarting DNS"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
@@ -315,14 +317,8 @@ rg -U -q 'forward-zone:\n    name: "\."\n    forward-addr: 127\.0\.0\.1@5354\n  
     || fail "local DNS repair helper does not keep public fallback resolvers behind Control D"
 rg -U -q 'forward-zone:\n    name: "\."\n    forward-addr: 127\.0\.0\.1@5354\n    forward-addr: 1\.1\.1\.1\n    forward-addr: 9\.9\.9\.9' "$laptop_script" \
     || fail "laptop resolver setup does not keep public fallback resolvers behind Control D"
-rg -q 'local-zone: "api\.x\.ai\." redirect' "$fix_local_dns" \
-    || fail "local DNS repair helper does not pin api.x.ai away from the weak Houston-routed edge"
-rg -q 'local-data: "api\.x\.ai\. 60 IN A 104\.18\.19\.80"' "$fix_local_dns" \
-    || fail "local DNS repair helper does not keep api.x.ai on the stable Houston-routed edge"
-rg -q 'local-zone: "api\.x\.ai\." redirect' "$laptop_script" \
-    || fail "laptop resolver setup does not pin api.x.ai away from the weak Houston-routed edge"
-rg -q 'local-data: "api\.x\.ai\. 60 IN A 104\.18\.19\.80"' "$laptop_script" \
-    || fail "laptop resolver setup does not keep api.x.ai on the stable Houston-routed edge"
+! rg -q 'local-zone: "api\.x\.ai\." redirect|local-data: "api\.x\.ai\.' "$fix_local_dns" "$laptop_script" \
+    || fail "resolver repair paths must not carry the api.x.ai pin"
 rg -q 'do-not-query-localhost: no' "$laptop_script" \
     || fail "Unbound cannot query the local Control D listener"
 rg -q 'chroot: ""' "$laptop_script" \

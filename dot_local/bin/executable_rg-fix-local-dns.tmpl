@@ -293,11 +293,6 @@ $username_line
     private-address: fe80::/10
     tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt"
 
-# Keep the x.ai API on the Cloudflare address that answers consistently from
-# the Houston egress. The route remains on the US full tunnel.
-local-zone: "api.x.ai." redirect
-local-data: "api.x.ai. 60 IN A 104.18.19.80"
-
 forward-zone:
     name: "releases.lean-lang.org."
     forward-addr: 1.1.1.1
