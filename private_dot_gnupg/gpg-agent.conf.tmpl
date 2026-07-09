@@ -3,7 +3,7 @@
 {{ if eq .chezmoi.os "darwin" -}}
 pinentry-program /usr/local/bin/pinentry-mac
 {{ else if eq .chezmoi.os "linux" -}}
-{{ if eq .chezmoi.hostname "rgam5terra" -}}
+{{ if or (eq .chezmoi.hostname "rgam5terra") (eq .chezmoi.hostname "rgSURFLat") -}}
 pinentry-program /usr/bin/pinentry-curses
 {{ else -}}
 pinentry-program /usr/bin/pinentry-gnome3
