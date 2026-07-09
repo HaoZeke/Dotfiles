@@ -3,6 +3,7 @@
 set {
  $ms_pos fullscreen disable, border pixel 1, move position 1px 1px, resize set 50 ppt 35 ppt
  $sf_pos fullscreen disable, border pixel 1, move position center
+ $fractal_pos fullscreen disable, border pixel 1, move position center, resize set 45 ppt 62 ppt
  $start_ms systemctl --user start foot-ms.service
  $start_sf systemctl --user start foot-subfloat.service
 }
@@ -24,5 +25,10 @@ for_window [app_id="subFloat"] {
 }
 bindsym F5 exec swaymsg [app_id="subFloat"] scratchpad show || $start_sf, $sf_pos
 
-# Fractal is a regular tiled client; the helper only launches or focuses it.
+# Fractal floats as the interactive Matrix client without scratchpad hiding.
+for_window [app_id="org.gnome.Fractal"] {
+    floating enable
+    sticky disable
+    $fractal_pos
+}
 bindsym $mod+m exec ~/.local/bin/rg-fractal-toggle

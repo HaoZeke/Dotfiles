@@ -30,9 +30,13 @@ test -r "$scratchpads" || fail "missing scratchpad config"
 test -r "$i3top" || fail "missing i3status-rs top config"
 
 rg -q 'app_id="org.gnome.Fractal"' "$scratchpads" \
-    && fail "Fractal windows must not be forced into scratchpad rules"
-rg -q '\$fractal_pos|org\.gnome\.Fractal.*scratchpad|move to scratchpad.*Fractal' "$scratchpads" \
-    && fail "Fractal must not have scratchpad placement"
+    || fail "Fractal windows must be routed by app_id"
+rg -q '\$fractal_pos' "$scratchpads" \
+    || fail "Fractal floating placement must be named"
+rg -U -q 'for_window \[app_id="org\.gnome\.Fractal"\] \{\n    floating enable\n    sticky disable\n    \$fractal_pos\n\}' "$scratchpads" \
+    || fail "Fractal must float without scratchpad management"
+rg -q 'org\.gnome\.Fractal.*scratchpad|move to scratchpad.*Fractal' "$scratchpads" \
+    && fail "Fractal must not be hidden in a scratchpad"
 rg -q 'rg-fractal-toggle' "$i3top" \
     || fail "top bar must expose the Fractal launcher"
 
