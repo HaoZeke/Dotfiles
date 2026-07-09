@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
-# Install rg-net-heal as a root timer: keeps the x.ai tailscale up (Starfleet +
-# grok models) and the landsbankinn.is /24 carved direct out of the US egress,
-# re-asserted every 30s so it survives network roams.
+# Install rg-net-heal as a root timer: keeps the x.ai tailscale up, keeps
+# Tailscale transport endpoints on the LAN uplink, and keeps selected direct
+# carve-outs off the US egress.
+# rg-net-heal-sha256: {{ include "dot_local/bin/executable_rg-net-heal" | sha256sum }}
+# rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
 set -euo pipefail
 
 HEAL_SRC="$HOME/.local/bin/rg-net-heal"
@@ -38,7 +40,7 @@ install_bin "$RECOVER_SRC" /usr/local/sbin/rg-net-recover
 
 install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
 [Unit]
-Description=Heal x.ai tailscale + landsbankinn.is direct carve-out
+Description=Heal x.ai tailscale and local underlay carve-outs
 After=network-online.target tailscaled.service
 Wants=network-online.target
 
@@ -49,7 +51,7 @@ EOF
 
 install_root /etc/systemd/system/rg-net-heal.timer <<'EOF'
 [Unit]
-Description=Periodic rg-net-heal (x.ai tailscale + bank carve-out)
+Description=Periodic rg-net-heal (x.ai tailscale + local underlay carve-outs)
 
 [Timer]
 OnBootSec=20

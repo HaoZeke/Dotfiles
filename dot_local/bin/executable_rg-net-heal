@@ -6,12 +6,16 @@
 #      daemon running + connected. Auto-recover a Stopped state; on a real logout
 #      (auth expiry) notify the desktop -- re-login needs a human, so never block
 #      on an interactive `tailscale up`.
-#   2. landsbankinn.is carve-out: the bank times out through the Windscribe US
+#   2. Tailscale underlay carve-out: control-plane, log-in, log-upload, and
+#      active peer transport endpoints are substrate for Starfleet / x.ai
+#      split routes. Keep those destination /32 routes on the current LAN
+#      default so the mesh survives a US full-tunnel stall.
+#   3. landsbankinn.is carve-out: the bank times out through the Windscribe US
 #      (Houston) egress, so keep its /24 routed DIRECT via the current LAN
 #      default. rule 5208 ("lookup main suppress_prefixlength 0") consults main
 #      for specific routes before the egress rule, so a /24 in main suffices.
 #      Re-asserted each run -> survives network roams with no baked-in gateway.
-#   3. eduVPN (SURF) carve-out: the split-VPN control channel to the SURF eduVPN
+#   4. eduVPN (SURF) carve-out: the split-VPN control channel to the SURF eduVPN
 #      server, plus the portal/discovery hosts used to fetch or renew a profile,
 #      must egress on the LOCAL uplink; with the US 0/0 tunnel up they exit the
 #      US IP and time out. Carve SURF's eduVPN /24 direct (covers server, portal,
@@ -26,6 +30,75 @@ notify() {
     [ -S "$bus" ] && sudo -u rgoswami DBUS_SESSION_BUS_ADDRESS="unix:path=$bus" \
         notify-send -u critical "net-heal" "$1" >/dev/null 2>&1 || true
     log "$1"
+}
+
+public_underlay_v4() {
+    local ip="$1" o1 o2 o3 o4 oct
+    case "$ip" in
+        ''|*[!0-9.]*|10.*|127.*|169.254.*|192.168.*|100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*) return 1 ;;
+    esac
+    IFS=. read -r o1 o2 o3 o4 <<EOF
+$ip
+EOF
+    for oct in "$o1" "$o2" "$o3" "$o4"; do
+        case "$oct" in ''|*[!0-9]*) return 1 ;; esac
+        [ "$oct" -ge 0 ] 2>/dev/null && [ "$oct" -le 255 ] 2>/dev/null || return 1
+    done
+    [ "$o1" -eq 0 ] && return 1
+    [ "$o1" -eq 172 ] && [ "$o2" -ge 16 ] && [ "$o2" -le 31 ] && return 1
+    [ "$o1" -ge 224 ] && return 1
+    return 0
+}
+
+route_local_v4() {
+    local ip="$1" label="${2:-host}"
+    public_underlay_v4 "$ip" || return 0
+    if ! ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw"; then
+        ip route replace "$ip/32" via "$gw" dev "$dev" table main 2>/dev/null \
+            && log "$label carve-out re-asserted: $ip via $gw dev $dev"
+    fi
+}
+
+tailscale_underlay_ips() {
+    command -v tailscale >/dev/null 2>&1 || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    tailscale status --json 2>/dev/null | python3 -c '
+import json
+import sys
+
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+
+def host(addr):
+    if not isinstance(addr, str) or not addr:
+        return None
+    if addr.startswith("["):
+        return None
+    if addr.count(":") == 1:
+        return addr.rsplit(":", 1)[0]
+    if ":" in addr:
+        return None
+    return addr
+
+for peer in (data.get("Peer") or {}).values():
+    for field in ("CurAddr", "RelayAddr"):
+        value = host(peer.get(field))
+        if value:
+            print(value)
+    for addr in peer.get("Addrs") or ():
+        value = host(addr)
+        if value:
+            print(value)
+' 2>/dev/null || true
+}
+
+tailscale_host_ips() {
+    local host
+    for host in ${RG_TAILSCALE_UNDERLAY_HOSTS:-controlplane.tailscale.com log.tailscale.com login.tailscale.com}; do
+        getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}'
+    done
 }
 
 # --- 1. x.ai tailscale ----------------------------------------------------
@@ -50,7 +123,14 @@ else
     log "no LAN default route; cannot assert bank carve-out"
 fi
 
-# --- 3. eduVPN (SURF) carve-out: control channel + portal off the US egress -
+# --- 3. Tailscale underlay carve-out: mesh transport off the US egress -----
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    { tailscale_underlay_ips; tailscale_host_ips; } | sort -u | while read -r ip; do
+        route_local_v4 "$ip" "tailscale underlay"
+    done
+fi
+
+# --- 4. eduVPN (SURF) carve-out: control channel + portal off the US egress -
 # The split-VPN control channel to the SURF eduVPN server, and the portal /
 # discovery hosts used to fetch or renew a profile, must egress on the LOCAL
 # uplink; with the US 0/0 tunnel up they exit the US IP and time out. Carve
