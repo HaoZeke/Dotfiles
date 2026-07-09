@@ -10,7 +10,7 @@ LAUNCH=${RG_FRACTAL_LAUNCH:-fractal}
 
 usage() {
     cat <<'EOF'
-usage: rg-fractal-toggle [toggle|show|hide|status|status-json]
+usage: rg-fractal-toggle [toggle|show|focus|hide|status|status-json]
 EOF
 }
 
@@ -41,26 +41,24 @@ is_visible() {
     ' >/dev/null 2>&1
 }
 
+focus_window() {
+    "$SWAYMSG" "[app_id=\"$APP_ID\"] focus" >/dev/null
+}
+
 show_window() {
     if is_running; then
-        "$SWAYMSG" "[app_id=\"$APP_ID\"] scratchpad show" >/dev/null
+        focus_window
     else
         "$SWAYMSG" exec "$LAUNCH" >/dev/null
     fi
 }
 
 hide_window() {
-    "$SWAYMSG" "[app_id=\"$APP_ID\"] move to scratchpad" >/dev/null
+    show_window
 }
 
 toggle_window() {
-    if ! is_running; then
-        "$SWAYMSG" exec "$LAUNCH" >/dev/null
-    elif is_visible; then
-        hide_window
-    else
-        show_window
-    fi
+    show_window
 }
 
 status_json() {
@@ -74,6 +72,7 @@ status_json() {
 case "${1:-toggle}" in
     toggle) toggle_window ;;
     show) show_window ;;
+    focus) show_window ;;
     hide) hide_window ;;
     status)
         if is_running; then

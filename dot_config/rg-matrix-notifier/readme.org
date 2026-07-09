@@ -15,7 +15,7 @@ The =Mx= block in the top bar is a status/launcher block:
 
 - =Mx setup= / =Mx!= means account auth is not complete.
 - =Mx= means the notifier has synced successfully.
-- Left click opens the Fractal UI through =rg-fractal-toggle=.
+- Left click opens or focuses the Fractal UI through =rg-fractal-toggle=.
 - Right click restarts =rg-matrix-notifier.service=.
 
 The block is not required for notification delivery. It is useful because it

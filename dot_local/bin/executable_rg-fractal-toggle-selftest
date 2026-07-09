@@ -30,11 +30,11 @@ test -r "$scratchpads" || fail "missing scratchpad config"
 test -r "$i3top" || fail "missing i3status-rs top config"
 
 rg -q 'app_id="org.gnome.Fractal"' "$scratchpads" \
-    || fail "Fractal windows must be routed by app_id"
-rg -q '\$fractal_pos' "$scratchpads" \
-    || fail "Fractal scratchpad placement must be named"
+    && fail "Fractal windows must not be forced into scratchpad rules"
+rg -q '\$fractal_pos|org\.gnome\.Fractal.*scratchpad|move to scratchpad.*Fractal' "$scratchpads" \
+    && fail "Fractal must not have scratchpad placement"
 rg -q 'rg-fractal-toggle' "$i3top" \
-    || fail "top bar must expose the Fractal toggle"
+    || fail "top bar must expose the Fractal launcher"
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
@@ -86,7 +86,7 @@ RG_FRACTAL_PGREP="$fake_pgrep" \
 RG_FRACTAL_RUNNING=1 \
 RG_FRACTAL_TREE='{"nodes":[{"app_id":"org.gnome.Fractal","visible":false,"id":42}]}' \
 "$script" toggle
-assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] scratchpad show' "hidden window show"
+assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] focus' "hidden window focus"
 
 >"$log"
 RG_FRACTAL_TEST_LOG="$log" \
@@ -95,6 +95,6 @@ RG_FRACTAL_PGREP="$fake_pgrep" \
 RG_FRACTAL_RUNNING=1 \
 RG_FRACTAL_TREE='{"nodes":[{"app_id":"org.gnome.Fractal","visible":true,"id":43}]}' \
 "$script" toggle
-assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] move to scratchpad' "visible window hide"
+assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] focus' "visible window focus"
 
 printf 'ok\n'
