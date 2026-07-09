@@ -34,6 +34,8 @@ fix_local_dns="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-local-dns
 fix_nm_ctrld="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld")"
 profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
 us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
+net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
+net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
 us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
@@ -47,6 +49,8 @@ test -r "$fix_local_dns" || fail "missing local DNS repair helper"
 test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
+test -r "$net_recover" || fail "missing one-shot network recovery helper"
+test -r "$net_heal_script" || fail "missing net heal provisioning script"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
@@ -128,6 +132,7 @@ bash -n "$rendered_weather"
 bash -n "$fix_local_dns"
 bash -n "$profile_selftest"
 bash -n "$us_egress_up"
+bash -n "$net_recover"
 mkdir -p "$tmp_net/bin"
 cat >"$tmp_net/bin/pass" <<'SH'
 #!/usr/bin/env sh
@@ -191,6 +196,22 @@ rg -q 'systemctl disable --now NetworkManager-wait-online.service NetworkManager
     || fail "NetworkManager Control D repair helper does not disable the NetworkManager service trio"
 rg -q 'systemctl restart ctrld.service' "$fix_nm_ctrld" \
     || fail "NetworkManager Control D repair helper does not restart Control D after dependency cleanup"
+rg -q 'disable --now rg-us-egress-watch.service' "$net_recover" \
+    || fail "network recovery helper must keep the realtime egress watcher disabled"
+rg -q 'systemctl stop rg-us-egress-guard.timer' "$net_recover" \
+    || fail "network recovery helper must stop the periodic guard before rebuilding egress"
+rg -q 'systemctl restart rg-us-egress.service' "$net_recover" \
+    || fail "network recovery helper must rebuild the managed Houston egress stack"
+rg -q '/usr/local/sbin/rg-net-heal' "$net_recover" \
+    || fail "network recovery helper must reassert x.ai tailscale and carve-outs"
+rg -q 'tailscale set --accept-dns=true' "$net_recover" \
+    || fail "network recovery helper must re-enable x.ai split DNS"
+rg -q 'https://api.x.ai/v1/models' "$net_recover" \
+    || fail "network recovery helper must probe the x.ai API path"
+rg -q 'systemctl restart rg-us-egress-guard.timer' "$net_recover" \
+    || fail "network recovery helper must leave the periodic guard active"
+rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
+    || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

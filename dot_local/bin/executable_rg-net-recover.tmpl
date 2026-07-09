@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Hostname gate: laptop DNS/network mutators must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-net-recover: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+set -Eeuo pipefail
+
+if [ "$(id -u)" -ne 0 ]; then
+    printf 'run as root: sudo %s\n' "$0" >&2
+    exit 2
+fi
+
+log_step() {
+    printf '\n== %s ==\n' "$1"
+}
+
+run_optional() {
+    "$@" || printf 'warning: command failed: %s\n' "$*" >&2
+}
+
+log_step "stop egress mutators while rebuilding"
+systemctl disable --now rg-us-egress-watch.service >/dev/null 2>&1 || true
+systemctl stop rg-us-egress-guard.timer >/dev/null 2>&1 || true
+systemctl reset-failed rg-us-egress-watch.service rg-us-egress-guard.service rg-us-egress.service wg-quick@rg-us-egress-wg.service >/dev/null 2>&1 || true
+
+log_step "ensure x.ai tailnet DNS is accepted"
+systemctl start tailscaled.service
+tailscale set --accept-dns=true
+
+log_step "reassert x.ai tailnet and local carve-outs"
+if [ -x /usr/local/sbin/rg-net-heal ]; then
+    /usr/local/sbin/rg-net-heal
+else
+    /home/rgoswami/.local/bin/rg-net-heal
+fi
+
+log_step "rebuild Houston egress and local DNS"
+systemctl restart rg-us-egress.service
+
+log_step "leave periodic guard active, realtime watcher disabled"
+systemctl restart rg-net-heal.timer
+systemctl restart rg-us-egress-guard.timer
+systemctl disable --now rg-us-egress-watch.service >/dev/null 2>&1 || true
+resolvectl flush-caches || true
+
+log_step "quick checks"
+systemctl is-active --quiet tailscaled.service && printf 'tailscaled: active\n'
+systemctl is-active --quiet ctrld.service && printf 'ctrld: active\n'
+systemctl is-active --quiet unbound.service && printf 'unbound: active\n'
+systemctl is-active --quiet wg-quick@rg-us-egress-wg.service && printf 'wg-quick@rg-us-egress-wg: active\n'
+systemctl is-active --quiet rg-us-egress-watch.service && {
+    printf 'rg-us-egress-watch.service is still active; this is unsafe\n' >&2
+    exit 5
+}
+resolvectl query api.x.ai >/dev/null
+curl -4 -sS --connect-timeout 5 --max-time 12 -o /dev/null \
+    -w 'api.x.ai: http=%{http_code} time=%{time_total}s local=%{local_ip}\n' \
+    https://api.x.ai/v1/models
+ip route get 100.100.100.100 | grep -q ' dev tailscale0' \
+    && printf 'tailscale DNS route: tailscale0\n'
+ip route get 1.1.1.1 | grep -q ' dev rg-us-egress-wg' \
+    && printf 'default IPv4 route: rg-us-egress-wg\n'

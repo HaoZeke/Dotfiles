@@ -6,8 +6,13 @@
 set -euo pipefail
 
 HEAL_SRC="$HOME/.local/bin/rg-net-heal"
+RECOVER_SRC="$HOME/.local/bin/rg-net-recover"
 if [ ! -x "$HEAL_SRC" ]; then
     echo "chezmoi: rg-net-heal missing; skipping install." >&2
+    exit 0
+fi
+if [ ! -x "$RECOVER_SRC" ]; then
+    echo "chezmoi: rg-net-recover missing; skipping install." >&2
     exit 0
 fi
 
@@ -29,6 +34,7 @@ install_root() {
 }
 
 install_bin "$HEAL_SRC" /usr/local/sbin/rg-net-heal
+install_bin "$RECOVER_SRC" /usr/local/sbin/rg-net-recover
 
 install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
 [Unit]
