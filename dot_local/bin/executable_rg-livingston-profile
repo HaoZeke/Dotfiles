@@ -43,6 +43,7 @@ Options:
 
 Environment:
   RG_LIVINGSTON_SKIP_EGRESS_CHECK=1  Do not warn when public IP is not Texas.
+  RG_LIVINGSTON_PROXY_BYPASS=LIST     Override proxy bypass hosts.
 USAGE
 }
 
@@ -72,6 +73,7 @@ x_home() {
 
 dry_run=0
 proxy="${RG_LIVINGSTON_PROXY:-}"
+proxy_bypass="${RG_LIVINGSTON_PROXY_BYPASS:-*.ia.surf.nl;*.surf.nl;surf.nl;<local>}"
 replace_process=1
 timedatectl_bin="${RG_LIVINGSTON_TIMEDATECTL:-timedatectl}"
 sudo_bin="${RG_LIVINGSTON_SUDO:-sudo}"
@@ -463,6 +465,7 @@ run_browser() {
 
     if [ -n "$proxy" ]; then
         browser_args+=("--proxy-server=$proxy")
+        browser_args+=("--proxy-bypass-list=$proxy_bypass")
     fi
 
     if [ "$browser_name" = "vivaldi" ]; then

@@ -44,6 +44,7 @@ assert_not_contains() {
 
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
+surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\<local\>'
 
 fake_curl="$tmp_home/curl"
 cat >"$fake_curl" <<'SH'
@@ -124,6 +125,7 @@ out=$(
     "$SCRIPT" --dry-run --proxy socks5://127.0.0.1:9050 chromium
 )
 assert_contains "$out" "--proxy-server=socks5://127.0.0.1:9050" "proxy flag"
+assert_contains "$out" "$surf_proxy_bypass" "SURF proxy bypass"
 
 out=$(
     HOME="$tmp_home" \
@@ -133,6 +135,7 @@ out=$(
     "$SCRIPT" --dry-run chromium
 )
 assert_contains "$out" "--proxy-server=socks5://wind-user:wind-pass@us.windscribe.example:1080" "pass-provided proxy flag"
+assert_contains "$out" "$surf_proxy_bypass" "pass-provided proxy SURF bypass"
 
 out=$(
     HOME="$tmp_home" \
