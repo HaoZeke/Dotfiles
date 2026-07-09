@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-vivaldi-surf-bypass).
+#
+# Add SURF internal hosts to saved Chromium/Vivaldi extension proxy bypass lists.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-vivaldi-surf-bypass [--root DIR] [--dry-run]
+
+Scans Vivaldi profile Preferences files and adds SURF internal hosts to saved
+extension proxy bypass lists. This covers the Chromium internal
+"bypass_list" form and the chrome.proxy API "rules.bypassList" form.
+
+Options:
+  --root DIR   Vivaldi config root (default: ~/.config/vivaldi).
+  --dry-run    Print profiles that would change without writing files.
+  -h, --help   Show this help.
+USAGE
+}
+
+die() {
+    echo "rg-vivaldi-surf-bypass: $*" >&2
+    exit 2
+}
+
+need_cmd() {
+    command -v "$1" >/dev/null 2>&1 || die "$1 is required"
+}
+
+root="${RG_VIVALDI_ROOT:-$HOME/.config/vivaldi}"
+dry_run=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --root)
+            [ $# -ge 2 ] || die "--root requires a directory"
+            root="$2"
+            shift 2
+            ;;
+        --dry-run)
+            dry_run=1
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            die "unknown argument: $1"
+            ;;
+    esac
+done
+
+need_cmd jq
+need_cmd cmp
+need_cmd mktemp
+
+[ -d "$root" ] || die "Vivaldi root does not exist: $root"
+
+surf_bypass_json='[
+  "*.ia.surf.nl",
+  "*.surf.nl",
+  "surf.nl",
+  "*.ia.surfsara.nl",
+  "*.surfsara.nl",
+  "surfsara.nl",
+  "<local>"
+]'
+
+jq_filter='
+def trim_string: gsub("^\\s+|\\s+$"; "");
+def normalize_list:
+  if type == "array" then
+    map(tostring | trim_string) | map(select(. != ""))
+  elif type == "string" then
+    split(",") | map(trim_string) | map(select(. != ""))
+  else
+    []
+  end;
+def stable_unique:
+  reduce .[] as $item ([]; if index($item) then . else . + [$item] end);
+def merged_bypass($existing):
+  (($existing | normalize_list) + $surf_bypass) | stable_unique;
+def should_patch_proxy:
+  type == "object" and (
+    .mode == "fixed_servers" or
+    (.rules? | type == "object") or
+    has("bypass_list")
+  );
+def patch_proxy:
+  if should_patch_proxy then
+    (if (.mode == "fixed_servers" or has("bypass_list")) then
+      .bypass_list = (merged_bypass(.bypass_list) | join(","))
+    else
+      .
+    end)
+    | (if (.rules? | type == "object") then
+      .rules.bypassList = merged_bypass(.rules.bypassList)
+    else
+      .
+    end)
+  else
+    .
+  end;
+def patch_setting:
+  (if (.preferences.proxy? != null) then
+    .preferences.proxy |= patch_proxy
+  else
+    .
+  end)
+  | (if (.regular_only_preferences.proxy? != null) then
+    .regular_only_preferences.proxy |= patch_proxy
+  else
+    .
+  end)
+  | (if (.incognito_preferences.proxy? != null) then
+    .incognito_preferences.proxy |= patch_proxy
+  else
+    .
+  end);
+if (.extensions.settings? | type) == "object" then
+  .extensions.settings |= with_entries(.value |= patch_setting)
+else
+  .
+end
+'
+
+profile_name() {
+    jq -r '.profile.name // "unknown-profile"' "$1" 2>/dev/null || printf 'unknown-profile\n'
+}
+
+patch_preferences() {
+    local prefs="$1" tmp name
+
+    tmp="$(mktemp)"
+    if ! jq --argjson surf_bypass "$surf_bypass_json" "$jq_filter" "$prefs" >"$tmp"; then
+        rm -f "$tmp"
+        echo "rg-vivaldi-surf-bypass: invalid JSON: $prefs" >&2
+        return 1
+    fi
+
+    name="$(profile_name "$prefs")"
+    if cmp -s "$prefs" "$tmp"; then
+        rm -f "$tmp"
+        printf 'already-ok\t%s\t%s\n' "$name" "$prefs"
+        return 0
+    fi
+
+    if [ "$dry_run" -eq 1 ]; then
+        rm -f "$tmp"
+        printf 'would-update\t%s\t%s\n' "$name" "$prefs"
+        return 0
+    fi
+
+    mv "$tmp" "$prefs"
+    printf 'updated\t%s\t%s\n' "$name" "$prefs"
+}
+
+found=0
+status=0
+
+for prefs in "$root"/Default/Preferences "$root"/Profile*/Preferences; do
+    [ -f "$prefs" ] || continue
+    found=1
+    patch_preferences "$prefs" || status=1
+done
+
+[ "$found" -eq 1 ] || die "no Vivaldi Preferences files under: $root"
+
+if pgrep -x vivaldi-bin >/dev/null 2>&1 || pgrep -x vivaldi >/dev/null 2>&1; then
+    echo "rg-vivaldi-surf-bypass: Vivaldi is running; reload affected proxy extensions or restart Vivaldi for active proxy state to refresh" >&2
+fi
+
+exit "$status"

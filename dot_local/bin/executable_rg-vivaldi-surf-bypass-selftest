@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-vivaldi-surf-bypass-selftest).
+#
+# Behavior checks for rg-vivaldi-surf-bypass.
+
+set -eu
+
+if [ $# -gt 1 ]; then
+    echo "usage: executable_rg-vivaldi-surf-bypass-selftest [/path/to/executable_rg-vivaldi-surf-bypass]" >&2
+    exit 2
+fi
+
+SCRIPT="${1:-}"
+if [ -z "$SCRIPT" ]; then
+    here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    case "$(basename -- "$0")" in
+        executable_*) SCRIPT="$here/executable_rg-vivaldi-surf-bypass" ;;
+        *) SCRIPT="$here/rg-vivaldi-surf-bypass" ;;
+    esac
+fi
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *)
+            echo "FAIL: missing ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+assert_not_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*)
+            echo "FAIL: unexpected ${label}: ${needle}" >&2
+            echo "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+json_get() {
+    local prefs="$1" filter="$2"
+    jq -r "$filter" "$prefs"
+}
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+mkdir -p "$tmp_dir/Default" "$tmp_dir/Profile 1" "$tmp_dir/Profile 2" "$tmp_dir/Profile 3"
+
+cat >"$tmp_dir/Default/Preferences" <<'JSON'
+{
+  "profile": {
+    "name": "Person 1"
+  },
+  "extensions": {
+    "settings": {
+      "proton": {
+        "manifest": {
+          "name": "Proton VPN: Fast & Secure"
+        },
+        "preferences": {
+          "proxy": {
+            "mode": "fixed_servers",
+            "server": "https://node-us-339.protonvpn.net:4444",
+            "bypass_list": "localhost,127.0.0.1,*.surf.nl"
+          }
+        }
+      }
+    }
+  }
+}
+JSON
+
+cat >"$tmp_dir/Profile 1/Preferences" <<'JSON'
+{
+  "profile": {
+    "name": "NLme"
+  },
+  "extensions": {
+    "settings": {
+      "windscribe": {
+        "manifest": {
+          "name": "Windscribe"
+        },
+        "regular_only_preferences": {
+          "proxy": {
+            "mode": "fixed_servers",
+            "rules": {
+              "singleProxy": {
+                "scheme": "socks5",
+                "host": "127.0.0.1",
+                "port": 9050
+              },
+              "bypassList": [
+                "localhost",
+                "*.ia.surf.nl"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+JSON
+
+cat >"$tmp_dir/Profile 2/Preferences" <<'JSON'
+{
+  "profile": {
+    "name": "Direct"
+  },
+  "extensions": {
+    "settings": {
+      "direct": {
+        "manifest": {
+          "name": "Direct Proxy"
+        },
+        "preferences": {
+          "proxy": {
+            "mode": "direct"
+          }
+        }
+      }
+    }
+  }
+}
+JSON
+
+cat >"$tmp_dir/Profile 3/Preferences" <<'JSON'
+{
+  "profile": {
+    "name": "NoProxy"
+  },
+  "extensions": {
+    "settings": {
+      "notes": {
+        "manifest": {
+          "name": "Notes"
+        },
+        "preferences": {
+          "color": "blue"
+        }
+      }
+    }
+  }
+}
+JSON
+
+out="$("$SCRIPT" --root "$tmp_dir" --dry-run)"
+assert_contains "$out" "Person 1" "dry-run fixed proxy profile"
+assert_contains "$out" "NLme" "dry-run rules profile"
+assert_not_contains "$out" "would-update	Direct" "dry-run direct proxy profile"
+assert_not_contains "$out" "would-update	NoProxy" "dry-run no-proxy profile"
+
+"$SCRIPT" --root "$tmp_dir" >/tmp/rg-vivaldi-surf-bypass-selftest.out
+out="$(cat /tmp/rg-vivaldi-surf-bypass-selftest.out)"
+assert_contains "$out" "updated" "update output"
+
+default_prefs="$tmp_dir/Default/Preferences"
+profile1_prefs="$tmp_dir/Profile 1/Preferences"
+profile2_prefs="$tmp_dir/Profile 2/Preferences"
+
+bypass="$(json_get "$default_prefs" '.extensions.settings.proton.preferences.proxy.bypass_list')"
+assert_contains "$bypass" "*.ia.surf.nl" "ia.surf wildcard in internal bypass"
+assert_contains "$bypass" "*.ia.surfsara.nl" "ia.surfsara wildcard in internal bypass"
+assert_contains "$bypass" "*.surfsara.nl" "surfsara wildcard in internal bypass"
+assert_contains "$bypass" "surf.nl" "surf apex in internal bypass"
+assert_contains "$bypass" "<local>" "local bypass in internal bypass"
+[ "$(printf '%s' "$bypass" | tr ',' '\n' | grep -c '^\*.surf\.nl$')" -eq 1 ] || {
+    echo "FAIL: duplicate *.surf.nl in internal bypass: $bypass" >&2
+    exit 1
+}
+
+rules="$(json_get "$profile1_prefs" '.extensions.settings.windscribe.regular_only_preferences.proxy.rules.bypassList | join(",")')"
+assert_contains "$rules" "*.ia.surf.nl" "ia.surf wildcard in rules bypass"
+assert_contains "$rules" "*.ia.surfsara.nl" "ia.surfsara wildcard in rules bypass"
+assert_contains "$rules" "*.surfsara.nl" "surfsara wildcard in rules bypass"
+assert_contains "$rules" "surfsara.nl" "surfsara apex in rules bypass"
+[ "$(json_get "$profile1_prefs" '.extensions.settings.windscribe.regular_only_preferences.proxy.rules.bypassList | map(select(. == "*.ia.surf.nl")) | length')" = 1 ] || {
+    echo "FAIL: duplicate *.ia.surf.nl in rules bypass" >&2
+    exit 1
+}
+
+[ "$(json_get "$profile2_prefs" '.extensions.settings.direct.preferences.proxy.mode')" = direct ] || {
+    echo "FAIL: direct proxy profile was changed unexpectedly" >&2
+    exit 1
+}
+
+"$SCRIPT" --root "$tmp_dir" >/tmp/rg-vivaldi-surf-bypass-selftest-second.out
+out="$(cat /tmp/rg-vivaldi-surf-bypass-selftest-second.out)"
+assert_contains "$out" "already-ok" "idempotent output"

@@ -73,7 +73,7 @@ x_home() {
 
 dry_run=0
 proxy="${RG_LIVINGSTON_PROXY:-}"
-proxy_bypass="${RG_LIVINGSTON_PROXY_BYPASS:-*.ia.surf.nl;*.surf.nl;surf.nl;<local>}"
+proxy_bypass="${RG_LIVINGSTON_PROXY_BYPASS:-*.ia.surf.nl;*.surf.nl;surf.nl;*.ia.surfsara.nl;*.surfsara.nl;surfsara.nl;<local>}"
 replace_process=1
 timedatectl_bin="${RG_LIVINGSTON_TIMEDATECTL:-timedatectl}"
 sudo_bin="${RG_LIVINGSTON_SUDO:-sudo}"

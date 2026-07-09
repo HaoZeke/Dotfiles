@@ -44,7 +44,7 @@ assert_not_contains() {
 
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
-surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\<local\>'
+surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\<local\>'
 
 fake_curl="$tmp_home/curl"
 cat >"$fake_curl" <<'SH'
