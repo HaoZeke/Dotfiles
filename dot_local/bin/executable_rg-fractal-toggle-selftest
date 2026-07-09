@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-fractal-toggle-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-fractal-toggle"
+scratchpads="$repo/dot_config/sway/conf.d/scratchpads"
+i3top="$repo/dot_config/i3rust/i3_top.toml.tmpl"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+assert_contains() {
+    local haystack="$1" needle="$2" label="$3"
+    case "$haystack" in
+        *"$needle"*) ;;
+        *)
+            printf 'FAIL: missing %s: %s\n' "$label" "$needle" >&2
+            printf '%s\n' "$haystack" >&2
+            exit 1
+            ;;
+    esac
+}
+
+test -x "$script" || fail "missing executable rg-fractal-toggle"
+test -r "$scratchpads" || fail "missing scratchpad config"
+test -r "$i3top" || fail "missing i3status-rs top config"
+
+rg -q 'app_id="org.gnome.Fractal"' "$scratchpads" \
+    || fail "Fractal windows must be routed by app_id"
+rg -q '\$fractal_pos' "$scratchpads" \
+    || fail "Fractal scratchpad placement must be named"
+rg -q 'rg-fractal-toggle' "$i3top" \
+    || fail "top bar must expose the Fractal toggle"
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+log="$tmpdir/calls.log"
+
+fake_swaymsg="$tmpdir/swaymsg"
+cat >"$fake_swaymsg" <<'SH'
+#!/usr/bin/env bash
+[ -z "${RG_FRACTAL_TEST_LOG:-}" ] || printf 'swaymsg:%s\n' "$*" >>"$RG_FRACTAL_TEST_LOG"
+case "$*" in
+    *get_tree*)
+        printf '%s\n' "${RG_FRACTAL_TREE:-{}}"
+        ;;
+    *)
+        ;;
+esac
+SH
+chmod +x "$fake_swaymsg"
+
+fake_pgrep="$tmpdir/pgrep"
+cat >"$fake_pgrep" <<'SH'
+#!/usr/bin/env bash
+[ -z "${RG_FRACTAL_TEST_LOG:-}" ] || printf 'pgrep:%s\n' "$*" >>"$RG_FRACTAL_TEST_LOG"
+[ "${RG_FRACTAL_RUNNING:-0}" = "1" ]
+SH
+chmod +x "$fake_pgrep"
+
+out=$(
+    RG_FRACTAL_SWAYMSG="$fake_swaymsg" \
+    RG_FRACTAL_PGREP="$fake_pgrep" \
+    RG_FRACTAL_RUNNING=0 \
+    "$script" status-json
+)
+assert_contains "$out" '"state":"Idle"' "idle status"
+assert_contains "$out" '"short_text":"Mx"' "status short text"
+
+RG_FRACTAL_TEST_LOG="$log" \
+RG_FRACTAL_SWAYMSG="$fake_swaymsg" \
+RG_FRACTAL_PGREP="$fake_pgrep" \
+RG_FRACTAL_RUNNING=0 \
+RG_FRACTAL_LAUNCH='printf launch\n' \
+"$script" toggle
+assert_contains "$(cat "$log")" 'swaymsg:exec printf launch' "launch through sway"
+
+>"$log"
+RG_FRACTAL_TEST_LOG="$log" \
+RG_FRACTAL_SWAYMSG="$fake_swaymsg" \
+RG_FRACTAL_PGREP="$fake_pgrep" \
+RG_FRACTAL_RUNNING=1 \
+RG_FRACTAL_TREE='{"nodes":[{"app_id":"org.gnome.Fractal","visible":false,"id":42}]}' \
+"$script" toggle
+assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] scratchpad show' "hidden window show"
+
+>"$log"
+RG_FRACTAL_TEST_LOG="$log" \
+RG_FRACTAL_SWAYMSG="$fake_swaymsg" \
+RG_FRACTAL_PGREP="$fake_pgrep" \
+RG_FRACTAL_RUNNING=1 \
+RG_FRACTAL_TREE='{"nodes":[{"app_id":"org.gnome.Fractal","visible":true,"id":43}]}' \
+"$script" toggle
+assert_contains "$(cat "$log")" '[app_id="org.gnome.Fractal"] move to scratchpad' "visible window hide"
+
+printf 'ok\n'

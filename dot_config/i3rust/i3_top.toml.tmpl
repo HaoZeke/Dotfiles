@@ -33,6 +33,15 @@ format = "$1m"
 
 [[block]]
 block = "custom"
+command = "~/.local/bin/rg-fractal-toggle status-json"
+json = true
+interval = 30
+[[block.click]]
+button = "left"
+cmd = "~/.local/bin/rg-fractal-toggle toggle"
+
+[[block]]
+block = "custom"
 command = "~/.local/bin/rg-network-status-json"
 json = true
 interval = 3

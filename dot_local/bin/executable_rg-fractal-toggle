@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-fractal-toggle).
+
+set -eu
+
+APP_ID=org.gnome.Fractal
+SWAYMSG=${RG_FRACTAL_SWAYMSG:-swaymsg}
+PGREP=${RG_FRACTAL_PGREP:-pgrep}
+LAUNCH=${RG_FRACTAL_LAUNCH:-fractal}
+
+usage() {
+    cat <<'EOF'
+usage: rg-fractal-toggle [toggle|show|hide|status|status-json]
+EOF
+}
+
+is_running() {
+    "$PGREP" -x fractal >/dev/null 2>&1
+}
+
+tree() {
+    if [ -n "${RG_FRACTAL_TREE:-}" ]; then
+        printf '%s\n' "$RG_FRACTAL_TREE"
+    else
+        "$SWAYMSG" -t get_tree
+    fi
+}
+
+is_visible() {
+    tree | jq -e --arg app_id "$APP_ID" '
+      def walknodes:
+        . as $in
+        | if type == "object" then
+            ., (.nodes[]? | walknodes), (.floating_nodes[]? | walknodes)
+          elif type == "array" then
+            .[] | walknodes
+          else
+            empty
+          end;
+      any(walknodes; .app_id? == $app_id and .visible == true)
+    ' >/dev/null 2>&1
+}
+
+show_window() {
+    if is_running; then
+        "$SWAYMSG" "[app_id=\"$APP_ID\"] scratchpad show" >/dev/null
+    else
+        "$SWAYMSG" exec "$LAUNCH" >/dev/null
+    fi
+}
+
+hide_window() {
+    "$SWAYMSG" "[app_id=\"$APP_ID\"] move to scratchpad" >/dev/null
+}
+
+toggle_window() {
+    if ! is_running; then
+        "$SWAYMSG" exec "$LAUNCH" >/dev/null
+    elif is_visible; then
+        hide_window
+    else
+        show_window
+    fi
+}
+
+status_json() {
+    if is_running; then
+        printf '{"state":"Good","text":"Mx","short_text":"Mx"}\n'
+    else
+        printf '{"state":"Idle","text":"Mx","short_text":"Mx"}\n'
+    fi
+}
+
+case "${1:-toggle}" in
+    toggle) toggle_window ;;
+    show) show_window ;;
+    hide) hide_window ;;
+    status)
+        if is_running; then
+            printf 'running\n'
+        else
+            printf 'stopped\n'
+        fi
+        ;;
+    status-json) status_json ;;
+    -h|--help|help) usage ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
