@@ -149,6 +149,24 @@ else
     log "no LAN default route; cannot assert bank carve-out"
 fi
 
+# --- 2b. gitlab.com direct carve-out (Cloudflare-fronted; roam-proof) -------
+# gitlab.com (git + altssh) is Cloudflare anycast: the US egress reaches some
+# pool IPs and times out on others, so SSH pushes to the vault gamble on the
+# egress->Cloudflare path and stall. Keep gitlab on the LAN uplink. Static /24
+# covers the current pool; also pin whatever gitlab.com / altssh resolve to now.
+GITLAB_DIRECT="${RG_GITLAB_DIRECT:-172.65.251.0/24}"
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    if ! ip route show table main "$GITLAB_DIRECT" 2>/dev/null | grep -q "via $gw"; then
+        ip route replace "$GITLAB_DIRECT" via "$gw" dev "$dev" table main 2>/dev/null \
+            && log "gitlab carve-out re-asserted: $GITLAB_DIRECT via $gw dev $dev"
+    fi
+    for gl_host in gitlab.com altssh.gitlab.com; do
+        getent ahostsv4 "$gl_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
+            route_local_v4 "$ip" "gitlab"
+        done
+    done
+fi
+
 # --- 3. Tailscale underlay carve-out: mesh transport off the US egress -----
 if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     { tailscale_underlay_ips; tailscale_host_ips; } | sort -u | while read -r ip; do
