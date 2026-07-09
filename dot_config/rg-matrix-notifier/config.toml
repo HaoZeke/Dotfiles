@@ -1,5 +1,5 @@
-user_id = ""
-homeserver = ""
+user_id = "@rohit.goswami:surf.nl"
+homeserver = "https://matrix.surf.nl"
 body_max_chars = 160
 timeout_ms = 30000
 retry_seconds = 30
@@ -11,3 +11,5 @@ access_token_command = ["pass", "show", "matrix/rg-matrix-notifier/access-token"
 [sink]
 backend = "notify-send"
 urgency = "normal"
+timeout_ms = 8000
+open_command = ["rg-fractal-toggle", "show"]

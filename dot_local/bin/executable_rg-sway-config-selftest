@@ -11,8 +11,10 @@ fail() {
 }
 
 scratchpads="$repo/dot_config/sway/conf.d/scratchpads"
+dunstrc="$repo/dot_config/dunst/dunstrc.tmpl"
 
 test -r "$scratchpads" || fail "missing $scratchpads"
+test -r "$dunstrc" || fail "missing $dunstrc"
 
 rg -q 'set \{.*' "$scratchpads" \
     || fail "scratchpad settings block is missing"
@@ -24,5 +26,7 @@ rg -q 'bindsym F1 .*scratchpad show.*\$ms_pos' "$scratchpads" \
     || fail "F1 does not reapply main scratchpad placement"
 rg -q 'bindsym F5 .*scratchpad show.*\$sf_pos' "$scratchpads" \
     || fail "F5 does not reapply secondary scratchpad placement"
+rg -q 'mouse_left_click = do_action, close_current' "$dunstrc" \
+    || fail "notification left click must invoke the default action"
 
 printf 'ok\n'

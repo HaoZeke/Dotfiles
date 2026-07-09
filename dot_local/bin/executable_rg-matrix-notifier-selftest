@@ -61,6 +61,12 @@ rg -q 'ureq' "$src/Cargo.toml" \
     || fail "crate must own Matrix sync HTTP"
 rg -q 'access_token_command' "$config" \
     || fail "config must use an external access token provider"
+rg -q 'open_command = \["rg-fractal-toggle", "show"\]' "$config" \
+    || fail "config must wire notification Open action to Fractal"
+rg -q 'homeserver = "https://matrix.surf.nl"' "$config" \
+    || fail "config must include the SURF Matrix homeserver"
+rg -q 'user_id = "@rohit.goswami:surf.nl"' "$config" \
+    || fail "config must include the SURF Matrix user id"
 if rg -q '^access_token\s*=' "$config"; then
     fail "config must not contain a raw access token"
 fi
@@ -143,8 +149,11 @@ cat >"$fixture" <<'JSON'
 JSON
 
 log="$tmpdir/events.jsonl"
+state="$tmpdir/state"
+mkdir -p "$state"
+printf '{"next_batch":"seed"}\n' >"$state/since.json"
 RG_MATRIX_NOTIFIER_TEST_LOG="$log" \
-    "$script" --config "$config" --state-dir "$tmpdir/state" process-sync "$fixture"
+    "$script" --config "$config" --state-dir "$state" process-sync "$fixture"
 
 events=$(cat "$log")
 assert_contains "$events" '"event_id":"$other"' "message event"
@@ -156,11 +165,18 @@ assert_contains "$events" '"body":"Encrypted Matrix message"' "encrypted placeho
 assert_not_contains "$events" '"event_id":"$own"' "own message"
 
 RG_MATRIX_NOTIFIER_TEST_LOG="$log" \
-    "$script" --config "$config" --state-dir "$tmpdir/state" process-sync "$fixture"
+    "$script" --config "$config" --state-dir "$state" process-sync "$fixture"
 lines=$(wc -l <"$log")
 [ "$lines" -eq 2 ] || fail "dedup should keep command sink at two emitted events, got $lines lines"
 
-status=$("$script" --config "$config" --state-dir "$tmpdir/state" status-json)
+fresh_log="$tmpdir/fresh-events.jsonl"
+fresh_state="$tmpdir/fresh-state"
+RG_MATRIX_NOTIFIER_TEST_LOG="$fresh_log" \
+    "$script" --config "$config" --state-dir "$fresh_state" process-sync "$fixture"
+[ ! -e "$fresh_log" ] || fail "first sync must seed state without emitting backlog"
+[ -e "$fresh_state/since.json" ] || fail "first sync must persist next_batch"
+
+status=$("$script" --config "$config" --state-dir "$state" status-json)
 assert_contains "$status" '"state":"Good"' "status after sync"
 assert_contains "$status" '"short_text":"Mx"' "status short text"
 

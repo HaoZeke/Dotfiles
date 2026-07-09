@@ -1,0 +1,107 @@
+#+title: rg-matrix-notifier
+
+* Purpose
+
+=rg-matrix-notifier= is a lightweight Matrix event source for desktop
+notifications. It is not a chat UI and it does not keep Fractal running.
+
+Fractal remains the interactive client. The notifier runs as a separate Matrix
+device, syncs events from the homeserver, normalizes them to JSON, and sends
+them to a configured notification sink.
+
+* Bar Status
+
+The =Mx= block in the top bar is a status/launcher block:
+
+- =Mx setup= / =Mx!= means account auth is not complete.
+- =Mx= means the notifier has synced successfully.
+- Left click opens the Fractal UI through =rg-fractal-toggle=.
+- Right click restarts =rg-matrix-notifier.service=.
+
+The block is not required for notification delivery. It is useful because it
+shows auth/network state and keeps Fractal one click away.
+
+Notifications themselves also have an =Open= action. With the default
+=notify-send= sink, selecting =Open= runs:
+
+#+begin_src sh
+rg-fractal-toggle show
+#+end_src
+
+* SURF Setup
+
+The checked-in config contains only non-secret account metadata:
+
+#+begin_src toml
+user_id = "@rohit.goswami:surf.nl"
+homeserver = "https://matrix.surf.nl"
+#+end_src
+
+The access token is stored outside chezmoi in =pass=:
+
+#+begin_src sh
+pass show matrix/rg-matrix-notifier/access-token
+#+end_src
+
+Run the SSO setup command from the graphical session:
+
+#+begin_src sh
+rg-matrix-notifier setup-sso \
+  --homeserver https://matrix.surf.nl \
+  --user-id @rohit.goswami:surf.nl
+#+end_src
+
+The command starts a localhost callback, opens the Matrix SSO page, waits for
+SURFconext login, exchanges the returned Matrix login token, stores the access
+token in =pass=, and rewrites =~/.config/rg-matrix-notifier/config.toml=.
+
+Start or restart the service after setup:
+
+#+begin_src sh
+systemctl --user restart rg-matrix-notifier.service
+rg-matrix-notifier status-json
+#+end_src
+
+* Notification Sinks
+
+The notifier is backend agnostic. The default sink is =notify-send=:
+
+#+begin_src toml
+[sink]
+backend = "notify-send"
+urgency = "normal"
+timeout_ms = 8000
+open_command = ["rg-fractal-toggle", "show"]
+#+end_src
+
+For a custom command sink:
+
+#+begin_src toml
+[sink]
+backend = "command"
+command = ["/path/to/sink"]
+#+end_src
+
+The command receives one normalized JSON event on stdin and in
+=RG_MATRIX_EVENT_JSON=. The same event fields are also exposed as environment
+variables:
+
+- =RG_MATRIX_EVENT_ID=
+- =RG_MATRIX_ROOM_ID=
+- =RG_MATRIX_ROOM_NAME=
+- =RG_MATRIX_SENDER=
+- =RG_MATRIX_BODY=
+
+Example event:
+
+#+begin_src json
+{"backend":"matrix","event_id":"$event","event_type":"m.room.message","room_id":"!room:surf.nl","room_name":"Ops Room","sender":"@alice:surf.nl","body":"hello","origin_server_ts":1783514102943}
+#+end_src
+
+* Security Model
+
+The notifier does not read Fractal's token file or Matrix SDK SQLite stores.
+Those files are Fractal-owned and may use private encryption/serialization.
+
+The notifier owns a separate Matrix device token. Revoke that Matrix device
+from a full Matrix client if the token is compromised.
