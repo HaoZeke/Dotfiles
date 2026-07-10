@@ -42,7 +42,7 @@ interval = 60
 [[block]]
 block = "battery"
 interval = 15
-format = "$percentage $time $power|N/A"
+format = "$percentage {$time_remaining.dur(hms:true, min_unit:m) |}{$power |}"
 
 [[block]]
 block = "music"
