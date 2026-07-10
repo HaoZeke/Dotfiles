@@ -44,10 +44,16 @@ exit 0
 FLOCK
 chmod +x "$tmp/flock.sh"
 
-# Mock curl: quality probes return a fast 401, a slow 401, or transport failure.
+# Mock curl: quality probes return a fast 401, a slow 401, or transport
+# failure. The fallback URL (pin-independent) honours RG_TEST_FALLBACK,
+# defaulting to the same behaviour as the primary probe.
 cat >"$tmp/curl.sh" <<'CURL'
 #!/usr/bin/env bash
-case "${RG_TEST_QUALITY:-ok}" in
+mode="${RG_TEST_QUALITY:-ok}"
+case "$*" in
+*cloudflare*) mode="${RG_TEST_FALLBACK:-$mode}" ;;
+esac
+case "$mode" in
 ok) printf '401 0.250000 100.83.241.81\n'; exit 0 ;;
 slow) printf '401 7.500000 100.83.241.81\n'; exit 0 ;;
 fail) exit 28 ;;
@@ -106,6 +112,7 @@ run_case() {
         RG_GUARD_FLOCK="$tmp/flock.sh" \
         RG_GUARD_LOCK="$tmp/guard.lock" \
         RG_TEST_LOCKED="${RG_TEST_LOCKED:-0}" \
+        RG_TEST_FALLBACK="${RG_TEST_FALLBACK:-}" \
         RG_US_EGRESS_QUALITY_STATE="$quality_state" \
         RG_US_EGRESS_QUALITY_FAIL_THRESHOLD=2 \
         RG_US_EGRESS_QUALITY_ATTEMPTS=1 \
@@ -131,6 +138,13 @@ rm -f "$quality_state"
 n=$(run_case 1 0 1 1 slow); [ "${n:-0}" = "0" ] || fail "slow successful x.ai probe must not restart (got $n)"
 n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "first failing x.ai quality probe must not restart (got $n)"
 n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "1" ] || fail "persistent failing x.ai quality probe must restart (got $n)"
+rm -f "$quality_state"
+# api.x.ai dark but the pin-independent fallback answers: stale hosts pin, the
+# tunnel is healthy -- never restart, however often it repeats.
+RG_TEST_FALLBACK=ok n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "pin-suspect probe failure must not restart (got $n)"
+RG_TEST_FALLBACK=ok n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "repeated pin-suspect probe failure must not restart (got $n)"
+unset RG_TEST_FALLBACK
+n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "pin-suspect runs must clear the failure counter (got $n)"
 rm -f "$quality_state"
 n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
 n=$(run_case 1 0 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"

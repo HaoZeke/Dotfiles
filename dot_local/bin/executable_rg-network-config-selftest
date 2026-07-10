@@ -242,8 +242,12 @@ rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal"
     || fail "periodic network heal helper must route carve-out endpoints via the LAN gateway"
 rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \
     || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
-rg -q 'ensure_hosts_record 104\.18\.19\.80 api\.x\.ai' "$net_heal" \
+rg -q 'ensure_hosts_record "\$XAI_PIN_IP" api\.x\.ai' "$net_heal" \
     || fail "periodic network heal helper must pin api.x.ai without restarting DNS"
+rg -q -- '--resolve "api\.x\.ai:443:\$edge"' "$net_heal" \
+    || fail "periodic network heal helper must validate the api.x.ai pin through the live egress"
+rg -q 'api\.x\.ai pin rotated' "$net_heal" \
+    || fail "periodic network heal helper must rotate a dead api.x.ai pin to a live edge"
 rg -q 'nl_public_service_hosts' "$net_heal" \
     || fail "periodic network heal helper lacks a Dutch public-service host list"
 rg -q 'www\.cbr\.nl' "$net_heal" \
