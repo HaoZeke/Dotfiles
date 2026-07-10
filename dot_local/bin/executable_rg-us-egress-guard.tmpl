@@ -37,8 +37,8 @@ FLOCK="${RG_GUARD_FLOCK:-flock}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
 CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
-# Mutual-exclusion lock: the periodic timer and the real-time watch both run this
-# script, so serialize them (set to "none" to disable, e.g. under test).
+# Mutual-exclusion lock: the periodic timer and manual invocations can overlap,
+# so serialize them (set to "none" to disable, e.g. under test).
 LOCK="${RG_GUARD_LOCK:-/run/rg-us-egress-guard.lock}"
 # Consecutive x.ai probe failures before a restart is warranted, and where the
 # count is persisted between guard ticks.
@@ -176,8 +176,8 @@ egress_desired() {
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.
 egress_desired || exit 0
 
-# Serialize every mutation. The periodic timer and the real-time watch both run
-# this script; two concurrent `systemctl restart wg-quick` calls make systemd
+# Serialize every mutation. The periodic timer and a manual run can overlap;
+# two concurrent `systemctl restart wg-quick` calls make systemd
 # cancel one mid-flight, leaving the interface up but its 0/0 route half-applied
 # -- a total blackhole until reboot. A non-blocking lock makes a second instance
 # skip instead of colliding, so a restart's own netlink churn can never trigger a

@@ -314,10 +314,12 @@ rg -q 'PersistentKeepalive = 25' "$us_egress_up" \
     || fail "US egress helper must keep the Houston WireGuard NAT binding warm"
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"
-rg -q 'disable --now rg-us-egress-watch.service rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
+rg -q 'disable --now rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
     || fail "US egress provisioning does not disable boot-time full-tunnel services by default"
-! rg -q '^sudo systemctl enable --now rg-us-egress-watch.service$' "$us_egress_guard_script" \
-    || fail "US egress watcher is still unconditionally enabled at boot"
+rg -q 'rm -f /etc/systemd/system/rg-us-egress-watch.service /usr/local/sbin/rg-us-egress-watch' "$us_egress_guard_script" \
+    || fail "US egress provisioning must remove the retired real-time watcher"
+! rg -q 'enable --now rg-us-egress-watch.service' "$us_egress_guard_script" \
+    || fail "US egress watcher must never be enabled"
 ! rg -q '^sudo systemctl enable rg-us-egress.service$' "$us_egress_guard_script" \
     || fail "US egress full-tunnel service is still unconditionally enabled at boot"
 cleanup_call_line=$(rg -n '^cleanup_us_egress_state$' "$us_egress_up" | head -n 1 | cut -d: -f1)
