@@ -13,6 +13,14 @@
 #      the 30s serialized guard covers its job without the restart races.
 set -euo pipefail
 
+# Root provisioning must never hang a plain `chezmoi apply` on a password
+# prompt. Without cached sudo credentials, skip cleanly; `rg-net provision`
+# is the explicit interactive path.
+if ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; skipping egress provisioning (run: rg-net provision)" >&2
+    exit 0
+fi
+
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
 if [ ! -x "$GUARD_SRC" ]; then

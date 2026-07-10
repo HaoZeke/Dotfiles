@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# rg-net: single entry point for the laptop's network stack. The helpers grew
+# organically; this is the map plus a thin dispatcher so nobody has to remember
+# which of the rg-net-*/rg-us-egress-* scripts is safe to run.
+set -uo pipefail
+
+BIN="$HOME/.local/bin"
+
+map() {
+    cat <<'EOF'
+rg-net map :: who does what (rgx1gen11)
+
+READ-ONLY (always safe)
+  rg-net doctor           live audit of every path; 10-min timer alerts on regression
+  rg-net drift            chezmoi source vs applied vs root-installed copies
+  rg-network-status-json  status bar feed
+
+ROUTE-ONLY MUTATORS (self-healing, cannot take the uplink down)
+  rg-net heal             carve-outs + api.x.ai pin + prune (30s root timer)
+  rg-haozeke-tunnel-carveout   keep the Terra tailnet off the US tunnel
+  rg-tunnel-akamai-carveout    keep Akamai CDN sites on the NL uplink
+  rg-livingston-egress    split tunnel for the Livingston browser profile only
+
+HEAVY MUTATORS (root; these CAN kill connectivity -- use rg-net wrappers)
+  rg-net up|down          Houston 0/0 egress (rg-us-egress.service ->
+                          rg-us-egress-up: rebuilds DNS, disables NetworkManager,
+                          installs the 0/0 tunnel + pref-5205 x.ai mark rule)
+  rg-net recover          one-shot rebuild after a broken state (rg-net-recover)
+  rg-us-egress-guard      tunnel keep-alive (30s root timer; serialized)
+  rg-fix-local-dns        resolver chain rebuild (called by egress up)
+  rg-fix-networkmanager-ctrld  DISABLES NetworkManager; laptop-only, never Terra
+  rg-surf-vpn-apply       install a fresh eduVPN profile + restart split VPN
+  rg-airplane             radios + tailnets off/on
+
+WHO OWNS WHAT AT RUNTIME (systemd)
+  rg-net-heal.timer(30s)  rg-us-egress-guard.timer(30s)  rg-net-doctor.timer(10m,user)
+  rg-akamai-carveout-refresh.timer(12h)  rg-us-egress.service  wg-quick@rg-us-egress-wg
+  tailscaled(x.ai)  tailscale-haozeke(user,Terra)  openvpn-client@surf-split(SURF)
+
+INTERACTION IN ONE LINE
+  egress-up builds the tunnel and DNS, then heal (timer + at bring-up) keeps
+  destinations carved around it, guard keeps the tunnel itself alive, doctor
+  watches everything and shouts; nothing else should touch routing.
+EOF
+}
+
+drift() {
+    local rc=0
+    echo "== chezmoi source vs target =="
+    chezmoi status 2>/dev/null | grep -v '^$' || echo "  (clean)"
+    echo "== root-installed copies vs chezmoi-applied =="
+    local pair src dst
+    for pair in \
+        "$BIN/rg-net-heal:/usr/local/sbin/rg-net-heal" \
+        "$BIN/rg-net-recover:/usr/local/sbin/rg-net-recover" \
+        "$BIN/rg-us-egress-guard:/usr/local/sbin/rg-us-egress-guard" \
+        "$BIN/rg-tunnel-akamai-carveout:/usr/local/sbin/rg-tunnel-akamai-carveout"; do
+        src="${pair%%:*}"; dst="${pair##*:}"
+        if [ ! -e "$dst" ]; then
+            printf '  MISSING %s (provision has not run)\n' "$dst"; rc=1
+        elif cmp -s "$src" "$dst"; then
+            printf '  ok      %s\n' "$dst"
+        else
+            printf '  DRIFT   %s != %s (re-run: rg-net provision)\n' "$dst" "$src"; rc=1
+        fi
+    done
+    return "$rc"
+}
+
+provision() {
+    # The chezmoi run_onchange scripts skip root work without cached sudo
+    # credentials (so a plain `chezmoi apply` can never hang on a password
+    # prompt mid-run). This is the explicit, interactive provisioning path.
+    sudo -v || return 1
+    RG_US_EGRESS_AUTOSTART="${RG_US_EGRESS_AUTOSTART:-1}" chezmoi apply
+    # Force the provisioning scripts to re-run even when their hash is
+    # unchanged but the installed copies drifted.
+    if ! drift >/dev/null 2>&1; then
+        chezmoi state delete-bucket --bucket=scriptState >/dev/null 2>&1 || true
+        RG_US_EGRESS_AUTOSTART="${RG_US_EGRESS_AUTOSTART:-1}" chezmoi apply
+    fi
+    drift
+}
+
+case "${1:-map}" in
+    map) map ;;
+    doctor) exec "$BIN/rg-net-doctor" ;;
+    drift) drift ;;
+    heal) exec sudo /usr/local/sbin/rg-net-heal ;;
+    up) exec sudo systemctl restart rg-us-egress.service ;;
+    down) exec sudo systemctl stop rg-us-egress.service wg-quick@rg-us-egress-wg.service ;;
+    recover) exec sudo /usr/local/sbin/rg-net-recover ;;
+    provision) provision ;;
+    *) map; exit 2 ;;
+esac

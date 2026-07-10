@@ -287,6 +287,16 @@ rg -q 'ipinfo\.io/json' "$net_doctor" \
     || fail "doctor must report the egress exit geography"
 rg -q 'notify-send -u critical "net-doctor' "$net_doctor_alert" \
     || fail "doctor alert wrapper must raise a desktop notification on regression"
+rg_net="$repo/dot_local/bin/executable_rg-net"
+test -r "$rg_net" || fail "missing rg-net dispatcher"
+bash -n "$rg_net" || fail "rg-net dispatcher does not parse"
+for word in map doctor drift heal up down recover provision; do
+    rg -q "^    $word" "$rg_net" || fail "rg-net dispatcher lacks the $word subcommand"
+done
+rg -q 'sudo -n true' "$net_heal_script" \
+    || fail "net heal provisioning must skip cleanly without cached sudo credentials"
+rg -q 'sudo -n true' "$us_egress_guard_script" \
+    || fail "egress provisioning must skip cleanly without cached sudo credentials"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

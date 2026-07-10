@@ -8,6 +8,14 @@
 # rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
 set -euo pipefail
 
+# Root provisioning must never hang a plain `chezmoi apply` on a password
+# prompt. Without cached sudo credentials, skip cleanly; `rg-net provision`
+# is the explicit interactive path.
+if ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; skipping net-heal provisioning (run: rg-net provision)" >&2
+    exit 0
+fi
+
 HEAL_SRC="$HOME/.local/bin/rg-net-heal"
 RECOVER_SRC="$HOME/.local/bin/rg-net-recover"
 if [ ! -x "$HEAL_SRC" ]; then
