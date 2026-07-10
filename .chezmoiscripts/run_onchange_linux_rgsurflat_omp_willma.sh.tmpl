@@ -1,0 +1,236 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
+#!/usr/bin/env bash
+# rgSURFLat: specialize OMP to Willma-only (no multi-agent workstation stack).
+# Hash: specialize-v3-self-contained
+# OMP agent configs are gitignored + nimvault on the workstation; this host
+# never uses the multi-provider sealed models.yml as the live default.
+set -euo pipefail
+
+export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
+log() { printf 'chezmoi rgsurflat-omp: %s\n' "$*"; }
+
+AGENT="${HOME}/.omp/agent"
+SHARE="${HOME}/.local/share/omp-surf"
+mkdir -p "${AGENT}/extensions" "${HOME}/.local/bin" "${HOME}/.omp"
+
+# --- bun + omp ---
+if ! command -v bun >/dev/null 2>&1; then
+  log "installing bun"
+  curl -fsSL https://bun.sh/install | bash
+  export PATH="${HOME}/.bun/bin:${PATH}"
+fi
+if ! command -v omp >/dev/null 2>&1; then
+  log "installing @oh-my-pi/pi-coding-agent@16.4.0"
+  bun install -g @oh-my-pi/pi-coding-agent@16.4.0
+fi
+
+# --- extension (tracked under ~/.local/share/omp-surf) ---
+if [[ -f "${SHARE}/gpt-oss-priors.ts" ]]; then
+  install -m 0644 "${SHARE}/gpt-oss-priors.ts" "${AGENT}/extensions/gpt-oss-priors.ts"
+  log "installed gpt-oss-priors extension"
+fi
+if [[ -f "${SHARE}/README-SURF.txt" ]]; then
+  install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
+fi
+
+# --- token resolve ---
+models="${AGENT}/models.yml"
+token=""
+if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
+  token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
+  log "token from pass"
+elif [[ -f "$models" ]]; then
+  token=$(WILLMA_MODELS="$models" python3 - <<'PY' 2>/dev/null || true
+import os, re
+from pathlib import Path
+t = Path(os.environ["WILLMA_MODELS"]).read_text()
+m = re.search(r"apiKey:\s*[\"']?([^\"'\n]+)", t)
+if m and m.group(1) and "PLACEHOLDER" not in m.group(1):
+    print(m.group(1).strip())
+PY
+)
+  [[ -n "${token}" ]] && log "token preserved from models.yml"
+fi
+if [[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
+  token="${SURF_AI_HUB_TOKEN}"
+  log "token from SURF_AI_HUB_TOKEN"
+fi
+if [[ -z "${token}" ]]; then
+  log "WARN: no Willma token; models.yml will keep PLACEHOLDER until pass/env available"
+  token="WILLMA_TOKEN_PLACEHOLDER"
+fi
+
+# --- models.yml: Willma only ---
+export WILLMA_TOKEN="$token"
+python3 - <<'PY'
+from pathlib import Path
+import os
+tok = os.environ["WILLMA_TOKEN"]
+# yaml-safe single-line token
+safe = tok.replace("\\", "\\\\").replace('"', '\\"')
+text = f'''# rgSURFLat SURF-only (chezmoi run_onchange). Do not nimvault seal from this host.
+providers:
+  surf-ai-hub:
+    baseUrl: https://willma.surf.nl/api/v0
+    apiKey: "{safe}"
+    api: openai-completions
+    authHeader: true
+    models:
+      - id: openai/gpt-oss-120b
+        name: GPT-OSS 120B (SURF Willma)
+        reasoning: true
+        input:
+          - text
+        contextWindow: 131072
+        maxTokens: 32768
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsDeveloperRole: false
+          supportsStore: false
+          supportsReasoningEffort: true
+          maxTokensField: max_tokens
+          supportsUsageInStreaming: true
+'''
+p = Path.home() / ".omp/agent/models.yml"
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(text)
+print("wrote", p)
+PY
+
+# --- config.yml: all roles Willma; skills = eb-stack only ---
+cat > "${AGENT}/config.yml" <<'YAML'
+# rgSURFLat SURF-only (chezmoi run_onchange). No multi-agent commercial stack.
+lastChangelogVersion: 16.4.0
+modelRoles:
+  default: surf-ai-hub/openai/gpt-oss-120b
+  plan: surf-ai-hub/openai/gpt-oss-120b
+  smol: surf-ai-hub/openai/gpt-oss-120b
+  slow: surf-ai-hub/openai/gpt-oss-120b
+  commit: surf-ai-hub/openai/gpt-oss-120b
+  fallback: surf-ai-hub/openai/gpt-oss-120b
+  surf: surf-ai-hub/openai/gpt-oss-120b
+  eb-stack: surf-ai-hub/openai/gpt-oss-120b
+  surf-plan: surf-ai-hub/openai/gpt-oss-120b
+skills:
+  customDirectories:
+    - ~/Git/Github/Tools/eb-stack/skills
+startup:
+  setupWizard: false
+  checkUpdate: false
+memories:
+  enabled: true
+bashInterceptor:
+  enabled: true
+python:
+  toolMode: both
+ask:
+  timeout: 120
+compaction:
+  autoCompact: true
+  compactThreshold: 0.85
+task:
+  eager: true
+YAML
+chmod 600 "${AGENT}/config.yml" "${AGENT}/models.yml"
+log "wrote SURF-only config.yml + models.yml"
+
+# --- AGENTS.md ---
+cat > "${AGENT}/AGENTS.md" <<'MD'
+# SURF laptop (rg.surf) - Willma gpt-oss-120b only
+
+## Hard Rules
+
+- Never attribute AI in public output. No bot signatures, no `Co-Authored-By`.
+- Never open, comment on, create, review, merge, or close GitHub issues/PRs.
+  Read-only GitHub access only unless the user explicitly narrows to a safe command.
+- Never force push without permission.
+- Never `rm` to delete files outside `/tmp`; use `rtrash`. Never `gio trash`.
+- Use ASCII punctuation only.
+- NEVER compile or run heavy builds on this laptop — use `rg.terra` (or Snellius/elja)
+  for cargo/eb builds. Running an already-built remote binary is fine.
+
+## Model policy
+
+- **Only model:** `surf-ai-hub/openai/gpt-oss-120b` (SURF AI Hub Willma).
+- All `modelRoles` point at Willma. No Alibaba/DeepSeek/Copilot/Ollama on this host.
+
+## Tools
+
+- Prefer **apply_patch** (`~/.omp/agent/extensions/gpt-oss-priors.ts`) for multi-hunk edits.
+- Print-mode: pin toolbox `bash,read,edit,apply_patch` (avoid flaky task tool in `-p`).
+
+## Skills (this host)
+
+- **Only:** `~/Git/Github/Tools/eb-stack/skills` (annual-bump).
+- Do **not** use `pi_env` skills here (workstation multi-agent pack).
+
+## eb-stack
+
+- Real CLI only (`check-recipe`, `bump`, `solve`); never invent deps.
+- Prefer `ssh rg.terra` for robot + release binary.
+- CLI form: `--require-configopt=-Dflag=value` (attached `=`).
+- No GitHub/GitLab PR surface; IssuePR drafts only.
+
+## Launch
+
+```
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+omp-surf
+# or omp-eb-stack / omp
+```
+
+## Auth
+
+- Token in `~/.omp/agent/models.yml` (`pass show surf/ai-hub/token` when store exists).
+- **Never** `nimvault seal` models.yml from this host (corrupts workstation multi-provider blob).
+MD
+chmod 600 "${AGENT}/AGENTS.md"
+log "wrote SURF AGENTS.md"
+
+# --- no multi-agent MCP on this host ---
+# leave mcp absent or empty; do not copy workstation ookcite/eb-stack absolute paths
+if [[ -f "${HOME}/.omp/mcp.json" ]] || [[ -f "${AGENT}/mcp.json" ]]; then
+  log "note: existing mcp.json left in place; SURF profile does not install workstation MCP"
+fi
+
+# --- wizard skip ---
+db="${AGENT}/agent.db"
+if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('setupVersion','1');"
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
+  log "agent.db setupVersion=1 setupWizard=false"
+else
+  log "agent.db missing until first omp run; re-apply after first launch if wizard appears"
+fi
+
+# --- wrappers (also managed as chezmoi files; reinforce PATH) ---
+for name in omp-surf omp-eb-stack; do
+  cat > "${HOME}/.local/bin/${name}" <<'WRAP'
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+ext="$HOME/.omp/agent/extensions/gpt-oss-priors.ts"
+if [[ -f "$ext" ]]; then
+  exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium -e "$ext" "$@"
+else
+  exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium "$@"
+fi
+WRAP
+  chmod 755 "${HOME}/.local/bin/${name}"
+done
+log "wrappers omp-surf omp-eb-stack"
+
+# --- smoke ---
+if [[ "$token" != "WILLMA_TOKEN_PLACEHOLDER" ]] && command -v omp >/dev/null 2>&1; then
+  out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -3 || true)
+  log "smoke: ${out//$'\n'/ | }"
+else
+  log "skip live smoke (no token or no omp)"
+fi
+
+log "done: Willma-only OMP specialized on rgSURFLat"
+{{- end }}
