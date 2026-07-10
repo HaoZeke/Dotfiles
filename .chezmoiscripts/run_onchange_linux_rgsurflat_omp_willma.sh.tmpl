@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
 # rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v7-mcp-context7-project-ctx
+# Hash: specialize-v7b-bunx-project-ctx-schema
 # Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
 set -euo pipefail
 
@@ -250,19 +250,19 @@ agent.mkdir(parents=True, exist_ok=True)
 key = os.environ.get("CTX7_KEY", "")
 servers = {}
 # Context7 via npx (no local binary required)
-if key:
-    servers["context7"] = {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@upstash/context7-mcp", "--api-key", key],
-    }
+import shutil
+if shutil.which("bunx"):
+    cmd, base = "bunx", ["-y", "@upstash/context7-mcp"]
+elif shutil.which("npx"):
+    cmd, base = "npx", ["-y", "@upstash/context7-mcp"]
+elif shutil.which("bun"):
+    cmd, base = "bun", ["x", "-y", "@upstash/context7-mcp"]
 else:
-    # still register; server may prompt or use free tier
-    servers["context7"] = {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@upstash/context7-mcp"],
-    }
+    cmd, base = "npx", ["-y", "@upstash/context7-mcp"]
+args = list(base)
+if key:
+    args += ["--api-key", key]
+servers["context7"] = {"type": "stdio", "command": cmd, "args": args}
 # project-ctx MCP when binary exists
 pc = home / ".local" / "bin" / "project-ctx-mcp"
 if pc.is_file() and os.access(pc, os.X_OK):
