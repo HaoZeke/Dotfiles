@@ -22,6 +22,10 @@
 #      static, discovery mirror), pin disco.eduvpn.org's out-of-range IPs, and
 #      blackhole its dead IPv6 so discovery falls straight to IPv4. Specific main
 #      routes beat wg-quick's 0/0 (rule 5208), re-asserted each run.
+#   5. Dutch public-service carve-out: CBR, DigiD, MijnOverheid, tax, RDW,
+#      benefits, benefits-adjacent, and similar public portals can reject or
+#      mis-handle the Houston egress. Resolve the known public-service host set
+#      on each run and route those /32s through the local uplink.
 set -uo pipefail
 
 log() { logger -t rg-net-heal -- "$1"; }
@@ -126,6 +130,76 @@ tailscale_host_ips() {
     done
 }
 
+nl_public_service_hosts() {
+    if [ -n "${RG_NL_PUBLIC_SERVICE_HOSTS:-}" ]; then
+        printf '%s\n' $RG_NL_PUBLIC_SERVICE_HOSTS
+        return 0
+    fi
+    cat <<'EOF'
+cbr.nl
+www.cbr.nl
+mijn.cbr.nl
+digid.nl
+www.digid.nl
+mijn.digid.nl
+app.digid.nl
+inloggen.digid.nl
+overheid.nl
+www.overheid.nl
+mijn.overheid.nl
+mijnoverheid.nl
+www.mijnoverheid.nl
+berichtenbox.overheid.nl
+rijksoverheid.nl
+www.rijksoverheid.nl
+government.nl
+www.government.nl
+nederlandwereldwijd.nl
+www.nederlandwereldwijd.nl
+netherlandsworldwide.nl
+www.netherlandsworldwide.nl
+belastingdienst.nl
+www.belastingdienst.nl
+mijn.belastingdienst.nl
+mijnbelastingdienst.belastingdienst.nl
+toeslagen.nl
+www.toeslagen.nl
+mijn.toeslagen.nl
+duo.nl
+www.duo.nl
+mijn.duo.nl
+rdw.nl
+www.rdw.nl
+mijn.rdw.nl
+uwv.nl
+www.uwv.nl
+werk.nl
+www.werk.nl
+svb.nl
+www.svb.nl
+mysvb.nl
+www.mysvb.nl
+cjib.nl
+www.cjib.nl
+politie.nl
+www.politie.nl
+om.nl
+www.om.nl
+rechtspraak.nl
+www.rechtspraak.nl
+ind.nl
+www.ind.nl
+kadaster.nl
+www.kadaster.nl
+kvk.nl
+www.kvk.nl
+rvo.nl
+www.rvo.nl
+logius.nl
+www.logius.nl
+EOF
+}
+
 # --- 1. x.ai tailscale ----------------------------------------------------
 systemctl is-active --quiet tailscaled.service || { systemctl start tailscaled.service >/dev/null 2>&1 || true; sleep 2; }
 ts_state="$(tailscale status --json 2>/dev/null \
@@ -163,6 +237,16 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     for gl_host in gitlab.com altssh.gitlab.com; do
         getent ahostsv4 "$gl_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
             route_local_v4 "$ip" "gitlab"
+        done
+    done
+fi
+
+# --- 2c. Dutch public-service carve-out (CBR, DigiD, MijnOverheid, tax) ----
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    nl_public_service_hosts | sort -u | while read -r nl_host; do
+        case "$nl_host" in ''|\#*) continue ;; esac
+        getent ahostsv4 "$nl_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
+            route_local_v4 "$ip" "nl public service:$nl_host"
         done
     done
 fi

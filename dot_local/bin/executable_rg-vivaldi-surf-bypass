@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-vivaldi-surf-bypass).
 #
-# Add SURF internal hosts to saved Chromium/Vivaldi extension proxy bypass lists.
+# Add SURF internal and Dutch public-service hosts to saved Chromium/Vivaldi
+# extension proxy bypass lists.
 
 set -euo pipefail
 
@@ -9,9 +10,10 @@ usage() {
     cat <<'USAGE'
 usage: rg-vivaldi-surf-bypass [--root DIR] [--dry-run]
 
-Scans Vivaldi profile Preferences files and adds SURF internal hosts to saved
-extension proxy bypass lists. This covers the Chromium internal
-"bypass_list" form and the chrome.proxy API "rules.bypassList" form.
+Scans Vivaldi profile Preferences files and adds SURF internal plus Dutch
+public-service hosts to saved extension proxy bypass lists. This covers the
+Chromium internal "bypass_list" form and the chrome.proxy API
+"rules.bypassList" form.
 
 Options:
   --root DIR   Vivaldi config root (default: ~/.config/vivaldi).
@@ -66,6 +68,54 @@ surf_bypass_json='[
   "*.ia.surfsara.nl",
   "*.surfsara.nl",
   "surfsara.nl",
+  "*.digid.nl",
+  "digid.nl",
+  "*.cbr.nl",
+  "cbr.nl",
+  "*.overheid.nl",
+  "overheid.nl",
+  "*.mijnoverheid.nl",
+  "mijnoverheid.nl",
+  "*.rijksoverheid.nl",
+  "rijksoverheid.nl",
+  "*.government.nl",
+  "government.nl",
+  "*.nederlandwereldwijd.nl",
+  "nederlandwereldwijd.nl",
+  "*.netherlandsworldwide.nl",
+  "netherlandsworldwide.nl",
+  "*.belastingdienst.nl",
+  "belastingdienst.nl",
+  "*.toeslagen.nl",
+  "toeslagen.nl",
+  "*.duo.nl",
+  "duo.nl",
+  "*.rdw.nl",
+  "rdw.nl",
+  "*.uwv.nl",
+  "uwv.nl",
+  "*.werk.nl",
+  "werk.nl",
+  "*.svb.nl",
+  "svb.nl",
+  "*.cjib.nl",
+  "cjib.nl",
+  "*.politie.nl",
+  "politie.nl",
+  "*.om.nl",
+  "om.nl",
+  "*.rechtspraak.nl",
+  "rechtspraak.nl",
+  "*.ind.nl",
+  "ind.nl",
+  "*.kadaster.nl",
+  "kadaster.nl",
+  "*.kvk.nl",
+  "kvk.nl",
+  "*.rvo.nl",
+  "rvo.nl",
+  "*.logius.nl",
+  "logius.nl",
   "<local>"
 ]'
 
