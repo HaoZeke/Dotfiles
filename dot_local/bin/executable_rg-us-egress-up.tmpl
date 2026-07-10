@@ -17,6 +17,76 @@ ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
 tmp_conf=""
 activation_started=0
 
+# Transform the provider WireGuard conf into the runtime conf: strip DNS=,
+# force a carrier-safe MTU, normalize PersistentKeepalive to 25 inside every
+# [Peer], and inject the policy-rule hooks into [Interface]. Pure text -> text
+# so it is testable without root (--render-conf below).
+render_runtime_conf() {
+    local src="$1" conf_mtu mtu
+    conf_mtu="$(awk -F= '/^[[:space:]]*MTU[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' "$src")"
+    mtu="${RG_US_EGRESS_MTU:-${conf_mtu:-1280}}"
+    awk -v mtu="$mtu" '
+    BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
+    function inject_hooks() {
+        if (injected == 0) {
+            # Route the system tailscaled(x.ai) own transport (fwmark 0x80000)
+            # into the tunnel BEFORE tailscale rule 5210 sends it to main/LAN:
+            # the x.ai tailnet must see this node from the Houston exit or
+            # model access is refused. Empty table 51820 (tunnel down) falls
+            # through to the next rule, so this is inert without the tunnel.
+            print "PostUp = ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PostUp = ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
+            print "PostUp = ip -6 rule add pref 5206 lookup 52 2>/dev/null || true"
+            print "PreDown = ip -4 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PreDown = ip -6 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PreDown = ip -4 rule del pref 5206 lookup 52 2>/dev/null || true"
+            print "PreDown = ip -6 rule del pref 5206 lookup 52 2>/dev/null || true"
+            injected = 1
+        }
+    }
+    function finish_peer() {
+        if (peer_seen == 1 && keepalive_seen == 0) {
+            print "PersistentKeepalive = 25"
+        }
+    }
+    /^[[:space:]]*DNS[[:space:]]*=/ { next }
+    /^[[:space:]]*MTU[[:space:]]*=/ { next }
+    /^[[:space:]]*PersistentKeepalive[[:space:]]*=/ { keepalive_seen = 1; print "PersistentKeepalive = 25"; next }
+    /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
+    # The [Peer] header must consume the line here (next): letting it fall
+    # through to the generic section rule ran finish_peer() twice and emitted
+    # PersistentKeepalive into [Interface], which wg rejects -- the tunnel then
+    # fails to start on every regeneration (the 2026-07-10 boot outage).
+    /^[[:space:]]*\[Peer\][[:space:]]*$/ { finish_peer(); inject_hooks(); print; peer_seen = 1; keepalive_seen = 0; next }
+    /^[[:space:]]*\[/ { finish_peer(); peer_seen = 0; keepalive_seen = 0; print; next }
+    { print }
+    END { finish_peer(); inject_hooks() }
+    ' "$src"
+}
+
+# Refuse to install a runtime conf whose keys sit in the wrong section; wg
+# parses [Peer]-only keys strictly and a misplaced line kills the unit at boot.
+verify_runtime_conf() {
+    awk '
+    /^[[:space:]]*\[/ { sect = $0 }
+    /^[[:space:]]*PersistentKeepalive[[:space:]]*=/ && sect !~ /\[Peer\]/ { bad = 1 }
+    /^[[:space:]]*(PostUp|PreDown|MTU|Address|PrivateKey)[[:space:]]*=/ && sect !~ /\[Interface\]/ { bad = 1 }
+    /^[[:space:]]*(PublicKey|AllowedIPs|Endpoint)[[:space:]]*=/ && sect !~ /\[Peer\]/ { bad = 1 }
+    END { exit bad }
+    ' "$1"
+}
+
+# Testing hook: render the runtime conf transform and exit (no root, no
+# network). Used by rg-network-config-selftest to pin the conf structure.
+if [ "${1:-}" = "--render-conf" ]; then
+    src="${2:?usage: $0 --render-conf <source.conf> <out.conf>}"
+    dst="${3:?usage: $0 --render-conf <source.conf> <out.conf>}"
+    render_runtime_conf "$src" >"$dst"
+    verify_runtime_conf "$dst"
+    exit $?
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
     printf 'run as root: sudo bash %s [wireguard.conf]\n' "$0" >&2
     exit 2
@@ -293,42 +363,11 @@ tmp_conf="$(mktemp)"
 # A conservative MTU lets WireGuard data survive carriers (mobile hotspots) that
 # pass the small handshake but silently drop full ~1420-byte payloads. Precedence:
 # RG_US_EGRESS_MTU env > explicit MTU in the source conf > 1280 default.
-conf_mtu="$(awk -F= '/^[[:space:]]*MTU[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' "$conf")"
-egress_mtu="${RG_US_EGRESS_MTU:-${conf_mtu:-1280}}"
-awk -v mtu="$egress_mtu" '
-    BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
-    function inject_hooks() {
-        if (injected == 0) {
-            # Route the system tailscaled(x.ai) own transport (fwmark 0x80000)
-            # into the tunnel BEFORE tailscale rule 5210 sends it to main/LAN:
-            # the x.ai tailnet must see this node from the Houston exit or
-            # model access is refused. Empty table 51820 (tunnel down) falls
-            # through to the next rule, so this is inert without the tunnel.
-            print "PostUp = ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PostUp = ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
-            print "PostUp = ip -6 rule add pref 5206 lookup 52 2>/dev/null || true"
-            print "PreDown = ip -4 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PreDown = ip -6 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PreDown = ip -4 rule del pref 5206 lookup 52 2>/dev/null || true"
-            print "PreDown = ip -6 rule del pref 5206 lookup 52 2>/dev/null || true"
-            injected = 1
-        }
-    }
-    function finish_peer() {
-        if (peer_seen == 1 && keepalive_seen == 0) {
-            print "PersistentKeepalive = 25"
-        }
-    }
-    /^[[:space:]]*DNS[[:space:]]*=/ { next }
-    /^[[:space:]]*MTU[[:space:]]*=/ { next }
-    /^[[:space:]]*PersistentKeepalive[[:space:]]*=/ { keepalive_seen = 1; print "PersistentKeepalive = 25"; next }
-    /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
-    /^[[:space:]]*\[Peer\][[:space:]]*$/ { finish_peer(); peer_seen = 1; keepalive_seen = 0; inject_hooks() }
-    /^[[:space:]]*\[/ { finish_peer(); peer_seen = 0; keepalive_seen = 0 }
-    { print }
-    END { finish_peer(); inject_hooks() }
-' "$conf" >"$tmp_conf"
+render_runtime_conf "$conf" >"$tmp_conf"
+if ! verify_runtime_conf "$tmp_conf"; then
+    printf 'rendered runtime conf is structurally invalid; refusing to install it\n' >&2
+    exit 3
+fi
 install -m 0600 "$tmp_conf" "$runtime_conf"
 
 printf '\n== remove stale WireGuard state before activation ==\n'

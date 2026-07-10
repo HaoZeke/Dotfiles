@@ -331,6 +331,40 @@ rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_u
     || fail "US egress helper does not verify the WireGuard unit remains active"
 rg -q 'PersistentKeepalive = 25' "$us_egress_up" \
     || fail "US egress helper must keep the Houston WireGuard NAT binding warm"
+
+# Functional check of the runtime-conf transform: render a sample provider
+# conf and pin the section structure. A misplaced key is exactly the failure
+# that killed the tunnel at boot on 2026-07-10 (keepalive in [Interface]).
+render_wg_case() {
+    local body="$1" out="$tmp_selftest/rendered-$2.conf"
+    printf '%s\n' "$body" >"$tmp_selftest/sample-$2.conf"
+    bash "$us_egress_up" --render-conf "$tmp_selftest/sample-$2.conf" "$out" \
+        || fail "runtime conf transform failed structural validation (case $2)"
+    printf '%s\n' "$out"
+}
+sample='[Interface]
+PrivateKey = xPRIVx
+Address = 10.10.10.2/32
+DNS = 10.255.255.1
+[Peer]
+PublicKey = xPUBx
+AllowedIPs = 0.0.0.0/0,::/0
+Endpoint = 1.2.3.4:443'
+rendered="$(render_wg_case "$sample" plain)"
+keepalive_sections=$(awk '/^\[/{sect=$0} /^PersistentKeepalive/{print sect}' "$rendered" | sort -u)
+test "$keepalive_sections" = "[Peer]" \
+    || fail "injected keepalive must land only inside [Peer] (got: ${keepalive_sections:-none})"
+hook_sections=$(awk '/^\[/{sect=$0} /^Post[UD]|^PreDown/{print sect}' "$rendered" | sort -u)
+test "$hook_sections" = "[Interface]" \
+    || fail "policy-rule hooks must land only inside [Interface] (got: ${hook_sections:-none})"
+rg -q '^MTU = 1280$' "$rendered" || fail "rendered conf must carry the carrier-safe MTU"
+! rg -q '^DNS' "$rendered" || fail "rendered conf must strip provider DNS"
+rendered="$(render_wg_case "${sample}
+PersistentKeepalive=15" keepalive)"
+test "$(rg -c '^PersistentKeepalive' "$rendered")" = "1" \
+    || fail "an existing keepalive must be normalized, not duplicated"
+rg -q '^PersistentKeepalive = 25$' "$rendered" \
+    || fail "an existing keepalive must be normalized to 25"
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"
 rg -q 'disable --now rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
