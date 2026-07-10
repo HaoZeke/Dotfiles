@@ -299,6 +299,19 @@ rg -q 'sudo -n true' "$net_heal_script" \
     || fail "net heal provisioning must skip cleanly without cached sudo credentials"
 rg -q 'sudo -n true' "$us_egress_guard_script" \
     || fail "egress provisioning must skip cleanly without cached sudo credentials"
+borg_mirror="$repo/dot_local/bin/executable_rg-borg-pcloud-mirror"
+test -r "$borg_mirror" || fail "missing borg pCloud mirror helper"
+bash -n "$borg_mirror" || fail "borg pCloud mirror helper does not parse"
+rg -q 'mountpoint -q "\$MOUNT"' "$borg_mirror" \
+    || fail "borg mirror must skip cleanly when pCloud is not mounted"
+rg -q 'no mirror in \$\{STALE_DAYS\}\+ days|no offsite copy' "$borg_mirror" \
+    || fail "borg mirror must alert when the offsite copy goes stale"
+rg -q 'rsync -a --delete' "$borg_mirror" \
+    || fail "borg mirror must mirror (not accumulate) the Terra repo"
+test -r "$repo/dot_config/systemd/user/rg-borg-pcloud-mirror.timer" \
+    || fail "missing borg mirror timer unit"
+rg -q 'enable --now rg-borg-pcloud-mirror.timer' "$repo/.chezmoiscripts/run_onchange_linux_terra_mail_tunnel.sh.tmpl" \
+    || fail "mail tunnel provisioning must enable the borg mirror timer"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

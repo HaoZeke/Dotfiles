@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Mirror Terra's borg repository into pCloud. The mail (and Terra user config)
+# is backed up nightly on Terra into a LOCAL borg repo -- backups must never
+# depend on the pCloud client being alive at 3am. This mirror runs on the
+# laptop, where the pCloud FUSE client lives, and only when it is mounted.
+# Silence is not success: if no mirror lands for a week, raise the alarm.
+set -uo pipefail
+
+SRC="${RG_BORG_MIRROR_SRC:-rg.terra:Backups/borg/terra/}"
+DST="${RG_BORG_MIRROR_DST:-$HOME/pCloudDrive/Backups/Borg/terra/}"
+STAMP="${RG_BORG_MIRROR_STAMP:-$HOME/.local/state/rg-borg-pcloud-mirror.last}"
+STALE_DAYS="${RG_BORG_MIRROR_STALE_DAYS:-7}"
+
+alert() { notify-send -u critical "borg pCloud mirror" "$1" 2>/dev/null || true; }
+
+MOUNT="${RG_BORG_MIRROR_MOUNT:-$HOME/pCloudDrive}"
+if ! mountpoint -q "$MOUNT"; then
+    if [ -z "$(find "$STAMP" -mtime "-$STALE_DAYS" 2>/dev/null)" ]; then
+        alert "pCloud not mounted and no mirror in ${STALE_DAYS}+ days; the Terra mail backup has no offsite copy. Start the pcloud client."
+    fi
+    echo "pCloudDrive not mounted; skipping mirror"
+    exit 0
+fi
+
+mkdir -p "$DST"
+if rsync -a --delete "$SRC" "$DST"; then
+    mkdir -p "$(dirname "$STAMP")"
+    touch "$STAMP"
+    echo "mirror ok: $(du -sh "$DST" 2>/dev/null | cut -f1)"
+else
+    alert "rsync of the Terra borg repo to pCloud failed; see journalctl --user -u rg-borg-pcloud-mirror"
+    exit 1
+fi

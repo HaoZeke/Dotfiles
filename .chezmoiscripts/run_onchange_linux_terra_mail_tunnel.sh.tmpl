@@ -9,4 +9,10 @@ listeners="$(ss -ltn '( sport = :1143 )' 2>/dev/null || true)"
 if ! grep -q '127\.0\.0\.1:1143' <<<"$listeners" || ! grep -q '\[::1\]:1143' <<<"$listeners"; then
   systemctl --user restart terra-mail-tunnel.service 2>/dev/null || true
 fi
+
+# Offsite copy of the Terra borg repo (the mail archive lives there): daily
+# mirror into pCloud whenever the FUSE client is mounted; alerts after 7
+# stale days so a never-running client cannot silently mean no offsite copy.
+systemctl --user enable --now rg-borg-pcloud-mirror.timer >/dev/null 2>&1 \
+  || echo "chezmoi: rg-borg-pcloud-mirror.timer not enabled yet" >&2
 {{- end }}

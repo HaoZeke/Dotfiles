@@ -1,0 +1,7 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Service]
+# config.yaml's encryption_passcommand reads ${CREDENTIALS_DIRECTORY}/borg-passphrase;
+# pass/gpg cannot decrypt headless (pinentry needs a tty), so the passphrase is
+# a 0600 file loaded as a systemd credential. The file itself stays vault-side.
+LoadCredential=borg-passphrase:%h/.config/borgmatic/borg-passphrase
+{{- end -}}
