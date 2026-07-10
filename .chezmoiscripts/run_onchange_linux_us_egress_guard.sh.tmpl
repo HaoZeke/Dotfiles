@@ -51,6 +51,17 @@ install_bin() {
 install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
 [ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
 
+# (0) Audio: force the SOF driver for the Raptor Lake cAVS device. The
+# auto-selector's DMIC probe silently demotes it to legacy HDA (no internal
+# mic, "microphone not found" in Meet); pinning dsp_driver=3 gives the
+# digital mic array on every boot. Verified 2026-07-10 on the stock kernel;
+# the linux-rg kernel additionally soft-locks on live audio rebind (tracked
+# separately) -- never reload these modules live, set the option and reboot.
+install_root /etc/modprobe.d/rg-sof-audio.conf 0644 <<'EOF'
+# Managed by chezmoi (run_onchange_linux_us_egress_guard.sh.tmpl).
+options snd-intel-dspcfg dsp_driver=3
+EOF
+
 # (1) Root cause: stop networkd reaping rules/routes it did not create.
 install_root /etc/systemd/networkd.conf.d/10-rg-keep-foreign-routes.conf 0644 <<'EOF'
 # Managed by chezmoi (run_onchange_linux_us_egress_guard.sh.tmpl).
