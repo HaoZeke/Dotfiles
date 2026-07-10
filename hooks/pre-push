@@ -38,6 +38,23 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         echo "$offenders" >&2
         blocked=1
     fi
+
+    # Selftest-gutting guard: assertions in the *-selftest helpers are the
+    # only gate between an automated edit and a broken live network stack
+    # (the 2026-07-09 regression removed a carve-out AND its guarding
+    # assertion in one sweep). Removing a `fail "` line from a selftest is
+    # only pushable when a commit in the range owns the change with an
+    # explicit `selftest-rework:` note.
+    if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+        gutted=$(git diff "$range" -- 'dot_local/bin/*selftest*' 2>/dev/null | \
+            grep -E '^-[^-]' | grep -c 'fail "' || true)
+        if [ "${gutted:-0}" -gt 0 ] && \
+            ! git log "$range" --format='%B' 2>/dev/null | grep -q 'selftest-rework:'; then
+            echo "BLOCKED: $gutted selftest assertion line(s) removed on $local_ref without a selftest-rework: note" >&2
+            echo "If the spec really changed, say so in the commit body: selftest-rework: <why>" >&2
+            blocked=1
+        fi
+    fi
 done
 
 if [ "$blocked" -eq 1 ]; then
