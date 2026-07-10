@@ -100,6 +100,10 @@ chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
 quality_state="$tmp/quality-state"
+# Deterministic carve-out health: pretend the /32 peer backstops are pinned so
+# carveout_present() never depends on the host's real nft/run state.
+hz_state="$tmp/hz-endpoints"
+printf '203.0.113.7\n' >"$hz_state"
 
 # run_case WG_ENABLED SERVICE_ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
 run_case() {
@@ -113,6 +117,7 @@ run_case() {
         RG_GUARD_LOCK="$tmp/guard.lock" \
         RG_TEST_LOCKED="${RG_TEST_LOCKED:-0}" \
         RG_TEST_FALLBACK="${RG_TEST_FALLBACK:-}" \
+        RG_HZ_STATE="$hz_state" \
         RG_US_EGRESS_QUALITY_STATE="$quality_state" \
         RG_US_EGRESS_QUALITY_FAIL_THRESHOLD=2 \
         RG_US_EGRESS_QUALITY_ATTEMPTS=1 \

@@ -67,10 +67,22 @@ rule=$(ip rule show 2>/dev/null | grep "fwmark $HZ_MARK" || true)
 tab=$(ip route show table "$HZ_TABLE" 2>/dev/null | grep '^default ' || true)
 nft_ok=0
 nft list table inet rg_hz_carveout >/dev/null 2>&1 && nft_ok=1
-if [ -n "$rule" ]; then ok "ip rule: $rule"; else bad "ip rule for fwmark $HZ_MARK missing"; fi
-if [ -n "$tab" ]; then ok "table $HZ_TABLE: $tab"; else bad "table $HZ_TABLE has no default (stale carve-out)"; fi
-if [ "$nft_ok" -eq 1 ]; then ok "nft table inet rg_hz_carveout present"
-else bad "nft rg_hz_carveout ABSENT — haozeke UDP likely hairpins via US WG; run: sudo rg-haozeke-tunnel-carveout up"; fi
+tunnel_up=0
+ip link show rg-us-egress-wg >/dev/null 2>&1 && tunnel_up=1
+if [ "$tunnel_up" -eq 0 ]; then
+  # Without the 0/0 tunnel there is nothing to carve around; absence is normal.
+  ok "carve-out not required (US egress down); rule=$([ -n "$rule" ] && echo present || echo absent)"
+else
+  if [ -n "$rule" ]; then ok "ip rule: $rule"; else bad "ip rule for fwmark $HZ_MARK missing"; fi
+  if [ -n "$tab" ]; then ok "table $HZ_TABLE: $tab"; else bad "table $HZ_TABLE has no default (stale carve-out)"; fi
+  if [ "$nft_ok" -eq 1 ]; then
+    ok "nft table inet rg_hz_carveout present"
+  elif [ -s /run/rg-hz-carveout.endpoints ]; then
+    wrn "nft cgroup mark unavailable on this kernel; /32 peer backstops active ($(wc -l </run/rg-hz-carveout.endpoints) pinned)"
+  else
+    bad "nft rg_hz_carveout ABSENT and no peer backstops — haozeke UDP likely hairpins via US WG; run: sudo rg-haozeke-tunnel-carveout up"
+  fi
+fi
 
 # Prefer the live direct endpoint from the haozeke daemon; static fallback.
 terra_ep=$(tailscale --socket="$HZ_SOCK" status 2>/dev/null \

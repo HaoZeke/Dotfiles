@@ -57,18 +57,17 @@ case "$quality_fail_threshold" in ''|*[!0-9]*) quality_fail_threshold=3 ;; esac
 reassert_carveout() {
     [ -x "$CARVEOUT" ] && "$CARVEOUT" up >/dev/null 2>&1 || true
 }
-# Healthy carve-out needs (a) policy rule, (b) nft cgroup mark table, and
-# (c) a default route in table 5151. A stale rule alone is a common failure mode
-# after resume/networkd restarts and leaves haozeke UDP hairpinning through WG.
+# Healthy carve-out needs (a) the policy rule, (b) a default in table 5151,
+# and (c) EITHER the nft cgroup mark table OR the /32 peer backstops. The
+# cgroupv2 socket match does not load on every kernel/nft build; the carve-out
+# script then falls back to the backstops by design, and demanding nft anyway
+# made the guard re-apply a working carve-out every tick, forever.
 carveout_present() {
     $IP rule show 2>/dev/null | grep -q "fwmark $HZ_MARK" || return 1
-    # nft list needs root; when unprivileged, treat rule+table default as enough
-    # only if table has a default — empty table 5151 is broken.
     $IP route show table "${RG_HZ_TABLE:-5151}" 2>/dev/null | grep -q '^default ' || return 1
-    if [ "$(id -u)" -eq 0 ] || command -v nft >/dev/null 2>&1; then
-        nft list table inet rg_hz_carveout >/dev/null 2>&1 || return 1
-    fi
-    return 0
+    nft list table inet rg_hz_carveout >/dev/null 2>&1 && return 0
+    [ -s "${RG_HZ_STATE:-/run/rg-hz-carveout.endpoints}" ] && return 0
+    return 1
 }
 
 quality_probe_once() {

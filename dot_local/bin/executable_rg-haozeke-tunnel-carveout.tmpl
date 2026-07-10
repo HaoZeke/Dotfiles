@@ -85,7 +85,9 @@ EOF
     read -r gw dev <<<"$(lan_default4)"
     [ -n "${gw:-}" ] && [ -n "${dev:-}" ] || die "no IPv4 LAN default route to bypass through"
     ip -4 route replace default via "$gw" dev "$dev" table "$TABLE"
-    ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+    # Delete until absent: a single del leaves duplicates behind when earlier
+    # re-asserts stacked identical rules, and the list grows forever.
+    while ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null; do :; done
     ip -4 rule add fwmark "$MARK" table "$TABLE" pref "$PREF"
 
     # IPv6: only carve if the LAN actually has a v6 default (else leave v6
@@ -93,7 +95,7 @@ EOF
     read -r gw6 dev6 <<<"$(lan_default6)"
     if [ -n "${gw6:-}" ] && [ -n "${dev6:-}" ]; then
         ip -6 route replace default via "$gw6" dev "$dev6" table "$TABLE"
-        ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+        while ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null; do :; done
         ip -6 rule add fwmark "$MARK" table "$TABLE" pref "$PREF"
     fi
 
@@ -126,8 +128,8 @@ down(){
         done < "$STATE"
         rm -f "$STATE"
     fi
-    ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
-    ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null || true
+    while ip -4 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null; do :; done
+    while ip -6 rule del fwmark "$MARK" table "$TABLE" 2>/dev/null; do :; done
     ip -4 route flush table "$TABLE" 2>/dev/null || true
     ip -6 route flush table "$TABLE" 2>/dev/null || true
     nft delete table inet "${NFT_TABLE}" 2>/dev/null || true
