@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v13-advisor-ttsr-rules
+# Hash: specialize-v14-willma-multimodel-embed
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.opencode/bin:${HOME}/.cargo/bin:${PATH}"
@@ -210,6 +210,34 @@ print("models.yml token injected")
 PY
 else
   log "WARN: could not inject Willma token"
+fi
+
+# ---------- inject Willma token into config mnemopi embeddingApiKey ----------
+cfg="${AGENT}/config.yml"
+if [[ -f "$cfg" && -n "${token}" ]]; then
+  export WILLMA_TOKEN="$token" WILLMA_CFG="$cfg"
+  python3 - <<'PY'
+import os, re
+from pathlib import Path
+p = Path(os.environ["WILLMA_CFG"])
+tok = os.environ["WILLMA_TOKEN"]
+t = p.read_text()
+esc = tok.replace("\\", "\\\\").replace('"', '\\"')
+t2, n = re.subn(
+    r'(embeddingApiKey:\s*)(["\']?)[^"\'\n]+\2',
+    lambda m: m.group(1) + '"' + esc + '"',
+    t,
+    count=1,
+)
+if n == 0 and "WILLMA_TOKEN_PLACEHOLDER" in t:
+    t2 = t.replace("WILLMA_TOKEN_PLACEHOLDER", tok)
+    n = 1
+if n:
+    p.write_text(t2)
+    print("config.yml mnemopi embeddingApiKey injected")
+else:
+    print("config.yml: no embeddingApiKey placeholder to inject")
+PY
 fi
 
 # ---------- OpenCode Willma config (secondary) ----------
