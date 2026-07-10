@@ -299,8 +299,17 @@ awk -v mtu="$egress_mtu" '
     BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
     function inject_hooks() {
         if (injected == 0) {
+            # Route the system tailscaled(x.ai) own transport (fwmark 0x80000)
+            # into the tunnel BEFORE tailscale rule 5210 sends it to main/LAN:
+            # the x.ai tailnet must see this node from the Houston exit or
+            # model access is refused. Empty table 51820 (tunnel down) falls
+            # through to the next rule, so this is inert without the tunnel.
+            print "PostUp = ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PostUp = ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
             print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
             print "PostUp = ip -6 rule add pref 5206 lookup 52 2>/dev/null || true"
+            print "PreDown = ip -4 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
+            print "PreDown = ip -6 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
             print "PreDown = ip -4 rule del pref 5206 lookup 52 2>/dev/null || true"
             print "PreDown = ip -6 rule del pref 5206 lookup 52 2>/dev/null || true"
             injected = 1
@@ -391,6 +400,17 @@ printf 'Lean release host resolves via local DNS\n'
 
 printf '\n== route checks ==\n'
 verify_route_uses_interface "IPv4 default egress" 1.1.1.1 "$iface"
+# The x.ai tailnet transport carries tailscaled's fwmark; the pref-5205 rule
+# must land it in the tunnel so x.ai sees the Houston exit, not the LAN.
+marked_route="$(ip route get 8.8.8.8 mark 0x80000 2>/dev/null || true)"
+printf 'tailscale-marked route: %s\n' "${marked_route:-none}"
+case "$marked_route" in
+    *" dev ${iface} "*|*" dev ${iface}") : ;;
+    *)
+        printf 'tailscale-marked traffic does not route through %s; x.ai would see the LAN exit\n' "$iface" >&2
+        exit 6
+        ;;
+esac
 verify_ctrld_carveout
 # Bringing up the 0/0 tunnel triggers a network-change in the system tailscaled,
 # which briefly rebuilds its route table 52; retry so the check waits for that

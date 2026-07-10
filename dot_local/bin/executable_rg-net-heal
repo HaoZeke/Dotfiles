@@ -6,10 +6,13 @@
 #      daemon running + connected. Auto-recover a Stopped state; on a real logout
 #      (auth expiry) notify the desktop -- re-login needs a human, so never block
 #      on an interactive `tailscale up`.
-#   2. Tailscale underlay carve-out: control-plane, log-in, log-upload, and
-#      active peer transport endpoints are substrate for Starfleet / x.ai
-#      split routes. Keep those destination /32 routes on the current LAN
-#      default so the mesh survives a US full-tunnel stall.
+#   2. x.ai tailnet visibility: the x.ai tailnet must see this node from the
+#      Houston exit or model access is refused. The system tailscaled's own
+#      transport (fwmark 0x80000) rides the tunnel via the pref-5205 rule that
+#      rg-us-egress-up installs; this script must NOT carve x.ai control-plane
+#      or peer-transport endpoints onto the LAN, and it deletes any stale /32
+#      of that kind left over from the earlier underlay carve-out. Only the
+#      haozeke tailnet (section 3) stays on the LAN uplink.
 #   3. landsbankinn.is carve-out: the bank times out through the Windscribe US
 #      (Houston) egress, so keep its /24 routed DIRECT via the current LAN
 #      default. rule 5208 ("lookup main suppress_prefixlength 0") consults main
@@ -123,9 +126,9 @@ for peer in (data.get("Peer") or {}).values():
 ' 2>/dev/null || true
 }
 
-tailscale_host_ips() {
+xai_control_host_ips() {
     local host
-    for host in ${RG_TAILSCALE_UNDERLAY_HOSTS:-controlplane.tailscale.com log.tailscale.com login.tailscale.com}; do
+    for host in ${RG_XAI_CONTROL_HOSTS:-controlplane.tailscale.com log.tailscale.com login.tailscale.com}; do
         getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}'
     done
 }
@@ -251,18 +254,13 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     done
 fi
 
-# --- 3. Tailscale underlay carve-out: mesh transport off the US egress -----
-if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
-    { tailscale_underlay_ips; tailscale_host_ips; } | sort -u | while read -r ip; do
-        route_local_v4 "$ip" "tailscale underlay"
-    done
-fi
-
-# --- 3b. Haozeke (cosmolab / Terra) tailnet underlay carve-out --------------
+# --- 3. Haozeke (cosmolab / Terra) tailnet underlay carve-out ---------------
 # The second tailscaled runs userspace-networking on /tmp/ts-hz.sock; its peer
 # transport must stay on the LOCAL uplink, or the direct path dies inside the
-# US 0/0 tunnel and the peer becomes unreachable. Same treatment as section 3,
-# for the second tailnet socket.
+# US 0/0 tunnel and the peer becomes unreachable. The desired set is recorded
+# so the x.ai anti-carve below never deletes an IP the haozeke path needs
+# (Terra reachability outranks x.ai visibility on shared infrastructure).
+hz_underlay_set="$(mktemp)"
 if [ -n "${gw:-}" ] && [ -n "${dev:-}" ] && [ -S /tmp/ts-hz.sock ] \
     && command -v tailscale >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tailscale --socket=/tmp/ts-hz.sock status --json 2>/dev/null | python3 -c '
@@ -292,10 +290,28 @@ for peer in (data.get("Peer") or {}).values():
         value = host(addr)
         if value:
             print(value)
-' 2>/dev/null | sort -u | while read -r ip; do
+' 2>/dev/null | sort -u | tee "$hz_underlay_set" | while read -r ip; do
         route_local_v4 "$ip" "haozeke underlay"
     done
 fi
+
+# --- 3b. x.ai tailnet visibility: keep its transport OFF the LAN uplink -----
+# The x.ai tailnet must see this node from the Houston exit or model access is
+# refused. The marked pref-5205 rule (rg-us-egress-up) already tunnels the
+# system tailscaled's own flows; here we delete any stale LAN /32 for x.ai
+# control-plane hosts or system-tailnet transport endpoints (left by the
+# retired underlay carve-out), except IPs the haozeke tailnet needs local.
+if command -v tailscale >/dev/null 2>&1; then
+    { tailscale_underlay_ips; xai_control_host_ips; } | sort -u | while read -r ip; do
+        public_underlay_v4 "$ip" || continue
+        grep -qxF "$ip" "$hz_underlay_set" 2>/dev/null && continue
+        if ip route show table main "$ip/32" 2>/dev/null | grep -q .; then
+            ip route del "$ip/32" table main 2>/dev/null \
+                && log "x.ai transport un-carved: $ip rides the US egress"
+        fi
+    done
+fi
+rm -f "$hz_underlay_set"
 
 # --- 4. eduVPN (SURF) carve-out: control channel + portal off the US egress -
 # The split-VPN control channel to the SURF eduVPN server, and the portal /

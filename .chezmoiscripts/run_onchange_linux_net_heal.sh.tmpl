@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
-# Install rg-net-heal as a root timer: keeps the x.ai tailscale up, keeps
-# Tailscale transport endpoints on the LAN uplink, and keeps selected direct
-# carve-outs off the US egress.
+# Install rg-net-heal as a root timer: keeps the x.ai tailscale up and its
+# transport on the US egress (Houston visibility), keeps the haozeke tailnet
+# transport on the LAN uplink, and keeps selected direct carve-outs off the
+# US egress.
 # rg-net-heal-sha256: {{ include "dot_local/bin/executable_rg-net-heal" | sha256sum }}
 # rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
 set -euo pipefail
