@@ -1,0 +1,6 @@
+[Unit]
+Description=Live audit of the multi-path network stack (alerts on regression)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-net-doctor-alert

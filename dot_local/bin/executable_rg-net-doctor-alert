@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Timer wrapper for rg-net-doctor: run the live stack audit and raise a
+# desktop notification when it regresses, so a broken carve-out or a dark
+# Terra path surfaces within minutes instead of at the next build attempt.
+# The full report always lands in the journal for forensics.
+set -uo pipefail
+
+DOCTOR="${RG_NET_DOCTOR:-$HOME/.local/bin/rg-net-doctor}"
+
+out="$("$DOCTOR" 2>&1)"
+rc=$?
+printf '%s\n' "$out" | logger -t rg-net-doctor
+if [ "$rc" -ne 0 ]; then
+    bad="$(printf '%s\n' "$out" | grep -E '^  BAD' | head -n 5)"
+    notify-send -u critical "net-doctor: stack regression" \
+        "${bad:-doctor failed; journalctl -t rg-net-doctor}" 2>/dev/null || true
+fi
+exit "$rc"

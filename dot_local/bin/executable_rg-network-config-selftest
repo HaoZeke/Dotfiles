@@ -268,6 +268,25 @@ rg -q '/usr/local/sbin/rg-net-heal' "$us_egress_up" \
     || fail "US egress helper must reassert destination carve-outs at bring-up"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
+rg -q 'enable --now rg-net-doctor.timer' "$net_heal_script" \
+    || fail "net heal provisioning must enable the periodic live doctor"
+net_doctor="$repo/dot_local/bin/executable_rg-net-doctor"
+net_doctor_alert="$repo/dot_local/bin/executable_rg-net-doctor-alert"
+test -r "$net_doctor" || fail "missing live network doctor"
+test -r "$net_doctor_alert" || fail "missing doctor alert wrapper"
+test -r "$repo/dot_config/systemd/user/rg-net-doctor.service" || fail "missing doctor service unit"
+test -r "$repo/dot_config/systemd/user/rg-net-doctor.timer" || fail "missing doctor timer unit"
+bash -n "$net_doctor" && bash -n "$net_doctor_alert" || fail "doctor helpers do not parse"
+rg -q '5205:.*fwmark 0x80000' "$net_doctor" \
+    || fail "doctor must verify the x.ai Houston-visibility rule"
+rg -q 'ip route get 8.8.8.8 mark 0x80000' "$net_doctor" \
+    || fail "doctor must verify tailscale-marked traffic exits via the tunnel"
+rg -q -- '--resolve "api\.x\.ai:443:\$pin"' "$net_doctor" \
+    || fail "doctor must probe the api.x.ai pin health"
+rg -q 'ipinfo\.io/json' "$net_doctor" \
+    || fail "doctor must report the egress exit geography"
+rg -q 'notify-send -u critical "net-doctor' "$net_doctor_alert" \
+    || fail "doctor alert wrapper must raise a desktop notification on regression"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

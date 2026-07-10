@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic live network stack audit
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

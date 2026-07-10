@@ -67,4 +67,12 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now rg-net-heal.timer
 sudo systemctl start rg-net-heal.service || true
 echo "chezmoi: rg-net-heal timer enabled"
+
+# Live-audit timer (user unit: needs the session bus for notify-send). Best
+# effort on first apply: the unit files land with the same chezmoi run.
+if systemctl --user daemon-reload >/dev/null 2>&1; then
+    systemctl --user enable --now rg-net-doctor.timer >/dev/null 2>&1 \
+        && echo "chezmoi: rg-net-doctor timer enabled" \
+        || echo "chezmoi: rg-net-doctor timer not enabled yet (unit missing?)" >&2
+fi
 {{- end }}

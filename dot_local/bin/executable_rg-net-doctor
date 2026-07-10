@@ -72,7 +72,11 @@ if [ -n "$tab" ]; then ok "table $HZ_TABLE: $tab"; else bad "table $HZ_TABLE has
 if [ "$nft_ok" -eq 1 ]; then ok "nft table inet rg_hz_carveout present"
 else bad "nft rg_hz_carveout ABSENT — haozeke UDP likely hairpins via US WG; run: sudo rg-haozeke-tunnel-carveout up"; fi
 
-ep_route=$(ip route get 153.92.128.58 2>/dev/null | head -1 || true)
+# Prefer the live direct endpoint from the haozeke daemon; static fallback.
+terra_ep=$(tailscale --socket="$HZ_SOCK" status 2>/dev/null \
+  | grep -E "rgam5terra|${TERRA_IP}" | grep -oE 'direct [0-9.]+:' \
+  | grep -oE '[0-9.]+' | head -1 || true)
+ep_route=$(ip route get "${terra_ep:-153.92.128.58}" 2>/dev/null | head -1 || true)
 if echo "$ep_route" | grep -q 'rg-us-egress-wg'; then
   wrn "terra public endpoint routes via US WG (expected when carve-out broken): $ep_route"
 elif echo "$ep_route" | grep -qE 'wlan0|dev eth'; then
@@ -127,8 +131,43 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
   else
     wrn "rg-us-egress-guard.timer not enabled — carve-out may rot after networkd restart"
   fi
+
+  printf '== x.ai visibility (tailnet must exit via Houston) ==\n'
+  if ip rule show 2>/dev/null | grep -q '5205:.*fwmark 0x80000'; then
+    ok "pref-5205 tailscale-mark rule present"
+  else
+    bad "pref-5205 tailscale-mark rule missing — x.ai sees the LAN exit; restart rg-us-egress.service"
+  fi
+  marked=$(ip route get 8.8.8.8 mark 0x80000 2>/dev/null | head -1 || true)
+  if echo "$marked" | grep -q 'rg-us-egress-wg'; then
+    ok "tailscale-marked traffic exits via the tunnel"
+  else
+    bad "tailscale-marked traffic on LAN: ${marked:-no route}"
+  fi
+
+  printf '== x.ai API pin health ==\n'
+  pin=$(awk '$1 ~ /^[0-9.]+$/ && $2 == "api.x.ai" {print $1; exit}' /etc/hosts 2>/dev/null)
+  if [ -n "$pin" ]; then
+    code=$(curl -4 -sS -o /dev/null --connect-timeout 4 --max-time 8 \
+      --resolve "api.x.ai:443:$pin" -w '%{http_code}' https://api.x.ai/v1/models 2>/dev/null || echo 000)
+    case "$code" in
+      [23][0-9][0-9]|401|403) ok "api.x.ai pin $pin answers (http $code)" ;;
+      *) bad "api.x.ai pin $pin dead (http $code) — rg-net-heal rotates it within ~2min" ;;
+    esac
+  else
+    wrn "no api.x.ai pin in /etc/hosts (rg-net-heal asserts it)"
+  fi
+
+  printf '== egress exit geography ==\n'
+  geo=$(curl -4 -sS --connect-timeout 5 --max-time 10 https://ipinfo.io/json 2>/dev/null \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("country","?"), d.get("city","?"), d.get("ip","?"))' 2>/dev/null || true)
+  case "$geo" in
+    US*) ok "default egress exits in $geo" ;;
+    '') wrn "egress geography probe failed" ;;
+    *) bad "default egress exits in $geo (expected US with the tunnel up)" ;;
+  esac
 else
-  wrn "US egress WG not active (terra path simpler when down)"
+  wrn "US egress WG not active (terra path simpler when down; x.ai sees the LAN exit)"
 fi
 
 printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
