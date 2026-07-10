@@ -236,6 +236,18 @@ rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7]
     || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
 rg -q 'ensure_hosts_record 104\.18\.19\.80 api\.x\.ai' "$net_heal" \
     || fail "periodic network heal helper must pin api.x.ai without restarting DNS"
+rg -q 'nl_public_service_hosts' "$net_heal" \
+    || fail "periodic network heal helper lacks a Dutch public-service host list"
+rg -q 'www\.cbr\.nl' "$net_heal" \
+    || fail "periodic network heal helper does not cover CBR"
+rg -q 'www\.digid\.nl' "$net_heal" \
+    || fail "periodic network heal helper does not cover DigiD"
+rg -q 'mijnoverheid\.nl' "$net_heal" \
+    || fail "periodic network heal helper does not cover MijnOverheid"
+rg -q 'belastingdienst\.nl' "$net_heal" \
+    || fail "periodic network heal helper does not cover Belastingdienst"
+rg -q 'getent ahostsv4 "\$nl_host"' "$net_heal" \
+    || fail "periodic network heal helper does not resolve Dutch public-service routes dynamically"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \

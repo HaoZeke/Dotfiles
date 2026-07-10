@@ -175,6 +175,10 @@ assert_contains "$bypass" "*.ia.surf.nl" "ia.surf wildcard in internal bypass"
 assert_contains "$bypass" "*.ia.surfsara.nl" "ia.surfsara wildcard in internal bypass"
 assert_contains "$bypass" "*.surfsara.nl" "surfsara wildcard in internal bypass"
 assert_contains "$bypass" "surf.nl" "surf apex in internal bypass"
+assert_contains "$bypass" "*.digid.nl" "DigiD wildcard in internal bypass"
+assert_contains "$bypass" "*.cbr.nl" "CBR wildcard in internal bypass"
+assert_contains "$bypass" "*.overheid.nl" "Overheid wildcard in internal bypass"
+assert_contains "$bypass" "*.belastingdienst.nl" "Belastingdienst wildcard in internal bypass"
 assert_contains "$bypass" "<local>" "local bypass in internal bypass"
 [ "$(printf '%s' "$bypass" | tr ',' '\n' | grep -c '^\*.surf\.nl$')" -eq 1 ] || {
     echo "FAIL: duplicate *.surf.nl in internal bypass: $bypass" >&2
@@ -186,6 +190,10 @@ assert_contains "$rules" "*.ia.surf.nl" "ia.surf wildcard in rules bypass"
 assert_contains "$rules" "*.ia.surfsara.nl" "ia.surfsara wildcard in rules bypass"
 assert_contains "$rules" "*.surfsara.nl" "surfsara wildcard in rules bypass"
 assert_contains "$rules" "surfsara.nl" "surfsara apex in rules bypass"
+assert_contains "$rules" "*.digid.nl" "DigiD wildcard in rules bypass"
+assert_contains "$rules" "*.cbr.nl" "CBR wildcard in rules bypass"
+assert_contains "$rules" "*.overheid.nl" "Overheid wildcard in rules bypass"
+assert_contains "$rules" "*.belastingdienst.nl" "Belastingdienst wildcard in rules bypass"
 [ "$(json_get "$profile1_prefs" '.extensions.settings.windscribe.regular_only_preferences.proxy.rules.bypassList | map(select(. == "*.ia.surf.nl")) | length')" = 1 ] || {
     echo "FAIL: duplicate *.ia.surf.nl in rules bypass" >&2
     exit 1
