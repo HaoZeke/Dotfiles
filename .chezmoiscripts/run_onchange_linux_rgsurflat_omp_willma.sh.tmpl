@@ -1,19 +1,33 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
-# rgSURFLat: specialize OMP to Willma-only (no multi-agent workstation stack).
-# Hash: specialize-v3-self-contained
-# OMP agent configs are gitignored + nimvault on the workstation; this host
-# never uses the multi-provider sealed models.yml as the live default.
+# rgSURFLat: OMP + Willma with full OMP skill/tool surface for SURF work.
+# Hash: specialize-v4-pi_env-rtk-superpowers
+#
+# What this host is:
+#   - Model: only Willma gpt-oss-120b (surf-ai-hub)
+#   - Skills: pi_env pack + eb-stack annual-bump + superpowers procedures
+#   - RTK binary + rtk-rewrite extension (token-compact shell)
+#   - apply_patch prior for gpt-oss
+#
+# What this host is NOT:
+#   - Multi-provider commercial routing (Alibaba/DeepSeek/Copilot defaults)
+#   - Local GPU LLM stack (gpu-llm skills may be present as docs but unused)
 set -euo pipefail
 
-export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
+export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
 log() { printf 'chezmoi rgsurflat-omp: %s\n' "$*"; }
 
 AGENT="${HOME}/.omp/agent"
 SHARE="${HOME}/.local/share/omp-surf"
-mkdir -p "${AGENT}/extensions" "${HOME}/.local/bin" "${HOME}/.omp"
+TOOLS="${HOME}/Git/Github/Tools"
+PI_ENV="${TOOLS}/pi_env"
+EB_STACK="${TOOLS}/eb-stack"
 
-# --- bun + omp ---
+mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
+  "${HOME}/.local/bin" "${HOME}/.claude/hooks" \
+  "${TOOLS}" "${SHARE}"
+
+# ---------- bun + omp ----------
 if ! command -v bun >/dev/null 2>&1; then
   log "installing bun"
   curl -fsSL https://bun.sh/install | bash
@@ -24,16 +38,90 @@ if ! command -v omp >/dev/null 2>&1; then
   bun install -g @oh-my-pi/pi-coding-agent@16.4.0
 fi
 
-# --- extension (tracked under ~/.local/share/omp-surf) ---
-if [[ -f "${SHARE}/gpt-oss-priors.ts" ]]; then
-  install -m 0644 "${SHARE}/gpt-oss-priors.ts" "${AGENT}/extensions/gpt-oss-priors.ts"
-  log "installed gpt-oss-priors extension"
-fi
-if [[ -f "${SHARE}/README-SURF.txt" ]]; then
-  install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
+# ---------- jq (rtk-rewrite hook) ----------
+if ! command -v jq >/dev/null 2>&1; then
+  if command -v pacman >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    sudo -n pacman -S --noconfirm --needed jq >/dev/null 2>&1 || true
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    log "WARN: jq missing; rtk-rewrite hook will no-op until jq is installed"
+  fi
 fi
 
-# --- token resolve ---
+# ---------- RTK binary (Rust Token Killer) ----------
+install_rtk() {
+  local ver url tmp
+  ver="${RTK_VERSION:-0.43.0}"
+  url="https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-unknown-linux-musl.tar.gz"
+  tmp=$(mktemp -d)
+  log "installing rtk ${ver} -> ~/.local/bin/rtk"
+  if curl -fsSL "$url" -o "${tmp}/rtk.tgz"; then
+    tar -C "$tmp" -xzf "${tmp}/rtk.tgz"
+    # tarball layout may be flat binary or nested
+    if [[ -f "${tmp}/rtk" ]]; then
+      install -m 0755 "${tmp}/rtk" "${HOME}/.local/bin/rtk"
+    else
+      find "$tmp" -type f -name rtk -exec install -m 0755 {} "${HOME}/.local/bin/rtk" \;
+    fi
+  else
+    log "WARN: rtk download failed"
+  fi
+  rm -rf "$tmp"
+}
+if ! command -v rtk >/dev/null 2>&1; then
+  install_rtk
+else
+  log "rtk present: $(rtk --version 2>/dev/null | head -1 || echo unknown)"
+fi
+
+# ---------- pi_env (OMP skills + reference extensions) ----------
+# pi_env is the HaoZeke OMP environment pack: skills (rtk, code-search, fast-tools,
+# writing-quality, ...) and extensions. Not multi-agent commercial routing.
+if [[ ! -d "${PI_ENV}/.git" ]]; then
+  log "cloning pi_env"
+  if git clone --depth 1 git@github.com:HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null \
+    || git clone --depth 1 https://github.com/HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null; then
+    log "pi_env cloned"
+  else
+    log "WARN: could not clone pi_env; skills incomplete until clone succeeds"
+  fi
+else
+  log "pi_env present ($(git -C "${PI_ENV}" rev-parse --short HEAD 2>/dev/null || echo ok))"
+fi
+
+# ---------- eb-stack skills (already expected) ----------
+if [[ ! -d "${EB_STACK}/skills" ]]; then
+  log "WARN: ${EB_STACK}/skills missing; annual-bump skill unavailable"
+fi
+
+# ---------- extensions ----------
+# apply_patch prior for gpt-oss
+if [[ -f "${SHARE}/gpt-oss-priors.ts" ]]; then
+  install -m 0644 "${SHARE}/gpt-oss-priors.ts" "${AGENT}/extensions/gpt-oss-priors.ts"
+fi
+# rtk-rewrite (OMP PreToolUse -> rtk)
+if [[ -f "${SHARE}/extensions/rtk-rewrite.ts" ]]; then
+  install -m 0644 "${SHARE}/extensions/rtk-rewrite.ts" "${AGENT}/extensions/rtk-rewrite.ts"
+  install -m 0644 "${SHARE}/extensions/rtk-rewrite.ts" "${HOME}/.omp/extensions/rtk-rewrite.ts"
+elif [[ -f "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" ]]; then
+  install -m 0644 "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" "${AGENT}/extensions/rtk-rewrite.ts"
+  install -m 0644 "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" "${HOME}/.omp/extensions/rtk-rewrite.ts"
+fi
+# useful pi_env extensions (no local-GPU deps)
+if [[ -d "${PI_ENV}/.omp/extensions" ]]; then
+  for ext in code-search.ts fast-tools.ts writing-quality.ts dirty-repo-guard.ts; do
+    if [[ -f "${PI_ENV}/.omp/extensions/${ext}" ]]; then
+      install -m 0644 "${PI_ENV}/.omp/extensions/${ext}" "${AGENT}/extensions/${ext}"
+    fi
+  done
+fi
+# rtk-rewrite hook (shared with Claude Code path the extension expects)
+if [[ -f "${SHARE}/hooks/rtk-rewrite.sh" ]]; then
+  install -m 0755 "${SHARE}/hooks/rtk-rewrite.sh" "${HOME}/.claude/hooks/rtk-rewrite.sh"
+  log "installed rtk-rewrite hook"
+fi
+
+# ---------- token ----------
 models="${AGENT}/models.yml"
 token=""
 if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
@@ -56,19 +144,17 @@ if [[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
   log "token from SURF_AI_HUB_TOKEN"
 fi
 if [[ -z "${token}" ]]; then
-  log "WARN: no Willma token; models.yml will keep PLACEHOLDER until pass/env available"
+  log "WARN: no Willma token"
   token="WILLMA_TOKEN_PLACEHOLDER"
 fi
 
-# --- models.yml: Willma only ---
 export WILLMA_TOKEN="$token"
 python3 - <<'PY'
 from pathlib import Path
 import os
 tok = os.environ["WILLMA_TOKEN"]
-# yaml-safe single-line token
 safe = tok.replace("\\", "\\\\").replace('"', '\\"')
-text = f'''# rgSURFLat SURF-only (chezmoi run_onchange). Do not nimvault seal from this host.
+text = f'''# rgSURFLat SURF-only models (Willma). Do not nimvault seal from this host.
 providers:
   surf-ai-hub:
     baseUrl: https://willma.surf.nl/api/v0
@@ -101,9 +187,9 @@ p.write_text(text)
 print("wrote", p)
 PY
 
-# --- config.yml: all roles Willma; skills = eb-stack only ---
+# ---------- config: Willma roles + full skill dirs ----------
 cat > "${AGENT}/config.yml" <<'YAML'
-# rgSURFLat SURF-only (chezmoi run_onchange). No multi-agent commercial stack.
+# rgSURFLat: Willma-only model routing + full OMP skill surface for SURF work.
 lastChangelogVersion: 16.4.0
 modelRoles:
   default: surf-ai-hub/openai/gpt-oss-120b
@@ -117,7 +203,13 @@ modelRoles:
   surf-plan: surf-ai-hub/openai/gpt-oss-120b
 skills:
   customDirectories:
+    # pi_env: OMP skill pack (rtk, code-search, fast-tools, writing-quality, ...)
+    - ~/Git/Github/Tools/pi_env/skills
+    # EasyBuild annual-bump runbook
     - ~/Git/Github/Tools/eb-stack/skills
+    # obra/superpowers procedures (TDD, debugging, verification, planning)
+    - ~/.local/share/omp-surf/skills/superpowers
+    - ~/.local/share/omp-surf/skills/superpowers-extended
 startup:
   setupWizard: false
   checkUpdate: false
@@ -136,42 +228,71 @@ task:
   eager: true
 YAML
 chmod 600 "${AGENT}/config.yml" "${AGENT}/models.yml"
-log "wrote SURF-only config.yml + models.yml"
+log "wrote SURF config (Willma + skill dirs)"
 
-# --- AGENTS.md ---
+# ---------- AGENTS.md ----------
 cat > "${AGENT}/AGENTS.md" <<'MD'
-# SURF laptop (rg.surf) - Willma gpt-oss-120b only
+# SURF laptop (rg.surf) - Willma gpt-oss-120b + full OMP skills
 
 ## Hard Rules
 
 - Never attribute AI in public output. No bot signatures, no `Co-Authored-By`.
-- Never open, comment on, create, review, merge, or close GitHub issues/PRs.
-  Read-only GitHub access only unless the user explicitly narrows to a safe command.
+- Never open, comment on, create, review, merge, or close GitHub issues/PRs
+  unless the user explicitly authorizes a safe read-only command.
 - Never force push without permission.
-- Never `rm` to delete files outside `/tmp`; use `rtrash`. Never `gio trash`.
+- Never `rm` outside `/tmp`; use `rtrash`. Never `gio trash`.
 - Use ASCII punctuation only.
-- NEVER compile or run heavy builds on this laptop — use `rg.terra` (or Snellius/elja)
-  for cargo/eb builds. Running an already-built remote binary is fine.
+- NEVER compile or run heavy builds on this laptop — use `rg.terra` (or
+  Snellius/elja). Running an already-built remote binary is fine.
 
 ## Model policy
 
 - **Only model:** `surf-ai-hub/openai/gpt-oss-120b` (SURF AI Hub Willma).
-- All `modelRoles` point at Willma. No Alibaba/DeepSeek/Copilot/Ollama on this host.
+- All `modelRoles` point at Willma. No Alibaba/DeepSeek/Copilot/Ollama defaults.
 
-## Tools
+## Skills (what is installed)
 
-- Prefer **apply_patch** (`~/.omp/agent/extensions/gpt-oss-priors.ts`) for multi-hunk edits.
-- Print-mode: pin toolbox `bash,read,edit,apply_patch` (avoid flaky task tool in `-p`).
+| Pack | Path | Purpose |
+|------|------|---------|
+| **pi_env** | `~/Git/Github/Tools/pi_env/skills` | OMP skill pack: `rtk`, `code-search`, `fast-tools`, `writing-quality`, `web-search`, `tmux`, ... |
+| **eb-stack** | `~/Git/Github/Tools/eb-stack/skills` | EasyBuild annual-bump / check-recipe runbook |
+| **superpowers** | `~/.local/share/omp-surf/skills/superpowers` | obra procedures: TDD, systematic-debugging, verification-before-completion, writing-plans, ... |
+| **superpowers-extended** | `~/.local/share/omp-surf/skills/superpowers-extended` | Extended subset when present |
 
-## Skills (this host)
+`pi_env` is **not** multi-agent commercial routing. It is the OMP environment
+repo (skills + TypeScript extensions). Multi-agent *models* are what we exclude
+on this host; the skill pack stays.
 
-- **Only:** `~/Git/Github/Tools/eb-stack/skills` (annual-bump).
-- Do **not** use `pi_env` skills here (workstation multi-agent pack).
+## RTK (Rust Token Killer)
 
-## eb-stack
+- Binary: `rtk` on `PATH` (`~/.local/bin/rtk`).
+- Extension: `~/.omp/agent/extensions/rtk-rewrite.ts` rewrites bash tool calls
+  through `~/.claude/hooks/rtk-rewrite.sh` (needs `jq`).
+- Prefer compact shell: `rtk git status`, `rtk ls`, etc. Extension does this
+  automatically for common patterns when rtk+jq are present.
+- Skill: `pi_env/skills/rtk/SKILL.md`.
 
-- Real CLI only (`check-recipe`, `bump`, `solve`); never invent deps.
-- Prefer `ssh rg.terra` for robot + release binary.
+## Tools / extensions
+
+- **apply_patch** (`gpt-oss-priors.ts`) for multi-hunk edits on gpt-oss.
+- **rtk-rewrite**, **code-search**, **fast-tools**, **writing-quality** when present.
+- Print-mode drivers: pin toolbox `bash,read,edit,apply_patch` for bounded work.
+
+## Superpowers workflow
+
+Use superpowers skills as process, not as a second agent stack:
+
+- `using-superpowers` — when to load skills
+- `systematic-debugging` — root cause before fixes
+- `test-driven-development` — red/green/refactor
+- `verification-before-completion` — evidence before claims
+- `writing-plans` / `executing-plans` — design then implement
+- `brainstorming` — explore before building
+
+## eb-stack / EasyBuild
+
+- Skill: `annual-bump` under eb-stack/skills.
+- Real CLI only; never invent deps. Prefer `ssh rg.terra` for robot + release binary.
 - CLI form: `--require-configopt=-Dflag=value` (attached `=`).
 - No GitHub/GitLab PR surface; IssuePR drafts only.
 
@@ -181,56 +302,76 @@ cat > "${AGENT}/AGENTS.md" <<'MD'
 export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
 omp-surf
 # or omp-eb-stack / omp
+# wrappers load gpt-oss-priors; agent/extensions auto-load rtk-rewrite etc.
 ```
 
 ## Auth
 
-- Token in `~/.omp/agent/models.yml` (`pass show surf/ai-hub/token` when store exists).
-- **Never** `nimvault seal` models.yml from this host (corrupts workstation multi-provider blob).
+- Token in `~/.omp/agent/models.yml` (from `pass show surf/ai-hub/token` when available).
+- **Never** `nimvault seal` models.yml from this host.
 MD
 chmod 600 "${AGENT}/AGENTS.md"
-log "wrote SURF AGENTS.md"
+log "wrote AGENTS.md"
 
-# --- no multi-agent MCP on this host ---
-# leave mcp absent or empty; do not copy workstation ookcite/eb-stack absolute paths
-if [[ -f "${HOME}/.omp/mcp.json" ]] || [[ -f "${AGENT}/mcp.json" ]]; then
-  log "note: existing mcp.json left in place; SURF profile does not install workstation MCP"
-fi
-
-# --- wizard skip ---
-db="${AGENT}/agent.db"
-if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
-  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('setupVersion','1');"
-  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
-  log "agent.db setupVersion=1 setupWizard=false"
-else
-  log "agent.db missing until first omp run; re-apply after first launch if wizard appears"
-fi
-
-# --- wrappers (also managed as chezmoi files; reinforce PATH) ---
+# ---------- wrappers: Willma + apply_patch + ensure extensions dir ----------
 for name in omp-surf omp-eb-stack; do
   cat > "${HOME}/.local/bin/${name}" <<'WRAP'
 #!/usr/bin/env bash
 set -euo pipefail
 export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
-ext="$HOME/.omp/agent/extensions/gpt-oss-priors.ts"
-if [[ -f "$ext" ]]; then
-  exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium -e "$ext" "$@"
-else
-  exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium "$@"
-fi
+exts=()
+for e in \
+  "$HOME/.omp/agent/extensions/gpt-oss-priors.ts" \
+  "$HOME/.omp/agent/extensions/rtk-rewrite.ts" \
+  "$HOME/.omp/agent/extensions/code-search.ts" \
+  "$HOME/.omp/agent/extensions/fast-tools.ts" \
+  "$HOME/.omp/agent/extensions/writing-quality.ts"
+do
+  [[ -f "$e" ]] && exts+=(-e "$e")
+done
+exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium "${exts[@]}" "$@"
 WRAP
   chmod 755 "${HOME}/.local/bin/${name}"
 done
-log "wrappers omp-surf omp-eb-stack"
+log "wrappers updated (Willma + extensions)"
 
-# --- smoke ---
+# ---------- wizard skip ----------
+db="${AGENT}/agent.db"
+if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('setupVersion','1');"
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
+  log "agent.db wizard skip"
+fi
+
+# ---------- README ----------
+if [[ -f "${SHARE}/README-SURF.txt" ]]; then
+  install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
+fi
+
+# ---------- smoke ----------
+log "skill dirs present:"
+for d in \
+  "${PI_ENV}/skills" \
+  "${EB_STACK}/skills" \
+  "${SHARE}/skills/superpowers" \
+  "${SHARE}/skills/superpowers-extended"
+do
+  if [[ -d "$d" ]]; then
+    n=$(find "$d" -name SKILL.md 2>/dev/null | wc -l)
+    log "  $d ($n skills)"
+  else
+    log "  MISSING $d"
+  fi
+done
+log "extensions: $(ls -1 "${AGENT}/extensions" 2>/dev/null | tr '\n' ' ')"
+log "rtk: $(command -v rtk || echo MISSING) $(rtk --version 2>/dev/null | head -1 || true)"
+
 if [[ "$token" != "WILLMA_TOKEN_PLACEHOLDER" ]] && command -v omp >/dev/null 2>&1; then
   out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -3 || true)
   log "smoke: ${out//$'\n'/ | }"
 else
-  log "skip live smoke (no token or no omp)"
+  log "skip live smoke"
 fi
 
-log "done: Willma-only OMP specialized on rgSURFLat"
+log "done: Willma + pi_env + RTK + superpowers on rgSURFLat"
 {{- end }}
