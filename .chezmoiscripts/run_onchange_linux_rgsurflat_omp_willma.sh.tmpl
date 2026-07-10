@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
 # rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v7b-bunx-project-ctx-schema
+# Hash: specialize-v8-mcp-puppeteer
 # Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
 set -euo pipefail
 
@@ -232,6 +232,17 @@ elif command -v pass >/dev/null 2>&1 && pass show api/context7 >/dev/null 2>&1; 
   chmod 600 "${HOME}/.config/context7/api_key"
 fi
 
+# ---------- Puppeteer MCP (browser; system chromium) ----------
+if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
+  mkdir -p "${HOME}/.omp/puppeteer"
+  install -m 0644 "${SHARE}/puppeteer/puppeteer_mcp.js" "${HOME}/.omp/puppeteer/puppeteer_mcp.js"
+  install -m 0644 "${SHARE}/puppeteer/package.json" "${HOME}/.omp/puppeteer/package.json"
+  if [[ ! -d "${HOME}/.omp/puppeteer/node_modules/@modelcontextprotocol" ]]; then
+    log "installing puppeteer MCP deps (bun)"
+    (cd "${HOME}/.omp/puppeteer" && bun install) ||       (cd "${HOME}/.omp/puppeteer" && npm install --omit=dev) ||       log "WARN: puppeteer npm install failed"
+  fi
+fi
+
 # ensure project-ctx binaries if present in SHARE/bin (optional drop-in)
 if [[ -x "${SHARE}/bin/project-ctx" ]]; then
   install -m 0755 "${SHARE}/bin/project-ctx" "${HOME}/.local/bin/project-ctx"
@@ -270,6 +281,15 @@ if pc.is_file() and os.access(pc, os.X_OK):
         "type": "stdio",
         "command": str(pc),
         "args": [],
+    }
+# puppeteer when installed
+pup = home / ".omp" / "puppeteer" / "puppeteer_mcp.js"
+if pup.is_file():
+    node = shutil.which("node") or "node"
+    servers["puppeteer"] = {
+        "type": "stdio",
+        "command": node,
+        "args": [str(pup)],
     }
 # eb-stack MCP only if binary on this host
 eb = home / ".local" / "bin" / "eb-stack"
@@ -345,6 +365,7 @@ Claude-user skill import. Optional later: Context7 MCP (needs MCP server), anthr
 
 - **context7** — up-to-date library docs (`resolve-library-id`, `query-docs`). Prefer over training-data guesses.
 - **project-ctx** — `.project-ctx.toml` conventions/build (CLI `project-ctx show .` or MCP).
+- **puppeteer** — browser automation (stealth); needs system Chromium.
 - Key for Context7: `~/.config/context7/api_key` or `CONTEXT7_API_KEY` (not in git).
 
 ## Launch
