@@ -2,10 +2,10 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v10b-willma-keyfile
+# Hash: specialize-v11-ebstack-opencode-doctor
 set -euo pipefail
 
-export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.opencode/bin:${HOME}/.cargo/bin:${PATH}"
 log() { printf 'chezmoi rgsurflat-omp: %s\n' "$*"; }
 
 AGENT="${HOME}/.omp/agent"
@@ -15,10 +15,19 @@ PI_ENV="${TOOLS}/pi_env"
 EB_STACK="${TOOLS}/eb-stack"
 OMP_VER="${OMP_VERSION:-16.4.1}"
 RTK_VER="${RTK_VERSION:-0.43.0}"
+OPENCODE_VER="${OPENCODE_VERSION:-1.17.18}"
 
 mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
   "${HOME}/.local/bin" "${HOME}/.claude/hooks" \
-  "${HOME}/.config/context7" "${HOME}/.config/ookcite" "${TOOLS}"
+  "${HOME}/.config/context7" "${HOME}/.config/ookcite" \
+  "${HOME}/.config/surf-ai-hub" "${HOME}/.config/opencode" "${TOOLS}"
+
+# ---------- PATH durability (bash) ----------
+if [[ -f "${HOME}/.bashrc" ]] && ! grep -q '\.bun/bin' "${HOME}/.bashrc" 2>/dev/null; then
+  printf '\n# SURF OMP / tooling\nexport PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"\n' \
+    >> "${HOME}/.bashrc"
+  log "appended PATH to .bashrc"
+fi
 
 # ---------- bun + omp ----------
 if ! command -v bun >/dev/null 2>&1; then
@@ -52,11 +61,60 @@ else
   log "rtk: $(rtk --version 2>/dev/null | head -1 || echo ok)"
 fi
 
-# ---------- pi_env (extension source only) ----------
+# ---------- OpenCode (secondary Willma harness) ----------
+need_oc=1
+if command -v opencode >/dev/null 2>&1; then
+  ocver=$(opencode --version 2>/dev/null | head -1 || true)
+  log "opencode ${ocver}"
+  need_oc=0
+elif [[ -x "${HOME}/.opencode/bin/opencode" ]]; then
+  log "opencode at ~/.opencode/bin"
+  need_oc=0
+  ln -sfn "${HOME}/.opencode/bin/opencode" "${HOME}/.local/bin/opencode"
+fi
+if [[ "$need_oc" -eq 1 ]]; then
+  log "installing opencode ${OPENCODE_VER}"
+  if curl -fsSL https://opencode.ai/install | bash -s -- --version "${OPENCODE_VER}" 2>/dev/null \
+    || curl -fsSL https://opencode.ai/install | bash 2>/dev/null; then
+    export PATH="${HOME}/.opencode/bin:${PATH}"
+    [[ -x "${HOME}/.opencode/bin/opencode" ]] && \
+      ln -sfn "${HOME}/.opencode/bin/opencode" "${HOME}/.local/bin/opencode"
+  else
+    log "WARN: opencode install failed (secondary harness optional)"
+  fi
+fi
+
+# ---------- pi_env + eb-stack (source trees) ----------
 if [[ ! -d "${PI_ENV}/.git" ]]; then
   git clone --depth 1 git@github.com:HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null \
     || git clone --depth 1 https://github.com/HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null \
     || log "WARN: pi_env clone failed"
+fi
+if [[ ! -d "${EB_STACK}/.git" ]]; then
+  git clone --depth 1 git@github.com:HaoZeke/eb-stack.git "${EB_STACK}" 2>/dev/null \
+    || git clone --depth 1 https://github.com/HaoZeke/eb-stack.git "${EB_STACK}" 2>/dev/null \
+    || log "WARN: eb-stack clone failed"
+fi
+
+# ---------- eb-stack binary (MCP + CLI); never build here — pull if missing ----------
+if [[ ! -x "${HOME}/.local/bin/eb-stack" ]]; then
+  if [[ -x "${EB_STACK}/target/release/eb-stack" ]]; then
+    install -m 0755 "${EB_STACK}/target/release/eb-stack" "${HOME}/.local/bin/eb-stack"
+    log "eb-stack from local release build"
+  elif command -v scp >/dev/null 2>&1; then
+    # Prefer prebuilt from rg.terra or the multi-agent workstation via Tailscale
+    for src in "rg.terra:${HOME}/.local/bin/eb-stack" "rgx1gen11:${HOME}/.local/bin/eb-stack"; do
+      if scp -o ConnectTimeout=5 -o BatchMode=yes "$src" "${HOME}/.local/bin/eb-stack.tmp" 2>/dev/null; then
+        mv "${HOME}/.local/bin/eb-stack.tmp" "${HOME}/.local/bin/eb-stack"
+        chmod 755 "${HOME}/.local/bin/eb-stack"
+        log "eb-stack pulled from ${src%%:*}"
+        break
+      fi
+    done
+  fi
+  [[ -x "${HOME}/.local/bin/eb-stack" ]] || log "WARN: eb-stack binary missing (MCP optional)"
+else
+  log "eb-stack: $(eb-stack --version 2>/dev/null | head -1 || echo present)"
 fi
 
 # ---------- pack wrappers / extensions ----------
@@ -71,13 +129,33 @@ if [[ -f "${SHARE}/extensions/rtk-rewrite.ts" ]]; then
   install -m 0644 "${SHARE}/extensions/rtk-rewrite.ts" "${HOME}/.omp/extensions/rtk-rewrite.ts"
 fi
 if [[ -d "${PI_ENV}/.omp/extensions" ]]; then
-  for ext in code-search.ts fast-tools.ts writing-quality.ts dirty-repo-guard.ts; do
+  # Do NOT install dirty-repo-guard into agent/extensions (blocks -p on dirty trees).
+  for ext in code-search.ts fast-tools.ts writing-quality.ts; do
     [[ -f "${PI_ENV}/.omp/extensions/${ext}" ]] && \
       install -m 0644 "${PI_ENV}/.omp/extensions/${ext}" "${AGENT}/extensions/${ext}"
   done
+  # Keep a copy off the auto-load path for optional interactive use
+  if [[ -f "${PI_ENV}/.omp/extensions/dirty-repo-guard.ts" ]]; then
+    mkdir -p "${SHARE}/extensions-optional"
+    install -m 0644 "${PI_ENV}/.omp/extensions/dirty-repo-guard.ts" \
+      "${SHARE}/extensions-optional/dirty-repo-guard.ts"
+  fi
+fi
+# Remove auto-loaded dirty-repo-guard if a previous specialize installed it
+if [[ -f "${AGENT}/extensions/dirty-repo-guard.ts" ]]; then
+  mkdir -p "${SHARE}/extensions-optional"
+  mv -f "${AGENT}/extensions/dirty-repo-guard.ts" \
+    "${SHARE}/extensions-optional/dirty-repo-guard.ts"
+  log "moved dirty-repo-guard out of auto-load path"
 fi
 [[ -f "${SHARE}/hooks/rtk-rewrite.sh" ]] && \
   install -m 0755 "${SHARE}/hooks/rtk-rewrite.sh" "${HOME}/.claude/hooks/rtk-rewrite.sh"
+
+# ---------- orphan skill cleanup ----------
+if [[ -d "${SHARE}/skills/superpowers-extended" ]]; then
+  # Not in config keep set; leave tree but log — do not rtrash without user ask
+  log "note: orphan skills/superpowers-extended present (not in customDirectories)"
+fi
 
 # ---------- Puppeteer node_modules ----------
 if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
@@ -90,7 +168,7 @@ if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
   fi
 fi
 
-# ---------- inject Willma token into models.yml (from tmpl placeholder) ----------
+# ---------- resolve Willma token ----------
 models="${AGENT}/models.yml"
 token=""
 if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
@@ -111,7 +189,6 @@ PY
 )
 fi
 if [[ -n "${token}" ]]; then
-  mkdir -p "${HOME}/.config/surf-ai-hub"
   printf '%s\n' "$token" > "${HOME}/.config/surf-ai-hub/api_key"
   chmod 600 "${HOME}/.config/surf-ai-hub/api_key"
 fi
@@ -135,38 +212,85 @@ else
   log "WARN: could not inject Willma token"
 fi
 
-# ---------- inject Context7 key into mcp.json args if file present ----------
-mcp="${AGENT}/mcp.json"
-if [[ -f "$mcp" && -f "${HOME}/.config/context7/api_key" ]]; then
-  export CTX7_KEY=$(tr -d '\r\n' < "${HOME}/.config/context7/api_key")
-  export MCP_PATH="$mcp"
+# ---------- OpenCode Willma config (secondary) ----------
+if [[ -n "${token}" ]]; then
+  export WILLMA_TOKEN="$token"
   python3 - <<'PY'
 import json, os
 from pathlib import Path
-p=Path(os.environ["MCP_PATH"])
-key=os.environ["CTX7_KEY"]
-d=json.loads(p.read_text())
-s=d.setdefault("mcpServers",{}).setdefault("context7",{"type":"stdio","command":"bunx","args":[]})
-args=s.get("args") or ["-y","@upstash/context7-mcp"]
-# strip old key
-out=[]
-skip=False
-for a in args:
-    if skip:
-        skip=False
-        continue
-    if a=="--api-key":
-        skip=True
-        continue
-    out.append(a)
-if "-y" not in out:
-    out=["-y","@upstash/context7-mcp"]+out
-out=out+["--api-key", key]
-s["args"]=out
-if not s.get("command"):
-    s["command"]="bunx"
-p.write_text(json.dumps(d, indent=2)+"\n")
-print("mcp.json context7 key injected")
+tok = os.environ["WILLMA_TOKEN"]
+p = Path.home() / ".config/opencode/opencode.json"
+doc = {
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "willma": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "SURF Willma",
+      "options": {
+        "baseURL": "https://willma.surf.nl/api/v0",
+        "apiKey": tok,
+      },
+      "models": {
+        "openai/gpt-oss-120b": {
+          "name": "GPT-OSS 120B (Willma)",
+        }
+      },
+    }
+  },
+  "model": "willma/openai/gpt-oss-120b",
+}
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(json.dumps(doc, indent=2) + "\n")
+p.chmod(0o600)
+print("opencode.json Willma written")
+PY
+fi
+
+# ---------- inject Context7 key into mcp.json; drop eb-stack MCP if bin missing ----------
+mcp="${AGENT}/mcp.json"
+if [[ -f "$mcp" ]]; then
+  export CTX7_KEY=""
+  [[ -f "${HOME}/.config/context7/api_key" ]] && \
+    CTX7_KEY=$(tr -d '\r\n' < "${HOME}/.config/context7/api_key")
+  export MCP_PATH="$mcp" CTX7_KEY
+  export EB_STACK_BIN="${HOME}/.local/bin/eb-stack"
+  python3 - <<'PY'
+import json, os
+from pathlib import Path
+p = Path(os.environ["MCP_PATH"])
+d = json.loads(p.read_text())
+servers = d.setdefault("mcpServers", {})
+key = os.environ.get("CTX7_KEY") or ""
+if key:
+    s = servers.setdefault("context7", {"type": "stdio", "command": "bunx", "args": []})
+    args = s.get("args") or ["-y", "@upstash/context7-mcp"]
+    out = []
+    skip = False
+    for a in args:
+        if skip:
+            skip = False
+            continue
+        if a == "--api-key":
+            skip = True
+            continue
+        out.append(a)
+    if "-y" not in out:
+        out = ["-y", "@upstash/context7-mcp"] + out
+    out = out + ["--api-key", key]
+    s["args"] = out
+    s["command"] = s.get("command") or "bunx"
+# eb-stack MCP only if binary exists
+eb = Path(os.environ.get("EB_STACK_BIN", ""))
+if eb.is_file() and os.access(eb, os.X_OK):
+    servers["eb-stack"] = {
+        "type": "stdio",
+        "command": str(eb),
+        "args": ["mcp"],
+    }
+else:
+    servers.pop("eb-stack", None)
+p.write_text(json.dumps(d, indent=2) + "\n")
+print("mcp.json patched; servers=", sorted(servers))
 PY
 fi
 
@@ -184,12 +308,12 @@ if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
   sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
 fi
 
-# ---------- wrappers ----------
+# ---------- wrappers (match chezmoi executable_omp-surf) ----------
 for name in omp-surf omp-eb-stack; do
   cat > "${HOME}/.local/bin/${name}" <<'WRAP'
 #!/usr/bin/env bash
 set -euo pipefail
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
 exts=()
 for e in \
   "$HOME/.omp/agent/extensions/gpt-oss-priors.ts" \
@@ -208,11 +332,19 @@ done
 [[ -f "${SHARE}/README-SURF.txt" ]] && \
   install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
 
+# doctor is managed by chezmoi as executable_omp-surf-doctor; ensure executable
+[[ -f "${HOME}/.local/bin/omp-surf-doctor" ]] && chmod 755 "${HOME}/.local/bin/omp-surf-doctor"
+
 log "omp=$(omp --version 2>/dev/null | head -1)"
 log "mcp=$(python3 -c 'import json;from pathlib import Path;print(sorted(json.loads(Path.home().joinpath(".omp/agent/mcp.json").read_text()).get("mcpServers",{})))' 2>/dev/null || echo missing)"
+log "eb-stack=$(command -v eb-stack || echo missing)"
+log "opencode=$(command -v opencode || echo missing)"
 if command -v omp >/dev/null 2>&1 && [[ -f "$models" ]] && ! grep -q PLACEHOLDER "$models" 2>/dev/null; then
   out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -2 || true)
   log "smoke: ${out//$'\n'/ | }"
 fi
-log "done: tmpl-driven SURF OMP (runtime+secrets only)"
+if command -v omp-surf-doctor >/dev/null 2>&1; then
+  omp-surf-doctor 2>&1 | tail -20 | while read -r line; do log "doctor: $line"; done || true
+fi
+log "done: specialize-v11 SURF OMP"
 {{- end }}
