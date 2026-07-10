@@ -1,6 +1,0 @@
-[Unit]
-Description=Mirror the Terra borg repository into pCloud when mounted
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/rg-borg-pcloud-mirror

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Back the mail (and this machine's config set) up into the long-standing borg
+# repo on pCloud: Backups/Borg/ThinkPadX11Arch -- the same repo that seeded
+# Terra's mail stores. The canonical live mail is Terra's ~/.mail; it is
+# rsynced here into ~/.mail as a staging copy first, so the borgmatic config's
+# source list stays plain paths. Skips cleanly when the pCloud FUSE client is
+# not mounted, and alerts once no archive has landed for a week -- silence
+# must never mean "no backup". The borg passphrase comes from the config's
+# pass-based passcommand in this user session (operator mechanism; never
+# materialized to disk).
+set -uo pipefail
+
+MOUNT="${RG_MAILBK_MOUNT:-$HOME/pCloudDrive}"
+STAGE="${RG_MAILBK_STAGE:-$HOME/.mail}"
+SRC="${RG_MAILBK_SRC:-rg.terra:.mail/}"
+STAMP="${RG_MAILBK_STAMP:-$HOME/.local/state/rg-mail-pcloud-backup.last}"
+STALE_DAYS="${RG_MAILBK_STALE_DAYS:-7}"
+BORGMATIC="${RG_MAILBK_BORGMATIC:-$HOME/.local/bin/borgmatic}"
+
+alert() { notify-send -u critical "mail pCloud backup" "$1" 2>/dev/null || true; }
+stale_check() {
+    if [ -z "$(find "$STAMP" -mtime "-$STALE_DAYS" 2>/dev/null)" ]; then
+        alert "$1 and no archive in ${STALE_DAYS}+ days; the pCloud mail backup is going stale."
+    fi
+}
+
+if ! mountpoint -q "$MOUNT"; then
+    stale_check "pCloud is not mounted"
+    echo "pCloudDrive not mounted; skipping backup"
+    exit 0
+fi
+
+if ! rsync -a --delete "$SRC" "$STAGE/"; then
+    stale_check "staging rsync from the builder failed"
+    alert "mail staging rsync failed; backup skipped (is rg.terra reachable?)"
+    exit 1
+fi
+
+if "$BORGMATIC" --verbosity -1 --stats; then
+    mkdir -p "$(dirname "$STAMP")"
+    touch "$STAMP"
+    echo "backup ok"
+else
+    alert "borgmatic run failed; see journalctl --user -u rg-mail-pcloud-backup"
+    exit 1
+fi
