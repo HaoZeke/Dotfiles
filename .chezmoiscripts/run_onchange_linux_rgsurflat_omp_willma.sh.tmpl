@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v11b-shebang-fix
+# Hash: specialize-v11c-thinking-high
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.opencode/bin:${HOME}/.cargo/bin:${PATH}"
@@ -324,7 +324,7 @@ for e in \
 do
   [[ -f "$e" ]] && exts+=(-e "$e")
 done
-exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking medium "${exts[@]}" "$@"
+exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking high "${exts[@]}" "$@"
 WRAP
   chmod 755 "${HOME}/.local/bin/${name}"
 done
