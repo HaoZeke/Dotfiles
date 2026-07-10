@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
 # rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v5-curated-core-omp-16.4.1
+# Hash: specialize-v6-community-surf-skills
 # Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
 set -euo pipefail
 
@@ -186,10 +186,14 @@ modelRoles:
   surf-plan: surf-ai-hub/openai/gpt-oss-120b
 skills:
   customDirectories:
-    # Curated pi_env keep set (rtk, code-search, fast-tools, writing-quality, web-search, tmux, ...)
+    # Curated CLI/token pack (rtk, code-search, fast-tools, writing-quality, web-search, tmux, ...)
     - ~/.local/share/omp-surf/skills/core
-    # obra/superpowers process skills
+    # obra/superpowers process skills (TDD, debugging, verification, plans)
     - ~/.local/share/omp-surf/skills/superpowers
+    # SURF software-ops (surf-tasks / EasyBuild tracking)
+    - ~/.local/share/omp-surf/skills/surf
+    # Community high-signal: find-skills, mattpocock grill-me/handoff/code-review/...
+    - ~/.local/share/omp-surf/skills/community
     # EasyBuild annual-bump
     - ~/Git/Github/Tools/eb-stack/skills
   # Do not import large ~/.claude skill libraries on this host
@@ -236,12 +240,14 @@ cat > "${AGENT}/AGENTS.md" <<'MD'
 
 | Dir | Contents |
 |-----|----------|
-| `~/.local/share/omp-surf/skills/core` | rtk, code-search, fast-tools, writing-quality, web-search, tmux (+ cosmolab-remote if present) |
+| `~/.local/share/omp-surf/skills/core` | rtk, code-search, fast-tools, writing-quality, web-search, tmux, cosmolab-remote |
 | `~/.local/share/omp-surf/skills/superpowers` | TDD, systematic-debugging, verification, writing-plans, ... |
+| `~/.local/share/omp-surf/skills/surf` | surf-tasks (SURF software-ops goals/tasks/weekly) |
+| `~/.local/share/omp-surf/skills/community` | find-skills; mattpocock grill-me, handoff, code-review, diagnosing-bugs, research, to-spec |
 | `~/Git/Github/Tools/eb-stack/skills` | annual-bump EasyBuild runbook |
 
-Dropped on purpose: full pi_env gpu-llm/*, anki, joss, epfl-tasks, frontend-design;
-badlogic/pi-skills (browser/Google); Claude-user skill import.
+Dropped: full pi_env gpu-llm/*, anki, joss, epfl, frontend; 1000+ catalog dumps;
+Claude-user skill import. Optional later: Context7 MCP (needs MCP server), anthropics office skills.
 
 ## RTK
 
@@ -296,7 +302,7 @@ fi
 # ---------- report ----------
 log "omp=$(omp --version 2>/dev/null | head -1)"
 log "rtk=$(command -v rtk || echo MISSING) $(rtk --version 2>/dev/null | head -1 || true)"
-for d in "${SHARE}/skills/core" "${SHARE}/skills/superpowers" "${EB_STACK}/skills"; do
+for d in "${SHARE}/skills/core" "${SHARE}/skills/superpowers" "${SHARE}/skills/surf" "${SHARE}/skills/community" "${EB_STACK}/skills"; do
   if [[ -d "$d" ]]; then
     n=$(find "$d" -name SKILL.md 2>/dev/null | wc -l)
     log "skills $d ($n)"
