@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v10-tmpl-driven
+# Hash: specialize-v10b-willma-keyfile
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
@@ -95,6 +95,10 @@ models="${AGENT}/models.yml"
 token=""
 if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
   token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
+elif [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
+  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
+elif [[ -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
+  token="${SURF_AI_HUB_TOKEN}"
 elif [[ -f "$models" ]]; then
   token=$(python3 - <<'PY' 2>/dev/null || true
 import re
@@ -106,7 +110,11 @@ if m and "PLACEHOLDER" not in m.group(1):
 PY
 )
 fi
-[[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]] && token="${SURF_AI_HUB_TOKEN}"
+if [[ -n "${token}" ]]; then
+  mkdir -p "${HOME}/.config/surf-ai-hub"
+  printf '%s\n' "$token" > "${HOME}/.config/surf-ai-hub/api_key"
+  chmod 600 "${HOME}/.config/surf-ai-hub/api_key"
+fi
 if [[ -f "$models" && -n "${token}" ]]; then
   export WILLMA_TOKEN="$token" WILLMA_MODELS="$models"
   python3 - <<'PY'
