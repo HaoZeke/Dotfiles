@@ -6,6 +6,13 @@
 # separately via the sealed vault, not here.
 set -euo pipefail
 
+# Root provisioning must never hang a plain `chezmoi apply` on a password
+# prompt; without cached sudo credentials skip cleanly (re-run after sudo -v).
+if ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; skipping rgSURFLat system provisioning (sudo -v, then re-apply)" >&2
+    exit 0
+fi
+
 write_if_diff() {
     local dst="$1" mode="$2" content="$3"
     local tmp
@@ -163,12 +170,23 @@ health() {
     active && routes_ok && https_canary_ok
 }
 
-connect_with_cli() {
+notify_user() {
     runuser -u "$user" -- env \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
+        notify-send -u critical "eduVPN" "$1" >/dev/null 2>&1 || true
+}
+
+# Hard-capped and detached from any prompt: with an expired OAuth token the
+# CLI waits forever for a browser authorization; runuser PAM sessions escape
+# the service cgroup, so systemd cannot reap the hung child and they pile up
+# (41 orphans observed on 2026-07-10). timeout + stdin from /dev/null makes
+# every attempt self-terminating; rc 124 means re-authorization is needed.
+connect_with_cli() {
+    timeout 40 runuser -u "$user" -- env \
         HOME="$home_dir" \
         XDG_RUNTIME_DIR="/run/user/$uid" \
         DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus \
-        "$cli" connect --tcp -n 1 >/dev/null 2>&1
+        "$cli" connect --tcp -n 1 </dev/null >/dev/null 2>&1
 }
 
 health && { log "healthy"; exit 0; }
@@ -177,9 +195,24 @@ systemctl is-active --quiet NetworkManager.service || { log "NetworkManager inac
 has_default_route || { log "no default route"; exit 0; }
 
 log "repairing eduVPN"
+# Reap any hung CLI attempts from earlier ticks before starting a new one.
+pkill -u "$user" -f "eduvpn-cli" 2>/dev/null || true
 nmcli connection down eduVPN >/dev/null 2>&1 || true
 
-connect_with_cli || log "official CLI reconnect failed; trying existing NetworkManager profile"
+cli_rc=0
+connect_with_cli || cli_rc=$?
+if [ "$cli_rc" -eq 124 ]; then
+    # Interactive re-authorization is a human step; alert at most once an hour
+    # instead of thrashing every timer tick.
+    marker=/run/rg-eduvpn-auth-notified
+    if [ -z "$(find "$marker" -mmin -60 2>/dev/null)" ]; then
+        touch "$marker" 2>/dev/null || true
+        notify_user "SURF eduVPN needs re-authorization: run eduvpn-cli connect in a terminal and follow the browser prompt"
+    fi
+    log "CLI connect timed out (OAuth re-authorization needed)"
+elif [ "$cli_rc" -ne 0 ]; then
+    log "official CLI reconnect failed (rc=$cli_rc); trying existing NetworkManager profile"
+fi
 
 health && { log "healthy after CLI reconnect"; exit 0; }
 

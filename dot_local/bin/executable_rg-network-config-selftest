@@ -285,6 +285,8 @@ rg -q -- '--resolve "api\.x\.ai:443:\$pin"' "$net_doctor" \
     || fail "doctor must probe the api.x.ai pin health"
 rg -q 'ipinfo\.io/json' "$net_doctor" \
     || fail "doctor must report the egress exit geography"
+rg -q 'grok models.*v9-stickynote|v9-stickynote.*grok models' "$net_doctor" \
+    || fail "doctor must gate on v9-stickynote model visibility"
 rg -q 'notify-send -u critical "net-doctor' "$net_doctor_alert" \
     || fail "doctor alert wrapper must raise a desktop notification on regression"
 rg_net="$repo/dot_local/bin/executable_rg-net"

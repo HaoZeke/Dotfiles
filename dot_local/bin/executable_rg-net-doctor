@@ -157,6 +157,20 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     bad "tailscale-marked traffic on LAN: ${marked:-no route}"
   fi
 
+  printf '== x.ai model visibility (THE acceptance gate) ==\n'
+  # The models are gated on the Houston presence; v9-stickynote visible in the
+  # authenticated model list is the user-defined ground truth that the whole
+  # x.ai path works. Everything else in this section is supporting detail.
+  if command -v grok >/dev/null 2>&1 && [ -r "$HOME/.grok/auth.json" ]; then
+    if timeout 20 grok models 2>/dev/null | grep -q 'v9-stickynote'; then
+      ok "v9-stickynote visible in grok models"
+    else
+      bad "v9-stickynote NOT visible — x.ai sees the wrong exit or auth expired (check: rg-net doctor route/pin lines, then grok login)"
+    fi
+  else
+    wrn "grok CLI or auth missing; model-visibility gate skipped"
+  fi
+
   printf '== x.ai API pin health ==\n'
   pin=$(awk '$1 ~ /^[0-9.]+$/ && $2 == "api.x.ai" {print $1; exit}' /etc/hosts 2>/dev/null)
   if [ -n "$pin" ]; then
