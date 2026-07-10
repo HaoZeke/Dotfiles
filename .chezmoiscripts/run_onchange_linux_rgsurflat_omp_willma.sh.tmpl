@@ -1,8 +1,8 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
-# rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v9-ookcite-cf-ci
-# Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
+# rgSURFLat: runtime deps + secret injection.
+# Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
+# Hash: specialize-v10-tmpl-driven
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
@@ -17,9 +17,10 @@ OMP_VER="${OMP_VERSION:-16.4.1}"
 RTK_VER="${RTK_VERSION:-0.43.0}"
 
 mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
-  "${HOME}/.local/bin" "${HOME}/.claude/hooks" "${TOOLS}" "${SHARE}"
+  "${HOME}/.local/bin" "${HOME}/.claude/hooks" \
+  "${HOME}/.config/context7" "${HOME}/.config/ookcite" "${TOOLS}"
 
-# ---------- bun + omp pin ----------
+# ---------- bun + omp ----------
 if ! command -v bun >/dev/null 2>&1; then
   log "installing bun"
   curl -fsSL https://bun.sh/install | bash
@@ -28,23 +29,14 @@ fi
 need_omp=1
 if command -v omp >/dev/null 2>&1; then
   cur=$(omp --version 2>/dev/null | head -1 || true)
-  if [[ "$cur" == *"${OMP_VER}"* ]]; then
-    need_omp=0
-    log "omp already ${cur}"
-  fi
+  [[ "$cur" == *"${OMP_VER}"* ]] && need_omp=0 && log "omp ${cur}"
 fi
 if [[ "$need_omp" -eq 1 ]]; then
   log "installing @oh-my-pi/pi-coding-agent@${OMP_VER}"
   bun install -g "@oh-my-pi/pi-coding-agent@${OMP_VER}"
 fi
 
-# ---------- jq ----------
-if ! command -v jq >/dev/null 2>&1; then
-  if command -v pacman >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-    sudo -n pacman -S --noconfirm --needed jq >/dev/null 2>&1 || true
-  fi
-  [[ -x "$(command -v jq || true)" ]] || log "WARN: jq missing (rtk-rewrite no-op until installed)"
-fi
+command -v jq >/dev/null 2>&1 || log "WARN: jq missing (rtk-rewrite may no-op)"
 
 # ---------- RTK ----------
 if ! command -v rtk >/dev/null 2>&1; then
@@ -53,50 +45,30 @@ if ! command -v rtk >/dev/null 2>&1; then
   log "installing rtk ${RTK_VER}"
   if curl -fsSL "$url" -o "${tmp}/rtk.tgz"; then
     tar -C "$tmp" -xzf "${tmp}/rtk.tgz"
-    if [[ -f "${tmp}/rtk" ]]; then
-      install -m 0755 "${tmp}/rtk" "${HOME}/.local/bin/rtk"
-    else
-      find "$tmp" -type f -name rtk -exec install -m 0755 {} "${HOME}/.local/bin/rtk" \;
-    fi
-  else
-    log "WARN: rtk download failed"
+    find "$tmp" -type f -name rtk -exec install -m 0755 {} "${HOME}/.local/bin/rtk" \;
   fi
   rm -rf "$tmp"
 else
-  log "rtk: $(rtk --version 2>/dev/null | head -1 || echo present)"
+  log "rtk: $(rtk --version 2>/dev/null | head -1 || echo ok)"
 fi
 
-# ---------- pi_env clone (extension source only; skills come from curated core) ----------
+# ---------- pi_env (extension source only) ----------
 if [[ ! -d "${PI_ENV}/.git" ]]; then
-  log "cloning pi_env (extension source)"
   git clone --depth 1 git@github.com:HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null \
     || git clone --depth 1 https://github.com/HaoZeke/pi_env.git "${PI_ENV}" 2>/dev/null \
     || log "WARN: pi_env clone failed"
-else
-  log "pi_env present ($(git -C "${PI_ENV}" rev-parse --short HEAD 2>/dev/null || echo ok))"
 fi
 
-# ---------- curated core skills from SHARE (chezmoi-managed) ----------
-if [[ ! -d "${SHARE}/skills/core" ]]; then
-  log "WARN: ${SHARE}/skills/core missing; run chezmoi apply for omp-surf pack"
-fi
-if [[ ! -d "${SHARE}/skills/superpowers" ]]; then
-  log "WARN: superpowers pack missing under ${SHARE}/skills"
-fi
-if [[ ! -d "${EB_STACK}/skills" ]]; then
-  log "WARN: eb-stack skills missing"
-fi
+# ---------- pack wrappers / extensions ----------
+[[ -x "${SHARE}/bin/ookcite-mcp-pass" ]] && \
+  install -m 0755 "${SHARE}/bin/ookcite-mcp-pass" "${HOME}/.local/bin/ookcite-mcp-pass"
 
-# ---------- extensions ----------
 if [[ -f "${SHARE}/gpt-oss-priors.ts" ]]; then
   install -m 0644 "${SHARE}/gpt-oss-priors.ts" "${AGENT}/extensions/gpt-oss-priors.ts"
 fi
 if [[ -f "${SHARE}/extensions/rtk-rewrite.ts" ]]; then
   install -m 0644 "${SHARE}/extensions/rtk-rewrite.ts" "${AGENT}/extensions/rtk-rewrite.ts"
   install -m 0644 "${SHARE}/extensions/rtk-rewrite.ts" "${HOME}/.omp/extensions/rtk-rewrite.ts"
-elif [[ -f "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" ]]; then
-  install -m 0644 "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" "${AGENT}/extensions/rtk-rewrite.ts"
-  install -m 0644 "${PI_ENV}/.omp/extensions/rtk-rewrite.ts" "${HOME}/.omp/extensions/rtk-rewrite.ts"
 fi
 if [[ -d "${PI_ENV}/.omp/extensions" ]]; then
   for ext in code-search.ts fast-tools.ts writing-quality.ts dirty-repo-guard.ts; do
@@ -104,309 +76,105 @@ if [[ -d "${PI_ENV}/.omp/extensions" ]]; then
       install -m 0644 "${PI_ENV}/.omp/extensions/${ext}" "${AGENT}/extensions/${ext}"
   done
 fi
-if [[ -f "${SHARE}/hooks/rtk-rewrite.sh" ]]; then
+[[ -f "${SHARE}/hooks/rtk-rewrite.sh" ]] && \
   install -m 0755 "${SHARE}/hooks/rtk-rewrite.sh" "${HOME}/.claude/hooks/rtk-rewrite.sh"
-  log "rtk-rewrite hook installed"
-fi
 
-# ---------- token ----------
-models="${AGENT}/models.yml"
-token=""
-if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
-  token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
-  log "token from pass"
-elif [[ -f "$models" ]]; then
-  token=$(WILLMA_MODELS="$models" python3 - <<'PY' 2>/dev/null || true
-import os, re
-from pathlib import Path
-t = Path(os.environ["WILLMA_MODELS"]).read_text()
-m = re.search(r"apiKey:\s*[\"']?([^\"'\n]+)", t)
-if m and m.group(1) and "PLACEHOLDER" not in m.group(1):
-    print(m.group(1).strip())
-PY
-)
-  [[ -n "${token}" ]] && log "token preserved"
-fi
-[[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]] && token="${SURF_AI_HUB_TOKEN}"
-[[ -z "${token}" ]] && token="WILLMA_TOKEN_PLACEHOLDER" && log "WARN: no Willma token"
-
-export WILLMA_TOKEN="$token"
-python3 - <<'PY'
-from pathlib import Path
-import os
-tok = os.environ["WILLMA_TOKEN"]
-safe = tok.replace("\\", "\\\\").replace('"', '\\"')
-text = f'''# rgSURFLat Willma-only (inventory keep set). Do not seal from this host into multi-provider vault.
-providers:
-  surf-ai-hub:
-    baseUrl: https://willma.surf.nl/api/v0
-    apiKey: "{safe}"
-    api: openai-completions
-    authHeader: true
-    models:
-      - id: openai/gpt-oss-120b
-        name: GPT-OSS 120B (SURF Willma)
-        reasoning: true
-        input:
-          - text
-        contextWindow: 131072
-        maxTokens: 32768
-        cost:
-          input: 0
-          output: 0
-          cacheRead: 0
-          cacheWrite: 0
-        compat:
-          supportsDeveloperRole: false
-          supportsStore: false
-          supportsReasoningEffort: true
-          maxTokensField: max_tokens
-          supportsUsageInStreaming: true
-'''
-p = Path.home() / ".omp/agent/models.yml"
-p.parent.mkdir(parents=True, exist_ok=True)
-p.write_text(text)
-print("wrote", p)
-PY
-
-# ---------- config: curated skill dirs only ----------
-cat > "${AGENT}/config.yml" <<'YAML'
-# rgSURFLat Willma-only + curated OMP stack (see omp-stack-inventory).
-# Not a full pi_env dump: gpu-llm/anki/joss/epfl/frontend dropped.
-lastChangelogVersion: 16.4.1
-modelRoles:
-  default: surf-ai-hub/openai/gpt-oss-120b
-  plan: surf-ai-hub/openai/gpt-oss-120b
-  smol: surf-ai-hub/openai/gpt-oss-120b
-  slow: surf-ai-hub/openai/gpt-oss-120b
-  commit: surf-ai-hub/openai/gpt-oss-120b
-  fallback: surf-ai-hub/openai/gpt-oss-120b
-  surf: surf-ai-hub/openai/gpt-oss-120b
-  eb-stack: surf-ai-hub/openai/gpt-oss-120b
-  surf-plan: surf-ai-hub/openai/gpt-oss-120b
-skills:
-  customDirectories:
-    # Curated CLI/token pack (rtk, code-search, fast-tools, writing-quality, web-search, tmux, ...)
-    - ~/.local/share/omp-surf/skills/core
-    # obra/superpowers process skills (TDD, debugging, verification, plans)
-    - ~/.local/share/omp-surf/skills/superpowers
-    # SURF software-ops (surf-tasks / EasyBuild tracking)
-    - ~/.local/share/omp-surf/skills/surf
-    # Community high-signal: find-skills, mattpocock grill-me/handoff/code-review/...
-    - ~/.local/share/omp-surf/skills/community
-    # EasyBuild annual-bump
-    - ~/Git/Github/Tools/eb-stack/skills
-  # Do not import large ~/.claude skill libraries on this host
-  enableClaudeUser: false
-startup:
-  setupWizard: false
-  checkUpdate: false
-memories:
-  enabled: true
-bashInterceptor:
-  enabled: true
-python:
-  toolMode: both
-ask:
-  timeout: 120
-compaction:
-  autoCompact: true
-  compactThreshold: 0.85
-task:
-  eager: true
-YAML
-chmod 600 "${AGENT}/config.yml" "${AGENT}/models.yml"
-log "wrote curated config.yml"
-
-# ---------- MCP: context7 + project-ctx (SURF keep set) ----------
-# API key: ~/.config/context7/api_key or CONTEXT7_API_KEY or pass (never commit).
-mkdir -p "${HOME}/.config/context7" "${HOME}/.config/ookcite"
-ctx7_key=""
-if [[ -n "${CONTEXT7_API_KEY:-}" ]]; then
-  ctx7_key="${CONTEXT7_API_KEY}"
-elif [[ -f "${HOME}/.config/context7/api_key" ]]; then
-  ctx7_key=$(tr -d '\r\n' < "${HOME}/.config/context7/api_key")
-elif command -v pass >/dev/null 2>&1 && pass show api/context7 >/dev/null 2>&1; then
-  ctx7_key=$(pass show api/context7 | head -n1 | tr -d '\r\n')
-  printf '%s\n' "$ctx7_key" > "${HOME}/.config/context7/api_key"
-  chmod 600 "${HOME}/.config/context7/api_key"
-fi
-
-# ---------- Puppeteer MCP (browser; system chromium) ----------
+# ---------- Puppeteer node_modules ----------
 if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
   mkdir -p "${HOME}/.omp/puppeteer"
   install -m 0644 "${SHARE}/puppeteer/puppeteer_mcp.js" "${HOME}/.omp/puppeteer/puppeteer_mcp.js"
   install -m 0644 "${SHARE}/puppeteer/package.json" "${HOME}/.omp/puppeteer/package.json"
   if [[ ! -d "${HOME}/.omp/puppeteer/node_modules/@modelcontextprotocol" ]]; then
-    log "installing puppeteer MCP deps (bun)"
-    (cd "${HOME}/.omp/puppeteer" && bun install) ||       (cd "${HOME}/.omp/puppeteer" && npm install --omit=dev) ||       log "WARN: puppeteer npm install failed"
+    log "installing puppeteer MCP deps"
+    (cd "${HOME}/.omp/puppeteer" && bun install) || true
   fi
 fi
 
-# ookcite + cf-ci drop-in binaries/wrappers from pack or prior scp
-if [[ -x "${SHARE}/bin/ookcite-mcp-pass" ]]; then
-  install -m 0755 "${SHARE}/bin/ookcite-mcp-pass" "${HOME}/.local/bin/ookcite-mcp-pass"
+# ---------- inject Willma token into models.yml (from tmpl placeholder) ----------
+models="${AGENT}/models.yml"
+token=""
+if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
+  token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
+elif [[ -f "$models" ]]; then
+  token=$(python3 - <<'PY' 2>/dev/null || true
+import re
+from pathlib import Path
+t=Path.home().joinpath(".omp/agent/models.yml").read_text()
+m=re.search(r'apiKey:\s*["\']?([^"\'\n]+)', t)
+if m and "PLACEHOLDER" not in m.group(1):
+    print(m.group(1).strip())
+PY
+)
 fi
-# ensure project-ctx binaries if present in SHARE/bin (optional drop-in)
-if [[ -x "${SHARE}/bin/project-ctx" ]]; then
-  install -m 0755 "${SHARE}/bin/project-ctx" "${HOME}/.local/bin/project-ctx"
-fi
-if [[ -x "${SHARE}/bin/project-ctx-mcp" ]]; then
-  install -m 0755 "${SHARE}/bin/project-ctx-mcp" "${HOME}/.local/bin/project-ctx-mcp"
+[[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]] && token="${SURF_AI_HUB_TOKEN}"
+if [[ -f "$models" && -n "${token}" ]]; then
+  export WILLMA_TOKEN="$token" WILLMA_MODELS="$models"
+  python3 - <<'PY'
+import os, re
+from pathlib import Path
+p=Path(os.environ["WILLMA_MODELS"])
+tok=os.environ["WILLMA_TOKEN"]
+t=p.read_text()
+t2,n=re.subn(r'(apiKey:\s*)(["\']?)[^"\'\n]+\2',
+             lambda m: m.group(1)+'"'+tok.replace("\\","\\\\").replace('"','\\"')+'"',
+             t, count=1)
+if n==0:
+    t2=t.replace("WILLMA_TOKEN_PLACEHOLDER", tok)
+p.write_text(t2)
+print("models.yml token injected")
+PY
+else
+  log "WARN: could not inject Willma token"
 fi
 
-export CTX7_KEY="${ctx7_key}"
-python3 - <<'PYMCP'
+# ---------- inject Context7 key into mcp.json args if file present ----------
+mcp="${AGENT}/mcp.json"
+if [[ -f "$mcp" && -f "${HOME}/.config/context7/api_key" ]]; then
+  export CTX7_KEY=$(tr -d '\r\n' < "${HOME}/.config/context7/api_key")
+  export MCP_PATH="$mcp"
+  python3 - <<'PY'
 import json, os
 from pathlib import Path
-home = Path.home()
-agent = home / ".omp" / "agent"
-agent.mkdir(parents=True, exist_ok=True)
-key = os.environ.get("CTX7_KEY", "")
-servers = {}
-# Context7 via npx (no local binary required)
-import shutil
-if shutil.which("bunx"):
-    cmd, base = "bunx", ["-y", "@upstash/context7-mcp"]
-elif shutil.which("npx"):
-    cmd, base = "npx", ["-y", "@upstash/context7-mcp"]
-elif shutil.which("bun"):
-    cmd, base = "bun", ["x", "-y", "@upstash/context7-mcp"]
-else:
-    cmd, base = "npx", ["-y", "@upstash/context7-mcp"]
-args = list(base)
-if key:
-    args += ["--api-key", key]
-servers["context7"] = {"type": "stdio", "command": cmd, "args": args}
-# project-ctx MCP when binary exists
-pc = home / ".local" / "bin" / "project-ctx-mcp"
-if pc.is_file() and os.access(pc, os.X_OK):
-    servers["project-ctx"] = {
-        "type": "stdio",
-        "command": str(pc),
-        "args": [],
-    }
-# puppeteer when installed
-pup = home / ".omp" / "puppeteer" / "puppeteer_mcp.js"
-if pup.is_file():
-    node = shutil.which("node") or "node"
-    servers["puppeteer"] = {
-        "type": "stdio",
-        "command": node,
-        "args": [str(pup)],
-    }
-# ookcite (Business key via launcher / file / pass)
-ook_pass = home / ".local" / "bin" / "ookcite-mcp-pass"
-ook_bin = home / ".local" / "bin" / "ookcite-mcp"
-if ook_pass.is_file() and os.access(ook_pass, os.X_OK):
-    servers["ookcite"] = {
-        "type": "stdio",
-        "command": str(ook_pass),
-        "args": [],
-    }
-elif ook_bin.is_file() and os.access(ook_bin, os.X_OK):
-    servers["ookcite"] = {
-        "type": "stdio",
-        "command": str(ook_bin),
-        "args": [],
-        "env": {},
-    }
-# cf-ci (conda-forge / GH / Azure CI observability)
-cf = home / ".local" / "bin" / "cf-ci-mcp"
-if cf.is_file() and os.access(cf, os.X_OK):
-    servers["cf-ci"] = {
-        "type": "stdio",
-        "command": str(cf),
-        "args": [],
-    }
-# eb-stack MCP only if binary on this host
-eb = home / ".local" / "bin" / "eb-stack"
-if not eb.is_file():
-    eb = home / "Git" / "Github" / "Tools" / "eb-stack" / "target" / "release" / "eb-stack"
-if eb.is_file() and os.access(eb, os.X_OK):
-    servers["eb-stack"] = {
-        "type": "stdio",
-        "command": str(eb),
-        "args": ["mcp"],
-    }
-doc = {
-    "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
-    "mcpServers": servers,
-}
-out = agent / "mcp.json"
-out.write_text(json.dumps(doc, indent=2) + "\n")
-os.chmod(out, 0o600)
-print("wrote", out, "servers", list(servers))
-PYMCP
+p=Path(os.environ["MCP_PATH"])
+key=os.environ["CTX7_KEY"]
+d=json.loads(p.read_text())
+s=d.setdefault("mcpServers",{}).setdefault("context7",{"type":"stdio","command":"bunx","args":[]})
+args=s.get("args") or ["-y","@upstash/context7-mcp"]
+# strip old key
+out=[]
+skip=False
+for a in args:
+    if skip:
+        skip=False
+        continue
+    if a=="--api-key":
+        skip=True
+        continue
+    out.append(a)
+if "-y" not in out:
+    out=["-y","@upstash/context7-mcp"]+out
+out=out+["--api-key", key]
+s["args"]=out
+if not s.get("command"):
+    s["command"]="bunx"
+p.write_text(json.dumps(d, indent=2)+"\n")
+print("mcp.json context7 key injected")
+PY
+fi
 
-# seed eb-stack project-ctx if repo exists and missing toml
+# ---------- seed eb-stack project-ctx ----------
 if [[ -d "${EB_STACK}" && -f "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" ]]; then
   install -m 0644 "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" \
     "${EB_STACK}/.project-ctx.toml"
   log "seeded eb-stack .project-ctx.toml"
 fi
 
-
-# ---------- AGENTS.md ----------
-cat > "${AGENT}/AGENTS.md" <<'MD'
-# SURF laptop — Willma gpt-oss-120b + curated OMP stack
-
-## Hard Rules
-
-- Never attribute AI in public output.
-- Never open/comment/merge GitHub or GitLab issues/PRs without explicit user ask.
-- Never force push without permission.
-- Never `rm` outside `/tmp`; use `rtrash`. Never `gio trash`.
-- ASCII punctuation only.
-- Heavy builds only on `rg.terra` (or cluster) — not this laptop.
-
-## Model
-
-- Sole provider: `surf-ai-hub` / `openai/gpt-oss-120b` (Willma).
-- All modelRoles point at Willma.
-
-## Skills (keep set)
-
-| Dir | Contents |
-|-----|----------|
-| `~/.local/share/omp-surf/skills/core` | rtk, code-search, fast-tools, writing-quality, web-search, tmux, cosmolab-remote |
-| `~/.local/share/omp-surf/skills/superpowers` | TDD, systematic-debugging, verification, writing-plans, ... |
-| `~/.local/share/omp-surf/skills/surf` | surf-tasks (SURF software-ops goals/tasks/weekly) |
-| `~/.local/share/omp-surf/skills/community` | find-skills; mattpocock grill-me, handoff, code-review, diagnosing-bugs, research, to-spec |
-| `~/Git/Github/Tools/eb-stack/skills` | annual-bump EasyBuild runbook |
-
-Dropped: full pi_env gpu-llm/*, anki, joss, epfl, frontend; 1000+ catalog dumps;
-Claude-user skill import. Optional later: Context7 MCP (needs MCP server), anthropics office skills.
-
-## RTK
-
-- Binary `rtk` on PATH; extension `rtk-rewrite` + hook auto-rewrites common bash.
-- Skill: core/rtk.
-
-## Extensions
-
-- gpt-oss-priors (apply_patch), rtk-rewrite, code-search, fast-tools, writing-quality, dirty-repo-guard.
-
-## MCP
-
-- **context7** — up-to-date library docs (`resolve-library-id`, `query-docs`). Prefer over training-data guesses.
-- **project-ctx** — `.project-ctx.toml` conventions/build (CLI `project-ctx show .` or MCP).
-- **puppeteer** — browser automation (stealth); needs system Chromium.
-- **ookcite** — citation metadata (Business plan key via `~/.config/ookcite/api_key` or pass `services/ookcite-api-key`).
-- **cf-ci** — conda-forge / GH / Azure CI logs and checks (useful for packaging work).
-- **Not on SURF:** ttech-ops, beads, omp-bridge.
-- Key for Context7: `~/.config/context7/api_key` or `CONTEXT7_API_KEY` (not in git).
-
-## Launch
-
-```
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
-omp-surf
-```
-
-Never seal models.yml from this host into the multi-provider vault blob.
-MD
-chmod 600 "${AGENT}/AGENTS.md"
+# ---------- wizard skip ----------
+db="${AGENT}/agent.db"
+if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('setupVersion','1');"
+  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
+fi
 
 # ---------- wrappers ----------
 for name in omp-surf omp-eb-stack; do
@@ -429,31 +197,14 @@ WRAP
   chmod 755 "${HOME}/.local/bin/${name}"
 done
 
-# ---------- wizard ----------
-db="${AGENT}/agent.db"
-if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
-  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('setupVersion','1');"
-  sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
-fi
+[[ -f "${SHARE}/README-SURF.txt" ]] && \
+  install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
 
-[[ -f "${SHARE}/README-SURF.txt" ]] && install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
-
-# ---------- report ----------
 log "omp=$(omp --version 2>/dev/null | head -1)"
-log "rtk=$(command -v rtk || echo MISSING) $(rtk --version 2>/dev/null | head -1 || true)"
-for d in "${SHARE}/skills/core" "${SHARE}/skills/superpowers" "${SHARE}/skills/surf" "${SHARE}/skills/community" "${EB_STACK}/skills"; do
-  if [[ -d "$d" ]]; then
-    n=$(find "$d" -name SKILL.md 2>/dev/null | wc -l)
-    log "skills $d ($n)"
-  else
-    log "MISSING $d"
-  fi
-done
-log "exts: $(ls -1 "${AGENT}/extensions" 2>/dev/null | tr '\n' ' ')"
-
-if [[ "$token" != "WILLMA_TOKEN_PLACEHOLDER" ]] && command -v omp >/dev/null 2>&1; then
-  out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -3 || true)
+log "mcp=$(python3 -c 'import json;from pathlib import Path;print(sorted(json.loads(Path.home().joinpath(".omp/agent/mcp.json").read_text()).get("mcpServers",{})))' 2>/dev/null || echo missing)"
+if command -v omp >/dev/null 2>&1 && [[ -f "$models" ]] && ! grep -q PLACEHOLDER "$models" 2>/dev/null; then
+  out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -2 || true)
   log "smoke: ${out//$'\n'/ | }"
 fi
-log "done: curated Willma stack v5"
+log "done: tmpl-driven SURF OMP (runtime+secrets only)"
 {{- end }}

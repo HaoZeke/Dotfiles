@@ -117,10 +117,9 @@ dot_omp/agent/sessions/
 dot_omp/agent/memories/
 dot_omp/puppeteer/
 
-# On SURF laptop, do not apply workstation multi-MCP (ookcite path + eb-stack binary paths differ).
-{{ if eq .chezmoi.hostname "rgSURFLat" }}
-.omp/mcp.json
-.omp/agent/mcp.json
+# models.yml host template is SURF-only; workstation multi-provider stays nimvault-owned.
+{{ if ne .chezmoi.hostname "rgSURFLat" }}
+.omp/agent/models.yml
 {{ end }}
 # Private assistant config (machine-specific state)
 dot_claude/backups/
