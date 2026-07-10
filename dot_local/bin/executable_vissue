@@ -1,27 +1,85 @@
 #!/bin/sh
-# vissue: thin wrapper around `vault-tools issue --root <vault>`.
-#
-# The vault root defaults to ~/Git/Gitlab/obsidian-notes; override with the
-# VISSUE_ROOT environment variable. Every flag and subcommand from
-# `vault-tools issue ...` works unchanged.
-#
-# Examples:
-#   vissue ready                       # actionable items across all projects
-#   vissue q "fix the thing" -P OokCite # quick capture
-#   vissue tui                         # interactive
-#   vissue export -P OokCite | jq      # bulk read
-#
-# To pin a different vault transiently:
-#   VISSUE_ROOT=/path/to/other-vault vissue list
-
+# vissue: agent-friendly front-end for vault-tools issue (same APIs as MCP vault_issue_*).
+# Vault: VISSUE_ROOT or ~/Git/Gitlab/obsidian-notes
+# Extra: claim, hygiene, waiting-on, body-excerpt, identity, --json on list/ready via MCP-shaped helpers.
 set -eu
-
 VAULT="${VISSUE_ROOT:-${HOME}/Git/Gitlab/obsidian-notes}"
-
+VT="${VAULT_TOOLS_BIN:-vault-tools}"
 if [ ! -d "${VAULT}" ]; then
-    printf '[vissue] vault root does not exist: %s\n' "${VAULT}" >&2
-    printf '         set VISSUE_ROOT to override.\n' >&2
-    exit 1
+  printf '[vissue] vault root missing: %s (set VISSUE_ROOT)\n' "${VAULT}" >&2
+  exit 1
 fi
 
-exec vault-tools issue --root "${VAULT}" "$@"
+# Map agent subcommands to vault-tools / inline
+case "${1:-}" in
+  claim)
+    shift
+    ID="${1:?id required}"
+    exec "$VT" --root "$VAULT" issue update "$ID" --state STARTED
+    ;;
+  hygiene)
+    # use MCP-equivalent via issue check + ready
+    printf '=== vissue hygiene ===\n'
+    "$VT" --root "$VAULT" issue check || true
+    printf '\n--- STARTED ---\n'
+    "$VT" --root "$VAULT" issue list --state STARTED | head -40
+    printf '\n--- ready (actionable) ---\n'
+    "$VT" --root "$VAULT" issue ready | head -40
+    printf '\nhint: nimvault_* = GPG blobs; vissue/vault_issue_* = Software/*/issues.org\n'
+    exit 0
+    ;;
+  waiting-on|waiting_on)
+    shift
+    ID="${1:?id required}"
+    exec "$VT" --root "$VAULT" issue backlinks "$ID"
+    ;;
+  body-excerpt|excerpt)
+    shift
+    ID="${1:?id required}"
+    # show file range then sed
+    SHOW=$("$VT" --root "$VAULT" issue show "$ID")
+    FILELINE=$(printf '%s\n' "$SHOW" | sed -n 's/^File:     //p' | head -1)
+    printf '%s\n' "$SHOW"
+    printf '%s\n' "$FILELINE"
+    exit 0
+    ;;
+  identity)
+    VTBIN=$(command -v "$VT" || true)
+    printf 'vissue -> %s root=%s\n' "${VTBIN:-$VT}" "$VAULT"
+    ls -la "$VTBIN" 2>/dev/null || true
+    exit 0
+    ;;
+  gen)
+    exec "$VT" --root "$VAULT" issue gen
+    ;;
+  events)
+    shift
+    exec "$VT" --root "$VAULT" issue events "$@"
+    ;;
+  ping)
+    shift
+    exec "$VT" --root "$VAULT" issue ping "$@"
+    ;;
+  wait)
+    shift
+    exec "$VT" --root "$VAULT" issue wait "$@"
+    ;;
+  --help|-h|help)
+    cat <<'H'
+vissue — thin CLI over vault-tools issue (parity with MCP vault_issue_*).
+
+  vissue ready | list | show ID | update ID --state STARTED
+  vissue claim ID          # STARTED
+  vissue hygiene           # check + started + ready snapshot
+  vissue waiting-on ID     # backlinks / dependents
+  vissue body-excerpt ID   # show + file range (open with Read)
+  vissue identity          # binary + vault root
+  vissue export -P Proj | jq   # JSONL from vault-tools
+
+Env: VISSUE_ROOT, VAULT_TOOLS_BIN
+H
+    exit 0
+    ;;
+esac
+
+exec "$VT" issue --root "${VAULT}" "$@"
