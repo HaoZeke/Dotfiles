@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
 # rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v6-community-surf-skills
+# Hash: specialize-v7-mcp-context7-project-ctx
 # Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
 set -euo pipefail
 
@@ -218,6 +218,89 @@ YAML
 chmod 600 "${AGENT}/config.yml" "${AGENT}/models.yml"
 log "wrote curated config.yml"
 
+# ---------- MCP: context7 + project-ctx (SURF keep set) ----------
+# API key: ~/.config/context7/api_key or CONTEXT7_API_KEY or pass (never commit).
+mkdir -p "${HOME}/.config/context7"
+ctx7_key=""
+if [[ -n "${CONTEXT7_API_KEY:-}" ]]; then
+  ctx7_key="${CONTEXT7_API_KEY}"
+elif [[ -f "${HOME}/.config/context7/api_key" ]]; then
+  ctx7_key=$(tr -d '\r\n' < "${HOME}/.config/context7/api_key")
+elif command -v pass >/dev/null 2>&1 && pass show api/context7 >/dev/null 2>&1; then
+  ctx7_key=$(pass show api/context7 | head -n1 | tr -d '\r\n')
+  printf '%s\n' "$ctx7_key" > "${HOME}/.config/context7/api_key"
+  chmod 600 "${HOME}/.config/context7/api_key"
+fi
+
+# ensure project-ctx binaries if present in SHARE/bin (optional drop-in)
+if [[ -x "${SHARE}/bin/project-ctx" ]]; then
+  install -m 0755 "${SHARE}/bin/project-ctx" "${HOME}/.local/bin/project-ctx"
+fi
+if [[ -x "${SHARE}/bin/project-ctx-mcp" ]]; then
+  install -m 0755 "${SHARE}/bin/project-ctx-mcp" "${HOME}/.local/bin/project-ctx-mcp"
+fi
+
+export CTX7_KEY="${ctx7_key}"
+python3 - <<'PYMCP'
+import json, os
+from pathlib import Path
+home = Path.home()
+agent = home / ".omp" / "agent"
+agent.mkdir(parents=True, exist_ok=True)
+key = os.environ.get("CTX7_KEY", "")
+servers = {}
+# Context7 via npx (no local binary required)
+if key:
+    servers["context7"] = {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp", "--api-key", key],
+    }
+else:
+    # still register; server may prompt or use free tier
+    servers["context7"] = {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"],
+    }
+# project-ctx MCP when binary exists
+pc = home / ".local" / "bin" / "project-ctx-mcp"
+if pc.is_file() and os.access(pc, os.X_OK):
+    servers["project-ctx"] = {
+        "type": "stdio",
+        "command": str(pc),
+        "args": [],
+    }
+# eb-stack MCP only if binary on this host
+eb = home / ".local" / "bin" / "eb-stack"
+if not eb.is_file():
+    eb = home / "Git" / "Github" / "Tools" / "eb-stack" / "target" / "release" / "eb-stack"
+if eb.is_file() and os.access(eb, os.X_OK):
+    servers["eb-stack"] = {
+        "type": "stdio",
+        "command": str(eb),
+        "args": ["mcp"],
+    }
+doc = {
+    "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+    "mcpServers": servers,
+}
+out = agent / "mcp.json"
+out.write_text(json.dumps(doc, indent=2) + "\n")
+os.chmod(out, 0o600)
+print("wrote", out, "servers", list(servers))
+PYMCP
+
+# seed eb-stack project-ctx if repo exists and missing toml
+if [[ -d "${EB_STACK}" && -f "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" ]]; then
+  if [[ ! -f "${EB_STACK}/.project-ctx.toml" ]]; then
+    install -m 0644 "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" \
+      "${EB_STACK}/.project-ctx.toml"
+    log "seeded eb-stack .project-ctx.toml"
+  fi
+fi
+
+
 # ---------- AGENTS.md ----------
 cat > "${AGENT}/AGENTS.md" <<'MD'
 # SURF laptop — Willma gpt-oss-120b + curated OMP stack
@@ -257,6 +340,12 @@ Claude-user skill import. Optional later: Context7 MCP (needs MCP server), anthr
 ## Extensions
 
 - gpt-oss-priors (apply_patch), rtk-rewrite, code-search, fast-tools, writing-quality, dirty-repo-guard.
+
+## MCP
+
+- **context7** — up-to-date library docs (`resolve-library-id`, `query-docs`). Prefer over training-data guesses.
+- **project-ctx** — `.project-ctx.toml` conventions/build (CLI `project-ctx show .` or MCP).
+- Key for Context7: `~/.config/context7/api_key` or `CONTEXT7_API_KEY` (not in git).
 
 ## Launch
 
