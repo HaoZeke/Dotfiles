@@ -4,6 +4,10 @@ Description=Run SURF mail archive sync periodically
 
 [Timer]
 OnBootSec=2min
+# User-manager restarts reset monotonic timers; OnStartupSec re-arms the
+# chain then (OnBootSec is system boot; Persistent= is calendar-only). The
+# missing re-arm let the sync silently stop for a day on 2026-07-09.
+OnStartupSec=2min
 OnUnitActiveSec=5min
 RandomizedDelaySec=30s
 Persistent=true
