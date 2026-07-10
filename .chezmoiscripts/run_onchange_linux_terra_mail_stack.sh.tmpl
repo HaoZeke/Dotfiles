@@ -83,5 +83,10 @@ done
 systemctl --user enable --now rgsurf-mbsync.timer 2>/dev/null || \
   echo "chezmoi: enable rgsurf-mbsync.timer failed (unit or mbsync missing?)" >&2
 
+# Daily borg backup of the mail + Terra config into the seeded local copy of
+# the long-standing pCloud repo, then rclone-synced up (remote pcloud-dav).
+systemctl --user enable --now rg-mail-pcloud-backup.timer 2>/dev/null || \
+  echo "chezmoi: enable rg-mail-pcloud-backup.timer failed (unit missing?)" >&2
+
 echo "chezmoi: terra mail stack apply done"
 {{- end }}

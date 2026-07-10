@@ -299,21 +299,24 @@ rg -q 'sudo -n true' "$net_heal_script" \
     || fail "net heal provisioning must skip cleanly without cached sudo credentials"
 rg -q 'sudo -n true' "$us_egress_guard_script" \
     || fail "egress provisioning must skip cleanly without cached sudo credentials"
-mail_backup="$repo/dot_local/bin/executable_rg-mail-pcloud-backup"
-test -r "$mail_backup" || fail "missing mail pCloud backup helper"
-bash -n "$mail_backup" || fail "mail pCloud backup helper does not parse"
-rg -q 'mountpoint -q "\$MOUNT"' "$mail_backup" \
-    || fail "mail backup must skip cleanly when pCloud is not mounted"
-rg -q 'no archive in \$\{STALE_DAYS\}\+ days' "$mail_backup" \
+mail_backup="$repo/dot_local/bin/executable_rg-mail-pcloud-backup.tmpl"
+test -r "$mail_backup" || fail "missing mail pCloud backup helper template"
+rg -q 'rgam5terra' "$mail_backup" \
+    || fail "mail backup must be gated to the mail host (backups run FROM Terra)"
+rg -q 'rclone sync "\$REPO_LOCAL" "\$REMOTE"' "$mail_backup" \
+    || fail "mail backup must sync the repo up to pCloud after archiving"
+rg -q 'no successful backup in \$\{STALE_DAYS\}\+ days' "$mail_backup" \
     || fail "mail backup must alert when the pCloud archive goes stale"
-rg -q 'rsync -a --delete' "$mail_backup" \
-    || fail "mail backup must stage the canonical Terra mail before archiving"
+rg -q 'flock -n 9' "$mail_backup" \
+    || fail "mail backup must serialize borgmatic and the pCloud sync"
 ! rg -q 'pass show' "$mail_backup" \
     || fail "mail backup helper must not invoke pass itself (config passcommand only)"
-test -r "$repo/dot_config/systemd/user/rg-mail-pcloud-backup.timer" \
-    || fail "missing mail backup timer unit"
-rg -q 'enable --now rg-mail-pcloud-backup.timer' "$repo/.chezmoiscripts/run_onchange_linux_terra_mail_tunnel.sh.tmpl" \
-    || fail "mail tunnel provisioning must enable the mail backup timer"
+test -r "$repo/dot_config/systemd/user/rg-mail-pcloud-backup.timer.tmpl" \
+    || fail "missing mail backup timer unit template"
+rg -q 'enable --now rg-mail-pcloud-backup.timer' "$repo/.chezmoiscripts/run_onchange_linux_terra_mail_stack.sh.tmpl" \
+    || fail "terra mail stack provisioning must enable the mail backup timer"
+rg -q 'disable --now rg-mail-pcloud-backup.timer' "$repo/.chezmoiscripts/run_onchange_linux_terra_mail_tunnel.sh.tmpl" \
+    || fail "laptop provisioning must retire its short-lived backup role"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
     || fail "US egress helper does not support an environment-provided WireGuard config"
 rg -q 'rg-fix-local-dns' "$us_egress_up" \

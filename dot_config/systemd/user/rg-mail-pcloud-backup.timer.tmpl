@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Daily borg backup of mail + config, synced to pCloud
+
+[Timer]
+OnCalendar=03:30
+# Monotonic-only timers stall after user-manager restarts (the mbsync
+# lesson); calendar + Persistent covers both boots and downtime.
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

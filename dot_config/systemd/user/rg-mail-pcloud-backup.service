@@ -1,6 +1,0 @@
-[Unit]
-Description=Borg backup of mail + config into the pCloud repo
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/rg-mail-pcloud-backup

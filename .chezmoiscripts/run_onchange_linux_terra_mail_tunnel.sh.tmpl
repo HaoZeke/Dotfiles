@@ -10,10 +10,8 @@ if ! grep -q '127\.0\.0\.1:1143' <<<"$listeners" || ! grep -q '\[::1\]:1143' <<<
   systemctl --user restart terra-mail-tunnel.service 2>/dev/null || true
 fi
 
-# Daily borg backup of the mail (staged from Terra) + this machine's config
-# into the long-standing pCloud repo, whenever the FUSE client is mounted;
-# alerts after 7 stale days so an unmounted client cannot silently mean no
-# backup.
-systemctl --user enable --now rg-mail-pcloud-backup.timer >/dev/null 2>&1 \
-  || echo "chezmoi: rg-mail-pcloud-backup.timer not enabled yet" >&2
+# Mail backups run FROM Terra (rg-mail-pcloud-backup there); this laptop
+# keeps no mail store and no backup role. Clean up the short-lived local
+# attempt wherever it was applied.
+systemctl --user disable --now rg-mail-pcloud-backup.timer >/dev/null 2>&1 || true
 {{- end }}

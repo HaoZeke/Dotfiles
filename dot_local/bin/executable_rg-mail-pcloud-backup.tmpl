@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+{{- if ne .chezmoi.hostname "rgam5terra" }}
+echo "rg-mail-pcloud-backup: Terra-only (backups run from rgam5terra)" >&2
+exit 0
+{{- end }}
+# Back the mail (the canonical ~/.mail lives on THIS host) plus this host's
+# config set up into the long-standing borg repo Backups/Borg/ThinkPadX11Arch.
+# borgmatic writes to the local seeded copy of that repo, then rclone syncs it
+# to pCloud over WebDAV (remote pcloud-dav) -- one sequential flow under flock
+# so the sync can never observe a mid-write repo. Alerts when no successful
+# run lands for a week: silence must never mean "no backup".
+set -uo pipefail
+
+REPO_LOCAL="${RG_MAILBK_REPO:-$HOME/Backups/borg/ThinkPadX11Arch}"
+REMOTE="${RG_MAILBK_REMOTE:-pcloud-dav:Backups/Borg/ThinkPadX11Arch}"
+STAMP="${RG_MAILBK_STAMP:-$HOME/.local/state/rg-mail-pcloud-backup.last}"
+STALE_DAYS="${RG_MAILBK_STALE_DAYS:-7}"
+LOCK="${RG_MAILBK_LOCK:-/run/user/$(id -u)/rg-mail-pcloud-backup.lock}"
+
+alert() {
+    notify-send -u critical "mail pCloud backup" "$1" 2>/dev/null || true
+    logger -t rg-mail-pcloud-backup -- "$1"
+}
+stale_check() {
+    if [ -z "$(find "$STAMP" -mtime "-$STALE_DAYS" 2>/dev/null)" ]; then
+        alert "$1; no successful backup in ${STALE_DAYS}+ days."
+    fi
+}
+
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
+
+if [ ! -d "$REPO_LOCAL/data" ]; then
+    stale_check "local repo copy missing (seed incomplete?)"
+    exit 1
+fi
+
+if ! borgmatic --verbosity -1 --stats; then
+    stale_check "borgmatic failed"
+    alert "borgmatic run failed; see journalctl --user -u rg-mail-pcloud-backup"
+    exit 1
+fi
+
+if ! rclone sync "$REPO_LOCAL" "$REMOTE" --transfers 8 --checkers 8; then
+    stale_check "rclone sync to pCloud failed"
+    alert "rclone sync to pCloud failed; the local archive is fine but the offsite copy is stale"
+    exit 1
+fi
+
+mkdir -p "$(dirname "$STAMP")"
+touch "$STAMP"
+echo "backup + pCloud sync ok"
