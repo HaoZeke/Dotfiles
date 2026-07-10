@@ -228,10 +228,18 @@ rg -q 'ip route get 100\.119\.130\.84' "$net_recover" \
     || fail "rgSURFLat recovery must verify the local Terra route without contacting Terra"
 rg -q 'tailscale status --json' "$net_heal" \
     || fail "periodic network heal helper must inspect Tailscale peer transport endpoints"
-rg -q 'controlplane\.tailscale\.com log\.tailscale\.com login\.tailscale\.com' "$net_heal" \
-    || fail "periodic network heal helper must carve Tailscale control hosts off the US egress"
+rg -q 'x\.ai tailnet visibility' "$net_heal" \
+    || fail "periodic network heal helper must document the x.ai Houston-visibility requirement"
+! rg -q 'route_local_v4 "\$ip" "tailscale underlay"' "$net_heal" \
+    || fail "periodic network heal helper must not carve x.ai tailnet transport onto the LAN"
+rg -q 'route_local_v4 "\$ip" "haozeke underlay"' "$net_heal" \
+    || fail "periodic network heal helper must keep the haozeke tailnet transport on the LAN"
+rg -F -q 'ip route del "$ip/32" table main' "$net_heal" \
+    || fail "periodic network heal helper must delete stale LAN carve-outs for x.ai transport"
+rg -F -q 'grep -qxF "$ip" "$hz_underlay_set"' "$net_heal" \
+    || fail "periodic network heal helper must never un-carve IPs the haozeke tailnet needs"
 rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal" \
-    || fail "periodic network heal helper must route Tailscale underlay endpoints via the LAN gateway"
+    || fail "periodic network heal helper must route carve-out endpoints via the LAN gateway"
 rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \
     || fail "periodic network heal helper must not carve tailnet CGNAT addresses onto the LAN"
 rg -q 'ensure_hosts_record 104\.18\.19\.80 api\.x\.ai' "$net_heal" \
@@ -262,6 +270,12 @@ rg -q 'ip -4 rule add pref 5206 lookup 52' "$us_egress_up" \
     || fail "US egress helper does not prioritize Tailscale IPv4 routes before WireGuard"
 rg -q 'ip -6 rule add pref 5206 lookup 52' "$us_egress_up" \
     || fail "US egress helper does not prioritize Tailscale IPv6 routes before WireGuard"
+rg -q 'ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820' "$us_egress_up" \
+    || fail "US egress helper must tunnel x.ai tailscale-marked IPv4 transport for Houston visibility"
+rg -q 'ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820' "$us_egress_up" \
+    || fail "US egress helper must tunnel x.ai tailscale-marked IPv6 transport for Houston visibility"
+rg -q 'ip route get 8.8.8.8 mark 0x80000' "$us_egress_up" \
+    || fail "US egress helper must verify tailscale-marked traffic exits via the tunnel"
 rg -q 'verify_route_uses_tailscale "Tailscale DNS" 100\.100\.100\.100' "$us_egress_up" \
     || fail "US egress helper does not verify Tailscale DNS routing after WireGuard activation"
 rg -q 'verify_route_uses_interface "IPv4 default egress" 1\.1\.1\.1 "\$iface"' "$us_egress_up" \
