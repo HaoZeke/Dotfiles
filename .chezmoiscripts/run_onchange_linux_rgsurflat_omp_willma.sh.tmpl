@@ -1,8 +1,8 @@
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") -}}
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v11-ebstack-opencode-doctor
+# Hash: specialize-v11b-shebang-fix
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.opencode/bin:${HOME}/.cargo/bin:${PATH}"
