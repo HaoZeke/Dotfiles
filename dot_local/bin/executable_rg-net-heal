@@ -57,9 +57,17 @@ EOF
     return 0
 }
 
+# Dynamic /32 carve-outs are recorded per run so stale ones can be pruned: DNS
+# answers rotate, and a /32 left behind after a roam keeps a dead gateway and
+# blackholes that CDN edge for every site it serves. Static /24 carve-outs are
+# not recorded and never pruned.
+CARVE_STATE="${RG_CARVE_STATE:-/run/rg-net-heal.carves}"
+CARVE_STATE_NEW="$(mktemp)"
+
 route_local_v4() {
     local ip="$1" label="${2:-host}"
     public_underlay_v4 "$ip" || return 0
+    printf '%s\n' "$ip" >>"$CARVE_STATE_NEW"
     if ! ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw"; then
         ip route replace "$ip/32" via "$gw" dev "$dev" table main 2>/dev/null \
             && log "$label carve-out re-asserted: $ip via $gw dev $dev"
@@ -381,12 +389,25 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     fi
     getent ahostsv4 "$EDUVPN_DISCO" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
         case "$ip" in ''|*[!0-9.]*|145.100.179.*) continue ;; esac
-        if ! ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw"; then
-            ip route replace "$ip/32" via "$gw" dev "$dev" table main 2>/dev/null \
-                && log "eduVPN disco carve-out re-asserted: $ip via $gw dev $dev"
-        fi
+        route_local_v4 "$ip" "eduVPN disco"
     done
 fi
 for p in $EDUVPN_V6_DEAD; do
     ip -6 route show "$p" 2>/dev/null | grep -q unreachable || ip -6 route replace unreachable "$p" 2>/dev/null
 done
+
+# --- 5. prune dynamic /32 carve-outs that are no longer desired -------------
+# Skipped entirely when this run resolved nothing (total DNS outage must not
+# wipe a working carve-out set).
+if [ -s "$CARVE_STATE_NEW" ]; then
+    sort -u "$CARVE_STATE_NEW" -o "$CARVE_STATE_NEW"
+    if [ -f "$CARVE_STATE" ]; then
+        comm -23 "$CARVE_STATE" "$CARVE_STATE_NEW" 2>/dev/null | while read -r ip; do
+            [ -n "$ip" ] || continue
+            ip route del "$ip/32" table main 2>/dev/null \
+                && log "stale carve-out pruned: $ip"
+        done
+    fi
+    install -m 0644 "$CARVE_STATE_NEW" "$CARVE_STATE"
+fi
+rm -f "$CARVE_STATE_NEW"

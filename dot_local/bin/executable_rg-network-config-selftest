@@ -260,6 +260,12 @@ rg -q 'belastingdienst\.nl' "$net_heal" \
     || fail "periodic network heal helper does not cover Belastingdienst"
 rg -q 'getent ahostsv4 "\$nl_host"' "$net_heal" \
     || fail "periodic network heal helper does not resolve Dutch public-service routes dynamically"
+rg -q 'stale carve-out pruned' "$net_heal" \
+    || fail "periodic network heal helper must prune dynamic carve-outs that are no longer desired"
+rg -F -q 'if [ -s "$CARVE_STATE_NEW" ]; then' "$net_heal" \
+    || fail "periodic network heal helper must not prune on a run that resolved nothing"
+rg -q '/usr/local/sbin/rg-net-heal' "$us_egress_up" \
+    || fail "US egress helper must reassert destination carve-outs at bring-up"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
 rg -q 'RG_US_EGRESS_CONF' "$us_egress_up" \
