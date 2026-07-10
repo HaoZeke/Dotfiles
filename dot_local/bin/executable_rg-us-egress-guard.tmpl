@@ -22,6 +22,10 @@ unit="wg-quick@${iface}.service"
 managed_unit="rg-us-egress.service"
 probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
 quality_url="${RG_US_EGRESS_QUALITY_URL:-https://api.x.ai/v1/models}"
+# Second probe target that does NOT depend on the api.x.ai /etc/hosts pin: if
+# api.x.ai fails but this answers through the tunnel, the pin is stale (a dead
+# Cloudflare edge), not the tunnel -- restarting cannot help and storms.
+quality_fallback_url="${RG_US_EGRESS_QUALITY_FALLBACK_URL:-https://www.cloudflare.com/cdn-cgi/trace}"
 quality_max_ms="${RG_US_EGRESS_QUALITY_MAX_MS:-3000}"
 quality_attempts="${RG_US_EGRESS_QUALITY_ATTEMPTS:-2}"
 quality_probe="${RG_US_EGRESS_QUALITY_PROBE:-1}"
@@ -71,9 +75,9 @@ quality_probe_once() {
     [ "$quality_probe" = "0" ] && return 0
     command -v "$CURL" >/dev/null 2>&1 || return 0
 
-    local result code
+    local url="${1:-$quality_url}" result code
     result="$($CURL -4 -sS --connect-timeout 4 --max-time 8 -o /dev/null \
-        -w '%{http_code} %{time_total} %{local_ip}\n' "$quality_url" 2>/dev/null)" || return 1
+        -w '%{http_code} %{time_total} %{local_ip}\n' "$url" 2>/dev/null)" || return 1
     set -- $result
     code="${1:-000}"
 
@@ -91,6 +95,15 @@ quality_ok() {
     local attempt=1
     while [ "$attempt" -le "$quality_attempts" ]; do
         quality_probe_once && return 0
+        attempt=$((attempt + 1))
+    done
+    return 1
+}
+
+fallback_ok() {
+    local attempt=1
+    while [ "$attempt" -le "$quality_attempts" ]; do
+        quality_probe_once "$quality_fallback_url" && return 0
         attempt=$((attempt + 1))
     done
     return 1
@@ -186,6 +199,13 @@ if $IP link show "$iface" >/dev/null 2>&1 \
     if quality_ok; then
         # Reachable through the tunnel: clear the consecutive-failure counter.
         : >"$quality_state" 2>/dev/null || true
+    elif fallback_ok; then
+        # The tunnel demonstrably carries traffic; api.x.ai alone is dark, so
+        # the /etc/hosts pin points at a dead edge. A restart cannot fix that
+        # (rg-net-heal rotates the pin) and tearing down a healthy tunnel is
+        # the restart-storm failure mode. Clear the counter and leave it be.
+        : >"$quality_state" 2>/dev/null || true
+        $LOG "$iface carries traffic but the x.ai probe failed; api.x.ai hosts pin suspect, not restarting"
     else
         # One slow/failed x.ai probe is not proof the tunnel is dead (transient
         # upstream jitter looks identical); only restart after N consecutive

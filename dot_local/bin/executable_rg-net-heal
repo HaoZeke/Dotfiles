@@ -212,7 +212,57 @@ case "$ts_state" in
     Stopped) tailscale up --accept-dns=true >/dev/null 2>&1 || notify "x.ai tailscale stuck Stopped; run: sudo tailscale up" ;;
     NeedsLogin|NoState|"") notify "x.ai tailscale logged out -> Starfleet + grok models down. Re-login: sudo tailscale up --accept-dns=true" ;;
 esac
-ensure_hosts_record 104.18.19.80 api.x.ai
+
+# --- 1b. x.ai API hosts pin: keep it, but never let a retired edge rot in it -
+# api.x.ai is pinned in /etc/hosts to a Cloudflare edge that answers reliably
+# from the Houston egress. A hardcoded edge can die upstream; when it does, the
+# guard's quality probe (which resolves through the pin) would blame the tunnel
+# and restart-storm it. Validate the pinned edge through the live egress and
+# rotate to a currently-resolving edge that answers, keeping the pin honest.
+# Rotation only runs with the tunnel up: edge health from the NL uplink says
+# nothing about edge health from Houston.
+# The live pin in /etc/hosts is the source of truth after a rotation; the
+# hardcoded address only seeds a hosts file that lacks the record.
+xai_current_pin="$(awk '$1 ~ /^[0-9.]+$/ && $2 == "api.x.ai" {print $1; exit}' \
+    "${RG_HOSTS_FILE:-/etc/hosts}" 2>/dev/null)"
+XAI_PIN_IP="${RG_XAI_PIN_IP:-${xai_current_pin:-104.18.19.80}}"
+XAI_PIN_STATE="${RG_XAI_PIN_STATE:-/run/rg-net-heal.xai-pin-fails}"
+XAI_PIN_FAIL_THRESHOLD="${RG_XAI_PIN_FAIL_THRESHOLD:-3}"
+xai_pin_reachable() {
+    local edge="$1" code
+    code="$(curl -4 -sS -o /dev/null --connect-timeout 4 --max-time 8 \
+        --resolve "api.x.ai:443:$edge" -w '%{http_code}' \
+        https://api.x.ai/v1/models 2>/dev/null)" || return 1
+    case "$code" in [23][0-9][0-9]|401|403) return 0 ;; *) return 1 ;; esac
+}
+ensure_hosts_record "$XAI_PIN_IP" api.x.ai
+if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
+    && command -v curl >/dev/null 2>&1 && command -v dig >/dev/null 2>&1; then
+    if xai_pin_reachable "$XAI_PIN_IP"; then
+        : >"$XAI_PIN_STATE" 2>/dev/null || true
+    else
+        pin_fails="$(cat "$XAI_PIN_STATE" 2>/dev/null || echo 0)"
+        case "$pin_fails" in ''|*[!0-9]*) pin_fails=0 ;; esac
+        pin_fails=$((pin_fails + 1))
+        printf '%s\n' "$pin_fails" >"$XAI_PIN_STATE" 2>/dev/null || true
+        if [ "$pin_fails" -ge "$XAI_PIN_FAIL_THRESHOLD" ]; then
+            : >"$XAI_PIN_STATE" 2>/dev/null || true
+            rotated=0
+            for cand in $(dig @127.0.0.1 api.x.ai A +time=3 +tries=1 +short 2>/dev/null \
+                | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'); do
+                [ "$cand" = "$XAI_PIN_IP" ] && continue
+                if xai_pin_reachable "$cand"; then
+                    ensure_hosts_record "$cand" api.x.ai
+                    notify "api.x.ai pin rotated: $XAI_PIN_IP -> $cand (old edge dead from the egress)"
+                    rotated=1
+                    break
+                fi
+            done
+            [ "$rotated" -eq 1 ] \
+                || notify "api.x.ai unreachable on the pinned edge and every resolved candidate; upstream or egress problem"
+        fi
+    fi
+fi
 
 # --- 2. landsbankinn.is direct carve-out (roam-proof) ---------------------
 BANK="${RG_BANK_DIRECT:-89.104.148.0/24}"
