@@ -313,11 +313,9 @@ PYMCP
 
 # seed eb-stack project-ctx if repo exists and missing toml
 if [[ -d "${EB_STACK}" && -f "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" ]]; then
-  if [[ ! -f "${EB_STACK}/.project-ctx.toml" ]]; then
-    install -m 0644 "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" \
-      "${EB_STACK}/.project-ctx.toml"
-    log "seeded eb-stack .project-ctx.toml"
-  fi
+  install -m 0644 "${SHARE}/project-ctx-seeds/eb-stack.project-ctx.toml" \
+    "${EB_STACK}/.project-ctx.toml"
+  log "seeded eb-stack .project-ctx.toml"
 fi
 
 
