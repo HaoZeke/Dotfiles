@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
 #!/usr/bin/env bash
 # rgSURFLat: Willma-only OMP + curated best skill stack (inventory-driven).
-# Hash: specialize-v8-mcp-puppeteer
+# Hash: specialize-v9-ookcite-cf-ci
 # Source of truth: omp-stack-inventory (core + superpowers + eb-stack + RTK).
 set -euo pipefail
 
@@ -220,7 +220,7 @@ log "wrote curated config.yml"
 
 # ---------- MCP: context7 + project-ctx (SURF keep set) ----------
 # API key: ~/.config/context7/api_key or CONTEXT7_API_KEY or pass (never commit).
-mkdir -p "${HOME}/.config/context7"
+mkdir -p "${HOME}/.config/context7" "${HOME}/.config/ookcite"
 ctx7_key=""
 if [[ -n "${CONTEXT7_API_KEY:-}" ]]; then
   ctx7_key="${CONTEXT7_API_KEY}"
@@ -243,6 +243,10 @@ if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
   fi
 fi
 
+# ookcite + cf-ci drop-in binaries/wrappers from pack or prior scp
+if [[ -x "${SHARE}/bin/ookcite-mcp-pass" ]]; then
+  install -m 0755 "${SHARE}/bin/ookcite-mcp-pass" "${HOME}/.local/bin/ookcite-mcp-pass"
+fi
 # ensure project-ctx binaries if present in SHARE/bin (optional drop-in)
 if [[ -x "${SHARE}/bin/project-ctx" ]]; then
   install -m 0755 "${SHARE}/bin/project-ctx" "${HOME}/.local/bin/project-ctx"
@@ -290,6 +294,30 @@ if pup.is_file():
         "type": "stdio",
         "command": node,
         "args": [str(pup)],
+    }
+# ookcite (Business key via launcher / file / pass)
+ook_pass = home / ".local" / "bin" / "ookcite-mcp-pass"
+ook_bin = home / ".local" / "bin" / "ookcite-mcp"
+if ook_pass.is_file() and os.access(ook_pass, os.X_OK):
+    servers["ookcite"] = {
+        "type": "stdio",
+        "command": str(ook_pass),
+        "args": [],
+    }
+elif ook_bin.is_file() and os.access(ook_bin, os.X_OK):
+    servers["ookcite"] = {
+        "type": "stdio",
+        "command": str(ook_bin),
+        "args": [],
+        "env": {},
+    }
+# cf-ci (conda-forge / GH / Azure CI observability)
+cf = home / ".local" / "bin" / "cf-ci-mcp"
+if cf.is_file() and os.access(cf, os.X_OK):
+    servers["cf-ci"] = {
+        "type": "stdio",
+        "command": str(cf),
+        "args": [],
     }
 # eb-stack MCP only if binary on this host
 eb = home / ".local" / "bin" / "eb-stack"
@@ -364,6 +392,9 @@ Claude-user skill import. Optional later: Context7 MCP (needs MCP server), anthr
 - **context7** — up-to-date library docs (`resolve-library-id`, `query-docs`). Prefer over training-data guesses.
 - **project-ctx** — `.project-ctx.toml` conventions/build (CLI `project-ctx show .` or MCP).
 - **puppeteer** — browser automation (stealth); needs system Chromium.
+- **ookcite** — citation metadata (Business plan key via `~/.config/ookcite/api_key` or pass `services/ookcite-api-key`).
+- **cf-ci** — conda-forge / GH / Azure CI logs and checks (useful for packaging work).
+- **Not on SURF:** ttech-ops, beads, omp-bridge.
 - Key for Context7: `~/.config/context7/api_key` or `CONTEXT7_API_KEY` (not in git).
 
 ## Launch
