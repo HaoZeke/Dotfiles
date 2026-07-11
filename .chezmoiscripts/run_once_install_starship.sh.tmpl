@@ -1,0 +1,21 @@
+{{ if and (ne .chezmoi.os "windows") (lookPath "bash") -}}
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# dot_config/shellrc/bash.d/99_activate_bin.bash inits starship on every
+# host via `command -v starship`, but the only installer wired up so far
+# (run_once_x_bash.bash.tmpl) is gated to hostname rgx1gen11 as part of
+# the wider x-cmd tool bundle. Install the binary directly here so the
+# prompt theme is not tied to that one-host bundle.
+if command -v starship >/dev/null 2>&1; then
+    exit 0
+fi
+
+BIN_DIR="$HOME/.local/bin"
+mkdir -p "$BIN_DIR"
+
+echo "Installing starship prompt into $BIN_DIR..."
+curl -fsSL https://starship.rs/install.sh | sh -s -- -b "$BIN_DIR" -y
+
+{{ end }}

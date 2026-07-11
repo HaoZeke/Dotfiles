@@ -11,8 +11,11 @@ for cmd in git make; do
     fi
 done
 
-# Only run for interactive shells that are not "dumb"
-if [[ $- != *i* || $TERM == "dumb" ]]; then
+# Skip only in a genuinely non-terminal context (TERM=dumb). chezmoi
+# always runs this script as a non-interactive subprocess, so a $-
+# interactive-flag check is never true here and would skip the
+# install unconditionally.
+if [[ "${TERM:-}" == "dumb" ]]; then
     exit 0
 fi
 
