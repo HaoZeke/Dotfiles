@@ -1,0 +1,7 @@
+extends: existence
+message: "'%s' decorates a heading with an emoji. Headings state the topic; drop the decoration."
+scope: heading
+level: warning
+nonword: true
+tokens:
+  - '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]'

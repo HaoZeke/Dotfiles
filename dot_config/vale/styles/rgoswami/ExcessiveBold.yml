@@ -1,0 +1,7 @@
+extends: existence
+message: "three or more bolded spans close together. Bold sparingly; reserve it for one key term per paragraph."
+scope: raw
+level: suggestion
+nonword: true
+tokens:
+  - '(?:^|\n)(?!\|)[^\n]*(\*\*[^\*\n]+\*\*[^\n]{0,80}){3,}'

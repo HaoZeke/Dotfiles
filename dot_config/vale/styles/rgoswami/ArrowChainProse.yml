@@ -1,0 +1,8 @@
+extends: existence
+message: "'%s' is arrow-chain prose. Spell out the steps in sentences instead of chaining them with arrows."
+ignorecase: true
+scope: sentence
+level: warning
+nonword: true
+tokens:
+  - '\S+\s*(->|-->|=>|\x{2192})\s*\S+\s*(->|-->|=>|\x{2192})\s*\S+'

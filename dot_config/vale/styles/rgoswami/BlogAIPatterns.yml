@@ -38,3 +38,6 @@ tokens:
   - more operational context
   - that distinction matters
   - the richer interactive
+  - whether you'?re \w+([\w '-]* )?or \w+
+  - happy coding
+  - happy hacking

@@ -70,6 +70,7 @@ tokens:
   - '\bthat should do it\b'
   # Exploration clichés.
   - '\bdeep dive\b'
+  - '\bdive deep\b'
   - '\bdive in\b'
   - '\bdive into\b'
   - '\blet''?s dive\b'
@@ -80,6 +81,8 @@ tokens:
   - '\bstep by step\b'
   - '\bstep-by-step\b'
   - '\bwithout further ado\b'
+  - '\bbuckle up\b'
+  - '\blook no further\b'
   # Generic polish claims.
   - '\bbest practices\b'
   - '\bindustry-standard\b'
