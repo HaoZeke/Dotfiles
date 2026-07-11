@@ -47,6 +47,23 @@ fi
 
 command -v jq >/dev/null 2>&1 || log "WARN: jq missing (rtk-rewrite may no-op)"
 
+# ---------- vale styles sync (prose linting packages) ----------
+VALE_CFG_DIR="${HOME}/.config/vale"
+if command -v vale >/dev/null 2>&1; then
+  if [[ -d "${VALE_CFG_DIR}" && ! -d "${VALE_CFG_DIR}/styles/proselint" ]]; then
+    log "vale: styles missing proselint, running vale sync"
+    if (cd "${VALE_CFG_DIR}" && vale sync >/dev/null 2>&1); then
+      log "vale sync complete"
+    else
+      log "WARN: vale sync failed"
+    fi
+  else
+    log "vale: styles present"
+  fi
+else
+  log "vale: not installed, skipping style sync"
+fi
+
 # ---------- RTK ----------
 if ! command -v rtk >/dev/null 2>&1; then
   tmp=$(mktemp -d)
