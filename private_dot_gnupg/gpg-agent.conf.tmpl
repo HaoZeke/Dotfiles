@@ -12,5 +12,12 @@ pinentry-program /usr/bin/pinentry-gnome3
 allow-preset-passphrase
 allow-loopback-pinentry
 
+{{ if eq .chezmoi.hostname "rgam5terra" -}}
+# Always-on serve box (vault-tools serve --git-sync, unattended commits): one
+# interactive prime per week covers it instead of every 8 hours.
+default-cache-ttl 86400
+max-cache-ttl 604800
+{{ else -}}
 default-cache-ttl 28800
 max-cache-ttl 28800
+{{ end -}}
