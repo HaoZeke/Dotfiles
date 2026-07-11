@@ -1,0 +1,15 @@
+# Unified human-prose gate: lexical (rgoswami vale-YAML) + harper grammar.
+# Use with: proseguard --profile prose-human --styles-path ~/.config/vale/styles FILE
+name = "prose-human"
+description = "Natural non-AI prose gate (style + grammar). Judge off by default."
+severity_floor = "warning"
+include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
+exclude = ["**/node_modules/**", "**/.git/**"]
+lexical_styles = ["rgoswami"]
+
+[engines]
+lexical = true
+leak = false
+structure = false
+harper = true
+judge = false
