@@ -1,0 +1,27 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+[Unit]
+Description=cosmoet relay TCP forward connector (rgx1gen11 sshd via rgx1gen11-ssh-fwd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/cosmoet-bridge tcp-forward-connect --relay https://relay-direct.turtletech.us:8443 --secret-file %h/.config/cosmoet/relay-secret --session-id rgx1gen11-ssh-fwd --remote 127.0.0.1:22 --max-parallel 8
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+{{- else if eq .chezmoi.hostname "rgSURFLat" -}}
+[Unit]
+Description=cosmoet relay TCP forward listener (127.0.0.1:22224 -> rgx1gen11 sshd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/cosmoet-bridge tcp-forward-listen --relay https://relay-direct.turtletech.us:8443 --secret-file %h/.config/cosmoet/relay-secret --session-id rgx1gen11-ssh-fwd --local 22224 --max-parallel 8
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+{{- end -}}

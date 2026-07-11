@@ -1,0 +1,11 @@
+{{- if and (eq .chezmoi.os "linux") (or (eq .chezmoi.hostname "rgx1gen11") (eq .chezmoi.hostname "rgSURFLat")) -}}
+#!/usr/bin/env sh
+set -eu
+
+unit="$HOME/.config/systemd/user/cosmoet-ssh-fwd-rgx1gen11.service"
+
+[ -f "$unit" ] || exit 0
+
+systemctl --user daemon-reload
+systemctl --user enable --now cosmoet-ssh-fwd-rgx1gen11.service
+{{- end -}}
