@@ -1,0 +1,15 @@
+# Strict E-Prime gate: copular "to be" forms fail the severity floor.
+# Does not replace house default prose-human (soft E-Prime stays suggestion-only).
+name = "eprime-hard"
+description = "Hard E-Prime: to-be forms at error severity (eprime-hard style pack)"
+severity_floor = "warning"
+include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
+exclude = ["**/node_modules/**", "**/.git/**"]
+lexical_styles = ["eprime-hard"]
+
+[engines]
+lexical = true
+leak = false
+structure = false
+harper = false
+judge = false

@@ -1,0 +1,17 @@
+extends: existence
+message: "E-Prime hard: '%s' uses a 'to be' form. Restructure without the copula."
+ignorecase: true
+level: error
+scope: sentence
+tokens:
+  - ' is '
+  - ' are '
+  - ' was '
+  - ' were '
+  - ' be '
+  - ' been '
+  - ' being '
+  - "it's "
+  - "there's "
+  - "that's "
+  - "here's "
