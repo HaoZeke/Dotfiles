@@ -120,6 +120,8 @@ fi
 # ---------- pack wrappers / extensions ----------
 [[ -x "${SHARE}/bin/ookcite-mcp-pass" ]] && \
   install -m 0755 "${SHARE}/bin/ookcite-mcp-pass" "${HOME}/.local/bin/ookcite-mcp-pass"
+[[ -x "${SHARE}/bin/vault-remote-serve" ]] && \
+  install -m 0755 "${SHARE}/bin/vault-remote-serve" "${HOME}/.local/bin/vault-remote-serve"
 
 if [[ -f "${SHARE}/gpt-oss-priors.ts" ]]; then
   install -m 0644 "${SHARE}/gpt-oss-priors.ts" "${AGENT}/extensions/gpt-oss-priors.ts"
