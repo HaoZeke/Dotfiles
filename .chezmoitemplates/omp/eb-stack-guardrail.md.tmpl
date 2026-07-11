@@ -1,0 +1,49 @@
+## SURF Willma gpt-oss-120b
+
+When using model `surf-ai-hub/openai/gpt-oss-120b` (roles: surf, eb-stack, surf-plan):
+
+- Prefer the **apply_patch** tool for file edits (Codex-style *** Begin Patch).
+- Do not invent commercial models; SURF/eb-stack work stays on Willma only.
+
+### eb-stack driver contract
+
+- Print-mode driver invocations MUST pin the toolbox:
+  `omp -p --model surf-ai-hub/openai/gpt-oss-120b --tools=bash,read,edit,apply_patch,resolve,search_tool_bm25 ...`
+  (the task/delegation tool loses bounded work in -p; validated 2026-07-10:
+  three runs flaky with it available, deterministic pass without it).
+  `resolve` + `search_tool_bm25` keep MCP tools reachable: the eb-stack MCP
+  server (registered in `~/.omp/agent/mcp.json`) serves `eb_check_recipe` /
+  `eb_bump` / `eb_solve` with the reporting ladder and next-actions embedded
+  in every result — prefer those typed tools over shelling out to the CLI.
+
+- **Execute directly with your own tools** (shell + apply_patch). Do NOT
+  delegate to sub-agents/task tools for bounded work — a check-recipe run,
+  a recipe edit, and a re-check is three commands you run yourself; a
+  handoff that produces no edit is a silent failure (observed 2026-07-10:
+  a lint-fix task ended at "delegating to a sub-agent" with the file
+  untouched).
+- Finish the loop before reporting: if the task says fix-and-re-verify,
+  the report must contain the re-run's actual output, not the plan.
+- Read BOTH documents before acting: the skill
+  `~/Git/Github/Tools/eb-stack/skills/annual-bump/SKILL.md` (portable
+  procedure) and the site runbook
+  `~/Git/Gitlab/obsidian-notes/Software/SURF/eb_stack_site_runbook.org`
+  (exact per-machine incantations: rg.terra, elja, Snellius). The skill's
+  section 10 rules are the execution contract, not suggestions.
+- Run the REAL `eb-stack` CLI (`check-recipe`, `bump`, `solve`); never guess
+  dependency versions or reimplement EasyBuild semantics in prose.
+- Read tool output as instructions: a missing-dep hint ("available at other
+  generations: ...") is your work queue; a `[packaging]` checksum finding
+  means reorder the recipe's checksums (sources first, then patches) — never
+  bypass or delete the check.
+- Report with the three-claim ladder every time: resolves (check-recipe
+  exit 0) / builds (eb --robot green) / binary-verified (`env -i <bin>
+  --version` + ldd). Never claim a higher rung than you executed.
+- NEVER compile or run heavy builds on this laptop — remote builders only
+  (per the site runbook). Running an already-built binary locally is fine.
+- NEVER touch the GitHub/GitLab PR or issue surface (no gh/glab/eb --new-pr,
+  no comments): branch pushes to HaoZeke/* forks are allowed plumbing;
+  everything PR-facing goes to a paste-ready draft under
+  `~/Git/Gitlab/obsidian-notes/Software/IssuePRs/<repo>/` for the human.
+- One PR per recipe set exists at a time; if asked to prepare PR text,
+  check for existing open PRs for the same software first and say so.
