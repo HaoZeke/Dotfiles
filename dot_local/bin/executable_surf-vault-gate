@@ -1,0 +1,67 @@
+#!/bin/bash
+# surf-vault-gate: forced-command dispatcher for a restricted SSH key.
+# Validates $SSH_ORIGINAL_COMMAND against a fixed allowlist, then execs the
+# validated argv directly (never `sh -c` on untrusted input).
+set -u
+
+LOG="${HOME}/.local/state/surf-vault-gate.log"
+VT_SERVE_CMD='/home/rgoswami/.local/bin/vault-tools serve --root /home/rgoswami/Git/Gitlab/obsidian-notes'
+VISSUE_BIN='/home/rgoswami/.local/bin/vissue'
+
+reject() {
+    mkdir -p "$(dirname "$LOG")"
+    printf '%s reject: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${SSH_ORIGINAL_COMMAND:-<empty>}" >>"$LOG" 2>/dev/null
+    printf 'surf-vault-gate: command not permitted\n' >&2
+    exit 127
+}
+
+cmd="${SSH_ORIGINAL_COMMAND:-}"
+[ -n "$cmd" ] || reject
+
+case "$cmd" in
+    'true')
+        exec true
+        ;;
+    'hostname')
+        exec hostname
+        ;;
+    "$VT_SERVE_CMD")
+        exec /home/rgoswami/.local/bin/vault-tools serve --root /home/rgoswami/Git/Gitlab/obsidian-notes
+        ;;
+esac
+
+# only remaining shape accepted: vissue <subcommand> [args...]
+case "$cmd" in
+    'vissue '*|"${VISSUE_BIN} "*) ;;
+    *) reject ;;
+esac
+
+# no shell metacharacters anywhere in the line
+case "$cmd" in
+    *[\;\|\&\>\<\`\$\(\)\\]*) reject ;;
+esac
+case "$cmd" in
+    *$'\n'*) reject ;;
+esac
+
+# conservative overall character safelist
+case "$cmd" in
+    *[!A-Za-z0-9._/\ #@:=-]*) reject ;;
+esac
+
+read -r -a argv <<<"$cmd"
+
+bin="${argv[0]}"
+case "$bin" in
+    vissue) bin="$VISSUE_BIN" ;;
+    "$VISSUE_BIN") ;;
+    *) reject ;;
+esac
+
+sub="${argv[1]:-}"
+case "$sub" in
+    ready|list|show|update|claim|hygiene|waiting-on|body-excerpt|identity|export) ;;
+    *) reject ;;
+esac
+
+exec "$bin" "${argv[@]:1}"
