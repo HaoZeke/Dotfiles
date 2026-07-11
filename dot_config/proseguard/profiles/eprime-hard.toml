@@ -1,15 +1,17 @@
-# Strict E-Prime gate: copular "to be" forms fail the severity floor.
-# Does not replace house default prose-human (soft E-Prime stays suggestion-only).
+# Full house prose gate (rgoswami vale styles + harper) with HARD E-Prime:
+# copular "to be" forms fail at error (eprime-hard pack). Soft EPrimeSoft in
+# rgoswami remains suggestion-only under prose-human; this profile stacks
+# EPrimeHard so copulas fail the severity floor.
 name = "eprime-hard"
-description = "Hard E-Prime: to-be forms at error severity (eprime-hard style pack)"
+description = "rgoswami + harper + hard E-Prime (to-be forms at error)"
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
-lexical_styles = ["eprime-hard"]
+lexical_styles = ["rgoswami", "eprime-hard"]
 
 [engines]
 lexical = true
 leak = false
 structure = false
-harper = false
+harper = true
 judge = false
