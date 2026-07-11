@@ -39,5 +39,11 @@ tokens:
   - that distinction matters
   - the richer interactive
   - whether you'?re \w+([\w '-]* )?or \w+
+  - in today'?s fast-paced world
+  - in today'?s digital age
+  - in the modern era
+  - in an ever-changing world
+  - now more than ever
+  - in the age of \w+
   - happy coding
   - happy hacking
