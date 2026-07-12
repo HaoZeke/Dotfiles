@@ -1,7 +1,7 @@
-# Unified human-prose gate: lexical (rgoswami vale-YAML) + harper grammar.
+# Unified human-prose linter: lexical (rgoswami vale-YAML) + harper grammar.
 # Use with: proseguard --profile prose-human --styles-path ~/.config/vale/styles FILE
 name = "prose-human"
-description = "Natural non-AI prose gate (style + grammar). Judge off by default."
+description = "House prose linter: rgoswami + write-good + proselint + Readability metrics + harper."
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
@@ -30,6 +30,12 @@ leak = false
 structure = false
 harper = true
 judge = false
+
+# Skip markers (#skip_lint_start/end, code blocks, #+KEYWORD) and
+# styles/config/vocabularies/*/accept.txt are applied by the check path.
+
+# Rule-off: <!-- vale Rule = NO --> … YES  or  # proseguard:off Rule
+# Inline code/links blanked before engines (span-faithful).
 
 # Hemingway-style sentence complexity (word-count hard/very-hard) runs in-process
 # with defaults hard=14, very_hard=25. McCabe cyclomatic complexity is a code metric;

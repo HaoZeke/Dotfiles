@@ -251,7 +251,7 @@ tokens:
   - pre-?baked
   - pre-?installed and ready
 
-  # 2024–2026 focal / signpost AI-isms (Kobak focal set + Wikipedia SIGNS)
+  # 2024–2026 focal / signpost AI-isms (Kobak arxiv:2412.11385 + Wikipedia WP:AISIGNS)
   # Prefer phrase forms for words that collide with engineering jargon.
   - commendable
   - resonate
@@ -285,6 +285,8 @@ tokens:
   - garnering
   - bolstered
   - emphasizing
+  - emphasizes
+  - emphasize
   - boasts
   - demystify
   - demystifying
@@ -294,5 +296,180 @@ tokens:
   - igniting
   - beacon of
   - symphony of
+
+  # Mid-2024 → mid-2025 (GPT-4o era, WP:AISIGNS) + mid-2025+ residual forms
+  - highlighting
+  - highlights the
+  - streamlines
+  - streamlining
+  - elevates
+  - bolsters
+  - pivots
+  - pivoting
+  - fosters
+  - enhances
+  - navigates
+  - harnesses
+  - empowers
+  - unlocks
+  - reimagine
+  - reimagining
+  - reimagines
+  - elucidate
+  - elucidates
+  - elucidating
+  - catalyze
+  - catalyzing
+  - catalyst for
+  - burgeoning
+  - nascent
+  - plethora
+  - a plethora of
+  - unparalleled
+  - aforementioned
+  - encompasses
+  - encompassing
+  - endeavor
+  - endeavors
+  - endeavoring
+  - foundational
+  - holistically
+  - synergies
+  - synergistic
+  - paradigms
+  - cornerstones
+  - cornerstone of
+
+  # 2025–2026 field-guide / vale-ai-tells / Pangram high-signal (phrase-first)
+  - game-changer
+  - game changer
+  - game-changing
+  - supercharge
+  - supercharging
+  - supercharges
+  - democratize
+  - democratizing
+  - democratizes
+  - unprecedented
+  - unprecedentedly
+  - salient
+  - cognizant
+  - palpable
+  - amidst
+  - nestled
+  - bustling
+  - thought-provoking
+  - paradigm shift
+  - sea change
+  - watershed moment
+  - tipping point
+  - double-edged sword
+  - tip of the iceberg
+  - at the forefront
+  - on the cutting edge
+  - moving the needle
+  - moves the needle
+  - move the needle
+  - unlocks new
+  - unlock new
+  - unlock the potential
+  - unlocks the potential
+  - unlock the power
+  - unlock the full potential
+  - take to the next level
+  - take your .* to the next level
+  - revolutionize
+  - revolutionizing
+  - revolutionizes
+  - state-of-the-art
+  - best-in-class
+  - world-class
+  - next-generation
+  - next-level
+  - new normal
+  - in this day and age
+  - in an era of
+  - against this backdrop
+  - poised to
+  - a closer look reveals
+  - what this means is
+  - this begs the question
+  - make no mistake
+  - the reality is
+  - the fact of the matter
+  - it goes without saying
+  - needless to say
+  - at first glance
+  - actionable insights
+  - drive impact
+  - data-driven
+  - significant impact
+  - broader implications
+  - stands as a testament
+  - stands as a
+  - serves as a
+  - holds the distinction
+  - paints a picture
+  - paint a picture
+  - laid the groundwork
+  - lays the groundwork
+  - is not without its challenges
+  - not without challenges
+  - only time will tell
+  - the jury is still out
+  - it remains to be seen
+  - takes center stage
+  - take center stage
+  - the transformative power of
+  - a hallmark of
+  - the hallmark of
+  - intricate interplay
+  - delicate balance
+  - dynamic interplay
+  - complex and multifaceted
+  - instrumental role
+  - played a crucial role
+  - plays a crucial role
+  - dive deeper
+  - take a deep dive
+  - dive deep into
+  - unpack the
+  - unpacking the
+  - unpacking
+  - unpacks the
+  - going forward
+  - moving forward
+  - circle back
+  - low-hanging fruit
+  - let's break this down
+  - lets break this down
+  - as previously mentioned
+  - as mentioned earlier
+  - as outlined above
+  - as discussed above
+  - in the following sections
+  - in this article we
+  - in this blog post
+  - the good news is
+  - the bad news is
+  - whether you're a
+  - whether you are a
+  - hope this message finds you
+  - hope this email finds you
+  - i hope this email finds you
+  - with that in mind
+  - in other words
+  - to put it simply
+  - does the heavy lifting
+  - pulls its weight
+  - earns its keep
+  - speaks for itself
+  # Grok-idiosyncratic overuse noted on WP:AISIGNS (2026); phrase forms only
+  - causal relationship
+  - empirically validated
+  - strongly correlate
+  - strongly correlates
+  - concrete evidence
+  - concrete examples
 exceptions:
   - 'Holistic Fusion'

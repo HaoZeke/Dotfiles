@@ -1,0 +1,209 @@
+extends: existence
+message: "'%s' is AI/assistant vocabulary (proselint house pack). Rephrase."
+link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
+ignorecase: true
+level: warning
+tokens:
+  # Stock-adjacent corporate AI (extends CorporateSpeak coverage)
+  - circle back
+  - low-hanging fruit
+  - move the needle
+  - moving the needle
+  - synergy
+  - synergies
+  - at the end of the day
+  - win-win
+  - touch base
+  - bandwidth
+  - deep dive
+  - take a deep dive
+  - dive deeper
+  - unpack the
+  - unpacking the
+  - going forward
+  - moving forward
+  - actionable insights
+  - drive impact
+  - data-driven
+  - best-in-class
+  - world-class
+  - next-generation
+  - state-of-the-art
+  - game-changer
+  - game changer
+  - game-changing
+  - paradigm shift
+  - double-edged sword
+  - tip of the iceberg
+  - at the forefront
+  - on the cutting edge
+  - unlock the potential
+  - unlock the full potential
+  - unlocks new
+  - take to the next level
+  - revolutionize
+  - revolutionizing
+  - supercharge
+  - supercharging
+  - democratize
+  - democratizing
+  - unprecedented
+  - reimagine
+  - reimagining
+  - reimagines
+  - elevate
+  - elevating
+  - empower
+  - empowering
+  - leverage
+  - leveraging
+  - harness
+  - harnessing
+  - streamline
+  - streamlining
+  - seamless
+  - seamlessly
+  - robust
+  - holistic
+  - multifaceted
+  - transformative
+  - groundbreaking
+  - cutting-edge
+  - pivotal
+  - crucial
+  - delve
+  - delves
+  - delving
+  - tapestry
+  - intricate
+  - intricacies
+  - meticulously
+  - meticulous
+  - underscore
+  - underscores
+  - underscoring
+  - showcase
+  - showcasing
+  - showcases
+  - foster
+  - fostering
+  - fosters
+  - enhance
+  - enhancing
+  - enhances
+  - align with
+  - aligns with
+  - aligning with
+  - commendable
+  - resonate
+  - resonates
+  - compelling
+  - paramount
+  - unwavering
+  - underpins
+  - underpinning
+  - in the realm of
+  - in today's landscape
+  - in today's digital landscape
+  - in today's rapidly evolving
+  - against this backdrop
+  - in an era of
+  - make no mistake
+  - the reality is
+  - a closer look reveals
+  - what this means is
+  - this begs the question
+  - it's not just
+  - it's not about
+  - not just about
+  - more than just
+  - serves as a
+  - stands as a
+  - stands as a testament
+  - a testament to
+  - a rich tapestry
+  - the complexities of
+  - the intricacies of
+  - the nuances of
+  - it is important to note
+  - it is worth noting
+  - hope this helps
+  - hope this message finds you
+  - hope this email finds you
+  - feel free to
+  - don't hesitate to
+  - rest assured
+  - does the heavy lifting
+  - pulls its weight
+  - earns its keep
+  - speaks for itself
+  - here's the thing
+  - heres the thing
+  - let's break this down
+  - lets break this down
+  - as previously mentioned
+  - as mentioned earlier
+  - in this article we
+  - in this comprehensive guide
+  - everything you need to know
+  - whether you're a
+  - whether you are a
+  - poised to
+  - nestled
+  - bustling
+  - thought-provoking
+  - salient
+  - cognizant
+  - palpable
+  - amidst
+  - burgeoning
+  - nascent
+  - plethora
+  - a plethora of
+  - unparalleled
+  - aforementioned
+  - elucidate
+  - elucidating
+  - catalyze
+  - catalyst for
+  - cornerstone of
+  - beacon of
+  - symphony of
+  - demystify
+  - unleash
+  - ignite
+  - boasts
+  - emphasizing
+  - highlighting
+  - significant impact
+  - broader implications
+  - new normal
+  - in this day and age
+  - the fact of the matter
+  - it goes without saying
+  - needless to say
+  - at first glance
+  - with that in mind
+  - in other words
+  - to put it simply
+  - only time will tell
+  - the jury is still out
+  - it remains to be seen
+  - is not without its challenges
+  - paints a picture
+  - laid the groundwork
+  - lays the groundwork
+  - takes center stage
+  - the transformative power of
+  - a hallmark of
+  - intricate interplay
+  - complex and multifaceted
+  - plays a crucial role
+  - played a crucial role
+  - instrumental role
+  - concrete evidence
+  - concrete examples
+  - causal relationship
+  - empirically validated
+  - strongly correlate
+  - strongly correlates
