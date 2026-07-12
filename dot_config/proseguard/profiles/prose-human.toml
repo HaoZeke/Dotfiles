@@ -7,6 +7,23 @@ include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
 lexical_styles = ["rgoswami", "write-good", "proselint", "Readability"]
 
+# Match house ~/.config/vale/.vale.ini disables for write-good / proselint noise.
+lexical_disable = [
+  "write-good.Passive",
+  "write-good.So",
+  "write-good.E-Prime",
+  "write-good.ThereIs",
+  "write-good.TooWordy",
+  "write-good.Illusions",
+  "proselint.Annotations",
+  "proselint.AnimalLabels",
+  "proselint.DenizenLabels",
+  "proselint.GenderBias",
+  "proselint.GroupTerms",
+  "proselint.Spelling",
+]
+
+
 [engines]
 lexical = true
 leak = false
