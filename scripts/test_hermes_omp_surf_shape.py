@@ -2,12 +2,14 @@
 """Structural checks for house Hermes + OMP SURF wiring (no live network).
 
 Drives real files on disk (live ~/.hermes and ~/.omp/agent, plus chezmoi
-sources when present). Fails if secrets leak into non-.env config or SURF
-model wiring is missing.
+encrypted sources when decryptable). Fails if secrets leak into non-.env
+config or SURF model wiring is missing.
 """
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,12 +18,66 @@ import yaml
 HOME = Path.home()
 HERMES = HOME / ".hermes"
 OMP = HOME / ".omp" / "agent"
+CHZ = HOME / ".local" / "share" / "chezmoi"
 TOKEN_RE = re.compile(r"77696c6c6d61-[0-9a-f-]{20,}", re.I)
+WILLMA_HOST = "willma.surf.nl"
+SURF_MODEL = "openai/gpt-oss-120b"
 
 
 def fail(msg: str) -> None:
     print(f"FAIL: {msg}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def age_decrypt(path: Path) -> str | None:
+    """Decrypt a chezmoi age blob if identity is available; else None."""
+    if not path.is_file():
+        return None
+    identity = Path(os.environ.get("CHEZMOI_AGE_IDENTITY", str(HOME / "key.txt")))
+    if not identity.is_file():
+        return None
+    try:
+        r = subprocess.run(
+            ["age", "-d", "-i", str(identity), str(path)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0:
+        return None
+    return r.stdout
+
+
+def assert_hermes_surf_model(model: dict, providers: dict | None, label: str) -> None:
+    if not isinstance(model, dict):
+        fail(f"{label}: model must be mapping, got {type(model).__name__}")
+    default = model.get("default") or model.get("model")
+    if default != SURF_MODEL:
+        fail(f"{label}: SURF model id missing/wrong: {default!r}")
+    base = str(model.get("base_url") or "")
+    provider = str(model.get("provider") or "")
+    providers = providers or {}
+    # Docs-valid: provider custom + base_url, OR named providers.<id> with Willma URL
+    named_ok = False
+    if provider and provider in providers and isinstance(providers[provider], dict):
+        pbase = str(providers[provider].get("base_url") or providers[provider].get("api") or "")
+        if WILLMA_HOST in pbase or WILLMA_HOST in base:
+            named_ok = True
+    custom_ok = provider == "custom" and WILLMA_HOST in base
+    willma_name_ok = provider in {"willma", "surf", "surf-willma"} and (
+        WILLMA_HOST in base or named_ok
+    )
+    if not (custom_ok or named_ok or willma_name_ok):
+        fail(
+            f"{label}: need custom+Willma base_url or named providers.* Willma entry; "
+            f"got provider={provider!r} base_url={base!r} providers={list(providers)}"
+        )
+    api_key = model.get("api_key")
+    if api_key and not str(api_key).startswith("${"):
+        fail(f"{label}: model.api_key must be env-substituted or omitted")
 
 
 def main() -> None:
@@ -35,21 +91,8 @@ def main() -> None:
     ver = cfg.get("_config_version")
     if not isinstance(ver, int) or ver < 33:
         fail(f"_config_version expected >=33, got {ver!r}")
-    model = cfg.get("model")
-    if not isinstance(model, dict):
-        fail(f"model must be mapping, got {type(model).__name__}")
-    default = model.get("default") or model.get("model")
-    if default != "openai/gpt-oss-120b":
-        fail(f"SURF model id missing/wrong: {default!r}")
-    base = model.get("base_url") or ""
-    if "willma.surf.nl" not in str(base):
-        fail(f"Willma base_url missing: {base!r}")
-    if model.get("provider") != "custom":
-        fail(f"provider expected custom, got {model.get('provider')!r}")
-    # secrets must not be inline literals
-    api_key = model.get("api_key")
-    if api_key and not str(api_key).startswith("${"):
-        fail("model.api_key must be env-substituted or omitted")
+    assert_hermes_surf_model(cfg.get("model") or {}, cfg.get("providers") or {}, "live hermes")
+
     env_path = HERMES / ".env"
     if env_path.is_file():
         keys = {
@@ -62,13 +105,26 @@ def main() -> None:
     else:
         fail("missing ~/.hermes/.env")
 
+    # Sealed Hermes source (when decryptable) must match the same contract
+    sealed_hermes = CHZ / "private_dot_hermes" / "encrypted_private_config.yaml.age"
+    sealed_text = age_decrypt(sealed_hermes)
+    if sealed_text is not None:
+        if TOKEN_RE.search(sealed_text):
+            fail("plaintext Willma token in sealed hermes config")
+        sc = yaml.safe_load(sealed_text)
+        assert_hermes_surf_model(sc.get("model") or {}, sc.get("providers") or {}, "sealed hermes")
+        print("OK: sealed hermes decrypt matches SURF shape")
+    else:
+        print("SKIP: sealed hermes decrypt unavailable")
+
     models_yml = OMP / "models.yml"
     if models_yml.is_file():
         mt = models_yml.read_text()
-        if "surf-ai-hub" not in mt or "openai/gpt-oss-120b" not in mt:
+        if "surf-ai-hub" not in mt or SURF_MODEL not in mt:
             fail("OMP models.yml missing surf-ai-hub / gpt-oss-120b")
-        if "willma.surf.nl" not in mt:
+        if WILLMA_HOST not in mt:
             fail("OMP models.yml missing willma baseUrl")
+
     cfg_yml = OMP / "config.yml"
     if cfg_yml.is_file():
         oc = yaml.safe_load(cfg_yml.read_text())
@@ -76,7 +132,40 @@ def main() -> None:
         for role in ("surf", "eb-stack", "surf-plan", "advisor"):
             val = roles.get(role, "")
             if "surf-ai-hub" not in val and "gpt-oss-120b" not in val:
-                fail(f"OMP role {role} not SURF-wired: {val!r}")
+                fail(f"OMP live role {role} not SURF-wired: {val!r}")
+
+    # Host-conditional sealed OMP template: rgSURFLat branch is SURF-primary
+    omp_tmpl = CHZ / "dot_omp" / "agent" / "encrypted_config.yml.tmpl.age"
+    tmpl = age_decrypt(omp_tmpl)
+    if tmpl is not None:
+        if '{{- if eq .chezmoi.hostname "rgSURFLat" -}}' not in tmpl:
+            fail("OMP sealed config template missing rgSURFLat host branch")
+        if "{{- else -}}" not in tmpl or "{{- end -}}" not in tmpl:
+            fail("OMP sealed config template missing else/end host branches")
+        i = tmpl.index('{{- if eq .chezmoi.hostname "rgSURFLat" -}}')
+        j = tmpl.index("{{- else -}}")
+        surf_branch = tmpl[i:j]
+        if f"default: surf-ai-hub/{SURF_MODEL}" not in surf_branch:
+            fail("rgSURFLat branch default is not SURF-primary gpt-oss-120b")
+        for needle in (
+            "smol: surf-ai-hub/",
+            "plan: surf-ai-hub/",
+            "commit: surf-ai-hub/",
+            "vision: surf-ai-hub/",
+            "fallback: surf-ai-hub/",
+            "mnemopi",
+            "omp-surf/skills",
+        ):
+            if needle not in surf_branch:
+                fail(f"rgSURFLat branch missing SOTA needle: {needle}")
+        else_branch = tmpl[j:]
+        if "default: alibaba/" not in else_branch and "default: alibaba" not in else_branch:
+            # workstation multi-provider still has alibaba default
+            if "default: alibaba/qwen3-coder-plus" not in else_branch:
+                fail("else-branch workstation default missing alibaba coder")
+        print("OK: sealed OMP host-conditional template (rgSURFLat SURF-primary)")
+    else:
+        print("SKIP: OMP sealed template decrypt unavailable")
 
     print("OK: hermes+omp SURF shape and secret split")
 
