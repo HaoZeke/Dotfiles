@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-tlp-baseline"
+conf="$repo/dot_local/share/rgx1gen11/tlp-00-base.conf"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$script" || test -r "$script" || fail "missing rg-tlp-baseline"
+test -r "$conf" || fail "missing shared tlp-00-base.conf"
+
+path=$(RG_TLP_BASELINE="$conf" bash "$script" --path)
+[[ $path == "$conf" ]] || fail "path mode should return RG_TLP_BASELINE"
+
+body=$(RG_TLP_BASELINE="$conf" bash "$script" cat)
+printf '%s\n' "$body" | rg -q '^CPU_ENERGY_PERF_POLICY_ON_AC=power$' \
+    || fail "shared baseline must set AC EPP=power"
+printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=90$' \
+    || fail "shared baseline must set charge start 90"
+printf '%s\n' "$body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
+    || fail "shared baseline must denylist touchpad I2C"
+
+# cool-sync and userspace-root must not embed their own START_CHARGE blocks
+for f in \
+    "$repo/dot_local/bin/executable_rg-linux-rg-cool-sync" \
+    "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup"; do
+    if rg -q 'START_CHARGE_THRESH_BAT0=90' "$f" \
+        && ! rg -q 'rg-tlp-baseline' "$f"; then
+        fail "$f still embeds TLP keys without using rg-tlp-baseline"
+    fi
+done
+
+# laptop_power must not embed full TLP_CONTENT keys; must include shared conf
+laptop="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+rg -q 'tlp-00-base.conf|rg-tlp-baseline' "$laptop" \
+    || fail "laptop_power must consume the shared TLP baseline"
+! rg -q '^TLP_CONTENT=' "$laptop" \
+    || fail "laptop_power must not define TLP_CONTENT= anymore"
+
+# profile-root must be generated, not embedded
+! rg -q '^RG_X1GEN11_PROFILE_ROOT_CONTENT=' "$laptop" \
+    || fail "laptop_power must not embed RG_X1GEN11_PROFILE_ROOT_CONTENT"
+rg -q 'root-helper-script' "$laptop" \
+    || fail "laptop_power must install profile-root via root-helper-script"
+
+printf 'ok\n'

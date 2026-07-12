@@ -10,10 +10,14 @@ fail() {
 
 plymouth_script="$repo/.chezmoiscripts/run_onchange_linux_plymouth_resume.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
+tlp_baseline="$repo/dot_local/share/rgx1gen11/tlp-00-base.conf"
+tlp_helper="$repo/dot_local/bin/executable_rg-tlp-baseline"
 swayidle_service="$repo/dot_config/systemd/user/swayidle.service"
 
 test -r "$plymouth_script" || fail "missing $plymouth_script"
 test -r "$laptop_script" || fail "missing $laptop_script"
+test -r "$tlp_baseline" || fail "missing shared TLP baseline $tlp_baseline"
+test -r "$tlp_helper" || fail "missing rg-tlp-baseline helper"
 test -r "$swayidle_service" || fail "missing $swayidle_service"
 
 python - "$plymouth_script" <<'PY'
@@ -49,36 +53,46 @@ rg -q 'b751' "$laptop_script" \
     || fail "UVC autosuspend rule must target the integrated camera product id"
 rg -q 'power/control' "$laptop_script" \
     || fail "UVC autosuspend rule must set USB runtime PM"
-rg -q 'CPU_ENERGY_PERF_POLICY_ON_AC=power' "$laptop_script" \
+# TLP keys live in the shared baseline file (single source of truth).
+rg -q 'CPU_ENERGY_PERF_POLICY_ON_AC=power' "$tlp_baseline" \
     || fail "TLP AC EPP must match the cool undocked-mixed baseline"
-rg -q 'CPU_ENERGY_PERF_POLICY_ON_BAT=power' "$laptop_script" \
+rg -q 'CPU_ENERGY_PERF_POLICY_ON_BAT=power' "$tlp_baseline" \
     || fail "TLP battery EPP must match the undocked-mixed profile"
-rg -q 'CPU_MAX_PERF_ON_AC=70' "$laptop_script" \
+rg -q 'CPU_MAX_PERF_ON_AC=70' "$tlp_baseline" \
     || fail "TLP AC max_perf_pct must cap daily heat (70)"
-rg -q 'CPU_MAX_PERF_ON_BAT=60' "$laptop_script" \
+rg -q 'CPU_MAX_PERF_ON_BAT=60' "$tlp_baseline" \
     || fail "TLP battery max_perf_pct must cap daily heat (60)"
-rg -q 'CPU_SCALING_MAX_FREQ_ON_AC=1200000' "$laptop_script" \
+rg -q 'CPU_SCALING_MAX_FREQ_ON_AC=1200000' "$tlp_baseline" \
     || fail "TLP AC scaling_max_freq must hard-cap daily heat (1.2 GHz)"
-rg -q 'CPU_SCALING_MAX_FREQ_ON_BAT=1000000' "$laptop_script" \
+rg -q 'CPU_SCALING_MAX_FREQ_ON_BAT=1000000' "$tlp_baseline" \
     || fail "TLP battery scaling_max_freq must hard-cap daily heat (1.0 GHz)"
-rg -q 'CPU_BOOST_ON_AC=0' "$laptop_script" \
+rg -q 'CPU_BOOST_ON_AC=0' "$tlp_baseline" \
     || fail "TLP AC turbo boost must stay off for the undocked-mixed baseline"
-rg -q 'CPU_HWP_DYN_BOOST_ON_AC=0' "$laptop_script" \
+rg -q 'CPU_HWP_DYN_BOOST_ON_AC=0' "$tlp_baseline" \
     || fail "TLP AC HWP dynamic boost must stay off for the undocked-mixed baseline"
+rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$tlp_baseline" \
+    || fail "TLP AC platform profile must match the undocked-mixed profile"
+rg -q 'PLATFORM_PROFILE_ON_BAT=low-power' "$tlp_baseline" \
+    || fail "TLP battery platform profile must match the undocked-mixed profile"
+rg -q 'START_CHARGE_THRESH_BAT0=90' "$tlp_baseline" \
+    || fail "battery charge start threshold must favor useful runtime"
+rg -q 'STOP_CHARGE_THRESH_BAT0=98' "$tlp_baseline" \
+    || fail "battery charge stop threshold must allow near-full runtime"
+rg -q 'RUNTIME_PM_DENYLIST="00:15.0 00:15.1"' "$tlp_baseline" \
+    || fail "TLP must denylist both LPSS I2C controllers for the touchpad"
+# laptop_power must consume the shared baseline and generate profile-root.
+rg -q 'tlp-00-base.conf|resolve_tlp_baseline' "$laptop_script" \
+    || fail "laptop_power must consume the shared TLP baseline"
+rg -q 'root-helper-script' "$laptop_script" \
+    || fail "laptop_power must install profile-root via root-helper-script"
+! rg -q '^TLP_CONTENT=' "$laptop_script" \
+    || fail "laptop_power must not embed TLP_CONTENT"
+! rg -q '^RG_X1GEN11_PROFILE_ROOT_CONTENT=' "$laptop_script" \
+    || fail "laptop_power must not embed profile-root source"
 rg -q 'disabling thermald' "$laptop_script" \
     || fail "laptop power script must disable unsupported thermald on DYTC"
 rg -q '/usr/local/sbin/rg-x1gen11-profile-root focus' "$laptop_script" \
     || fail "focus profile must be allowed through the exact root-helper sudoers rule"
-rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$laptop_script" \
-    || fail "TLP AC platform profile must match the undocked-mixed profile"
-rg -q 'PLATFORM_PROFILE_ON_BAT=low-power' "$laptop_script" \
-    || fail "TLP battery platform profile must match the undocked-mixed profile"
-rg -q 'START_CHARGE_THRESH_BAT0=90' "$laptop_script" \
-    || fail "battery charge start threshold must favor useful runtime"
-rg -q 'STOP_CHARGE_THRESH_BAT0=98' "$laptop_script" \
-    || fail "battery charge stop threshold must allow near-full runtime"
-rg -q 'RUNTIME_PM_DENYLIST="00:15.0 00:15.1"' "$laptop_script" \
-    || fail "TLP must denylist both LPSS I2C controllers for the touchpad"
 rg -q '99-rg-touchpad-no-runtime-pm.rules' "$laptop_script" \
     || fail "touchpad I2C power/control=on rule must sort last (99-)"
 rg -q '65-rg-pci-pm-critical.rules' "$laptop_script" \

@@ -23,6 +23,15 @@ fake_bin="$tmpdir/bin"
 
 mkdir -p "$fake_root" "$fake_repo/dkms-overlays" "$fake_home/.local/bin" "$fake_bin"
 mkdir -p "$fake_home/.config/oomd"
+mkdir -p "$fake_home/.local/share/rgx1gen11" "$fake_home/.local/share/chezmoi/dot_local/share/rgx1gen11"
+# Shared TLP baseline (single source of truth).
+cp "$repo/dot_local/share/rgx1gen11/tlp-00-base.conf" \
+    "$fake_home/.local/share/rgx1gen11/tlp-00-base.conf"
+cp "$repo/dot_local/share/rgx1gen11/tlp-00-base.conf" \
+    "$fake_home/.local/share/chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"
+cp "$repo/dot_local/bin/executable_rg-tlp-baseline" \
+    "$fake_home/.local/bin/rg-tlp-baseline"
+chmod +x "$fake_home/.local/bin/rg-tlp-baseline"
 
 for helper in \
     rgx1gen11-dkms-overlay-apply \

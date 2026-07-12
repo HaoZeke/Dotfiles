@@ -12,6 +12,10 @@
 #
 # Separate from the memory-tuning script so a desktop host (no battery,
 # no lid) can disable just this part via chezmoi data.
+#
+# Shared TLP baseline (single source of truth — do not paste keys here):
+# tlp-baseline-sha256: {{ include "dot_local/share/rgx1gen11/tlp-00-base.conf" | sha256sum }}
+# Profile root helper is generated from rg-x1gen11-profile (not embedded).
 
 set -euo pipefail
 
@@ -240,153 +244,6 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
-'
-
-RG_X1GEN11_PROFILE_ROOT_CONTENT='#!/usr/bin/env bash
-set -euo pipefail
-
-profile="${1:-}"
-PROFILES_JSON="${RG_X1GEN11_PROFILES:-/home/rgoswami/.config/rg-x1gen11/profiles.json}"
-CHEZMOI_PROFILES=/home/rgoswami/.local/share/chezmoi/dot_config/rg-x1gen11/profiles.json
-
-if [ ! -r "$PROFILES_JSON" ] && [ -r "$CHEZMOI_PROFILES" ]; then
-    PROFILES_JSON="$CHEZMOI_PROFILES"
-fi
-
-profile_data=$(python3 - "$PROFILES_JSON" "$profile" <<PY
-import json
-import shlex
-import sys
-
-path, profile = sys.argv[1:3]
-data = json.load(open(path, encoding="utf-8"))
-profiles = data["profiles"]
-if profile not in profiles:
-    choices = "|".join(profiles)
-    print("usage: %s {%s}" % (sys.argv[0], choices), file=sys.stderr)
-    raise SystemExit(2)
-
-spec = profiles[profile]
-values = {
-    "platform": spec["platform_profile"],
-    "governor": spec["scaling_governor"],
-    "epp": spec["energy_performance_preference"],
-    "hwp": spec.get(
-        "hwp_dynamic_boost",
-        "1" if spec.get("scaling_governor") == "performance" else "0",
-    ),
-    "iwl": spec["iwlwifi_power_save"],
-    "zram_expr": spec["zram_size"],
-    "damon": "Y" if spec["damon_reclaim"] else "N",
-}
-for key, value in values.items():
-    print(f"{key}={shlex.quote(str(value))}")
-PY
-)
-eval "$profile_data"
-
-write_platform_profile() {
-    local path choices
-    for path in /sys/firmware/acpi/platform_profile /sys/devices/platform/thinkpad_acpi/platform_profile; do
-        [ -e "$path" ] || continue
-        choices="${path}_choices"
-        if [ -r "$choices" ] && ! grep -qw "$platform" "$choices"; then
-            printf "platform profile %s unavailable in %s\n" "$platform" "$choices" >&2
-            exit 1
-        fi
-        if ! write_sysfs_value "$path" "$platform"; then
-            printf "platform profile %s write rejected; skip\n" "$platform" >&2
-        fi
-        return 0
-    done
-    printf "platform_profile sysfs missing; skip\n" >&2
-}
-
-write_sysfs_value() {
-    local path="$1" value="$2"
-    printf "%s\n" "$value" >"$path" 2>/dev/null
-}
-
-write_cpufreq_value() {
-    local name="$1" value="$2" avail_name="$3"
-    local cpu path avail
-    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-        [ -d "$cpu" ] || continue
-        path="$cpu/cpufreq/$name"
-        avail="$cpu/cpufreq/$avail_name"
-        [ -e "$path" ] || continue
-        if [ -r "$avail" ] && ! grep -qw "$value" "$avail"; then
-            printf "skip %s: %s unavailable\n" "$path" "$value" >&2
-            continue
-        fi
-        if ! write_sysfs_value "$path" "$value"; then
-            printf "skip %s: write rejected\n" "$path" >&2
-        fi
-    done
-}
-
-write_if_path() {
-    local path="$1" value="$2" label="$3"
-    if [ ! -e "$path" ]; then
-        printf "%s: missing; skip\n" "$label" >&2
-        return 0
-    fi
-    if [ ! -w "$path" ]; then
-        printf "%s: read-only; skip\n" "$label" >&2
-        return 0
-    fi
-    if ! write_sysfs_value "$path" "$value"; then
-        printf "%s: write rejected; skip\n" "$label" >&2
-    fi
-}
-
-write_zram() {
-    local conf=/etc/systemd/zram-generator.conf.d/10-rg-profile.conf
-    local desired
-    install -d -m0755 /etc/systemd/zram-generator.conf.d
-    desired="# Managed by rg-x1gen11-profile-root
-[zram0]
-zram-size = $zram_expr
-compression-algorithm = zstd
-swap-priority = 100
-fs-type = swap"
-    # Already at the target size and live: nothing to do. Resizing zram forces a
-    # swapoff/swapon cycle that blocks under memory pressure, so skip it whenever
-    # the device is already configured the way we want.
-    if [ -r "$conf" ] && [ "$(cat "$conf")" = "$desired" ] \
-        && swapon --show=NAME --noheadings 2>/dev/null | grep -qx /dev/zram0; then
-        return 0
-    fi
-    printf "%s\n" "$desired" >"$conf"
-    systemctl daemon-reload
-    # A disksize left on an idle (non-swap) zram0 makes the generator
-    # comp_algorithm write fail with EBUSY; reset the device so the rebuild can
-    # run. This is the state a killed restart leaves behind.
-    if [ -e /sys/block/zram0/disksize ] \
-        && [ "$(cat /sys/block/zram0/disksize)" != 0 ] \
-        && ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx /dev/zram0; then
-        printf "1\n" >/sys/block/zram0/reset 2>/dev/null || true
-    fi
-    # Detach the restart so a slow swapoff cannot stall the calling oneshot unit
-    # past its start timeout; that kill mid-restart is what corrupts zram0.
-    systemctl restart --no-block systemd-zram-setup@zram0.service 2>/dev/null || true
-}
-
-write_damon() {
-    local path=/sys/module/damon_reclaim/parameters/enabled
-    [ -e "$path" ] || return 0
-    printf "%s\n" "$damon" >"$path"
-}
-
-write_platform_profile
-write_cpufreq_value scaling_governor "$governor" scaling_available_governors
-write_cpufreq_value energy_performance_preference "$epp" energy_performance_available_preferences
-write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost "$hwp" hwp_dynamic_boost
-write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
-write_zram
-write_damon
-
-printf "root profile applied: %s\n" "$profile"
 '
 
 # shellcheck disable=SC2016
@@ -753,64 +610,21 @@ done
 exit 0
 '
 
-# TLP: Intel P-state host with HWP and ThinkPad charge thresholds.
-# Matches the 21HM ThinkPad X1 Carbon Gen 11 hardware stack.
-# Daily baseline is cool-first: turbo off, EPP=power, and max_perf_pct caps
-# so multi-agent desktop load does not sit at the full 1.8 GHz non-turbo ceiling.
-# Intentional warmer profiles (focus/build-heavy) raise policy via rg-x1gen11-profile.
-TLP_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
-# CPU scaling
-CPU_SCALING_GOVERNOR_ON_AC=powersave
-CPU_SCALING_GOVERNOR_ON_BAT=powersave
-CPU_ENERGY_PERF_POLICY_ON_AC=power
-CPU_ENERGY_PERF_POLICY_ON_BAT=power
-CPU_MAX_PERF_ON_AC=70
-CPU_MAX_PERF_ON_BAT=60
-# Hard kHz ceiling: on this HWP+no_turbo host max_perf_pct alone does not pull
-# scaling_max_freq below cpuinfo_max; the explicit frequency cap does.
-CPU_SCALING_MAX_FREQ_ON_AC=1200000
-CPU_SCALING_MAX_FREQ_ON_BAT=1000000
-CPU_BOOST_ON_AC=0
-CPU_BOOST_ON_BAT=0
-CPU_HWP_DYN_BOOST_ON_AC=0
-CPU_HWP_DYN_BOOST_ON_BAT=0
-
-# ThinkPad platform profile
-PLATFORM_PROFILE_ON_AC=low-power
-PLATFORM_PROFILE_ON_BAT=low-power
-
-# Runtime PM for PCIe devices
-RUNTIME_PM_ON_AC=auto
-RUNTIME_PM_ON_BAT=auto
-# Exclude the Intel LPSS I2C controllers that drive the SYNA8017 precision
-# touchpad (00:15.0) and the ELAN touchscreen (00:15.1). With runtime PM left
-# on auto, TLP suspends 00:15.0 even on AC and the touchpad intermittently
-# freezes until an event wakes it. 70-rg-touchpad-no-runtime-pm.rules then pins
-# power/control=on (the i2c_designware default is auto, so denylist alone is not
-# enough).
-RUNTIME_PM_DENYLIST="00:15.0 00:15.1"
-PCIE_ASPM_ON_AC=default
-PCIE_ASPM_ON_BAT=powersupersave
-
-# Wi-Fi
-WIFI_PWR_ON_AC=off
-WIFI_PWR_ON_BAT=on
-
-# Disk
-DISK_IDLE_SECS_ON_AC=0
-DISK_IDLE_SECS_ON_BAT=2
-SATA_LINKPWR_ON_AC=med_power_with_dipm
-SATA_LINKPWR_ON_BAT=min_power
-
-# USB autosuspend with keyboard/mouse exclusions handled by TLPs defaults.
-USB_AUTOSUSPEND=1
-
-# ThinkPad battery care: charge 90 -> 98 on BAT0. This keeps near-full runtime
-# without holding the pack at a constant 100%.
-START_CHARGE_THRESH_BAT0=90
-STOP_CHARGE_THRESH_BAT0=98
-RESTORE_THRESHOLDS_ON_BAT=1
-'
+# TLP baseline lives in the shared share file (see tlp-baseline-sha256 above).
+# Loaded at apply time so cool-sync / userspace-root-setup use the same bytes.
+resolve_tlp_baseline() {
+    local c
+    for c in \
+        "${RG_TLP_BASELINE:-}" \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/rgx1gen11/tlp-00-base.conf" \
+        "$HOME/.local/share/rgx1gen11/tlp-00-base.conf" \
+        "$HOME/.local/share/chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"; do
+        [[ -n $c && -r $c ]] || continue
+        printf '%s\n' "$c"
+        return 0
+    done
+    return 1
+}
 
 UVC_AUTOSUSPEND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 # ThinkPad X1 Gen 11 integrated Chicony UVC camera: keep runtime PM automatic
@@ -933,8 +747,33 @@ if ! sudo test -f /etc/rg-tailnets/enabled; then
     write_if_diff /etc/rg-tailnets/enabled               "$TAILNETS_ENABLED_CONTENT" || true
 fi
 write_executable_if_diff /usr/local/sbin/rg-tailnet-power "$RG_TAILNET_POWER_CONTENT" || true
-write_if_diff /etc/tlp.d/00-base.conf                        "$TLP_CONTENT"     && TLP_CHANGED=1    || true
-write_executable_if_diff /usr/local/sbin/rg-x1gen11-profile-root "$RG_X1GEN11_PROFILE_ROOT_CONTENT" || true
+
+# Single-source TLP baseline (shared conf file).
+if tlp_src=$(resolve_tlp_baseline); then
+    write_if_diff /etc/tlp.d/00-base.conf "$(cat -- "$tlp_src")" && TLP_CHANGED=1 || true
+else
+    echo "chezmoi: ERROR missing shared TLP baseline (dot_local/share/rgx1gen11/tlp-00-base.conf)" >&2
+    exit 1
+fi
+
+# Profile root helper: always generate from rg-x1gen11-profile (never embed).
+PROFILE_BIN="${HOME}/.local/bin/rg-x1gen11-profile"
+if [ ! -x "$PROFILE_BIN" ]; then
+    PROFILE_BIN="${HOME}/.local/share/chezmoi/dot_local/bin/executable_rg-x1gen11-profile"
+fi
+if [ -r "$PROFILE_BIN" ]; then
+    PROFILE_ROOT_TMP=$(mktemp)
+    if bash "$PROFILE_BIN" root-helper-script "$PROFILE_ROOT_TMP" >/dev/null \
+        && bash -n "$PROFILE_ROOT_TMP"; then
+        write_executable_if_diff /usr/local/sbin/rg-x1gen11-profile-root \
+            "$(cat -- "$PROFILE_ROOT_TMP")" || true
+    else
+        echo "chezmoi: WARN failed to generate rg-x1gen11-profile-root; keeping existing" >&2
+    fi
+    rm -f "$PROFILE_ROOT_TMP"
+else
+    echo "chezmoi: WARN rg-x1gen11-profile missing; cannot refresh profile-root helper" >&2
+fi
 
 # system-sleep hook: runs as root on every suspend/hibernate cycle.
 # Written with 0755 via a separate path because write_if_diff always

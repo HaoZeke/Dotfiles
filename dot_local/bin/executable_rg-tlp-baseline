@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-tlp-baseline).
+# Resolve and print the canonical rgx1gen11 TLP 00-base.conf contents.
+# Prefer the installed share path; fall back to the chezmoi source tree.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-tlp-baseline [--path|cat]
+
+  --path   Print the resolved absolute path to the baseline conf (default).
+  cat      Print the conf file contents (for installers).
+USAGE
+}
+
+mode=path
+case "${1:-}" in
+"" | --path) mode=path ;;
+cat | --cat) mode=cat ;;
+-h | --help)
+    usage
+    exit 0
+    ;;
+*)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+candidates=()
+if [[ -n ${RG_TLP_BASELINE:-} ]]; then
+    candidates+=("$RG_TLP_BASELINE")
+fi
+candidates+=(
+    "${XDG_DATA_HOME:-$HOME/.local/share}/rgx1gen11/tlp-00-base.conf"
+    "$HOME/.local/share/rgx1gen11/tlp-00-base.conf"
+    "$HOME/.local/share/chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"
+)
+
+resolved=
+for c in "${candidates[@]}"; do
+    if [[ -r $c ]]; then
+        resolved=$c
+        break
+    fi
+done
+
+if [[ -z $resolved ]]; then
+    printf 'rg-tlp-baseline: cannot find tlp-00-base.conf (set RG_TLP_BASELINE)\n' >&2
+    exit 1
+fi
+
+case "$mode" in
+path) printf '%s\n' "$resolved" ;;
+cat) cat -- "$resolved" ;;
+esac

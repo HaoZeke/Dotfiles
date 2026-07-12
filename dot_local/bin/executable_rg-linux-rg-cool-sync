@@ -93,41 +93,30 @@ print_thermal() {
 }
 
 tlp_baseline() {
-    # Keep aligned with run_onchange_linux_laptop_power.sh.tmpl TLP_CONTENT
-    # (canonical daily baseline for rgx1gen11).
-    cat <<'TLP'
-# Managed by rg-linux-rg-cool-sync
-# Aligned with run_onchange_linux_laptop_power.sh.tmpl (canonical TLP baseline).
-CPU_SCALING_GOVERNOR_ON_AC=powersave
-CPU_SCALING_GOVERNOR_ON_BAT=powersave
-CPU_ENERGY_PERF_POLICY_ON_AC=power
-CPU_ENERGY_PERF_POLICY_ON_BAT=power
-CPU_MAX_PERF_ON_AC=70
-CPU_MAX_PERF_ON_BAT=60
-CPU_SCALING_MAX_FREQ_ON_AC=1200000
-CPU_SCALING_MAX_FREQ_ON_BAT=1000000
-CPU_BOOST_ON_AC=0
-CPU_BOOST_ON_BAT=0
-CPU_HWP_DYN_BOOST_ON_AC=0
-CPU_HWP_DYN_BOOST_ON_BAT=0
-PLATFORM_PROFILE_ON_AC=low-power
-PLATFORM_PROFILE_ON_BAT=low-power
-RUNTIME_PM_ON_AC=auto
-RUNTIME_PM_ON_BAT=auto
-RUNTIME_PM_DENYLIST="00:15.0 00:15.1"
-PCIE_ASPM_ON_AC=default
-PCIE_ASPM_ON_BAT=powersupersave
-WIFI_PWR_ON_AC=off
-WIFI_PWR_ON_BAT=on
-DISK_IDLE_SECS_ON_AC=0
-DISK_IDLE_SECS_ON_BAT=2
-SATA_LINKPWR_ON_AC=med_power_with_dipm
-SATA_LINKPWR_ON_BAT=min_power
-USB_AUTOSUSPEND=1
-START_CHARGE_THRESH_BAT0=90
-STOP_CHARGE_THRESH_BAT0=98
-RESTORE_THRESHOLDS_ON_BAT=1
-TLP
+    # Single source of truth: dot_local/share/rgx1gen11/tlp-00-base.conf
+    local helper path
+    helper=${RG_TLP_BASELINE_BIN:-}
+    if [[ -z $helper ]]; then
+        for helper in \
+            "$user_home/.local/bin/rg-tlp-baseline" \
+            "$chezmoi/dot_local/bin/executable_rg-tlp-baseline"; do
+            [[ -r $helper ]] && break
+        done
+    fi
+    if [[ -r $helper ]]; then
+        HOME="$user_home" bash "$helper" cat
+        return 0
+    fi
+    for path in \
+        "${RG_TLP_BASELINE:-}" \
+        "$user_home/.local/share/rgx1gen11/tlp-00-base.conf" \
+        "$chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"; do
+        [[ -n $path && -r $path ]] || continue
+        cat -- "$path"
+        return 0
+    done
+    printf 'rg-linux-rg-cool-sync: missing shared TLP baseline\n' >&2
+    return 1
 }
 
 if [[ $skip_live != 1 ]]; then
@@ -153,6 +142,11 @@ for helper in \
     rg-pipewire-rt-check; do
     install_user_helper "$chezmoi/dot_local/bin/executable_$helper" "$user_home/.local/bin/$helper"
 done
+install_user_helper "$chezmoi/dot_local/bin/executable_rg-tlp-baseline" "$user_home/.local/bin/rg-tlp-baseline"
+# Shared TLP conf for installers (not only on PATH helpers).
+install -D -m 0644 \
+    "$chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf" \
+    "$user_home/.local/share/rgx1gen11/tlp-00-base.conf"
 if [[ -x $linux_rg/rgx1gen11-live-check ]]; then
     install_user_helper "$linux_rg/rgx1gen11-live-check" "$user_home/.local/bin/rgx1gen11-live-check"
 fi

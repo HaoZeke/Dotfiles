@@ -21,9 +21,21 @@ fake_root="$tmpdir/root"
 fake_linux_rg="$tmpdir/linux-rg"
 fake_chezmoi="$tmpdir/chezmoi"
 log="$tmpdir/commands.log"
-mkdir -p "$fake_home/.local/bin" "$fake_root" "$fake_linux_rg" "$fake_chezmoi/dot_local/bin" "$tmpdir/bin"
+mkdir -p \
+    "$fake_home/.local/bin" \
+    "$fake_root" \
+    "$fake_linux_rg" \
+    "$fake_chezmoi/dot_local/bin" \
+    "$fake_chezmoi/dot_local/share/rgx1gen11" \
+    "$tmpdir/bin"
 cp "$script" "$fake_chezmoi/dot_local/bin/executable_rg-linux-rg-cool-sync"
 chmod +x "$fake_chezmoi/dot_local/bin/executable_rg-linux-rg-cool-sync"
+# Shared TLP baseline + resolver (single source of truth).
+cp "$repo/dot_local/share/rgx1gen11/tlp-00-base.conf" \
+    "$fake_chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"
+cp "$repo/dot_local/bin/executable_rg-tlp-baseline" \
+    "$fake_chezmoi/dot_local/bin/executable_rg-tlp-baseline"
+chmod +x "$fake_chezmoi/dot_local/bin/executable_rg-tlp-baseline"
 
 for helper in \
     rg-linux-rg-userspace-root-setup \
