@@ -5,7 +5,7 @@ description = "Natural non-AI prose gate (style + grammar). Judge off by default
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
-lexical_styles = ["rgoswami"]
+lexical_styles = ["rgoswami", "write-good", "proselint", "Readability"]
 
 [engines]
 lexical = true
@@ -13,3 +13,7 @@ leak = false
 structure = false
 harper = true
 judge = false
+
+# Hemingway-style sentence complexity (word-count hard/very-hard) runs in-process
+# with defaults hard=14, very_hard=25. McCabe cyclomatic complexity is a code metric;
+# for prose use Readability.* (ARI/Flesch/Gunning Fog) + hard sentences.
