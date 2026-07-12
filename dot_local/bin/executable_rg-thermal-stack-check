@@ -185,8 +185,12 @@ done
 printf '\n== TLP profile config ==\n'
 check_tlp_config_key CPU_SCALING_GOVERNOR_ON_AC powersave
 check_tlp_config_key CPU_SCALING_GOVERNOR_ON_BAT powersave
-check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_AC balance_power
-check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_BAT balance_power
+check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_AC power
+check_tlp_config_key CPU_ENERGY_PERF_POLICY_ON_BAT power
+check_tlp_config_key CPU_MAX_PERF_ON_AC 70
+check_tlp_config_key CPU_MAX_PERF_ON_BAT 60
+check_tlp_config_key CPU_SCALING_MAX_FREQ_ON_AC 1200000
+check_tlp_config_key CPU_SCALING_MAX_FREQ_ON_BAT 1000000
 check_tlp_config_key CPU_BOOST_ON_AC 0
 check_tlp_config_key CPU_BOOST_ON_BAT 0
 check_tlp_config_key CPU_HWP_DYN_BOOST_ON_AC 0
@@ -222,11 +226,16 @@ else
     pass "power-profiles-daemon inactive"
 fi
 
+# This chassis refuses thermald (dytc_lapmode). enabled-but-dead is not a
+# safety net; require thermald stay disabled/masked and inactive under TLP.
+# Prefer the both-active conflict when TLP already owns power.
 if [[ $tlp_active == active && $thermald_active == active ]]; then
     fail "thermald and TLP are both active without an explicit split policy"
+elif [[ $thermald_enabled == enabled || $thermald_enabled == static*enabled* ]]; then
+    fail "thermald enabled but unsupported on DYTC ThinkPad; disable it"
 elif [[ $thermald_active == active ]]; then
     pass "thermald active without TLP"
-elif [[ $thermald_active == unknown ]]; then
+elif [[ $thermald_active == unknown || $thermald_enabled == unknown ]]; then
     warn "thermald state unknown from this session"
 else
     pass "thermald inactive; DPTF/platform_profile/TLP remain primary"

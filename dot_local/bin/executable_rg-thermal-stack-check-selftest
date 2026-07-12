@@ -34,8 +34,12 @@ printf 'status:\t\tenabled\nspeed:\t\t2300\n' >"$fake_root/proc/acpi/ibm/fan"
 cat >"$fake_root/etc/tlp.d/00-base.conf" <<'TLP'
 CPU_SCALING_GOVERNOR_ON_AC=powersave
 CPU_SCALING_GOVERNOR_ON_BAT=powersave
-CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
-CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power
+CPU_ENERGY_PERF_POLICY_ON_AC=power
+CPU_ENERGY_PERF_POLICY_ON_BAT=power
+CPU_MAX_PERF_ON_AC=70
+CPU_MAX_PERF_ON_BAT=60
+CPU_SCALING_MAX_FREQ_ON_AC=1200000
+CPU_SCALING_MAX_FREQ_ON_BAT=1000000
 CPU_BOOST_ON_AC=0
 CPU_BOOST_ON_BAT=0
 CPU_HWP_DYN_BOOST_ON_AC=0
@@ -106,5 +110,30 @@ if PATH="$fake_bin:$PATH" RG_THERMAL_ROOT="$fake_root" "$script" --check \
 fi
 rg -q 'fail: thermald and TLP are both active' "$tmpdir/conflict.out" \
     || fail "checker must report the TLP/thermald conflict"
+
+# enabled-but-inactive is fiction on DYTC; checker must fail closed
+cat >"$fake_bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+verb=${1:?}
+unit=${2:?}
+case "$verb:$unit" in
+is-active:tlp.service) printf 'active\n' ;;
+is-enabled:tlp.service) printf 'enabled\n' ;;
+is-active:power-profiles-daemon.service) printf 'inactive\n'; exit 3 ;;
+is-enabled:power-profiles-daemon.service) printf 'disabled\n'; exit 1 ;;
+is-active:thermald.service) printf 'inactive\n'; exit 3 ;;
+is-enabled:thermald.service) printf 'enabled\n' ;;
+*) printf 'unexpected systemctl %s %s\n' "$verb" "$unit" >&2; exit 2 ;;
+esac
+SH
+chmod +x "$fake_bin/systemctl"
+
+if PATH="$fake_bin:$PATH" RG_THERMAL_ROOT="$fake_root" "$script" --check \
+    >"$tmpdir/thermald-enabled.out" 2>&1; then
+    fail "thermald enabled-but-inactive should fail on DYTC chassis"
+fi
+rg -q 'fail: thermald enabled but unsupported' "$tmpdir/thermald-enabled.out" \
+    || fail "checker must reject enabled-but-dead thermald"
 
 printf 'ok\n'

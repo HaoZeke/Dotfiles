@@ -2,10 +2,12 @@
   "default": "undocked-mixed",
   "profiles": {
     "undocked-mixed": {
-      "description": "Daily Sway + browser + occasional make -j9",
+      "description": "Daily Sway + browser + occasional make -j9 (cool-first baseline)",
       "platform_profile": "low-power",
       "scaling_governor": "powersave",
-      "energy_performance_preference": "balance_power",
+      "energy_performance_preference": "power",
+      "max_perf_pct": "70",
+      "scaling_max_freq": "1200000",
       "hwp_dynamic_boost": "0",
       "iwlwifi_power_save": "Y",
       "zram_size": "ram / 2",
@@ -62,6 +64,8 @@
       "platform_profile": "low-power",
       "scaling_governor": "powersave",
       "energy_performance_preference": "power",
+      "max_perf_pct": "60",
+      "scaling_max_freq": "1000000",
       "hwp_dynamic_boost": "0",
       "iwlwifi_power_save": "Y",
       "zram_size": "ram / 4",

@@ -29,10 +29,18 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scaling_gove
     || fail "undocked-mixed must use powersave governor on active intel_pstate"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'platform_profile: low-power' >/dev/null \
     || fail "undocked-mixed must use the low-power ACPI platform profile"
-RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'energy_performance_preference: balance_power' >/dev/null \
-    || fail "undocked-mixed must keep EPP below performance"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'energy_performance_preference: power' >/dev/null \
+    || fail "undocked-mixed must use the coolest EPP tier (power)"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'max_perf_pct: 70' >/dev/null \
+    || fail "undocked-mixed must cap intel_pstate max_perf_pct at 70"
+RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'scaling_max_freq: 1200000' >/dev/null \
+    || fail "undocked-mixed must hard-cap scaling_max_freq at 1.2 GHz"
 RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'hwp_dynamic_boost: 0' >/dev/null \
     || fail "undocked-mixed must keep HWP dynamic boost disabled"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'max_perf_pct: 100' >/dev/null \
+    || fail "build-heavy must restore full max_perf_pct (default 100)"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scaling_max_freq: 1800000' >/dev/null \
+    || fail "build-heavy must restore full non-turbo scaling_max_freq"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'scaling_governor: powersave' >/dev/null \
     || fail "memory-pressure must use powersave governor on active intel_pstate"
 RG_X1GEN11_PROFILES="$profiles" "$script" show docked-office | rg 'scaling_governor: powersave' >/dev/null \
@@ -250,8 +258,10 @@ printf 'undocked-mixed\n' >"$check_state/active-profile"
 printf 'low-power\n' >"$fake_sys/firmware/acpi/platform_profile"
 printf 'low-power balanced performance\n' >"$fake_sys/firmware/acpi/platform_profile_choices"
 printf 'powersave\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
-printf 'power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+printf 'balance_power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
 printf '0\n' >"$fake_sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost"
+printf '100\n' >"$fake_sys/devices/system/cpu/intel_pstate/max_perf_pct"
+printf '1800000\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 printf 'Y\n' >"$fake_sys/module/iwlwifi/parameters/power_save"
 
 if RG_X1GEN11_PROFILES="$profiles" \
@@ -263,11 +273,11 @@ if RG_X1GEN11_PROFILES="$profiles" \
     "$script" doctor --check >"$tmpdir/doctor-drift.out" 2>&1; then
     fail "doctor --check must fail on EPP drift"
 fi
-rg -q 'profile drift: energy_performance_preference live=power expected=balance_power' \
+rg -q 'profile drift: energy_performance_preference live=balance_power expected=power' \
     "$tmpdir/doctor-drift.out" \
     || fail "doctor --check must report EPP drift"
 
-printf 'balance_power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+printf 'power\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
 printf '1\n' >"$fake_sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost"
 if RG_X1GEN11_PROFILES="$profiles" \
     RG_X1GEN11_STATE_DIR="$check_state" \
@@ -283,6 +293,36 @@ rg -q 'profile drift: hwp_dynamic_boost live=1 expected=0' \
     || fail "doctor --check must report HWP dynamic boost drift"
 
 printf '0\n' >"$fake_sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost"
+printf '100\n' >"$fake_sys/devices/system/cpu/intel_pstate/max_perf_pct"
+if RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-max-perf-drift.out" 2>&1; then
+    fail "doctor --check must fail on max_perf_pct drift"
+fi
+rg -q 'profile drift: max_perf_pct live=100 expected=70' \
+    "$tmpdir/doctor-max-perf-drift.out" \
+    || fail "doctor --check must report max_perf_pct drift"
+
+printf '70\n' >"$fake_sys/devices/system/cpu/intel_pstate/max_perf_pct"
+printf '1800000\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
+if RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-scaling-max-drift.out" 2>&1; then
+    fail "doctor --check must fail on scaling_max_freq drift"
+fi
+rg -q 'profile drift: scaling_max_freq live=1800000 expected=1200000' \
+    "$tmpdir/doctor-scaling-max-drift.out" \
+    || fail "doctor --check must report scaling_max_freq drift"
+
+printf '1200000\n' >"$fake_sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 if RG_X1GEN11_PROFILES="$profiles" \
     RG_X1GEN11_STATE_DIR="$check_state" \
     RG_X1GEN11_SYSFS_ROOT="$fake_sys" \

@@ -139,8 +139,16 @@ test -x "$fake_root/usr/local/sbin/rg-x1gen11-profile-root" \
     || fail "cool-sync must install the generated profile root helper"
 test -r "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "cool-sync must install the TLP baseline"
-rg -q '^CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power$' "$fake_root/etc/tlp.d/00-base.conf" \
+rg -q '^CPU_ENERGY_PERF_POLICY_ON_BAT=power$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "cool-sync must align battery EPP with undocked-mixed"
+rg -q '^CPU_MAX_PERF_ON_AC=70$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install AC max_perf cap"
+rg -q '^CPU_MAX_PERF_ON_BAT=60$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install battery max_perf cap"
+rg -q '^CPU_SCALING_MAX_FREQ_ON_AC=1200000$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install AC scaling max freq cap"
+rg -q '^CPU_SCALING_MAX_FREQ_ON_BAT=1000000$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must install battery scaling max freq cap"
 rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "cool-sync must align AC platform profile with undocked-mixed"
 rg -q '^RUNTIME_PM_ON_AC=auto$' "$fake_root/etc/tlp.d/00-base.conf" \

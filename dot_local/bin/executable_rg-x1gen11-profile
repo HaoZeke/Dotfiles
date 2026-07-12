@@ -79,6 +79,14 @@ elif field == "energy_performance_preference" and field not in spec:
     value = "performance" if spec.get("scaling_governor") == "performance" else "balance_power"
 elif field == "hwp_dynamic_boost" and field not in spec:
     value = "1" if spec.get("scaling_governor") == "performance" else "0"
+elif field == "max_perf_pct" and field not in spec:
+    # Cool daily baseline may cap intel_pstate max_perf_pct; warmer profiles
+    # restore the full non-turbo range unless they set an explicit cap.
+    value = "100"
+elif field == "scaling_max_freq" and field not in spec:
+    # kHz ceiling written to cpufreq scaling_max_freq. Cool profiles set a hard
+    # cap; warmer profiles restore the non-turbo ceiling (1800000 on this host).
+    value = "1800000"
 else:
     value = spec[field]
 if isinstance(value, bool):
@@ -155,6 +163,28 @@ write_hwp_dynamic_boost() {
         return 0
     fi
     echo "$value" | $SUDO tee "$path" >/dev/null
+}
+
+write_max_perf_pct() {
+    local value="$1"
+    local path
+    path=$(sys_path /devices/system/cpu/intel_pstate/max_perf_pct)
+    if [ ! -e "$path" ]; then
+        printf 'max_perf_pct sysfs missing; skip\n' >&2
+        return 0
+    fi
+    echo "$value" | $SUDO tee "$path" >/dev/null
+}
+
+write_scaling_max_freq() {
+    local value="$1"
+    local cpu path
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        path="$cpu/cpufreq/scaling_max_freq"
+        [ -e "$path" ] || continue
+        echo "$value" | $SUDO tee "$path" >/dev/null
+    done
 }
 
 write_platform_profile() {
@@ -282,12 +312,14 @@ apply_root_helper() {
 
 apply_profile() {
     local profile="$1"
-    local platform governor epp hwp iwl zram damon damon_profile scx browser_high build_high
+    local platform governor epp hwp max_perf scaling_max iwl zram damon damon_profile scx browser_high build_high
 
     platform=$(profile_field "$profile" platform_profile)
     governor=$(profile_field "$profile" scaling_governor)
     epp=$(profile_field "$profile" energy_performance_preference)
     hwp=$(profile_field "$profile" hwp_dynamic_boost)
+    max_perf=$(profile_field "$profile" max_perf_pct)
+    scaling_max=$(profile_field "$profile" scaling_max_freq)
     iwl=$(profile_field "$profile" iwlwifi_power_save)
     zram=$(profile_field "$profile" zram_size)
     damon=$(profile_field "$profile" damon_reclaim)
@@ -310,6 +342,8 @@ apply_profile() {
         write_scaling_governor "$governor"
         write_energy_performance_preference "$epp"
         write_hwp_dynamic_boost "$hwp"
+        write_max_perf_pct "$max_perf"
+        write_scaling_max_freq "$scaling_max"
         write_iwl_power_save "$iwl"
         write_zram_size "$zram"
         apply_damon "$damon" "$damon_profile"
@@ -488,6 +522,8 @@ values = {
         "hwp_dynamic_boost",
         "1" if spec.get("scaling_governor") == "performance" else "0",
     ),
+    "max_perf": str(spec.get("max_perf_pct", "100")),
+    "scaling_max": str(spec.get("scaling_max_freq", "1800000")),
     "iwl": spec["iwlwifi_power_save"],
     "zram_expr": spec["zram_size"],
     "damon": "Y" if spec["damon_reclaim"] else "N",
@@ -528,7 +564,7 @@ write_cpufreq_value() {
         path="$cpu/cpufreq/$name"
         avail="$cpu/cpufreq/$avail_name"
         [ -e "$path" ] || continue
-        if [ -r "$avail" ] && ! grep -qw "$value" "$avail"; then
+        if [ -n "$avail_name" ] && [ -r "$avail" ] && ! grep -qw "$value" "$avail"; then
             printf "skip %s: %s unavailable\n" "$path" "$value" >&2
             continue
         fi
@@ -594,7 +630,9 @@ write_damon() {
 write_platform_profile
 write_cpufreq_value scaling_governor "$governor" scaling_available_governors
 write_cpufreq_value energy_performance_preference "$epp" energy_performance_available_preferences
+write_cpufreq_value scaling_max_freq "$scaling_max" ""
 write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost "$hwp" hwp_dynamic_boost
+write_if_path /sys/devices/system/cpu/intel_pstate/max_perf_pct "$max_perf" max_perf_pct
 write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
 write_zram
 write_damon
@@ -612,6 +650,8 @@ show_profile() {
     printf '  platform_profile: %s\n' "$(profile_field "$profile" platform_profile)"
     printf '  scaling_governor: %s\n' "$(profile_field "$profile" scaling_governor)"
     printf '  energy_performance_preference: %s\n' "$(profile_field "$profile" energy_performance_preference)"
+    printf '  max_perf_pct: %s\n' "$(profile_field "$profile" max_perf_pct)"
+    printf '  scaling_max_freq: %s\n' "$(profile_field "$profile" scaling_max_freq)"
     printf '  hwp_dynamic_boost: %s\n' "$(profile_field "$profile" hwp_dynamic_boost)"
     printf '  iwlwifi_power_save: %s\n' "$(profile_field "$profile" iwlwifi_power_save)"
     printf '  zram_size: %s\n' "$(profile_field "$profile" zram_size)"
@@ -686,6 +726,24 @@ profile_policy_check() {
         compare_value hwp_dynamic_boost "$live" "$expected"
     else
         printf 'profile drift: hwp_dynamic_boost live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" max_perf_pct)
+    path=$(sys_path /devices/system/cpu/intel_pstate/max_perf_pct)
+    if live=$(read_trimmed "$path"); then
+        compare_value max_perf_pct "$live" "$expected"
+    else
+        printf 'profile drift: max_perf_pct live=unavailable expected=%s\n' "$expected" >&2
+        failures=$((failures + 1))
+    fi
+
+    expected=$(profile_field "$profile" scaling_max_freq)
+    path=$(sys_path /devices/system/cpu/cpu0/cpufreq/scaling_max_freq)
+    if live=$(read_trimmed "$path"); then
+        compare_value scaling_max_freq "$live" "$expected"
+    else
+        printf 'profile drift: scaling_max_freq live=unavailable expected=%s\n' "$expected" >&2
         failures=$((failures + 1))
     fi
 
