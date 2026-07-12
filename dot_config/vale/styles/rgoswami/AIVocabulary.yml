@@ -250,5 +250,49 @@ tokens:
   - comes pre-?baked
   - pre-?baked
   - pre-?installed and ready
+
+  # 2024–2026 focal / signpost AI-isms (Kobak focal set + Wikipedia SIGNS)
+  # Prefer phrase forms for words that collide with engineering jargon.
+  - commendable
+  - resonate
+  - resonates
+  - resonating
+  - compelling
+  - paramount
+  - unwavering
+  - align with
+  - aligns with
+  - aligning with
+  - in alignment with
+  - perfect alignment
+  - seamless alignment
+  - strategic alignment
+  - meticulously
+  - underpins
+  - underpinning
+  - underpinned
+  - in the realm of
+  - in today's
+  - in today's landscape
+  - in today's digital landscape
+  - in today's rapidly evolving
+  - in today's fast-paced
+  # Extra high-signal excess verbs/forms from Kobak / field guides
+  - delves
+  - delving
+  - showcases
+  - garnered
+  - garnering
+  - bolstered
+  - emphasizing
+  - boasts
+  - demystify
+  - demystifying
+  - unleash
+  - unleashing
+  - ignite
+  - igniting
+  - beacon of
+  - symphony of
 exceptions:
   - 'Holistic Fusion'
