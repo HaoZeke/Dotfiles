@@ -100,6 +100,7 @@ keys=(
     vm.dirty_background_ratio
     vm.dirty_expire_centisecs
     vm.dirty_writeback_centisecs
+    vm.laptop_mode
 )
 
 expected_value() {
@@ -114,6 +115,7 @@ expected_value() {
     vm.dirty_background_ratio) printf '5\n' ;;
     vm.dirty_expire_centisecs) printf '3000\n' ;;
     vm.dirty_writeback_centisecs) printf '1500\n' ;;
+    vm.laptop_mode) printf '5\n' ;;
     *) die "no expected value for $1" ;;
     esac
 }

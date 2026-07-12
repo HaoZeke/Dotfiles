@@ -34,6 +34,7 @@ write_live dirty_ratio 10
 write_live dirty_background_ratio 5
 write_live dirty_expire_centisecs 3000
 write_live dirty_writeback_centisecs 1500
+write_live laptop_mode 5
 
 cat >"$conf" <<'EOF'
 # Managed test fixture
@@ -47,6 +48,7 @@ vm.dirty_ratio = 10
 vm.dirty_background_ratio = 5
 vm.dirty_expire_centisecs = 3000
 vm.dirty_writeback_centisecs = 1500
+vm.laptop_mode = 5
 EOF
 
 "$script" --proc-root "$proc_root" --config "$conf" >"$tmpdir/ok.out" \

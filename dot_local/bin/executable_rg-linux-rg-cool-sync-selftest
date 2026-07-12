@@ -155,8 +155,12 @@ rg -q '^RUNTIME_PM_ON_AC=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "cool-sync must install runtime PM policy"
 rg -q '^USB_AUTOSUSPEND=1$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "cool-sync must keep USB autosuspend enabled"
-rg -q '^START_CHARGE_THRESH_BAT0=75$' "$fake_root/etc/tlp.d/00-base.conf" \
-    || fail "cool-sync must keep ThinkPad BAT0 charge start threshold"
+rg -q '^START_CHARGE_THRESH_BAT0=90$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must keep ThinkPad BAT0 charge start threshold (90)"
+rg -q '^STOP_CHARGE_THRESH_BAT0=98$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must keep ThinkPad BAT0 charge stop threshold (98)"
+rg -q 'RUNTIME_PM_DENYLIST="00:15.0 00:15.1"' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "cool-sync must denylist touchpad I2C controllers in TLP"
 rg -q 'systemctl restart tlp.service' "$log" \
     || fail "cool-sync must restart TLP"
 rg -q '^root-helper undocked-mixed$' "$log" \

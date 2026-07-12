@@ -825,8 +825,27 @@ TOUCHPAD_PM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_la
 # runtime PM would otherwise auto-suspend the controller (the i2c_designware
 # default is auto). TLP denylists these same addresses (RUNTIME_PM_DENYLIST)
 # so it does not re-enable auto on `tlp start`.
+# Numbered 99- so this always wins over older hand-rolled pci_pm.rules if one
+# reappears; the managed critical-on rules live in 65-rg-pci-pm-critical.rules
+# without a blanket power/control=auto catch-all.
 ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:00:15.0", ATTR{power/control}="on"
 ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:00:15.1", ATTR{power/control}="on"
+'
+
+PCI_PM_CRITICAL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Keep a small set of always-on PCI devices powered. Intentionally NO blanket
+# SUBSYSTEM=="pci" power/control=auto rule: that pattern was previously shipped
+# as unowned pci_pm.rules and overwrote the touchpad I2C "on" pins (00:15.*).
+# Kernel default remains auto for unspecified devices.
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa708", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa74d", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa72f", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51ef", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51e0", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x519d", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51a3", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51e3", ATTR{power/control}="on"
 '
 
 # --- package installation -------------------------------------------------
@@ -859,9 +878,41 @@ CTRLD_CHANGED=0
 
 XE_CHANGED=0
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules       "$IOSCHED_CONTENT" && UDEV_CHANGED=1   || true
+write_if_diff /etc/udev/rules.d/65-rg-pci-pm-critical.rules "$PCI_PM_CRITICAL_CONTENT" && UDEV_CHANGED=1 || true
 write_if_diff /etc/udev/rules.d/70-rg-uvc-autosuspend.rules "$UVC_AUTOSUSPEND_CONTENT" && UDEV_CHANGED=1 || true
-write_if_diff /etc/udev/rules.d/70-rg-touchpad-no-runtime-pm.rules "$TOUCHPAD_PM_CONTENT" && UDEV_CHANGED=1 || true
+# Prefer 99- so touchpad "on" always sorts after any residual pci_pm rules.
+write_if_diff /etc/udev/rules.d/99-rg-touchpad-no-runtime-pm.rules "$TOUCHPAD_PM_CONTENT" && UDEV_CHANGED=1 || true
 write_if_diff /etc/modprobe.d/xe.conf                        "$XE_MODPROBE_CONTENT" && XE_CHANGED=1 || true
+
+# Retire conflicting hand-rolled / stale drop-ins that fight managed policy.
+# trash-put keeps recovery; never raw rm on /etc.
+retire_conflicting_dropin() {
+    local path=$1 reason=$2 flag=${3:-UDEV_CHANGED}
+    if sudo test -e "$path"; then
+        echo "chezmoi: retiring $path ($reason)"
+        if command -v trash-put >/dev/null 2>&1; then
+            sudo trash-put "$path" || sudo mv "$path" "${path}.rg-retired.$(date +%Y%m%d%H%M%S)"
+        else
+            sudo mv "$path" "${path}.rg-retired.$(date +%Y%m%d%H%M%S)"
+        fi
+        case "$flag" in
+        TLP_CHANGED) TLP_CHANGED=1 ;;
+        *) UDEV_CHANGED=1 ;;
+        esac
+    fi
+}
+# Blanket power/control=auto overwrote touchpad I2C "on" pins.
+retire_conflicting_dropin /etc/udev/rules.d/pci_pm.rules \
+    "blanket PCI auto overwrites 00:15.* touchpad pins"
+# Legacy path before rename to 99-rg-touchpad-no-runtime-pm.rules
+retire_conflicting_dropin /etc/udev/rules.d/70-rg-touchpad-no-runtime-pm.rules \
+    "replaced by 99-rg-touchpad-no-runtime-pm.rules"
+# Clobbers RUNTIME_PM_DENYLIST to only 00:15.0 (drops 00:15.1).
+retire_conflicting_dropin /etc/tlp.d/01-touchpad-no-suspend.conf \
+    "clobbers managed RUNTIME_PM_DENYLIST in 00-base.conf" TLP_CHANGED
+# Maps Chicony UVC camera 04f2:b751 to android_adb (same ID as integrated camera).
+retire_conflicting_dropin /etc/udev/rules.d/51-android.rules \
+    "04f2:b751 is the integrated Chicony UVC camera, not an Android gadget"
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf         "$LOGIND_CONTENT"  && LOGIND_CHANGED=1 || true
 write_if_diff /etc/systemd/sleep.conf.d/50-hibernate.conf    "$SLEEP_CONTENT"   && SLEEP_CHANGED=1  || true
 write_if_diff /etc/systemd/journald.conf.d/99-persistent-storage.conf "$JOURNALD_CONTENT" && JOURNALD_CHANGED=1 || true

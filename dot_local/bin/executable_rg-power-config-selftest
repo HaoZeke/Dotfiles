@@ -77,6 +77,20 @@ rg -q 'START_CHARGE_THRESH_BAT0=90' "$laptop_script" \
     || fail "battery charge start threshold must favor useful runtime"
 rg -q 'STOP_CHARGE_THRESH_BAT0=98' "$laptop_script" \
     || fail "battery charge stop threshold must allow near-full runtime"
+rg -q 'RUNTIME_PM_DENYLIST="00:15.0 00:15.1"' "$laptop_script" \
+    || fail "TLP must denylist both LPSS I2C controllers for the touchpad"
+rg -q '99-rg-touchpad-no-runtime-pm.rules' "$laptop_script" \
+    || fail "touchpad I2C power/control=on rule must sort last (99-)"
+rg -q '65-rg-pci-pm-critical.rules' "$laptop_script" \
+    || fail "managed PCI critical-on rules must replace unowned pci_pm.rules"
+rg -q 'retire_conflicting_dropin /etc/udev/rules.d/pci_pm.rules' "$laptop_script" \
+    || fail "laptop power must retire blanket pci_pm.rules"
+rg -q 'retire_conflicting_dropin /etc/tlp.d/01-touchpad-no-suspend.conf' "$laptop_script" \
+    || fail "laptop power must retire TLP denylist clobber drop-in"
+rg -q 'retire_conflicting_dropin /etc/udev/rules.d/51-android.rules' "$laptop_script" \
+    || fail "laptop power must retire android udev rules that claim the UVC camera"
+! rg -q 'SUBSYSTEM=="pci", ATTR\{power/control\}="auto"' "$laptop_script" \
+    || fail "managed PCI rules must not ship a blanket power/control=auto"
 rg -q 'HandleLidSwitch=suspend' "$laptop_script" \
     || fail "lid close must use fast suspend"
 rg -q 'HandleLidSwitchExternalPower=suspend' "$laptop_script" \

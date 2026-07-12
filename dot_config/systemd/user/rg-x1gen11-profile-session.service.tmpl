@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+[Unit]
+Description=Re-apply rgx1gen11 user profile slice caps after login
+Documentation=file://%h/.config/rg-x1gen11/profiles.json
+After=graphical-session-pre.target
+PartOf=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+# apply-user only: privileged sysfs is already owned by TLP + profile-root on
+# demand. Slice MemoryHigh / scx_mode need a user-manager context after login.
+ExecStart=%h/.local/bin/rg-x1gen11-profile apply-user undocked-mixed
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical-session.target
+{{- end -}}

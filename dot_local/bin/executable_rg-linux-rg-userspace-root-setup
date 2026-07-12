@@ -195,8 +195,10 @@ SYSCTL
 }
 
 install_tlp_profile_baseline() {
+  # Keep aligned with run_onchange_linux_laptop_power.sh.tmpl TLP_CONTENT.
   install_content /etc/tlp.d/00-base.conf 0644 "$(cat <<'TLP'
 # Managed by chezmoi (dot_local/bin/executable_rg-linux-rg-userspace-root-setup)
+# Aligned with run_onchange_linux_laptop_power.sh.tmpl (canonical TLP baseline).
 # Daily rgx1gen11 baseline. Explicit focus/build profiles raise policy through
 # rg-x1gen11-profile instead of keeping AC power in a hot default lane.
 CPU_SCALING_GOVERNOR_ON_AC=powersave
@@ -215,6 +217,7 @@ PLATFORM_PROFILE_ON_AC=low-power
 PLATFORM_PROFILE_ON_BAT=low-power
 RUNTIME_PM_ON_AC=auto
 RUNTIME_PM_ON_BAT=auto
+RUNTIME_PM_DENYLIST="00:15.0 00:15.1"
 PCIE_ASPM_ON_AC=default
 PCIE_ASPM_ON_BAT=powersupersave
 WIFI_PWR_ON_AC=off
@@ -224,8 +227,8 @@ DISK_IDLE_SECS_ON_BAT=2
 SATA_LINKPWR_ON_AC=med_power_with_dipm
 SATA_LINKPWR_ON_BAT=min_power
 USB_AUTOSUSPEND=1
-START_CHARGE_THRESH_BAT0=75
-STOP_CHARGE_THRESH_BAT0=80
+START_CHARGE_THRESH_BAT0=90
+STOP_CHARGE_THRESH_BAT0=98
 RESTORE_THRESHOLDS_ON_BAT=1
 TLP
 )"

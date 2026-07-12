@@ -28,8 +28,8 @@ SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_
 # Tuned for a zram-equipped Rust/Linux workstation on rgx1gen11. Anchored on:
 #   * /dev/zram0 at prio 100, zstd compression (see zram-generator.conf)
 #   * systemd-oomd managing user-.slice via PSI (see oomd.conf.d + user-.slice.d)
-#   * Meta facebookincubator/oomd host rules via ~/.config/oomd/oomd-rgx1gen11.json
-#     and rg-oomd-profile-install (complements, does not replace, systemd-oomd)
+#     — primary OOM path. Meta facebookincubator/oomd + ~/.config/oomd/oomd-rgx1gen11.json
+#     is OPTIONAL (rg-oomd-profile-install only enables it when the binary exists).
 #   * Per-workload caps via browser.slice, build.slice, rust-analyzer.slice
 #   * Profile sizing overrides in zram-generator.conf.d/10-rg-profile.conf from
 #     rg-x1gen11-profile apply
@@ -53,6 +53,11 @@ vm.dirty_ratio = 10
 vm.dirty_background_ratio = 5
 vm.dirty_expire_centisecs = 3000
 vm.dirty_writeback_centisecs = 1500
+
+# Absorb former unowned /etc/sysctl.d/laptop.conf so AC-heavy workstation
+# policy stays under chezmoi. Modest laptop_mode still reduces disk spin-up
+# storms when the pack is discharging without the aggressive defaults.
+vm.laptop_mode = 5
 '
 
 ZRAM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
@@ -98,6 +103,16 @@ SYSCTL_CHANGED=0
 ZRAM_CHANGED=0
 OOMD_CHANGED=0
 write_if_diff /etc/sysctl.d/99-memory.conf                     "$SYSCTL_CONTENT"         && SYSCTL_CHANGED=1 || true
+# Retire unowned laptop.conf now that vm.laptop_mode lives in 99-memory.conf.
+if sudo test -e /etc/sysctl.d/laptop.conf; then
+    echo "chezmoi: retiring /etc/sysctl.d/laptop.conf (absorbed into 99-memory.conf)"
+    if command -v trash-put >/dev/null 2>&1; then
+        sudo trash-put /etc/sysctl.d/laptop.conf || sudo mv /etc/sysctl.d/laptop.conf "/etc/sysctl.d/laptop.conf.rg-retired.$(date +%Y%m%d%H%M%S)"
+    else
+        sudo mv /etc/sysctl.d/laptop.conf "/etc/sysctl.d/laptop.conf.rg-retired.$(date +%Y%m%d%H%M%S)"
+    fi
+    SYSCTL_CHANGED=1
+fi
 write_if_diff /etc/systemd/zram-generator.conf                 "$ZRAM_CONTENT"           && ZRAM_CHANGED=1   || true
 sudo install -d -m 0755 /etc/systemd/zram-generator.conf.d 2>/dev/null || true
 write_if_diff /etc/systemd/oomd.conf.d/aggressive.conf         "$OOMD_CONF_CONTENT"      && OOMD_CHANGED=1   || true
