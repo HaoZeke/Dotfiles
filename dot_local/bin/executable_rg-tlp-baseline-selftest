@@ -3,7 +3,8 @@ set -euo pipefail
 
 repo=${1:-"$HOME/.local/share/chezmoi"}
 script="$repo/dot_local/bin/executable_rg-tlp-baseline"
-conf="$repo/dot_local/share/rgx1gen11/tlp-00-base.conf"
+x1_conf="$repo/dot_local/share/rgx1gen11/tlp-00-base.conf"
+surf_conf="$repo/dot_local/share/rgsurflat/tlp-00-base.conf"
 
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
@@ -11,18 +12,39 @@ fail() {
 }
 
 test -x "$script" || test -r "$script" || fail "missing rg-tlp-baseline"
-test -r "$conf" || fail "missing shared tlp-00-base.conf"
+test -r "$x1_conf" || fail "missing rgx1gen11 tlp-00-base.conf"
+test -r "$surf_conf" || fail "missing rgsurflat tlp-00-base.conf"
 
-path=$(RG_TLP_BASELINE="$conf" bash "$script" --path)
-[[ $path == "$conf" ]] || fail "path mode should return RG_TLP_BASELINE"
+path=$(RG_TLP_BASELINE="$x1_conf" bash "$script" --path)
+[[ $path == "$x1_conf" ]] || fail "path mode should return RG_TLP_BASELINE"
 
-body=$(RG_TLP_BASELINE="$conf" bash "$script" cat)
+body=$(RG_TLP_BASELINE="$x1_conf" bash "$script" cat)
 printf '%s\n' "$body" | rg -q '^CPU_ENERGY_PERF_POLICY_ON_AC=power$' \
-    || fail "shared baseline must set AC EPP=power"
+    || fail "x1 baseline must set AC EPP=power"
 printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=90$' \
-    || fail "shared baseline must set charge start 90"
+    || fail "x1 baseline must set charge start 90"
 printf '%s\n' "$body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
-    || fail "shared baseline must denylist touchpad I2C"
+    || fail "x1 baseline must denylist touchpad I2C"
+printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' \
+    || fail "x1 baseline must use ThinkPad low-power"
+
+surf_body=$(RG_TLP_BASELINE="$surf_conf" bash "$script" cat)
+printf '%s\n' "$surf_body" | rg -q '^PLATFORM_PROFILE_ON_AC=cool$' \
+    || fail "surf baseline must use Dell cool"
+printf '%s\n' "$surf_body" | rg -q '^START_CHARGE_THRESH_BAT0=50$' \
+    || fail "surf baseline must set charge start 50"
+printf '%s\n' "$surf_body" | rg -q '^STOP_CHARGE_THRESH_BAT0=90$' \
+    || fail "surf baseline must set charge stop 90"
+printf '%s\n' "$surf_body" | rg -q '^CPU_SCALING_MAX_FREQ_ON_AC=1600000$' \
+    || fail "surf baseline must cap AC at 1.6 GHz"
+printf '%s\n' "$surf_body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
+    || fail "surf baseline must denylist LPSS I2C"
+
+# --host must not cross-wire hosts when both shares exist
+x1_path=$(unset RG_TLP_BASELINE; bash "$script" --host rgx1gen11 --path)
+[[ $x1_path == *'/rgx1gen11/tlp-00-base.conf' ]] || fail "--host rgx1gen11 resolved wrong: $x1_path"
+surf_path=$(unset RG_TLP_BASELINE; bash "$script" --host rgSURFLat --path)
+[[ $surf_path == *'/rgsurflat/tlp-00-base.conf' ]] || fail "--host rgSURFLat resolved wrong: $surf_path"
 
 # cool-sync and userspace-root must not embed their own START_CHARGE blocks
 for f in \
@@ -46,5 +68,27 @@ rg -q 'tlp-00-base.conf|rg-tlp-baseline' "$laptop" \
     || fail "laptop_power must not embed RG_X1GEN11_PROFILE_ROOT_CONTENT"
 rg -q 'root-helper-script' "$laptop" \
     || fail "laptop_power must install profile-root via root-helper-script"
+
+# SURF power onchange: host gate + shared conf + never iwd
+surf_power="$repo/.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl"
+test -r "$surf_power" || fail "missing rgsurflat_power onchange"
+rg -q 'eq \.chezmoi\.hostname "rgSURFLat"' "$surf_power" \
+    || fail "rgsurflat_power must gate on rgSURFLat"
+rg -q 'rgsurflat/tlp-00-base.conf' "$surf_power" \
+    || fail "rgsurflat_power must consume rgsurflat TLP baseline"
+! rg -q 'disable --now NetworkManager|systemctl enable --now iwd|enable iwd\.service' "$surf_power" \
+    || fail "rgsurflat_power must not switch Wi-Fi stack to iwd"
+rg -q 'NetworkManager' "$surf_power" \
+    || fail "rgsurflat_power should mention NetworkManager (leave it alone / warn)"
+rg -q '99-rg-touchpad-no-runtime-pm' "$surf_power" \
+    || fail "rgsurflat_power must install touchpad I2C udev pin"
+rg -q 'i915-rg-power|enable_psr' "$surf_power" \
+    || fail "rgsurflat_power must set i915 PSR/FBC"
+
+# Baselines must not share charge or platform keys
+! rg -q 'PLATFORM_PROFILE_ON_AC=low-power' "$surf_conf" \
+    || fail "surf conf must not use ThinkPad low-power"
+! rg -q 'PLATFORM_PROFILE_ON_AC=cool' "$x1_conf" \
+    || fail "x1 conf must not use Dell cool"
 
 printf 'ok\n'

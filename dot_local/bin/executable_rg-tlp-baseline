@@ -1,42 +1,93 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-tlp-baseline).
-# Resolve and print the canonical rgx1gen11 TLP 00-base.conf contents.
+# Resolve and print the host-appropriate TLP 00-base.conf contents.
 # Prefer the installed share path; fall back to the chezmoi source tree.
+#
+# Host mapping:
+#   rgx1gen11  -> share/rgx1gen11/tlp-00-base.conf
+#   rgSURFLat  -> share/rgsurflat/tlp-00-base.conf
+# Override with RG_TLP_BASELINE or RG_TLP_HOST_SLUG / --host.
 
 set -euo pipefail
 
 usage() {
     cat <<'USAGE'
-usage: rg-tlp-baseline [--path|cat]
+usage: rg-tlp-baseline [--path|cat] [--host HOST]
 
   --path   Print the resolved absolute path to the baseline conf (default).
   cat      Print the conf file contents (for installers).
+  --host   Force host slug (rgx1gen11|rgsurflat) or hostname (rgSURFLat).
 USAGE
 }
 
 mode=path
-case "${1:-}" in
-"" | --path) mode=path ;;
-cat | --cat) mode=cat ;;
--h | --help)
-    usage
-    exit 0
-    ;;
-*)
-    usage >&2
-    exit 2
-    ;;
-esac
+force_host=
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --path | path)
+        mode=path
+        shift
+        ;;
+    cat | --cat)
+        mode=cat
+        shift
+        ;;
+    --host)
+        force_host=${2:-}
+        [[ -n $force_host ]] || {
+            usage >&2
+            exit 2
+        }
+        shift 2
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+    esac
+done
+
+host_slug() {
+    local h=${1:-}
+    case "$h" in
+    rgx1gen11 | x1 | thinkpad) printf 'rgx1gen11\n' ;;
+    rgSURFLat | rgsurflat | rg.surf | surf | latitude) printf 'rgsurflat\n' ;;
+    "")
+        if [[ -n ${RG_TLP_HOST_SLUG:-} ]]; then
+            host_slug "$RG_TLP_HOST_SLUG"
+            return
+        fi
+        host_slug "$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
+        ;;
+    *)
+        printf '%s\n' "$h"
+        ;;
+    esac
+}
+
+slug=$(host_slug "$force_host")
 
 candidates=()
 if [[ -n ${RG_TLP_BASELINE:-} ]]; then
     candidates+=("$RG_TLP_BASELINE")
 fi
-candidates+=(
-    "${XDG_DATA_HOME:-$HOME/.local/share}/rgx1gen11/tlp-00-base.conf"
-    "$HOME/.local/share/rgx1gen11/tlp-00-base.conf"
-    "$HOME/.local/share/chezmoi/dot_local/share/rgx1gen11/tlp-00-base.conf"
-)
+
+# Known hosts only resolve their own share (never cross-host).
+# Unknown hosts: try nothing except RG_TLP_BASELINE so mis-host is loud.
+case "$slug" in
+rgx1gen11 | rgsurflat)
+    share=$slug
+    candidates+=(
+        "${XDG_DATA_HOME:-$HOME/.local/share}/${share}/tlp-00-base.conf"
+        "$HOME/.local/share/${share}/tlp-00-base.conf"
+        "$HOME/.local/share/chezmoi/dot_local/share/${share}/tlp-00-base.conf"
+    )
+    ;;
+esac
 
 resolved=
 for c in "${candidates[@]}"; do
@@ -47,7 +98,7 @@ for c in "${candidates[@]}"; do
 done
 
 if [[ -z $resolved ]]; then
-    printf 'rg-tlp-baseline: cannot find tlp-00-base.conf (set RG_TLP_BASELINE)\n' >&2
+    printf 'rg-tlp-baseline: cannot find tlp-00-base.conf for host slug %s (set RG_TLP_BASELINE)\n' "$slug" >&2
     exit 1
 fi
 

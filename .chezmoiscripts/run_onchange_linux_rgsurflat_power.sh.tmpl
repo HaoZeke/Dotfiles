@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") }}
+# Laptop power management, Dell Latitude 7430 (rgSURFLat / rg.surf) ONLY.
+# Intentionally separate from run_onchange_linux_laptop_power.sh.tmpl (X1 Gen 11):
+#   * Dell platform_profile=cool (not ThinkPad low-power)
+#   * charge 50/90 (desk longevity; already used on this pack)
+#   * NetworkManager stays owner of Wi-Fi (campus + eduVPN)
+#   * Cirque + ELAN900C on LPSS I2C 00:15.*; i915 for Iris Xe 46a8
+#
+# Shared TLP baseline (single source of truth — do not paste keys here):
+# tlp-baseline-sha256: {{ include "dot_local/share/rgsurflat/tlp-00-base.conf" | sha256sum }}
+
+set -euo pipefail
+
+# Root provisioning must never hang a plain `chezmoi apply` on a password
+# prompt; without cached sudo credentials skip cleanly (re-run after sudo -v).
+if ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; skipping rgSURFLat power provisioning (sudo -v, then re-apply)" >&2
+    exit 0
+fi
+
+write_if_diff() {
+    local dst="$1" content="$2"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m 0644 -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+retire_conflicting_dropin() {
+    local path=$1 reason=$2
+    if sudo test -e "$path"; then
+        echo "chezmoi: retiring $path ($reason)"
+        if command -v trash-put >/dev/null 2>&1; then
+            sudo trash-put "$path" || sudo mv "$path" "${path}.rg-retired.$(date +%Y%m%d%H%M%S)"
+        elif command -v rtrash >/dev/null 2>&1; then
+            sudo rtrash "$path" || sudo mv "$path" "${path}.rg-retired.$(date +%Y%m%d%H%M%S)"
+        else
+            sudo mv "$path" "${path}.rg-retired.$(date +%Y%m%d%H%M%S)"
+        fi
+        return 0
+    fi
+    return 1
+}
+
+resolve_tlp_baseline() {
+    local c
+    for c in \
+        "${RG_TLP_BASELINE:-}" \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/rgsurflat/tlp-00-base.conf" \
+        "$HOME/.local/share/rgsurflat/tlp-00-base.conf" \
+        "$HOME/.local/share/chezmoi/dot_local/share/rgsurflat/tlp-00-base.conf"; do
+        [[ -n $c && -r $c ]] || continue
+        printf '%s\n' "$c"
+        return 0
+    done
+    return 1
+}
+
+IOSCHED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+# BFQ for interactive latency under I/O pressure (NVMe/SATA/eMMC).
+ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="mmcblk[0-9]*", ATTR{queue/scheduler}="bfq"
+'
+
+TOUCHPAD_PM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+# Keep Intel LPSS I2C controllers powered so the Cirque precision touchpad
+# (00:15.0) and ELAN900C touchscreen (00:15.1) do not freeze when runtime PM
+# would auto-suspend the controller (i2c_designware default is auto).
+# TLP denylists these same addresses (RUNTIME_PM_DENYLIST).
+# Numbered 99- so this wins over residual pci_pm.rules if one reappears.
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:00:15.0", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="pci", KERNEL=="0000:00:15.1", ATTR{power/control}="on"
+'
+
+I915_MODPROBE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+# Iris Xe Graphics (Alder Lake 46a8) is bound to i915 on this host.
+# Panel Self Refresh and Frame Buffer Compression drop display power.
+options i915 enable_psr=1 enable_fbc=1
+'
+
+LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+# Lid close and power key use fast suspend for everyday carry.
+HandleLidSwitch=suspend
+HandleLidSwitchExternalPower=suspend
+HandleLidSwitchDocked=ignore
+HandlePowerKey=suspend
+'
+
+RGPOWER_SUDOERS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+# Passwordless TLP/cpupower for profile helpers and quick thermal checks.
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp start
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp ac
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp bat
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp-stat -s
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp-stat -b
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/tlp-stat -p
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
+'
+
+# --- packages (report only; do not pacman from onchange without consent) ---
+if command -v pacman >/dev/null 2>&1; then
+    PKGS_NEEDED=()
+    for pkg in tlp tlp-rdw acpi cpupower smartmontools brightnessctl; do
+        pacman -Qi "$pkg" >/dev/null 2>&1 || PKGS_NEEDED+=("$pkg")
+    done
+    if [ "${#PKGS_NEEDED[@]}" -gt 0 ]; then
+        echo "chezmoi: missing required packages: ${PKGS_NEEDED[*]}" >&2
+        echo "chezmoi: install them with: sudo pacman -S --needed ${PKGS_NEEDED[*]}" >&2
+        exit 1
+    fi
+fi
+
+# --- refuse accidental X1 baseline on this host ---
+if tlp_src=$(resolve_tlp_baseline); then
+    if grep -q 'ThinkPad\|rgx1gen11\|low-power' -- "$tlp_src" 2>/dev/null \
+        && ! grep -q 'Latitude 7430\|rgsurflat\|rgSURFLat' -- "$tlp_src" 2>/dev/null; then
+        echo "chezmoi: ERROR refusing non-SURF TLP baseline at $tlp_src" >&2
+        exit 1
+    fi
+fi
+
+UDEV_CHANGED=0
+TLP_CHANGED=0
+LOGIND_CHANGED=0
+I915_CHANGED=0
+
+write_if_diff /etc/udev/rules.d/60-ioschedulers.rules "$IOSCHED_CONTENT" && UDEV_CHANGED=1 || true
+write_if_diff /etc/udev/rules.d/99-rg-touchpad-no-runtime-pm.rules "$TOUCHPAD_PM_CONTENT" && UDEV_CHANGED=1 || true
+write_if_diff /etc/modprobe.d/i915-rg-power.conf "$I915_MODPROBE_CONTENT" && I915_CHANGED=1 || true
+write_if_diff /etc/systemd/logind.conf.d/50-lid.conf "$LOGIND_CONTENT" && LOGIND_CHANGED=1 || true
+
+# Retire blanket PCI auto that overwrites touchpad I2C "on" pins.
+retire_conflicting_dropin /etc/udev/rules.d/pci_pm.rules \
+    "blanket PCI auto overwrites 00:15.* touchpad pins" && UDEV_CHANGED=1 || true
+retire_conflicting_dropin /etc/udev/rules.d/70-rg-touchpad-no-runtime-pm.rules \
+    "replaced by 99-rg-touchpad-no-runtime-pm.rules" && UDEV_CHANGED=1 || true
+# X1-only paths must never land here.
+retire_conflicting_dropin /etc/modprobe.d/xe.conf \
+    "X1 Xe modprobe is not used on Latitude 7430 (i915 owns the GPU)" || true
+retire_conflicting_dropin /etc/tlp.d/01-touchpad-no-suspend.conf \
+    "clobbers managed RUNTIME_PM_DENYLIST in 00-base.conf" && TLP_CHANGED=1 || true
+
+if tlp_src=$(resolve_tlp_baseline); then
+    write_if_diff /etc/tlp.d/00-base.conf "$(cat -- "$tlp_src")" && TLP_CHANGED=1 || true
+else
+    echo "chezmoi: ERROR missing shared TLP baseline (dot_local/share/rgsurflat/tlp-00-base.conf)" >&2
+    exit 1
+fi
+
+# sudoers drop-in for passwordless tlp/cpupower
+if ! sudo test -f /etc/sudoers.d/rgpower \
+   || ! printf "%s" "$RGPOWER_SUDOERS_CONTENT" | sudo cmp -s - /etc/sudoers.d/rgpower; then
+    TMP=$(mktemp)
+    printf "%s" "$RGPOWER_SUDOERS_CONTENT" >"$TMP"
+    if sudo visudo -c -f "$TMP" >/dev/null; then
+        sudo install -D -m 0440 -o root -g root "$TMP" /etc/sudoers.d/rgpower
+        echo "chezmoi: updated /etc/sudoers.d/rgpower"
+    else
+        echo "chezmoi: WARN /etc/sudoers.d/rgpower would be invalid; keeping existing" >&2
+    fi
+    rm -f "$TMP"
+fi
+
+# --- post-deploy activation ----------------------------------------------
+if [ "$I915_CHANGED" = "1" ]; then
+    echo "chezmoi: i915-rg-power.conf updated; module params take effect on next reboot (or i915 reload)."
+fi
+
+if [ "$UDEV_CHANGED" = "1" ]; then
+    sudo udevadm control --reload
+    sudo udevadm trigger --subsystem-match=block --action=change
+    sudo udevadm trigger --subsystem-match=pci --action=change
+    for c in /sys/devices/pci0000:00/0000:00:15.0/power/control \
+             /sys/devices/pci0000:00/0000:00:15.1/power/control; do
+        [ -e "$c" ] && echo on | sudo tee "$c" >/dev/null
+    done
+    for q in /sys/block/nvme*/queue/scheduler \
+             /sys/block/sd*/queue/scheduler \
+             /sys/block/mmcblk*/queue/scheduler; do
+        [ -e "$q" ] || continue
+        grep -q '\bbfq\b' "$q" || continue
+        echo bfq | sudo tee "$q" >/dev/null
+    done
+else
+    # Still pin touchpad I2C live even when rules were already in place.
+    for c in /sys/devices/pci0000:00/0000:00:15.0/power/control \
+             /sys/devices/pci0000:00/0000:00:15.1/power/control; do
+        if [ -e "$c" ] && [ "$(cat "$c")" != "on" ]; then
+            echo on | sudo tee "$c" >/dev/null
+        fi
+    done
+fi
+
+if [ "$LOGIND_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload
+    echo "chezmoi: logind drop-in updated (effective after reboot or manual logind restart)."
+fi
+
+# TLP owns policy; power-profiles-daemon fights it.
+if sudo systemctl is-enabled power-profiles-daemon.service >/dev/null 2>&1 \
+   || sudo systemctl is-active power-profiles-daemon.service >/dev/null 2>&1; then
+    echo "chezmoi: disabling power-profiles-daemon (conflicts with TLP)"
+    sudo systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
+fi
+
+# Leave NetworkManager alone — rgsurflat_system + eduVPN depend on it.
+if ! sudo systemctl is-active NetworkManager.service >/dev/null 2>&1; then
+    echo "chezmoi: WARN NetworkManager is not active; campus/eduVPN path may be broken" >&2
+fi
+if sudo systemctl is-enabled iwd.service >/dev/null 2>&1; then
+    echo "chezmoi: WARN iwd is enabled on rgSURFLat; this host is NM-owned (not disabling automatically)" >&2
+fi
+
+if ! sudo systemctl is-enabled tlp.service >/dev/null 2>&1; then
+    echo "chezmoi: enabling tlp.service"
+    sudo systemctl enable tlp.service
+fi
+
+if [ "$TLP_CHANGED" = "1" ]; then
+    sudo systemctl restart tlp.service
+elif ! sudo systemctl is-active tlp.service >/dev/null 2>&1; then
+    sudo systemctl start tlp.service
+fi
+
+if ! sudo systemctl is-enabled tlp.service >/dev/null 2>&1; then
+    echo "chezmoi: WARNING tlp.service still not enabled" >&2
+fi
+if ! sudo systemctl is-active tlp.service >/dev/null 2>&1; then
+    echo "chezmoi: WARNING tlp.service not active" >&2
+fi
+
+# Live verification summary (non-fatal).
+echo "chezmoi: rgSURFLat power summary:"
+echo "  platform_profile=$(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo '?')"
+echo "  no_turbo=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null || echo '?')"
+echo "  scaling_max_freq=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null || echo '?')"
+echo "  epp=$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo '?')"
+echo "  charge=$(cat /sys/class/power_supply/BAT0/charge_control_start_threshold 2>/dev/null || echo '?')→$(cat /sys/class/power_supply/BAT0/charge_control_end_threshold 2>/dev/null || echo '?')"
+echo "  i2c_15.0=$(cat /sys/bus/pci/devices/0000:00:15.0/power/control 2>/dev/null || echo '?')"
+echo "  i2c_15.1=$(cat /sys/bus/pci/devices/0000:00:15.1/power/control 2>/dev/null || echo '?')"
+echo "  tlp=$(systemctl is-active tlp.service 2>/dev/null || echo '?') nm=$(systemctl is-active NetworkManager.service 2>/dev/null || echo '?')"
+{{- end }}
