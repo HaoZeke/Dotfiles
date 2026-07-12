@@ -1,0 +1,54 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+# Hermes SURF/Willma: inject OPENAI_API_KEY + OPENAI_BASE_URL into ~/.hermes/.env
+# Hash: hermes-willma-env-v1
+set -euo pipefail
+log() { printf 'chezmoi hermes-willma: %s\n' "$*"; }
+
+HERMES_HOME="${HOME}/.hermes"
+ENVF="${HERMES_HOME}/.env"
+mkdir -p "${HERMES_HOME}"
+chmod 700 "${HERMES_HOME}" 2>/dev/null || true
+
+token=""
+if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
+  token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
+elif [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
+  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
+fi
+
+if [[ -z "${token}" ]]; then
+  log "WARN: no surf/ai-hub token (pass or ~/.config/surf-ai-hub/api_key); leave .env untouched"
+  exit 0
+fi
+
+# Merge into .env without dumping secrets to logs
+export HERMES_ENVF="$ENVF" WILLMA_TOKEN="$token"
+python3 << 'PY'
+from pathlib import Path
+import os
+p = Path(os.environ["HERMES_ENVF"])
+tok = os.environ["WILLMA_TOKEN"]
+kv = {}
+order = []
+if p.exists():
+    for line in p.read_text().splitlines():
+        if not line.strip() or line.strip().startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        kv[k] = v
+        order.append(k)
+for k, v in [
+    ("OPENAI_API_KEY", tok),
+    ("OPENAI_BASE_URL", "https://willma.surf.nl/api/v0"),
+    ("WILLMA_API_KEY", tok),
+]:
+    if k not in kv:
+        order.append(k)
+    kv[k] = v
+p.write_text("\n".join(f"{k}={kv[k]}" for k in order) + "\n")
+p.chmod(0o600)
+print("hermes .env SURF keys updated")
+PY
+log "injected Willma token into .env (keys only logged)"
+{{- end -}}
