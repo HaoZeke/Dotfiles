@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo=${1:-"$HOME/.local/share/chezmoi"}
+script="$repo/dot_local/bin/executable_rg-terra-power"
+conf="$repo/dot_local/share/rgam5terra/power-00-base.conf"
+onchange="$repo/.chezmoiscripts/run_onchange_linux_rgam5terra_power.sh.tmpl"
+
+fail() { printf "FAIL: %s\n" "$*" >&2; exit 1; }
+
+test -r "$script" || fail "missing rg-terra-power"
+test -r "$conf" || fail "missing power-00-base.conf"
+test -r "$onchange" || fail "missing rgam5terra power onchange"
+
+path=$(RG_TERRA_POWER_CONF="$conf" bash "$script" --path)
+[[ $path == "$conf" ]] || fail "path mode"
+
+body=$(RG_TERRA_POWER_CONF="$conf" bash "$script" cat)
+printf "%s\n" "$body" | rg -q "^CPU_ENERGY_PERF_POLICY=balance_performance$" \
+    || fail "must set EPP balance_performance"
+printf "%s\n" "$body" | rg -q "^CPU_BOOST=1$" || fail "must keep boost on"
+printf "%s\n" "$body" | rg -q "^CPU_SCALING_MAX_FREQ=0$" || fail "default full max freq"
+printf "%s\n" "$body" | rg -q "^USE_TLP=0$" || fail "must not use TLP on desktop"
+! printf "%s\n" "$body" | rg -q "^START_CHARGE_THRESH" || fail "no laptop charge keys in conf"
+
+rg -q "eq \\.chezmoi\\.hostname \"rgam5terra\"" "$onchange" || fail "host gate"
+rg -q "rgam5terra/power-00-base.conf" "$onchange" || fail "consumes share conf"
+rg -q "rg-terra-power-apply" "$onchange" || fail "installs apply helper"
+rg -q "exit 1" "$onchange" || fail "must exit non-zero without sudo"
+! rg -q "systemctl enable tlp" "$onchange" || fail "must not enable tlp.service"
+rg -q "Not a laptop stack" "$onchange" || fail "onchange should document non-laptop policy"
+rg -q "balance_performance" "$conf" || fail "conf balance_performance"
+
+printf "ok\n"

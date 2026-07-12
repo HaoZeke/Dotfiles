@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-terra-power).
+# Resolve / show / apply the rgam5terra desktop power baseline.
+
+set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+usage: rg-terra-power [--path|cat|status|apply]
+
+  --path   Print resolved power-00-base.conf path (default).
+  cat      Print conf contents.
+  status   Show live amd-pstate / governor / EPP / boost / temps.
+  apply    Apply conf to live sysfs (needs root or passwordless sudo).
+USAGE
+}
+
+mode=path
+case "${1:-}" in
+"" | --path) mode=path ;;
+cat | --cat) mode=cat ;;
+status | --status) mode=status ;;
+apply | --apply) mode=apply ;;
+-h | --help) usage; exit 0 ;;
+*) usage >&2; exit 2 ;;
+esac
+
+resolve_conf() {
+    local c
+    for c in \
+        "${RG_TERRA_POWER_CONF:-}" \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/rgam5terra/power-00-base.conf" \
+        "$HOME/.local/share/rgam5terra/power-00-base.conf" \
+        "$HOME/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf" \
+        "/home/rgoswami/.local/share/rgam5terra/power-00-base.conf" \
+        "/home/rgoswami/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf"; do
+        [[ -n ${c:-} && -r $c ]] || continue
+        printf '%s\n' "$c"
+        return 0
+    done
+    return 1
+}
+
+read_kv() {
+    # shellcheck disable=SC1090
+    set -a
+    # shellcheck source=/dev/null
+    source <(grep -E '^[A-Z_]+=.' "$1" | sed 's/\r$//')
+    set +a
+}
+
+as_root() {
+    if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
+apply_conf() {
+    local conf=$1
+    # shellcheck disable=SC2034
+    local CPU_SCALING_GOVERNOR=powersave
+    local CPU_ENERGY_PERF_POLICY=balance_performance
+    local CPU_BOOST=1
+    local CPU_SCALING_MAX_FREQ=0
+    read_kv "$conf"
+
+    local cpu gov epp max boost_path
+    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+        [[ -d $cpu/cpufreq ]] || continue
+        if [[ -n ${CPU_SCALING_GOVERNOR:-} && -w $cpu/cpufreq/scaling_governor ]]; then
+            printf '%s\n' "$CPU_SCALING_GOVERNOR" >"$cpu/cpufreq/scaling_governor" 2>/dev/null || \
+                as_root tee "$cpu/cpufreq/scaling_governor" >/dev/null <<<"$CPU_SCALING_GOVERNOR"
+        fi
+        if [[ -n ${CPU_ENERGY_PERF_POLICY:-} && -e $cpu/cpufreq/energy_performance_preference ]]; then
+            if [[ -w $cpu/cpufreq/energy_performance_preference ]]; then
+                printf '%s\n' "$CPU_ENERGY_PERF_POLICY" >"$cpu/cpufreq/energy_performance_preference"
+            else
+                as_root tee "$cpu/cpufreq/energy_performance_preference" >/dev/null <<<"$CPU_ENERGY_PERF_POLICY"
+            fi
+        fi
+        if [[ ${CPU_SCALING_MAX_FREQ:-0} != 0 && -e $cpu/cpufreq/scaling_max_freq ]]; then
+            if [[ -w $cpu/cpufreq/scaling_max_freq ]]; then
+                printf '%s\n' "$CPU_SCALING_MAX_FREQ" >"$cpu/cpufreq/scaling_max_freq"
+            else
+                as_root tee "$cpu/cpufreq/scaling_max_freq" >/dev/null <<<"$CPU_SCALING_MAX_FREQ"
+            fi
+        elif [[ ${CPU_SCALING_MAX_FREQ:-0} == 0 && -e $cpu/cpufreq/cpuinfo_max_freq && -e $cpu/cpufreq/scaling_max_freq ]]; then
+            max=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+            if [[ -w $cpu/cpufreq/scaling_max_freq ]]; then
+                printf '%s\n' "$max" >"$cpu/cpufreq/scaling_max_freq"
+            else
+                as_root tee "$cpu/cpufreq/scaling_max_freq" >/dev/null <<<"$max"
+            fi
+        fi
+    done
+
+    for boost_path in \
+        /sys/devices/system/cpu/cpufreq/boost \
+        /sys/devices/system/cpu/cpu0/cpufreq/boost; do
+        [[ -e $boost_path ]] || continue
+        if [[ -w $boost_path ]]; then
+            printf '%s\n' "${CPU_BOOST:-1}" >"$boost_path"
+        else
+            as_root tee "$boost_path" >/dev/null <<<"${CPU_BOOST:-1}"
+        fi
+        break
+    done
+
+    printf 'rg-terra-power: applied %s\n' "$conf"
+}
+
+show_status() {
+    printf 'hostname=%s\n' "$(hostname -s 2>/dev/null || hostname)"
+    printf 'driver=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver 2>/dev/null || echo '?')"
+    printf 'governor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo '?')"
+    printf 'epp=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo '?')"
+    printf 'boost=%s\n' "$(cat /sys/devices/system/cpu/cpufreq/boost 2>/dev/null || cat /sys/devices/system/cpu/cpu0/cpufreq/boost 2>/dev/null || echo '?')"
+    printf 'scaling_max_freq=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null || echo '?')"
+    printf 'cpuinfo_max_freq=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null || echo '?')"
+    if [[ -r /sys/class/hwmon/hwmon1/temp1_input ]]; then
+        awk '{printf "Tctl=%.1f C\n", $1/1000}' /sys/class/hwmon/hwmon1/temp1_input
+    elif command -v sensors >/dev/null 2>&1; then
+        sensors 2>/dev/null | rg -m1 'Tctl' || true
+    fi
+    printf 'load=%s\n' "$(cut -d' ' -f1-3 /proc/loadavg)"
+    systemctl is-active power-profiles-daemon.service 2>/dev/null | awk '{print "ppd="$1}' || true
+    cat /sys/block/nvme0n1/queue/scheduler 2>/dev/null | awk '{print "nvme_sched="$0}' || true
+}
+
+conf=
+if ! conf=$(resolve_conf); then
+    printf 'rg-terra-power: cannot find power-00-base.conf (set RG_TERRA_POWER_CONF)\n' >&2
+    exit 1
+fi
+
+case "$mode" in
+path) printf '%s\n' "$conf" ;;
+cat) cat -- "$conf" ;;
+status) show_status ;;
+apply)
+    if [[ ${EUID:-$(id -u)} -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+        printf 'rg-terra-power: need root or passwordless sudo for apply\n' >&2
+        exit 1
+    fi
+    apply_conf "$conf"
+    show_status
+    ;;
+esac

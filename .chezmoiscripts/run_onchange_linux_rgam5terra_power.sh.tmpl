@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+# Desktop power management for rgam5terra (rg.terra) ONLY.
+# AMD Ryzen 9 9950X + ASRock B650I Lightning: warmer-safe builder policy.
+# Not a laptop stack: no TLP, no charge thresholds, no lid policy, no Wi-Fi flips.
+#
+# Shared baseline (single source of truth):
+# power-baseline-sha256: {{ include "dot_local/share/rgam5terra/power-00-base.conf" | sha256sum }}
+
+set -euo pipefail
+
+USER_HOME="{{ .chezmoi.homeDir }}"
+USER_NAME="{{ .chezmoi.username }}"
+if [[ -n ${SUDO_USER:-} ]]; then
+    _su_home=$(getent passwd "$SUDO_USER" | cut -d: -f6 || true)
+    [[ -n ${_su_home:-} && -d $_su_home ]] && USER_HOME=$_su_home && USER_NAME=$SUDO_USER
+fi
+
+as_root() {
+    if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
+# Exit non-zero without credentials so chezmoi retries (never soft-skip exit 0).
+if [[ ${EUID:-$(id -u)} -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo; deferring rgam5terra power provisioning" >&2
+    echo "chezmoi: re-run as root or: sudo -v && chezmoi apply" >&2
+    exit 1
+fi
+
+write_if_diff() {
+    local dst="$1" content="$2" mode="${3:-0644}"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! as_root test -f "$dst" || ! as_root cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        as_root install -D -m "$mode" -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+resolve_power_baseline() {
+    local c
+    for c in \
+        "${RG_TERRA_POWER_CONF:-}" \
+        "${USER_HOME}/.local/share/rgam5terra/power-00-base.conf" \
+        "${USER_HOME}/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf" \
+        "${XDG_DATA_HOME:-$HOME/.local/share}/rgam5terra/power-00-base.conf" \
+        "$HOME/.local/share/rgam5terra/power-00-base.conf"; do
+        [[ -n ${c:-} && -r $c ]] || continue
+        printf '%s\n' "$c"
+        return 0
+    done
+    return 1
+}
+
+IOSCHED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgam5terra_power.sh.tmpl)
+# BFQ for interactive latency under heavy compile I/O on the builder NVMe.
+ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/scheduler}="bfq"
+ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/scheduler}="bfq"
+'
+
+APPLY_ROOT_CONTENT=$(cat <<'APPLY'
+#!/usr/bin/env bash
+# Managed by chezmoi — apply rgam5terra power baseline to live sysfs.
+set -euo pipefail
+CONF=""
+for c in \
+    /etc/rg-terra/power-00-base.conf \
+    /home/rgoswami/.local/share/rgam5terra/power-00-base.conf \
+    /home/rgoswami/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf; do
+    if [[ -r $c ]]; then CONF=$c; break; fi
+done
+if [[ -z $CONF ]]; then
+    echo "rg-terra-power-apply: missing power-00-base.conf" >&2
+    exit 1
+fi
+# shellcheck disable=SC1090
+source <(grep -E '^[A-Z_]+=.' "$CONF" | sed 's/\r$//')
+CPU_SCALING_GOVERNOR=${CPU_SCALING_GOVERNOR:-powersave}
+CPU_ENERGY_PERF_POLICY=${CPU_ENERGY_PERF_POLICY:-balance_performance}
+CPU_BOOST=${CPU_BOOST:-1}
+CPU_SCALING_MAX_FREQ=${CPU_SCALING_MAX_FREQ:-0}
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+    [[ -d $cpu/cpufreq ]] || continue
+    [[ -e $cpu/cpufreq/scaling_governor ]] && echo "$CPU_SCALING_GOVERNOR" >"$cpu/cpufreq/scaling_governor" || true
+    [[ -e $cpu/cpufreq/energy_performance_preference ]] && echo "$CPU_ENERGY_PERF_POLICY" >"$cpu/cpufreq/energy_performance_preference" || true
+    if [[ $CPU_SCALING_MAX_FREQ != 0 && -e $cpu/cpufreq/scaling_max_freq ]]; then
+        echo "$CPU_SCALING_MAX_FREQ" >"$cpu/cpufreq/scaling_max_freq" || true
+    elif [[ $CPU_SCALING_MAX_FREQ == 0 && -e $cpu/cpufreq/cpuinfo_max_freq ]]; then
+        cat "$cpu/cpufreq/cpuinfo_max_freq" >"$cpu/cpufreq/scaling_max_freq" || true
+    fi
+done
+for boost in /sys/devices/system/cpu/cpufreq/boost /sys/devices/system/cpu/cpu0/cpufreq/boost; do
+    if [[ -e $boost ]]; then
+        echo "$CPU_BOOST" >"$boost" || true
+        break
+    fi
+done
+for q in /sys/block/nvme*/queue/scheduler /sys/block/sd*/queue/scheduler; do
+    [[ -e $q ]] || continue
+    grep -q 'bfq' "$q" || continue
+    echo bfq >"$q" || true
+done
+echo "rg-terra-power-apply: ok conf=$CONF gov=$CPU_SCALING_GOVERNOR epp=$CPU_ENERGY_PERF_POLICY boost=$CPU_BOOST"
+APPLY
+)
+
+SERVICE_CONTENT='[Unit]
+Description=Apply rgam5terra (rg.terra) warmer-safe power baseline
+After=multi-user.target
+ConditionPathExists=/usr/local/sbin/rg-terra-power-apply
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-terra-power-apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+'
+
+power_src=
+if ! power_src=$(resolve_power_baseline); then
+    echo "chezmoi: ERROR missing rgam5terra power baseline" >&2
+    exit 1
+fi
+if grep -qE 'START_CHARGE_THRESH|PLATFORM_PROFILE_ON_AC=cool' -- "$power_src" \
+    && ! grep -q 'rgam5terra\|9950X\|B650I' -- "$power_src"; then
+    echo "chezmoi: ERROR refusing laptop power baseline at $power_src" >&2
+    exit 1
+fi
+
+write_if_diff /etc/rg-terra/power-00-base.conf "$(cat -- "$power_src")" 0644 || true
+write_if_diff /etc/udev/rules.d/60-ioschedulers.rules "$IOSCHED_CONTENT" 0644 && UDEV_CHANGED=1 || UDEV_CHANGED=0
+write_if_diff /usr/local/sbin/rg-terra-power-apply "$APPLY_ROOT_CONTENT" 0755 || true
+write_if_diff /etc/systemd/system/rg-terra-power.service "$SERVICE_CONTENT" 0644 || true
+
+if [ "${UDEV_CHANGED:-0}" = "1" ]; then
+    as_root udevadm control --reload
+    as_root udevadm trigger --subsystem-match=block --action=change
+fi
+
+if as_root systemctl is-enabled power-profiles-daemon.service >/dev/null 2>&1 \
+   || as_root systemctl is-active power-profiles-daemon.service >/dev/null 2>&1; then
+    echo "chezmoi: disabling power-profiles-daemon on rgam5terra"
+    as_root systemctl disable --now power-profiles-daemon.service 2>/dev/null || true
+fi
+
+as_root systemctl daemon-reload
+as_root systemctl enable rg-terra-power.service >/dev/null 2>&1 || true
+as_root /usr/local/sbin/rg-terra-power-apply
+
+echo "chezmoi: rgam5terra power summary:"
+echo "  governor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo '?')"
+echo "  epp=$(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo '?')"
+echo "  boost=$(cat /sys/devices/system/cpu/cpufreq/boost 2>/dev/null || echo '?')"
+echo "  scaling_max=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null || echo '?')"
+echo "  nvme_sched=$(cat /sys/block/nvme0n1/queue/scheduler 2>/dev/null || echo '?')"
+echo "  unit=$(systemctl is-enabled rg-terra-power.service 2>/dev/null || echo '?')"
+{{- end }}
