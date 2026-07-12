@@ -306,3 +306,6 @@ dot_claude/private_claude-mcp-servers.json
 ~/.config/vivaldi/Profile 6/Preferences
 ~/.config/vivaldi/Profile 7/Preferences
 ~/.claude/skills/f2py-tasks/SKILL.md
+~/.claude/skills/f2py-c-refcount/SKILL.md
+~/.grok/skills/f2py-c-refcount/SKILL.md
+~/.grok/skills/f2py-tasks/SKILL.md
