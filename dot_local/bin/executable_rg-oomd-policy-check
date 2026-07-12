@@ -131,13 +131,15 @@ require_pattern /etc/systemd/system/oomd.service.d/10-rg-protection.conf \
     'MemoryMin=64M' \
     "oomd service memory protection installed"
 
+printf '\n== facebookincubator oomd service ==\n'
 if command -v oomd >/dev/null 2>&1; then
-    printf '\n== facebookincubator oomd service ==\n'
+    pass "oomd binary present ($(command -v oomd))"
     systemctl_state is-enabled oomd.service "facebook oomd.service" enabled
     systemctl_state is-active oomd.service "facebook oomd.service" active
 else
-    printf '\n== facebookincubator oomd service ==\n'
-    warn "oomd binary missing; profile is installed but facebook oomd.service is not enforceable"
+    # rgx1gen11 requires Meta oomd alongside systemd-oomd; a profile-only
+    # install is not enforceable and is no longer a soft skip.
+    fail "oomd binary missing; facebook oomd.service is not enforceable"
 fi
 
 if (( failures > 0 )); then

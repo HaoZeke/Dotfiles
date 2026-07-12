@@ -28,8 +28,8 @@ SYSCTL_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_
 # Tuned for a zram-equipped Rust/Linux workstation on rgx1gen11. Anchored on:
 #   * /dev/zram0 at prio 100, zstd compression (see zram-generator.conf)
 #   * systemd-oomd managing user-.slice via PSI (see oomd.conf.d + user-.slice.d)
-#     — primary OOM path. Meta facebookincubator/oomd + ~/.config/oomd/oomd-rgx1gen11.json
-#     is OPTIONAL (rg-oomd-profile-install only enables it when the binary exists).
+#     — primary ManagedOOM path. Meta facebookincubator/oomd is also required on
+#     rgx1gen11 (run_onchange_linux_rgx1gen11_oomd.sh.tmpl + /etc/oomd/oomd.json).
 #   * Per-workload caps via browser.slice, build.slice, rust-analyzer.slice
 #   * Profile sizing overrides in zram-generator.conf.d/10-rg-profile.conf from
 #     rg-x1gen11-profile apply

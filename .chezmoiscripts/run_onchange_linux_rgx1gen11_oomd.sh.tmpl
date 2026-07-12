@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Require Meta facebookincubator/oomd on rgx1gen11 alongside systemd-oomd.
+# Binary is installed from a terra-built stage tarball (no laptop compile).
+# re-run hash: {{ include "dot_config/oomd/oomd-rgx1gen11.json" | sha256sum }}
+# re-run hash: {{ include "dot_local/bin/executable_rg-oomd-install-from-stage" | sha256sum }}
+
+set -euo pipefail
+
+profile="$HOME/.config/oomd/oomd-rgx1gen11.json"
+chezmoi_profile="$HOME/.local/share/chezmoi/dot_config/oomd/oomd-rgx1gen11.json"
+stage_tgz="${RG_OOMD_STAGE:-$HOME/.local/share/rg-oomd/oomd-0.5.0-arch-x86_64-stage.tgz}"
+install_bin="$HOME/.local/bin/rg-oomd-install-from-stage"
+if [ ! -x "$install_bin" ]; then
+    install_bin="$HOME/.local/share/chezmoi/dot_local/bin/executable_rg-oomd-install-from-stage"
+fi
+
+if [ ! -r "$profile" ] && [ -r "$chezmoi_profile" ]; then
+    mkdir -p "$(dirname "$profile")"
+    cp -f "$chezmoi_profile" "$profile"
+fi
+
+if ! command -v oomd >/dev/null 2>&1; then
+    if [ ! -r "$stage_tgz" ]; then
+        cat >&2 <<MSG
+chezmoi: Meta oomd is required on rgx1gen11 but /usr/bin/oomd is missing and
+no stage tarball was found at:
+  $stage_tgz
+Build facebookincubator/oomd v0.5.0 on rg.terra (meson+ninja; patch Log.h with
+#include <array> for GCC 16), stage-install, tar the DESTDIR, copy the tarball
+to that path, then re-run chezmoi apply (or: sudo rg-oomd-install-from-stage).
+MSG
+        exit 1
+    fi
+    echo "chezmoi: installing Meta oomd from $stage_tgz"
+    sudo bash "$install_bin" "$stage_tgz"
+else
+    # Binary present: refresh profile + drop-ins + ensure service is up.
+    root_script=$(mktemp)
+    RG_OOMD_ROOT_SCRIPT=$root_script \
+        bash "$HOME/.local/bin/rg-oomd-profile-install" "$profile" >/dev/null \
+        || bash "$HOME/.local/share/chezmoi/dot_local/bin/executable_rg-oomd-profile-install" "$profile" >/dev/null
+    sudo bash "$root_script"
+    rm -f "$root_script"
+fi
+
+if ! command -v oomd >/dev/null 2>&1; then
+    echo "chezmoi: oomd binary still missing after install path" >&2
+    exit 1
+fi
+if ! systemctl is-active --quiet oomd.service; then
+    echo "chezmoi: oomd.service is not active after apply" >&2
+    exit 1
+fi
+if ! systemctl is-active --quiet systemd-oomd.service; then
+    echo "chezmoi: systemd-oomd.service must stay active (complementary path)" >&2
+    exit 1
+fi
+echo "chezmoi: Meta oomd + systemd-oomd both active on rgx1gen11"
+{{- end }}

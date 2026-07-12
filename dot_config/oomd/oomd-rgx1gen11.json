@@ -46,8 +46,7 @@
             "recursive": "true",
             "size_threshold": "35",
             "min_growth_ratio": "1.20",
-            "post_action_delay": "20",
-            "reap_memory": "true"
+            "post_action_delay": "20"
           }
         }
       ]
@@ -73,8 +72,7 @@
             "cgroup": "user.slice/*",
             "recursive": "true",
             "threshold": "256M",
-            "post_action_delay": "30",
-            "reap_memory": "true"
+            "post_action_delay": "30"
           }
         }
       ]
@@ -103,8 +101,7 @@
             "cgroup": "user.slice/*",
             "resource": "io",
             "recursive": "true",
-            "post_action_delay": "20",
-            "reap_memory": "true"
+            "post_action_delay": "20"
           }
         }
       ]

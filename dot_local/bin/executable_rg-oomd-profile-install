@@ -49,17 +49,17 @@ CPUWeight=200
 IOWeight=200
 EOF
 
-if command -v oomd >/dev/null 2>&1; then
-    systemctl daemon-reload
-    systemctl enable --now oomd.service
-else
+if ! command -v oomd >/dev/null 2>&1; then
     systemctl daemon-reload
     cat >&2 <<'EOF'
-oomd is not installed. Build facebookincubator/oomd or install a trusted Arch
-package for it, then rerun:
-  systemctl enable --now oomd.service
+rg-oomd-profile-install: oomd binary missing after profile install.
+Install Meta facebookincubator/oomd (build on rg.terra, stage tarball via
+rg-oomd-install-from-stage), then re-run this helper so oomd.service can start.
 EOF
+    exit 1
 fi
+systemctl daemon-reload
+systemctl enable --now oomd.service
 ROOT
 
 chmod 0755 "$root_script"

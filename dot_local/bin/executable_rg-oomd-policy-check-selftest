@@ -107,6 +107,8 @@ rg -q 'ok: facebook oomd profile installed' "$tmpdir/ok.out" \
     || fail "checker must verify the installed facebook oomd profile"
 rg -q 'ok: facebook oomd.service active' "$tmpdir/ok.out" \
     || fail "checker must verify facebook oomd service when binary exists"
+rg -q 'ok: oomd binary present' "$tmpdir/ok.out" \
+    || fail "checker must report the oomd binary when present"
 
 rm -f "$fake_root/etc/oomd/oomd.json"
 if RG_OOMD_CHECK_ROOT="$fake_root" PATH="$fake_bin:$PATH" "$script" --check >"$tmpdir/missing.out" 2>&1; then
@@ -114,5 +116,52 @@ if RG_OOMD_CHECK_ROOT="$fake_root" PATH="$fake_bin:$PATH" "$script" --check >"$t
 fi
 rg -q 'fail: missing /etc/oomd/oomd.json' "$tmpdir/missing.out" \
     || fail "checker must report a missing facebook oomd profile"
+
+# Missing binary is a hard fail (no soft skip). Build a PATH that has
+# tools but not the host /usr/bin/oomd (which may be installed on this machine).
+rm -f "$fake_bin/oomd"
+nobin_path=$tmpdir/nobin-path
+mkdir -p "$nobin_path"
+# Prefer fake systemctl; expose real coreutils/rg without shipping /usr/bin wholesale.
+for tool in bash env rg cat tr printf; do
+    if [ -x "/usr/bin/$tool" ]; then
+        ln -sfn "/usr/bin/$tool" "$nobin_path/$tool"
+    fi
+done
+ln -sfn "$fake_bin/systemctl" "$nobin_path/systemctl"
+cp "$profile" "$fake_root/etc/oomd/oomd.json"
+if RG_OOMD_CHECK_ROOT="$fake_root" PATH="$nobin_path" "$script" --check >"$tmpdir/nobin.out" 2>&1; then
+    fail "missing oomd binary should fail closed"
+fi
+rg -q 'fail: oomd binary missing' "$tmpdir/nobin.out" \
+    || {
+        sed -n '1,120p' "$tmpdir/nobin.out" >&2
+        fail "checker must hard-fail when the Meta oomd binary is absent"
+    }
+
+# Install helper must refuse optional skip wording / fail without binary
+install_helper="$repo/dot_local/bin/executable_rg-oomd-profile-install"
+rg -q 'exit 1' "$install_helper" \
+    || fail "profile install must exit non-zero without oomd binary"
+! rg -q 'is not installed. Build facebookincubator' "$install_helper" \
+    || fail "profile install must not soft-skip when binary is missing"
+
+onchange="$repo/.chezmoiscripts/run_onchange_linux_rgx1gen11_oomd.sh.tmpl"
+test -r "$onchange" || fail "missing rgx1gen11 Meta oomd onchange script"
+rg -q 'eq \.chezmoi\.hostname "rgx1gen11"' "$onchange" \
+    || fail "oomd onchange must be gated to rgx1gen11"
+rg -q 'rg-oomd-install-from-stage' "$onchange" \
+    || fail "oomd onchange must install from terra stage when binary missing"
+rg -q 'systemd-oomd.service must stay active' "$onchange" \
+    || fail "oomd onchange must keep systemd-oomd as complementary path"
+
+stage_helper="$repo/dot_local/bin/executable_rg-oomd-install-from-stage"
+test -r "$stage_helper" || fail "missing rg-oomd-install-from-stage helper"
+rg -q 'oomd --check-config' "$stage_helper" \
+    || fail "stage install must validate config before enable"
+
+# Profile must not ship reap_memory (unknown to Meta oomd 0.5.0)
+! rg -q 'reap_memory' "$profile" \
+    || fail "oomd-rgx1gen11.json must not use reap_memory (invalid on v0.5.0)"
 
 printf 'ok\n'

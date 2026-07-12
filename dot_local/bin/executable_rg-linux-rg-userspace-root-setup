@@ -308,11 +308,11 @@ install_facebook_oomd_policy
 systemctl daemon-reload
 systemctl enable --now rgx1gen11-hibernate-image-size.service
 systemctl enable --now systemd-oomd.service
-if command -v oomd >/dev/null 2>&1; then
-  systemctl enable --now oomd.service
-else
-  printf 'warning: oomd binary missing; installed /etc/oomd/oomd.json but did not enable oomd.service\n' >&2
+if ! command -v oomd >/dev/null 2>&1; then
+  printf 'error: Meta oomd binary missing on rgx1gen11; install via rg-oomd-install-from-stage then re-run\n' >&2
+  exit 1
 fi
+systemctl enable --now oomd.service
 systemctl enable --now rg-ksm-madvise.service
 systemctl disable rg-damon-reclaim-memory-pressure.service 2>/dev/null || true
 systemctl disable --now fstrim.timer 2>/dev/null || true

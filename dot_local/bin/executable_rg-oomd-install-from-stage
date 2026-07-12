@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-oomd-install-from-stage).
+# Install Meta facebookincubator/oomd from a terra-built stage tarball.
+# Build on rg.terra (not the laptop): meson+ninja facebookincubator/oomd v0.5.0
+# with Log.h patched for GCC 16 (#include <array>), then:
+#   DESTDIR=stage ninja -C build install
+#   tar czf oomd-0.5.0-arch-x86_64-stage.tgz -C stage .
+#
+# Usage: sudo rg-oomd-install-from-stage [STAGE.tgz]
+
+set -euo pipefail
+
+stage_tgz=${1:-${RG_OOMD_STAGE:-$HOME/.local/share/rg-oomd/oomd-0.5.0-arch-x86_64-stage.tgz}}
+profile=${RG_OOMD_PROFILE:-$HOME/.config/oomd/oomd-rgx1gen11.json}
+chezmoi_profile=$HOME/.local/share/chezmoi/dot_config/oomd/oomd-rgx1gen11.json
+
+if [ ! -r "$stage_tgz" ]; then
+    printf 'rg-oomd-install-from-stage: missing stage tarball: %s\n' "$stage_tgz" >&2
+    exit 1
+fi
+if [ ! -r "$profile" ] && [ -r "$chezmoi_profile" ]; then
+    profile=$chezmoi_profile
+fi
+if [ ! -r "$profile" ]; then
+    printf 'rg-oomd-install-from-stage: missing profile: %s\n' "$profile" >&2
+    exit 1
+fi
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+tar xzf "$stage_tgz" -C "$tmpdir"
+
+if [ ! -x "$tmpdir/usr/bin/oomd" ]; then
+    printf 'rg-oomd-install-from-stage: stage missing usr/bin/oomd\n' >&2
+    exit 1
+fi
+if [ ! -r "$tmpdir/usr/lib/systemd/system/oomd.service" ]; then
+    printf 'rg-oomd-install-from-stage: stage missing oomd.service unit\n' >&2
+    exit 1
+fi
+
+install -Dm0755 "$tmpdir/usr/bin/oomd" /usr/bin/oomd
+install -Dm0644 "$tmpdir/usr/lib/systemd/system/oomd.service" /usr/lib/systemd/system/oomd.service
+if [ -r "$tmpdir/usr/share/man/man1/oomd.1" ]; then
+    install -Dm0644 "$tmpdir/usr/share/man/man1/oomd.1" /usr/share/man/man1/oomd.1
+fi
+
+# Profile is managed separately (rgx1gen11 ruleset, not package sample).
+install -Dm0644 "$profile" /etc/oomd/oomd.json
+
+install -d -m0755 /etc/systemd/system.conf.d
+cat >/etc/systemd/system.conf.d/20-rg-resource-accounting.conf <<'DROP'
+[Manager]
+DefaultCPUAccounting=true
+DefaultIOAccounting=true
+DefaultMemoryAccounting=true
+DefaultTasksAccounting=true
+DROP
+
+install -d -m0755 /etc/systemd/system/hostcritical.slice.d
+cat >/etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf <<'DROP'
+[Slice]
+MemoryMin=256M
+MemoryLow=256M
+CPUWeight=200
+IOWeight=200
+DROP
+
+install -d -m0755 /etc/systemd/system/oomd.service.d
+cat >/etc/systemd/system/oomd.service.d/10-rg-protection.conf <<'DROP'
+[Service]
+Slice=hostcritical.slice
+MemoryMin=64M
+MemoryLow=64M
+CPUWeight=200
+IOWeight=200
+DROP
+
+if ! /usr/bin/oomd --check-config /etc/oomd/oomd.json >/dev/null; then
+    printf 'rg-oomd-install-from-stage: config check failed for /etc/oomd/oomd.json\n' >&2
+    exit 1
+fi
+
+systemctl daemon-reload
+systemctl enable --now oomd.service
+systemctl is-active --quiet oomd.service
+printf 'ok: installed and started oomd from %s\n' "$stage_tgz"
