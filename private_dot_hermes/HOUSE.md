@@ -30,3 +30,18 @@ Prefer `${OPENAI_API_KEY}` in config; keep literal keys only in `.env`.
 ## Optional providers
 
 Doctor lists many optional keys (OpenRouter, Telegram, …). House policy: **do not** import every optional key. SURF/Willma is primary for SURF hosts.
+
+## Config shape (reconciled 2026-07-13)
+
+Source of truth is the **live Hermes CLI shape** (as on rgSURFLat after
+`hermes model` / migrate), sealed back into chezmoi:
+
+- `model.provider: custom:willma` (named custom provider; not bare `willma`)
+- Willma URL + `default_model` under `providers.willma`
+- `api_key: ${OPENAI_API_KEY}` only (secrets stay in `.env`)
+- `hooks.transform_llm_output` → `agent-hooks/willma-advisor.sh`
+- `platform_toolsets.cli` tool list (CLI surface)
+- Same MCP set: eb-stack, cf-ci, context7, project-ctx, nimvault, ookcite
+
+After a fresh `hermes model` rewrite: re-export live → `age` seal → push
+chezmoi, or `chezmoi apply` only if you intend to reset to sealed.
