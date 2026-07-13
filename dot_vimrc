@@ -441,9 +441,12 @@ autocmd BufWritePost .vimrc source ~/.vimrc
 let g:vim_markdown_math=1
 let g:vim_markdown_frontmatter=1
 
-" Vim Theme 
+" Vim Theme
  colorscheme molokai
-
+" rg-theme overrides background + scheme when the drop-in exists
+if filereadable(expand('~/.config/rg-theme/vim-colors.vim'))
+  execute 'source' expand('~/.config/rg-theme/vim-colors.vim')
+endif
 
 " More Stuff
 " Vim jump to the last position when reopening a file

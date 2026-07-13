@@ -23,6 +23,7 @@ fi
 
 {{ if or (eq .use_rust "yes") (lookPath "rg") -}}
 export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
+# Colour tokens filled by ~/.config/rg-theme/env when sourced below.
 export FZF_DEFAULT_OPTS="--extended --ansi --multi"
 export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/.ripgreprc"
 {{ end -}}
