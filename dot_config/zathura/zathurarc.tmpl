@@ -34,8 +34,10 @@ set window-title-basename true
 # true false
 set statusbar-home-tilde true
 
-# Put themes in a separate file
-include zathuraThemerc
+# Palette colors via rg-theme (symlink to palettes/.../zathura.themerc).
+# Legacy Spacemacs themerc kept as offline fallback only.
+include rg-theme.themerc
+# include zathuraThemerc
 
 # If colemak: {{ if eq .key_layout "colemak" }}
 # Put colemak bindings in a separate file

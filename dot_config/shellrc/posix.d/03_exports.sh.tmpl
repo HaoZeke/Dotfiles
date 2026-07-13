@@ -43,6 +43,13 @@ export GPG_TTY=$(tty)
 # Tmux update
 export TERM=xterm-256color
 
+# rg-theme: BAT_THEME / DELTA / optional wall paths for this mode.
+# Written by `rg-theme apply`; missing file is a no-op until first apply.
+if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/rg-theme/env" ]; then
+    # shellcheck disable=SC1091
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/rg-theme/env"
+fi
+
 {{ if eq .machine_name "rgx1gen11" -}}
 # For grabbing CPU-PyTorch
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
