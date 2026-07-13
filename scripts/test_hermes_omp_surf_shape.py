@@ -159,11 +159,14 @@ def main() -> None:
             if needle not in surf_branch:
                 fail(f"rgSURFLat branch missing SOTA needle: {needle}")
         else_branch = tmpl[j:]
-        if "default: alibaba/" not in else_branch and "default: alibaba" not in else_branch:
-            # workstation multi-provider still has alibaba default
-            if "default: alibaba/qwen3-coder-plus" not in else_branch:
-                fail("else-branch workstation default missing alibaba coder")
-        print("OK: sealed OMP host-conditional template (rgSURFLat SURF-primary)")
+        # Both host branches are Willma-only (Alibaba coding-plan retired).
+        if f"default: surf-ai-hub/{SURF_MODEL}" not in else_branch:
+            fail("else-branch workstation default is not SURF-primary gpt-oss-120b")
+        if "alibaba" in else_branch.lower() and "retired" not in else_branch.lower():
+            # comment about retirement is fine; live role ids must not remain
+            if "alibaba/" in else_branch:
+                fail("else-branch still maps roles to alibaba/*")
+        print("OK: sealed OMP host-conditional template (both branches SURF-primary)")
     else:
         print("SKIP: OMP sealed template decrypt unavailable")
 
