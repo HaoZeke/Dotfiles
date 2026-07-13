@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-{{ if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") (lookPath "bash") -}}
-# x-cmd CLI bundle for rgx1gen11 only.
+{{ if and (eq .chezmoi.os "linux") (or (eq .chezmoi.hostname "rgx1gen11") (eq .chezmoi.hostname "rgSURFLat")) (lookPath "bash") -}}
+# x-cmd CLI bundle for rgx1gen11 + rgSURFLat (zoxide, starship, fzf, …).
 # Nounset stays off: x-cmd's sourced X file references private vars
 # like ___X_CMD_ROOT before initializing them, and downstream `x env`
 # subcommands inherit the same pattern. Keep -e and pipefail so the

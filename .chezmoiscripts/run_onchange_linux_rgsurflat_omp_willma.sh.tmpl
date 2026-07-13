@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/agent/
-# Hash: specialize-v14-willma-multimodel-embed
+# Hash: specialize-v15-willma-devtools-hermes
 set -euo pipefail
 
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.opencode/bin:${HOME}/.cargo/bin:${PATH}"
@@ -13,7 +13,7 @@ SHARE="${HOME}/.local/share/omp-surf"
 TOOLS="${HOME}/Git/Github/Tools"
 PI_ENV="${TOOLS}/pi_env"
 EB_STACK="${TOOLS}/eb-stack"
-OMP_VER="${OMP_VERSION:-16.4.1}"
+OMP_VER="${OMP_VERSION:-16.4.6}"
 RTK_VER="${RTK_VERSION:-0.43.0}"
 OPENCODE_VER="${OPENCODE_VERSION:-1.17.18}"
 
@@ -24,7 +24,7 @@ mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
 
 # ---------- PATH durability (bash) ----------
 if [[ -f "${HOME}/.bashrc" ]] && ! grep -q '\.bun/bin' "${HOME}/.bashrc" 2>/dev/null; then
-  printf '\n# SURF OMP / tooling\nexport PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"\n' \
+  printf '\n# SURF OMP / tooling\nexport PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"\n' \
     >> "${HOME}/.bashrc"
   log "appended PATH to .bashrc"
 fi
@@ -63,6 +63,28 @@ if command -v vale >/dev/null 2>&1; then
 else
   log "vale: not installed, skipping style sync"
 fi
+
+# ---------- uv + hermes ----------
+if ! command -v uv >/dev/null 2>&1; then
+  log "installing uv"
+  curl -fsSL https://astral.sh/uv/install.sh | sh
+  export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+fi
+if ! command -v hermes >/dev/null 2>&1 && [[ ! -x "${HOME}/.local/bin/hermes" ]]; then
+  log "installing hermes-agent via uv"
+  uv tool install hermes-agent 2>/dev/null \
+    || uv tool install --from git+https://github.com/NousResearch/hermes-agent.git hermes-agent 2>/dev/null \
+    || log "WARN: hermes uv install failed (devtools script may cover)"
+fi
+if [[ ! -x "${HOME}/.local/bin/hermes" ]]; then
+  for c in \
+    "${HOME}/.local/share/uv/tools/hermes-agent/bin/hermes" \
+    "${HOME}/.local/bin/hermes-agent"
+  do
+    [[ -x "$c" ]] && ln -sfn "$c" "${HOME}/.local/bin/hermes" && break
+  done
+fi
+log "hermes=$(command -v hermes || echo missing)"
 
 # ---------- RTK ----------
 if ! command -v rtk >/dev/null 2>&1; then
@@ -360,7 +382,7 @@ for name in omp-surf omp-eb-stack; do
   cat > "${HOME}/.local/bin/${name}" <<'WRAP'
 #!/usr/bin/env bash
 set -euo pipefail
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"
 exts=()
 for e in \
   "$HOME/.omp/agent/extensions/gpt-oss-priors.ts" \
@@ -393,5 +415,5 @@ fi
 if command -v omp-surf-doctor >/dev/null 2>&1; then
   omp-surf-doctor 2>&1 | tail -20 | while read -r line; do log "doctor: $line"; done || true
 fi
-log "done: specialize-v11 SURF OMP"
+log "done: specialize-v15 SURF OMP"
 {{- end }}

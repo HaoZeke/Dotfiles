@@ -1,0 +1,146 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") -}}
+#!/usr/bin/env bash
+# rgSURFLat shell toolchain: x-cmd + zoxide/starship/fzf/… + uv + hermes.
+# Complements rgsurflat_omp_willma (omp/bun). Hash: devtools-v1-xcmd-hermes
+set -eo pipefail
+# nounset off: x-cmd sources private vars before init
+export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${HOME}/.opencode/bin:${PATH}"
+log() { printf 'chezmoi rgsurflat-devtools: %s\n' "$*"; }
+
+mkdir -p "${HOME}/.local/bin"
+
+# ---------- PATH durability (non-interactive + login) ----------
+ensure_path_line() {
+  local file="$1" line="$2" mark="$3"
+  [[ -f "$file" ]] || return 0
+  if ! grep -qF "$mark" "$file" 2>/dev/null; then
+    printf '\n# %s\n%s\n' "$mark" "$line" >> "$file"
+    log "appended PATH to ${file##*/}"
+  fi
+}
+ensure_path_line "${HOME}/.bashrc" \
+  'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"' \
+  'SURF tooling PATH'
+ensure_path_line "${HOME}/.zshrc" \
+  'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"' \
+  'SURF tooling PATH'
+# Always-on env snippet for non-interactive ssh
+ENVF="${HOME}/.local/bin/env"
+if [[ -f "$ENVF" ]]; then
+  if ! grep -q '\.bun/bin' "$ENVF" 2>/dev/null; then
+    cat >> "$ENVF" <<'SNIP'
+
+# SURF / bun / cargo tools
+case ":${PATH}:" in
+  *:"$HOME/.bun/bin":*) ;;
+  *) export PATH="$HOME/.bun/bin:$PATH" ;;
+esac
+case ":${PATH}:" in
+  *:"$HOME/.cargo/bin":*) ;;
+  *) export PATH="$HOME/.cargo/bin:$PATH" ;;
+esac
+SNIP
+    log "extended ~/.local/bin/env"
+  fi
+fi
+
+# ---------- bun (needed for omp; system bun ok) ----------
+if ! command -v bun >/dev/null 2>&1; then
+  log "installing bun"
+  curl -fsSL https://bun.sh/install | bash
+  export PATH="${HOME}/.bun/bin:${PATH}"
+fi
+log "bun=$(command -v bun) $($(command -v bun) --version 2>/dev/null || true)"
+
+# ---------- uv ----------
+if ! command -v uv >/dev/null 2>&1; then
+  log "installing uv"
+  curl -fsSL https://astral.sh/uv/install.sh | sh
+  export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}"
+fi
+log "uv=$(command -v uv || echo missing)"
+
+# ---------- hermes (uv tool or official installer) ----------
+if ! command -v hermes >/dev/null 2>&1 && [[ ! -x "${HOME}/.local/bin/hermes" ]]; then
+  log "installing hermes-agent"
+  if command -v uv >/dev/null 2>&1; then
+    uv tool install hermes-agent 2>/dev/null \
+      || uv tool install --from git+https://github.com/NousResearch/hermes-agent.git hermes-agent 2>/dev/null \
+      || true
+  fi
+  if ! command -v hermes >/dev/null 2>&1; then
+    # upstream curl install (same path user already used)
+    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \
+      | bash 2>/dev/null || log "WARN: hermes install failed"
+  fi
+fi
+# symlink into ~/.local/bin if only in uv tools
+if ! command -v hermes >/dev/null 2>&1; then
+  for c in \
+    "${HOME}/.local/share/uv/tools/hermes-agent/bin/hermes" \
+    "${HOME}/.local/bin/hermes-agent"
+  do
+    if [[ -x "$c" ]]; then
+      ln -sfn "$c" "${HOME}/.local/bin/hermes"
+      log "linked hermes from $c"
+      break
+    fi
+  done
+fi
+log "hermes=$(command -v hermes || ls ${HOME}/.local/bin/hermes 2>/dev/null || echo missing)"
+
+# ---------- x-cmd + CLI bundle (zoxide, starship, fzf, …) ----------
+if [[ ! -d "${HOME}/.x-cmd.root/" ]]; then
+  log "installing x-cmd"
+  installer=$(mktemp /tmp/x-cmd-install.XXXXXX)
+  trap 'rm -f "$installer"' RETURN
+  curl -fsSL https://get.x-cmd.com -o "$installer"
+  bash "$installer"
+  log "x-cmd installed"
+fi
+# shellcheck disable=SC1090
+[ ! -f "${HOME}/.x-cmd.root/X" ] || . "${HOME}/.x-cmd.root/X"
+
+if command -v x >/dev/null 2>&1 || [[ -f "${HOME}/.x-cmd.root/X" ]]; then
+  tools=(
+    atuin bat btm delta difft dust eza fd grex hyperfine hexyl navi ouch
+    pueue starship tokei watchexec zoxide
+    bun fzf uv vale shfmt miller pandoc
+  )
+  for item in "${tools[@]}"; do
+    x env use "$item" 2>/dev/null \
+      || log "skip x env use $item"
+  done
+  # starship preset once (ignore failure)
+  x starship use bracketed-segments 2>/dev/null || true
+else
+  log "WARN: x-cmd not on PATH after install"
+fi
+
+# Fallback zoxide if x-cmd registry rename
+if ! command -v zoxide >/dev/null 2>&1; then
+  log "installing zoxide via cargo/curl fallback"
+  if command -v cargo >/dev/null 2>&1; then
+    cargo install zoxide --locked 2>/dev/null || true
+  fi
+  if ! command -v zoxide >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh \
+      | bash 2>/dev/null || log "WARN: zoxide fallback failed"
+  fi
+fi
+
+# Ensure zoxide init lines exist for zsh (cmd Z matches house zshrc)
+if command -v zoxide >/dev/null 2>&1; then
+  if [[ -f "${HOME}/.zshrc" ]] && ! grep -q 'zoxide init' "${HOME}/.zshrc" 2>/dev/null; then
+    printf '\neval "$(zoxide init zsh --cmd Z)"\n' >> "${HOME}/.zshrc"
+    log "appended zoxide init to .zshrc"
+  fi
+  if [[ -f "${HOME}/.bashrc" ]] && ! grep -q 'zoxide init' "${HOME}/.bashrc" 2>/dev/null; then
+    printf '\neval "$(zoxide init bash --cmd z)"\n' >> "${HOME}/.bashrc"
+    log "appended zoxide init to .bashrc"
+  fi
+fi
+
+log "summary: x=$(command -v x || echo miss) zoxide=$(command -v zoxide || echo miss) starship=$(command -v starship || echo miss) uv=$(command -v uv || echo miss) hermes=$(command -v hermes || echo miss) bun=$(command -v bun || echo miss)"
+log "done: devtools-v1"
+{{- end -}}
