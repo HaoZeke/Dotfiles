@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-desktop-help-selftest).
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+src="$repo/dot_local/share/rg-desktop-help-src/main.rs"
+sway_readme="$repo/dot_config/sway/readme.org"
+bin="${RG_DESKTOP_HELP_BIN:-$HOME/.local/bin/rg-desktop-help}"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -r "$src" || fail "missing source $src"
+test -r "$sway_readme" || fail "missing sway readme"
+test -x "$bin" || fail "rg-desktop-help binary missing or not executable: $bin"
+
+for needle in \
+    'Theme toggle light/dark' \
+    'Theme palette picker' \
+    'Theme re-apply' \
+    'Herdr open / attach' \
+    'Herdr session picker' \
+    'Power / profiles menu' \
+    'Web workspace' \
+    'Code workspace' \
+    '--print-menu'
+do
+    rg -Fq -- "$needle" "$src" || fail "source missing $needle"
+done
+
+menu="$("$bin" --print-menu)"
+for label in \
+    "Theme toggle light/dark  [\$mod+Shift+F1]" \
+    "Theme palette picker     [\$mod+Shift+F2]" \
+    "Theme re-apply" \
+    "Herdr open / attach" \
+    "Herdr session picker" \
+    "Power / profiles menu    [\$mod+Shift+Escape]" \
+    "Web workspace            [\$mod+g w]" \
+    "Code workspace           [\$mod+g c]" \
+    "Media workspace          [\$mod+g m]" \
+    "Sys workspace            [\$mod+g s]"
+do
+    printf '%s\n' "$menu" | rg -Fq "$label" \
+        || fail "print-menu missing: $label"
+done
+
+rg -Fq 'rg-theme toggle' "$sway_readme" \
+    || fail "sway readme does not document theme entries"
+rg -Fq 'Herdr open / attach' "$sway_readme" \
+    || fail "sway readme does not document herdr entries"
+rg -Fq 'theme re-apply' "$sway_readme" \
+    || fail "sway readme does not document theme re-apply"
+rg -Fq 'rg-theme toggle' "$repo/dot_config/sway/config.tmpl" \
+    || fail "sway config missing rg-theme toggle binding"
+rg -Fq 'rg-theme pick' "$repo/dot_config/sway/config.tmpl" \
+    || fail "sway config missing rg-theme pick binding"
+
+printf 'ok\n'

@@ -71,6 +71,8 @@ Mouse actions on that block:
 | =$mod+Escape= | lock now |
 | =$mod+Shift+Escape= | open the rofi power/profile menu |
 | =$mod+Ctrl+Shift+Escape= | lock, then hibernate immediately |
+| =$mod+Shift+F1= | =rg-theme toggle= (light/dark in current palette) |
+| =$mod+Shift+F2= | =rg-theme pick= (rofi palette/mode chooser) |
 
 * Power Menu
 
@@ -132,10 +134,23 @@ palette. It is intentionally small and action-oriented, not a second full
 launcher.
 
 - It opens on =$mod+Shift+/=
-- It includes the high-value workspace jumps, session mode toggles, tmux
-  save/restore/chooser, lock, and the existing workspace chooser
+- The rofi prompt shows the current =rg-theme= palette/mode when available
 - Entries include the matching keybinding in the label so the menu doubles as
   rediscovery/help
+
+Groups in the menu:
+
+- *Workspaces*: read / notes / files / web / code / media / sys, plus the
+  workspace chooser (=$mod+/=)
+- *Terminal / agents*: tmux chooser/save/restore; =Herdr open / attach= (default
+  session in a foot client); =Herdr session picker= (rofi over
+  =herdr session list=, free-form new session name)
+- *Session modes*: =AWAKE= / =BOOST= / =FOCUS= / timed awake
+- *Appearance*: theme toggle (=$mod+Shift+F1=), palette picker
+  (=$mod+Shift+F2= via =rg-theme pick=), and theme re-apply (=rg-theme apply=)
+- *System*: lock, and the power/profiles menu (=$mod+Shift+Escape=)
+
+Theme and herdr rows are omitted when the corresponding binary is missing.
 
 * Tmux
 
@@ -180,6 +195,8 @@ The current behavior is wired primarily through:
 - =~/.local/bin/rg-caffeine=
 - =~/.local/bin/rg-power-menu=
 - =~/.local/bin/rg-desktop-help=
+- =~/.local/bin/rg-desktop-help-selftest=
+- =~/.local/share/rg-desktop-help-src/= (Rust source; rebuilt by chezmoi on change)
 - =~/.local/bin/rg-tmux-role=
 - =~/.local/bin/rg-wob-bridge=
 - =~/.local/bin/rg-sway-route-watcher=
