@@ -463,7 +463,9 @@ exec_always lxpolkit
 
 # Wayland settings
 for_window [shell="xwayland"] title_format "[XWayland] %title"
-exec dbus-update-activation-environment --systemd DISPLAY SWAYSOCK WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XDG_SESSION_TYPE=wayland QT_QPA_PLATFORM
+# QT_QPA_PLATFORMTHEME=gtk3 so Qt apps (Telegram Desktop Night Mode, etc.)
+# see portal org.freedesktop.appearance color-scheme instead of Unknown.
+exec dbus-update-activation-environment --systemd DISPLAY SWAYSOCK WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XDG_SESSION_TYPE=wayland QT_QPA_PLATFORM QT_QPA_PLATFORMTHEME
 
 # Moves the external screen to the right
 # swaymsg output eDP-1 pos 1600 0 res 1920x1080

@@ -30,6 +30,10 @@ export XDG_SESSION_DESKTOP=sway
 export XDG_CURRENT_DESKTOP=sway
 
 export QT_QPA_PLATFORM="wayland;xcb"
+# gtk3 platform theme: Qt QStyleHints::colorScheme tracks gsettings/portal
+# (Telegram Auto-night "Based on system", other Qt light/dark). Without this
+# Qt reports ColorScheme::Unknown on Sway and never flips Night Mode.
+export QT_QPA_PLATFORMTHEME=gtk3
 export SDL_VIDEODRIVER=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
 

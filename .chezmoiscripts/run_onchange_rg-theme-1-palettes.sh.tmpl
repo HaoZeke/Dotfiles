@@ -489,8 +489,8 @@ style = 'bold #${r5}'
 EOF
 }
 
-# Telegram Desktop color scheme (.tdesktop-theme). Applied live via
-# gdbus Application.Open when Telegram is running (rg-theme reload_telegram).
+# Telegram Desktop color scheme (.tdesktop-theme). Day/night slots;
+# Night Mode tracks portal color-scheme (rg-theme reload_telegram).
 write_telegram() {
     local dir="$1"; mkdir -p "$dir"
     cat >"$dir/telegram.tdesktop-theme" <<EOF
@@ -706,8 +706,8 @@ for _palette in tomorrow catppuccin gruvbox; do
     combine_foot "$_palette"
 done
 
-# Convenience copies for Telegram D-Bus Open (mode-agnostic names).
-# Active palette still wins via palettes/<p>/<mode>/telegram.tdesktop-theme.
+# Bootstrap day/night theme slots (rg-theme reload_telegram rewrites these
+# from the active palette on every apply).
 tg_share="$HOME/.local/share/rg-theme/telegram"
 mkdir -p "$tg_share"
 if [ -f "$OUT/catppuccin/dark/telegram.tdesktop-theme" ]; then
