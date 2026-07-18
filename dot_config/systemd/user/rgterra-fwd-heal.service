@@ -1,0 +1,6 @@
+[Unit]
+Description=Heal stale rgterra-ssh-fwd relay pairing (probe + two-ended bounce)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rgterra-fwd-heal

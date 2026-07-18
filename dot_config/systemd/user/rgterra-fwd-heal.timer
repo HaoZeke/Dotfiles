@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic rgterra-ssh-fwd pairing heal
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

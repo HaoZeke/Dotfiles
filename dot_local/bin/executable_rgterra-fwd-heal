@@ -1,0 +1,27 @@
+#!/bin/sh
+# Heal a stale rgterra-ssh-fwd relay pairing. The cosmoet bridge keeps both
+# endpoints "active" while the relay session un-pairs (TurtleTech-i35t), so
+# every consumer of 127.0.0.1:22222 (ssh rg.terra, the GitLab ProxyJump)
+# hangs at banner exchange until BOTH ends bounce. Probe; on failure restart
+# terra's connector via the rg.surf hop, then the local listener.
+set -u
+
+probe() {
+  ssh -o ConnectTimeout=6 -o BatchMode=yes rg.terra true 2>/dev/null
+}
+
+probe && exit 0
+
+logger -t rgterra-fwd-heal "forward stale; re-pairing both ends"
+ssh -o ConnectTimeout=8 -o BatchMode=yes rg.surf \
+  "ssh -o ConnectTimeout=8 -o BatchMode=yes rg.terra 'systemctl --user restart cosmoet-ssh-fwd.service'" \
+  2>/dev/null
+systemctl --user restart cosmoet-ssh-fwd-local.service
+sleep 6
+
+if probe; then
+  logger -t rgterra-fwd-heal "re-paired"
+else
+  logger -t rgterra-fwd-heal "re-pair FAILED (surf hop or terra down); manual attention needed"
+  exit 1
+fi
