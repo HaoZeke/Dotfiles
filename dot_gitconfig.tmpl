@@ -67,11 +67,19 @@
 [url "git@github.com:"]
 	insteadOf = https://github.com/
 
-[url "git@gitlab.com:"]
-	insteadOf = https://gitlab.com/
+# GitLab runs the other way from GitHub: the home uplink drops sustained SSH
+# streams to gitlab.com's Cloudflare edge (packs over ~1MB die mid send-pack;
+# ssh :22 and altssh :443 both), while git-over-HTTP/2 takes a 10MB pack
+# clean. So every gitlab remote, ssh-form included, rewrites to https; auth
+# rides the glab credential helper below.
+[url "https://gitlab.com/"]
+	insteadOf = git@gitlab.com:
 
 [credential]
 	helper = cache
+
+[credential "https://gitlab.com"]
+	helper = !glab auth git-credential
 
 [alias]
     mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
