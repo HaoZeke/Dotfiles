@@ -473,3 +473,9 @@ tokens:
   - concrete examples
 exceptions:
   - 'Holistic Fusion'
+
+  # Course-prose pastiche (Between Minima 2026-07)
+  - beautiful fact
+  - the game is clear
+  - powerful framework
+  - representation first
