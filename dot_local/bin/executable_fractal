@@ -6,6 +6,8 @@
 set -euo pipefail
 
 BIN="${FRACTAL_BIN:-$HOME/.local/libexec/fractal-haozeke/fractal}"
+APP_ID=org.gnome.Fractal
+SWAYMSG="${RG_FRACTAL_SWAYMSG:-swaymsg}"
 
 if [[ ! -x "$BIN" ]]; then
   printf '%s\n' \
@@ -15,11 +17,28 @@ if [[ ! -x "$BIN" ]]; then
   exit 127
 fi
 
-# Prefer user gresources/schemas/icons, then keep system fallbacks.
 if [[ -n "${XDG_DATA_DIRS:-}" ]]; then
   export XDG_DATA_DIRS="${HOME}/.local/share:${XDG_DATA_DIRS}"
 else
   export XDG_DATA_DIRS="${HOME}/.local/share:/usr/local/share:/usr/share"
 fi
 
-exec "$BIN" "$@"
+# If a Fractal window already exists, focus it. A second GApplication process
+# would only remote-activate and exit (looks like "nothing happened").
+if command -v "$SWAYMSG" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  if "$SWAYMSG" -t get_tree 2>/dev/null | jq -e --arg id "$APP_ID" '
+      def walk:
+        . as $in
+        | if type == "object" then
+            ., (.nodes[]? | walk), (.floating_nodes[]? | walk)
+          elif type == "array" then
+            .[] | walk
+          else empty end;
+      any(walk; .app_id? == $id)
+    ' >/dev/null 2>&1; then
+    "$SWAYMSG" "[app_id=\"$APP_ID\"] focus" >/dev/null 2>&1 || true
+    exit 0
+  fi
+fi
+
+exec -a fractal "$BIN" "$@"

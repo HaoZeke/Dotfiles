@@ -1,4 +1,3 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_fractal-haozeke).
-# Alias of fractal (HaoZeke fork).
 exec "$(dirname "$0")/fractal" "$@"
