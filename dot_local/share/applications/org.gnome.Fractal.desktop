@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Fractal
+GenericName=Matrix group messaging
+Comment=Matrix client with multi-message select, copy, and export (HaoZeke fork)
+Exec=fractal %U
+TryExec=fractal
+Icon=org.gnome.Fractal
+Terminal=false
+StartupNotify=true
+Categories=GNOME;GTK;Network;InstantMessaging;Chat;
+Keywords=Matrix;matrix.org;chat;irc;communications;fractal;element;riot;
+MimeType=x-scheme-handler/matrix;
+X-GNOME-UsesNotifications=true
+DBusActivatable=true
+X-Purism-FormFactor=Workstation;Mobile;

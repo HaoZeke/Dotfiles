@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_fractal).
+# HaoZeke Fractal fork (multi-message select/copy/export).
+# App ID stays org.gnome.Fractal for session drop-in.
+
+set -euo pipefail
+
+BIN="${FRACTAL_BIN:-$HOME/.local/libexec/fractal-haozeke/fractal}"
+
+if [[ ! -x "$BIN" ]]; then
+  printf '%s\n' \
+    "fractal: fork binary not found at $BIN" \
+    "Install the stripped binary to ~/.local/libexec/fractal-haozeke/fractal" \
+    "(built from github.com/HaoZeke/fractal branch haozeke)." >&2
+  exit 127
+fi
+
+# Prefer user gresources/schemas/icons, then keep system fallbacks.
+if [[ -n "${XDG_DATA_DIRS:-}" ]]; then
+  export XDG_DATA_DIRS="${HOME}/.local/share:${XDG_DATA_DIRS}"
+else
+  export XDG_DATA_DIRS="${HOME}/.local/share:/usr/local/share:/usr/share"
+fi
+
+exec "$BIN" "$@"
