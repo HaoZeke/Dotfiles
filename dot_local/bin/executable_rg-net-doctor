@@ -7,6 +7,7 @@ set -uo pipefail
 HZ_SOCK="${RG_HZ_TS_SOCK:-/tmp/ts-hz.sock}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
 HZ_TABLE="${RG_HZ_TABLE:-5151}"
+HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-$HOME/.local/bin/rg-haozeke-derp-targets}"
 TERRA_IP="${RG_TERRA_IP:-100.119.130.84}"
 SOCKS="${RG_HZ_SOCKS:-127.0.0.1:1055}"
 pass=0; fail=0; warn=0
@@ -97,6 +98,44 @@ else
   wrn "terra endpoint route: $ep_route"
 fi
 
+printf '== haozeke DERP source routes ==\n'
+lan_default=$(ip -4 route show table main default 2>/dev/null | head -1 || true)
+lan_dev=$(printf '%s\n' "$lan_default" | awk '{for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')
+lan_src=""
+if [ -n "$lan_dev" ]; then
+  lan_src=$(ip -4 -o addr show dev "$lan_dev" scope global 2>/dev/null \
+    | awk '{split($4, addr, "/"); print addr[1]; exit}')
+fi
+if [ ! -S "$HZ_SOCK" ]; then
+  bad "cannot audit DERP routes without $HZ_SOCK"
+elif [ ! -x "$HZ_DERP_TARGETS" ]; then
+  bad "missing active-DERP selector $HZ_DERP_TARGETS"
+else
+  hz_status_json=$(tailscale --socket="$HZ_SOCK" status --json 2>/dev/null || true)
+  hz_derp_map_json=$(tailscale --socket="$HZ_SOCK" debug derp-map 2>/dev/null || true)
+  hz_derp_ips=""
+  if [ -n "$hz_status_json" ] && [ -n "$hz_derp_map_json" ]; then
+    hz_derp_ips=$("$HZ_DERP_TARGETS" \
+      <(printf '%s\n' "$hz_status_json") \
+      <(printf '%s\n' "$hz_derp_map_json") 2>/dev/null || true)
+  fi
+  if [ -z "$hz_derp_ips" ]; then
+    bad "active haozeke DERP nodes unavailable"
+  else
+    while read -r derp_ip; do
+      [ -n "$derp_ip" ] || continue
+      derp_route=$(ip route get "$derp_ip" 2>/dev/null | head -1 || true)
+      if [ -n "$lan_dev" ] && [ -n "$lan_src" ] \
+        && printf '%s\n' "$derp_route" | grep -q " dev $lan_dev " \
+        && printf '%s\n' "$derp_route" | grep -q " src $lan_src"; then
+        ok "DERP $derp_ip uses residential source $lan_src on $lan_dev"
+      else
+        bad "DERP $derp_ip lacks a source-correct residential route: ${derp_route:-no route}"
+      fi
+    done <<<"$hz_derp_ips"
+  fi
+fi
+
 printf '== SOCKS reachability to terra:22 ==\n'
 socks_host="${SOCKS%:*}"
 socks_port="${SOCKS##*:}"
@@ -105,19 +144,44 @@ case "$banner" in
   SSH-*) ok "SOCKS ${SOCKS} -> ${TERRA_IP}:22 ($banner)" ;;
   *)
     # Fall back to a real ssh BatchMode probe (same path as agents use).
-    if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra true 2>/dev/null; then
-      ok "SOCKS path ok via ssh rg.terra (banner probe empty: ${banner:-none})"
+    if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra.ts true 2>/dev/null; then
+      ok "SOCKS path ok via ssh rg.terra.ts (banner probe empty: ${banner:-none})"
     else
       bad "cannot reach ${TERRA_IP}:22 via SOCKS (banner=${banner:-none})"
     fi
     ;;
 esac
 
+printf '== ssh rg.terra.ts fallback ==\n'
+if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra.ts true 2>/dev/null; then
+  ok "ssh rg.terra.ts BatchMode true"
+else
+  bad "ssh rg.terra.ts failed"
+fi
+
 printf '== ssh rg.terra ==\n'
 if timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=12 -o ControlPath=none rg.terra true 2>/dev/null; then
   ok "ssh rg.terra BatchMode true"
 else
   bad "ssh rg.terra failed"
+fi
+
+printf '== OLT residential egress ==\n'
+olt_count=0
+while read -r olt_ip; do
+  [ -n "$olt_ip" ] || continue
+  olt_count=$((olt_count+1))
+  olt_route=$(ip route get "$olt_ip" 2>/dev/null | head -1 || true)
+  if [ -n "$lan_dev" ] && [ -n "$lan_src" ] \
+    && printf '%s\n' "$olt_route" | grep -q " dev $lan_dev " \
+    && printf '%s\n' "$olt_route" | grep -q " src $lan_src"; then
+    ok "www.olt.com $olt_ip uses residential source $lan_src on $lan_dev"
+  else
+    bad "www.olt.com $olt_ip does not use the residential source: ${olt_route:-no route}"
+  fi
+done < <(getent ahostsv4 www.olt.com 2>/dev/null | awk '{print $1}' | sort -u)
+if [ "$olt_count" -eq 0 ]; then
+  bad "www.olt.com has no IPv4 answer"
 fi
 
 printf '== DNS chain ==\n'
