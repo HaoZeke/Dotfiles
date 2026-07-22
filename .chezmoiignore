@@ -62,9 +62,15 @@ Pictures/Walls/*
 .local/share/rg-wob-bridge-src
 {{ end }}
 {{ if ne .chezmoi.hostname "rgx1gen11" }}
-# rgx1gen11 backup helpers
+# rgx1gen11-only services and helpers
+.config/systemd/user/rg-surf-vpn-refresh.service
+.config/systemd/user/rg-surf-vpn-refresh.timer
 .config/systemd/user/turtleback-push.service
 .config/systemd/user/turtleback-push.timer
+.local/bin/rg-surf-vpn-apply
+.local/bin/rg-surf-vpn-export
+.local/bin/rg-surf-vpn-refresh
+.local/bin/rg-surf-vpn-validate
 .local/bin/rclone-pcloud
 .local/bin/rgpower
 .local/bin/turtleback-push
