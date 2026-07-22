@@ -36,6 +36,8 @@ profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
 us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
 net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
 net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
+derp_targets="$repo/dot_local/bin/executable_rg-haozeke-derp-targets"
+net_cli="$repo/dot_local/bin/executable_rg-net"
 net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
 us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
@@ -52,6 +54,8 @@ test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$net_recover" || fail "missing one-shot network recovery helper"
 test -r "$net_heal" || fail "missing periodic network heal helper"
+test -x "$derp_targets" || fail "missing haozeke DERP target selector"
+test -r "$net_cli" || fail "missing rg-net entry point"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
@@ -260,6 +264,26 @@ rg -q 'belastingdienst\.nl' "$net_heal" \
     || fail "periodic network heal helper does not cover Belastingdienst"
 rg -q 'getent ahostsv4 "\$nl_host"' "$net_heal" \
     || fail "periodic network heal helper does not resolve Dutch public-service routes dynamically"
+rg -q 'olt_hosts' "$net_heal" \
+    || fail "periodic network heal helper lacks a dedicated OLT host set"
+rg -q 'RG_OLT_HOSTS' "$net_heal" \
+    || fail "periodic network heal helper lacks an OLT host override"
+rg -q '^olt\.com$' "$net_heal" \
+    || fail "periodic network heal helper does not cover the OLT apex"
+rg -q '^www\.olt\.com$' "$net_heal" \
+    || fail "periodic network heal helper does not cover www.olt.com"
+rg -q '^kb\.olt\.com$' "$net_heal" \
+    || fail "periodic network heal helper does not cover kb.olt.com"
+rg -q 'getent ahostsv4 "\$olt_host"' "$net_heal" \
+    || fail "periodic network heal helper does not resolve OLT routes dynamically"
+rg -F -q 'route_local_v4 "$ip" "olt:$olt_host"' "$net_heal" \
+    || fail "periodic network heal helper does not send OLT hosts through the LAN"
+rg -q 'debug derp-map' "$net_heal" \
+    || fail "periodic network heal helper does not read the haozeke DERP map"
+rg -q 'rg-haozeke-derp-targets' "$net_heal" \
+    || fail "periodic network heal helper does not select active DERP nodes"
+rg -F -q 'route_local_v4 "$ip" "haozeke derp"' "$net_heal" \
+    || fail "periodic network heal helper does not route active DERP nodes through the LAN"
 rg -q 'stale carve-out pruned' "$net_heal" \
     || fail "periodic network heal helper must prune dynamic carve-outs that are no longer desired"
 rg -F -q 'if [ -s "$CARVE_STATE_NEW" ]; then' "$net_heal" \
@@ -268,6 +292,12 @@ rg -q '/usr/local/sbin/rg-net-heal' "$us_egress_up" \
     || fail "US egress helper must reassert destination carve-outs at bring-up"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
     || fail "net heal provisioning must install rg-net-recover as a root command"
+rg -q 'install_bin "\$DERP_TARGETS_SRC" /usr/local/sbin/rg-haozeke-derp-targets' "$net_heal_script" \
+    || fail "net heal provisioning must install the DERP selector as a root command"
+rg -q 'rg-haozeke-derp-targets-sha256:' "$net_heal_script" \
+    || fail "net heal provisioning must rerun when the DERP selector changes"
+rg -q 'rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets' "$net_cli" \
+    || fail "rg-net drift must compare the installed DERP selector"
 rg -q 'enable --now rg-net-doctor.timer' "$net_heal_script" \
     || fail "net heal provisioning must enable the periodic live doctor"
 net_doctor="$repo/dot_local/bin/executable_rg-net-doctor"
