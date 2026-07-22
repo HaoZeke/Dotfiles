@@ -20,7 +20,7 @@ set -eu
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-PREFERRED_IMAGE="${RG_LOCKSCREEN_IMAGE:-$HOME/Pictures/Walls/lockscreen.png}"
+DEFAULT_IMAGE="$HOME/Pictures/Walls/lockscreen.png"
 FALLBACK_IMAGE="$XDG_CONFIG_HOME/swaylock/lockscreen.png"
 FALLBACK_COLOR="${RG_LOCKSCREEN_COLOR:-101418}"
 MODE="${RG_LOCKSCREEN_MODE:-auto}"
@@ -45,6 +45,40 @@ Wrapper options:
 
 Any other arguments are passed through to swaylock unchanged.
 EOF
+}
+
+resolve_preferred_image() {
+    local state_path="${RG_THEME_STATE:-$XDG_STATE_HOME/rg-theme/state}"
+    local state_mode="dark"
+    local key value candidate
+
+    if [ -r "$state_path" ]; then
+        while IFS='=' read -r key value; do
+            case "$key" in
+                mode)
+                    state_mode="$value"
+                    ;;
+            esac
+        done < "$state_path"
+    fi
+
+    case "$state_mode" in
+        dark|light) ;;
+        *) state_mode="dark" ;;
+    esac
+
+    if [ -n "${RG_LOCKSCREEN_IMAGE:-}" ] \
+        && { [ -z "${RG_THEME_MODE:-}" ] || [ "$RG_THEME_MODE" = "$state_mode" ]; }; then
+        printf '%s\n' "$RG_LOCKSCREEN_IMAGE"
+        return
+    fi
+
+    candidate="$HOME/Pictures/Walls/lockscreen-$state_mode.png"
+    if [ -r "$candidate" ]; then
+        printf '%s\n' "$candidate"
+    else
+        printf '%s\n' "$DEFAULT_IMAGE"
+    fi
 }
 
 theme_config_path() {
@@ -187,6 +221,7 @@ if [ "$BG_MODE" = "auto" ]; then
 fi
 
 CONFIG_PATH="$(resolve_config_path)"
+PREFERRED_IMAGE="$(resolve_preferred_image)"
 if [ -r "$CONFIG_PATH" ]; then
     set -- swaylock -C "$CONFIG_PATH"
 else
