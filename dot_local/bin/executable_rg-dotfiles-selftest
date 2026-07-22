@@ -51,6 +51,8 @@ run "$REPO/dot_local/bin/executable_rg-surf-vpn-apply-selftest" \
     "$REPO/dot_local/bin/executable_rg-surf-vpn-apply"
 run "$REPO/dot_local/bin/executable_rg-surf-vpn-export-selftest" \
     "$REPO/dot_local/bin/executable_rg-surf-vpn-export"
+run "$REPO/dot_local/bin/executable_rg-surf-vpn-refresh-selftest" \
+    "$REPO/dot_local/bin/executable_rg-surf-vpn-refresh"
 run "$REPO/dot_local/bin/executable_rg-rgsurflat-system-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-kernel-build-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-sway-config-selftest" "$REPO"
