@@ -52,6 +52,7 @@ drift() {
     local pair src dst
     for pair in \
         "$BIN/rg-net-heal:/usr/local/sbin/rg-net-heal" \
+        "$BIN/rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets" \
         "$BIN/rg-net-recover:/usr/local/sbin/rg-net-recover" \
         "$BIN/rg-us-egress-guard:/usr/local/sbin/rg-us-egress-guard" \
         "$BIN/rg-tunnel-akamai-carveout:/usr/local/sbin/rg-tunnel-akamai-carveout"; do

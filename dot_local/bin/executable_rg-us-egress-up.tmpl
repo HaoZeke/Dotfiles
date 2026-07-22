@@ -437,7 +437,7 @@ if [ -z "$lean_ip" ] || [ "$lean_ip" = "0.0.0.0" ]; then
 fi
 printf 'Lean release host resolves via local DNS\n'
 
-printf '\n== reassert destination carve-outs (bank, gitlab, NL public services, eduVPN) ==\n'
+printf '\n== reassert destination carve-outs (bank, gitlab, NL public services, OLT, eduVPN) ==\n'
 # The heal timer would do this within 30s; running it now closes the window
 # where those destinations briefly exit via the fresh 0/0 tunnel.
 if [ -x /usr/local/sbin/rg-net-heal ]; then

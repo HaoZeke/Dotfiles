@@ -6,6 +6,7 @@
 # US egress.
 # rg-net-heal-sha256: {{ include "dot_local/bin/executable_rg-net-heal" | sha256sum }}
 # rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
+# rg-haozeke-derp-targets-sha256: {{ include "dot_local/bin/executable_rg-haozeke-derp-targets" | sha256sum }}
 set -euo pipefail
 
 # Root provisioning must never hang a plain `chezmoi apply` on a password
@@ -18,12 +19,17 @@ fi
 
 HEAL_SRC="$HOME/.local/bin/rg-net-heal"
 RECOVER_SRC="$HOME/.local/bin/rg-net-recover"
+DERP_TARGETS_SRC="$HOME/.local/bin/rg-haozeke-derp-targets"
 if [ ! -x "$HEAL_SRC" ]; then
     echo "chezmoi: rg-net-heal missing; skipping install." >&2
     exit 0
 fi
 if [ ! -x "$RECOVER_SRC" ]; then
     echo "chezmoi: rg-net-recover missing; skipping install." >&2
+    exit 0
+fi
+if [ ! -x "$DERP_TARGETS_SRC" ]; then
+    echo "chezmoi: rg-haozeke-derp-targets missing; skipping install." >&2
     exit 0
 fi
 
@@ -46,6 +52,7 @@ install_root() {
 
 install_bin "$HEAL_SRC" /usr/local/sbin/rg-net-heal
 install_bin "$RECOVER_SRC" /usr/local/sbin/rg-net-recover
+install_bin "$DERP_TARGETS_SRC" /usr/local/sbin/rg-haozeke-derp-targets
 
 install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
 [Unit]

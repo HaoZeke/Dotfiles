@@ -29,6 +29,9 @@
 #      benefits, benefits-adjacent, and similar public portals can reject or
 #      mis-handle the Houston egress. Resolve the known public-service host set
 #      on each run and route those /32s through the local uplink.
+#   6. OLT carve-out: OLT rejects or mis-handles authenticated traffic from the
+#      Houston exit. Resolve its public hosts and route only their current /32s
+#      through the local uplink.
 set -uo pipefail
 
 log() { logger -t rg-net-heal -- "$1"; }
@@ -211,6 +214,18 @@ www.logius.nl
 EOF
 }
 
+olt_hosts() {
+    if [ -n "${RG_OLT_HOSTS:-}" ]; then
+        printf '%s\n' $RG_OLT_HOSTS
+        return 0
+    fi
+    cat <<'EOF'
+olt.com
+www.olt.com
+kb.olt.com
+EOF
+}
+
 # --- 1. x.ai tailscale ----------------------------------------------------
 systemctl is-active --quiet tailscaled.service || { systemctl start tailscaled.service >/dev/null 2>&1 || true; sleep 2; }
 ts_state="$(tailscale status --json 2>/dev/null \
@@ -312,6 +327,16 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     done
 fi
 
+# --- 2d. OLT residential carve-out ----------------------------------------
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    olt_hosts | sort -u | while read -r olt_host; do
+        case "$olt_host" in ''|\#*) continue ;; esac
+        getent ahostsv4 "$olt_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
+            route_local_v4 "$ip" "olt:$olt_host"
+        done
+    done
+fi
+
 # --- 3. Haozeke (cosmolab / Terra) tailnet underlay carve-out ---------------
 # The second tailscaled runs userspace-networking on /tmp/ts-hz.sock; its peer
 # transport must stay on the LOCAL uplink, or the direct path dies inside the
@@ -319,9 +344,11 @@ fi
 # so the x.ai anti-carve below never deletes an IP the haozeke path needs
 # (Terra reachability outranks x.ai visibility on shared infrastructure).
 hz_underlay_set="$(mktemp)"
+HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-/usr/local/sbin/rg-haozeke-derp-targets}"
 if [ -n "${gw:-}" ] && [ -n "${dev:-}" ] && [ -S /tmp/ts-hz.sock ] \
     && command -v tailscale >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
-    tailscale --socket=/tmp/ts-hz.sock status --json 2>/dev/null | python3 -c '
+    hz_status_json="$(tailscale --socket=/tmp/ts-hz.sock status --json 2>/dev/null || true)"
+    printf '%s\n' "$hz_status_json" | python3 -c '
 import json
 import sys
 
@@ -351,6 +378,21 @@ for peer in (data.get("Peer") or {}).values():
 ' 2>/dev/null | sort -u | tee "$hz_underlay_set" | while read -r ip; do
         route_local_v4 "$ip" "haozeke underlay"
     done
+
+    if [ -x "$HZ_DERP_TARGETS" ] && [ -n "$hz_status_json" ]; then
+        hz_derp_map_json="$(tailscale --socket=/tmp/ts-hz.sock debug derp-map 2>/dev/null || true)"
+        if [ -n "$hz_derp_map_json" ]; then
+            hz_derp_ips="$("$HZ_DERP_TARGETS" \
+                <(printf '%s\n' "$hz_status_json") \
+                <(printf '%s\n' "$hz_derp_map_json") 2>/dev/null)" \
+                || { log "haozeke DERP target selection failed"; hz_derp_ips=""; }
+            if [ -n "$hz_derp_ips" ]; then
+                printf '%s\n' "$hz_derp_ips" | sort -u | tee -a "$hz_underlay_set" | while read -r ip; do
+                    route_local_v4 "$ip" "haozeke derp"
+                done
+            fi
+        fi
+    fi
 fi
 
 # --- 3b. x.ai tailnet visibility: keep its transport OFF the LAN uplink -----
