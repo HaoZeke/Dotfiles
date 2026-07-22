@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+"""Validate a SURF medewerkers-split OpenVPN export without exposing secrets."""
+
+from __future__ import annotations
+
+import collections
+import datetime as dt
+import json
+import os
+import shlex
+import stat
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+DEFAULT_CA_SHA256 = "0D:7D:E6:6B:18:BA:08:F1:C0:CA:56:15:87:5F:51:E1:BD:1C:18:E2:22:AA:64:A4:4F:7E:77:FB:B2:AA:3B:EC"
+BLOCK_NAMES = ("ca", "cert", "key", "tls-crypt")
+EXPECTED_DIRECTIVES = collections.Counter(
+    {
+        ("dev", "tun"): 1,
+        ("client",): 1,
+        ("nobind",): 1,
+        ("remote-cert-tls", "server"): 1,
+        ("verb", "3"): 1,
+        ("server-poll-timeout", "10"): 1,
+        ("tls-version-min", "1.3"): 1,
+        ("data-ciphers", "AES-256-GCM:CHACHA20-POLY1305"): 1,
+        ("reneg-sec", "0"): 1,
+        ("remote", "medewerkers-split.surf.eduvpn.nl", "1197", "udp"): 1,
+        ("remote", "medewerkers-split.surf.eduvpn.nl", "1197", "tcp"): 1,
+    }
+)
+
+
+class ValidationError(Exception):
+    """A bounded error that is safe to expose in logs and notifications."""
+
+
+def normalize_fingerprint(value: str) -> str:
+    return value.replace(":", "").strip().upper()
+
+
+def parse_profile(path: Path) -> tuple[collections.Counter[tuple[str, ...]], dict[str, str]]:
+    try:
+        file_stat = path.lstat()
+    except OSError as error:
+        raise ValidationError(f"cannot stat profile: {error.strerror}") from error
+    if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+        raise ValidationError("profile must be a regular file, not a symlink")
+    if stat.S_IMODE(file_stat.st_mode) & 0o077:
+        raise ValidationError("profile permissions must not grant group or other access")
+    if file_stat.st_size > 512 * 1024:
+        raise ValidationError("profile exceeds the 512 KiB size limit")
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise ValidationError(f"cannot read UTF-8 profile: {error}") from error
+    if "\x00" in text:
+        raise ValidationError("profile contains a NUL byte")
+
+    directives: collections.Counter[tuple[str, ...]] = collections.Counter()
+    blocks: dict[str, str] = {}
+    block_name: str | None = None
+    block_lines: list[str] = []
+
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        stripped = raw_line.strip()
+        if block_name is not None:
+            if stripped == f"</{block_name}>":
+                content = "\n".join(block_lines).strip() + "\n"
+                if not content.strip():
+                    raise ValidationError(f"empty <{block_name}> block")
+                blocks[block_name] = content
+                block_name = None
+                block_lines = []
+            elif stripped.startswith("</") or (stripped.startswith("<") and stripped.endswith(">")):
+                raise ValidationError(f"invalid nested or mismatched block at line {line_number}")
+            else:
+                block_lines.append(raw_line)
+            continue
+
+        if not stripped or stripped.startswith(("#", ";")):
+            continue
+        if stripped.startswith("<") and stripped.endswith(">"):
+            name = stripped[1:-1]
+            if name not in BLOCK_NAMES or name in blocks:
+                raise ValidationError(f"unexpected or duplicate <{name}> block")
+            block_name = name
+            block_lines = []
+            continue
+        try:
+            fields = tuple(shlex.split(stripped, comments=False, posix=True))
+        except ValueError as error:
+            raise ValidationError(f"invalid directive syntax at line {line_number}") from error
+        if not fields:
+            continue
+        directives[fields] += 1
+
+    if block_name is not None:
+        raise ValidationError(f"unterminated <{block_name}> block")
+    missing_blocks = sorted(set(BLOCK_NAMES) - set(blocks))
+    if missing_blocks:
+        raise ValidationError(f"missing inline blocks: {', '.join(missing_blocks)}")
+    if directives != EXPECTED_DIRECTIVES:
+        unexpected = directives - EXPECTED_DIRECTIVES
+        missing = EXPECTED_DIRECTIVES - directives
+        details: list[str] = []
+        if unexpected:
+            details.append("unexpected=" + ",".join(sorted(fields[0] for fields in unexpected)))
+        if missing:
+            details.append("missing=" + ",".join(sorted(" ".join(fields) for fields in missing)))
+        raise ValidationError("directive set does not match medewerkers-split" + (": " + "; ".join(details) if details else ""))
+    return directives, blocks
+
+
+def run_openssl(openssl: str, *arguments: str) -> str:
+    result = subprocess.run(
+        [openssl, *arguments],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.returncode != 0:
+        raise ValidationError("OpenSSL rejected profile cryptographic material")
+    return result.stdout
+
+
+def write_private(path: Path, content: str) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        stream.write(content)
+
+
+def certificate_fingerprint(openssl: str, certificate: Path) -> str:
+    output = run_openssl(openssl, "x509", "-in", str(certificate), "-noout", "-fingerprint", "-sha256")
+    try:
+        return output.strip().split("=", 1)[1]
+    except IndexError as error:
+        raise ValidationError("OpenSSL returned an invalid certificate fingerprint") from error
+
+
+def certificate_dates(openssl: str, certificate: Path) -> tuple[dt.datetime, dt.datetime]:
+    output = run_openssl(openssl, "x509", "-in", str(certificate), "-noout", "-startdate", "-enddate")
+    values = dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
+    try:
+        start = dt.datetime.strptime(values["notBefore"], "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+        end = dt.datetime.strptime(values["notAfter"], "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+    except (KeyError, ValueError) as error:
+        raise ValidationError("OpenSSL returned invalid certificate dates") from error
+    return start, end
+
+
+def validate(path: Path) -> dict[str, object]:
+    _, blocks = parse_profile(path)
+    openssl = os.environ.get("RG_OPENSSL", "openssl")
+    expected_ca = normalize_fingerprint(os.environ.get("RG_SURF_CA_SHA256", DEFAULT_CA_SHA256))
+
+    with tempfile.TemporaryDirectory(prefix="rg-surf-vpn-validate-") as directory:
+        work = Path(directory)
+        ca_path = work / "ca.pem"
+        cert_path = work / "cert.pem"
+        key_path = work / "key.pem"
+        write_private(ca_path, blocks["ca"])
+        write_private(cert_path, blocks["cert"])
+        write_private(key_path, blocks["key"])
+
+        ca_fingerprint = certificate_fingerprint(openssl, ca_path)
+        if normalize_fingerprint(ca_fingerprint) != expected_ca:
+            raise ValidationError("inline CA fingerprint does not match the pinned SURF CA")
+
+        identity = run_openssl(
+            openssl,
+            "x509",
+            "-in",
+            str(cert_path),
+            "-noout",
+            "-subject",
+            "-issuer",
+            "-nameopt",
+            "RFC2253",
+        )
+        identity_lines = dict(line.split("=", 1) for line in identity.splitlines() if "=" in line)
+        subject = identity_lines.get("subject", "")
+        issuer = identity_lines.get("issuer", "")
+        if "OU=medewerkers-split" not in subject.split(","):
+            raise ValidationError("client certificate OU is not medewerkers-split")
+        if issuer != "CN=VPN CA":
+            raise ValidationError("client certificate issuer is not CN=VPN CA")
+
+        run_openssl(openssl, "verify", "-CAfile", str(ca_path), str(cert_path))
+        cert_public = run_openssl(openssl, "x509", "-in", str(cert_path), "-pubkey", "-noout").strip()
+        key_public = run_openssl(openssl, "pkey", "-in", str(key_path), "-pubout").strip()
+        if cert_public != key_public:
+            raise ValidationError("client private key does not match the certificate")
+
+        start, end = certificate_dates(openssl, cert_path)
+        current = dt.datetime.now(dt.timezone.utc)
+        if start > current:
+            raise ValidationError("client certificate is not valid yet")
+        if end <= current + dt.timedelta(hours=1):
+            raise ValidationError("client certificate has less than one hour remaining")
+
+        tls_crypt = blocks["tls-crypt"].splitlines()
+        if len(tls_crypt) < 3 \
+            or tls_crypt[0] != "-----BEGIN OpenVPN Static key V1-----" \
+            or tls_crypt[-1] != "-----END OpenVPN Static key V1-----":
+            raise ValidationError("tls-crypt block has an invalid static-key envelope")
+
+        return {
+            "profile": "medewerkers-split",
+            "remote_host": "medewerkers-split.surf.eduvpn.nl",
+            "remote_port": 1197,
+            "ca_sha256": ca_fingerprint,
+            "cert_sha256": certificate_fingerprint(openssl, cert_path),
+            "not_before": start.isoformat(),
+            "not_before_epoch": int(start.timestamp()),
+            "not_after": end.isoformat(),
+            "not_after_epoch": int(end.timestamp()),
+        }
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        print("usage: rg-surf-vpn-validate PROFILE", file=sys.stderr)
+        return 2
+    try:
+        metadata = validate(Path(argv[1]))
+    except ValidationError as error:
+        print(f"rg-surf-vpn-validate: {error}", file=sys.stderr)
+        return 1
+    print(json.dumps(metadata, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
