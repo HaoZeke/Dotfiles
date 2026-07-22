@@ -80,7 +80,16 @@ route_local_v4() {
 ensure_hosts_record() {
     local ip="$1" host="$2" hosts_file="${RG_HOSTS_FILE:-/etc/hosts}" tmp
     [ -r "$hosts_file" ] || return 0
-    grep -Eq "^[[:space:]]*$ip[[:space:]].*([[:space:]]|^)$host([[:space:]]|$)" "$hosts_file" && return 0
+    awk -v ip="$ip" -v host="$host" '
+        $1 == ip {
+            for (i = 2; i <= NF; i++) {
+                if ($i == host) {
+                    found = 1
+                }
+            }
+        }
+        END { exit !found }
+    ' "$hosts_file" && return 0
     tmp="$(mktemp)"
     awk -v host="$host" '
         {
@@ -145,8 +154,10 @@ xai_control_host_ips() {
 }
 
 nl_public_service_hosts() {
+    local -a override_hosts
     if [ -n "${RG_NL_PUBLIC_SERVICE_HOSTS:-}" ]; then
-        printf '%s\n' $RG_NL_PUBLIC_SERVICE_HOSTS
+        read -r -a override_hosts <<<"$RG_NL_PUBLIC_SERVICE_HOSTS"
+        printf '%s\n' "${override_hosts[@]}"
         return 0
     fi
     cat <<'EOF'
@@ -215,8 +226,10 @@ EOF
 }
 
 olt_hosts() {
+    local -a override_hosts
     if [ -n "${RG_OLT_HOSTS:-}" ]; then
-        printf '%s\n' $RG_OLT_HOSTS
+        read -r -a override_hosts <<<"$RG_OLT_HOSTS"
+        printf '%s\n' "${override_hosts[@]}"
         return 0
     fi
     cat <<'EOF'
