@@ -47,6 +47,8 @@ run "$REPO/dot_local/bin/executable_rg-haozeke-derp-targets-selftest" \
     "$REPO/dot_local/bin/executable_rg-haozeke-derp-targets"
 run "$REPO/dot_local/bin/executable_rg-surf-vpn-validate-selftest" \
     "$REPO/dot_local/bin/executable_rg-surf-vpn-validate"
+run "$REPO/dot_local/bin/executable_rg-surf-vpn-apply-selftest" \
+    "$REPO/dot_local/bin/executable_rg-surf-vpn-apply"
 run "$REPO/dot_local/bin/executable_rg-rgsurflat-system-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-kernel-build-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-sway-config-selftest" "$REPO"
