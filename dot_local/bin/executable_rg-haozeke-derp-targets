@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Print public DERP IPv4 nodes used by a userspace Tailscale daemon."""
+
+from __future__ import annotations
+
+import ipaddress
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot read JSON from {path}: {error}") from error
+    if not isinstance(value, dict):
+        raise ValueError(f"expected a JSON object in {path}")
+    return value
+
+
+def relay_codes(status: dict[str, Any]) -> set[str]:
+    codes: set[str] = set()
+    self_status = status.get("Self")
+    if isinstance(self_status, dict):
+        relay = self_status.get("Relay")
+        if isinstance(relay, str) and relay:
+            codes.add(relay)
+
+    peers = status.get("Peer")
+    if isinstance(peers, dict):
+        for peer in peers.values():
+            if not isinstance(peer, dict):
+                continue
+            relay = peer.get("Relay")
+            if isinstance(relay, str) and relay:
+                codes.add(relay)
+    return codes
+
+
+def active_derp_ipv4(status: dict[str, Any], derp_map: dict[str, Any]) -> list[ipaddress.IPv4Address]:
+    active_codes = relay_codes(status)
+    addresses: set[ipaddress.IPv4Address] = set()
+    regions = derp_map.get("Regions")
+    if not isinstance(regions, dict):
+        return []
+
+    for region in regions.values():
+        if not isinstance(region, dict) or region.get("RegionCode") not in active_codes:
+            continue
+        nodes = region.get("Nodes")
+        if not isinstance(nodes, list):
+            continue
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            try:
+                address = ipaddress.IPv4Address(node.get("IPv4", ""))
+            except ipaddress.AddressValueError:
+                continue
+            if address.is_global:
+                addresses.add(address)
+    return sorted(addresses, key=int)
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 3:
+        print("usage: rg-haozeke-derp-targets STATUS_JSON DERP_MAP_JSON", file=sys.stderr)
+        return 2
+    try:
+        status = load_json(Path(argv[1]))
+        derp_map = load_json(Path(argv[2]))
+    except ValueError as error:
+        print(f"rg-haozeke-derp-targets: {error}", file=sys.stderr)
+        return 1
+
+    for address in active_derp_ipv4(status, derp_map):
+        print(address)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
