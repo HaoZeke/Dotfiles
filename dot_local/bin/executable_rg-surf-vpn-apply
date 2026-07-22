@@ -1,52 +1,169 @@
 #!/usr/bin/env bash
-# rg-surf-vpn-apply: install the newest eduVPN (SURF medewerkers-split) OpenVPN
-# profile exported from the portal, then (re)start the split-VPN client. Run this
-# after logging in at https://surf.eduvpn.nl/portal/home and downloading a config
-# (the UDP export already carries both remotes: udp primary, tcp fallback). The
-# server endpoint carve-out that keeps the control channel off the US egress is
-# maintained by rg-net-heal; this script only swaps the profile and bounces the
-# service. Self-elevates via sudo.
+# Validate and install a SURF medewerkers-split export, then prove tunnel health.
 set -uo pipefail
 
 DL="${RG_SURF_DL_DIR:-/home/rgoswami/Downloads}"
 DEST="${RG_SURF_OVPN:-/etc/openvpn/client/surf-split.conf}"
-UNIT="openvpn-client@surf-split.service"
+STATUS_FILE="${RG_SURF_STATUS_FILE:-/var/lib/rg-surf-vpn/status.json}"
+UNIT="${RG_SURF_OPENVPN_UNIT:-openvpn-client@surf-split.service}"
+CANARY_HOST="${RG_SURF_CANARY_HOST:-servicedesk.surf.nl}"
+SOURCE_UID="${RG_SURF_SOURCE_UID:-1001}"
+WAIT_ATTEMPTS="${RG_SURF_WAIT_ATTEMPTS:-20}"
 
-log() { printf 'rg-surf-vpn-apply: %s\n' "$*"; }
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+VALIDATOR="${RG_SURF_VALIDATOR:-$script_dir/rg-surf-vpn-validate}"
+SYSTEMCTL="${RG_SURF_SYSTEMCTL:-systemctl}"
+JOURNALCTL="${RG_SURF_JOURNALCTL:-journalctl}"
+IP="${RG_SURF_IP:-ip}"
+GETENT="${RG_SURF_GETENT:-getent}"
+SLEEP="${RG_SURF_SLEEP:-sleep}"
 
-[ "$(id -u)" -eq 0 ] || exec sudo -- "$0" "$@"
+log() {
+    printf 'rg-surf-vpn-apply: %s\n' "$*"
+}
 
-# Newest UDP export (carries both remotes); fall back to any medewerkers-split export.
-src="$(ls -t "$DL"/surf.eduvpn.nl_*_openvpn_udp.ovpn 2>/dev/null | head -1)"
-[ -n "$src" ] || src="$(ls -t "$DL"/surf.eduvpn.nl_*_openvpn_*.ovpn 2>/dev/null | head -1)"
-[ -n "$src" ] || { log "no eduVPN export found in $DL"; exit 1; }
+usage() {
+    cat <<'EOF'
+usage: rg-surf-vpn-apply [PROFILE]
+       rg-surf-vpn-apply --validate-only PROFILE
 
-grep -q '^remote ' "$src" || { log "$src has no 'remote' line; not an OpenVPN profile"; exit 1; }
+Without PROFILE, install the newest SURF medewerkers-split export from Downloads.
+EOF
+}
 
-# Cert sanity: warn (do not block) if the exported client cert is already expired.
-cert="$(awk '/<cert>/{f=1;next}/<\/cert>/{f=0}f' "$src")"
-enddate="$(printf '%s\n' "$cert" | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)"
-if [ -n "$cert" ] && ! printf '%s\n' "$cert" | openssl x509 -checkend 0 -noout >/dev/null 2>&1; then
-    log "WARNING: client cert already expired (${enddate:-unknown}); download a fresh profile"
+newest_download() {
+    find "$DL" -maxdepth 1 -type f \
+        \( -name 'surf.eduvpn.nl_*_openvpn_udp.ovpn' -o -name 'surf.eduvpn.nl_*_openvpn_*.ovpn' \) \
+        -printf '%T@ %p\n' 2>/dev/null \
+        | sort -nr \
+        | sed -n '1s/^[^ ]* //p'
+}
+
+case "$#:${1:-}" in
+    0:*) src="$(newest_download)" ;;
+    1:-h|1:--help) usage; exit 0 ;;
+    1:*) src="$1" ;;
+    2:--validate-only)
+        exec "$VALIDATOR" "$2"
+        ;;
+    *) usage >&2; exit 2 ;;
+esac
+
+[ -n "${src:-}" ] || { log "no eduVPN export found in $DL" >&2; exit 1; }
+[ -f "$src" ] && [ ! -L "$src" ] || { log "profile must be a regular file, not a symlink" >&2; exit 1; }
+[ "$(stat -c '%u' "$src" 2>/dev/null)" = "$SOURCE_UID" ] \
+    || { log "profile owner does not match uid $SOURCE_UID" >&2; exit 1; }
+case "$(stat -c '%a' "$src" 2>/dev/null)" in
+    400|600) ;;
+    *) log "profile must have mode 0400 or 0600" >&2; exit 1 ;;
+esac
+[ -x "$VALIDATOR" ] || { log "validator not executable: $VALIDATOR" >&2; exit 1; }
+
+dest_parent="$(dirname -- "$DEST")"
+if [ "$(id -u)" -ne 0 ] && { [ ! -d "$dest_parent" ] || [ ! -w "$dest_parent" ]; }; then
+    exec sudo -- "$0" "$@"
 fi
 
-install -m 0600 -o root -g root "$src" "$DEST" || { log "install to $DEST failed"; exit 1; }
-log "installed $(basename "$src") -> $DEST (cert expires ${enddate:-unknown})"
+candidate="$(mktemp /tmp/rg-surf-vpn-candidate.XXXXXX)"
+cleanup() {
+    [ ! -e "$candidate" ] || unlink "$candidate"
+}
+trap cleanup EXIT
 
-systemctl restart "$UNIT" || { log "failed to restart $UNIT"; exit 1; }
-
-# Wait for the tunnel to actually come up before declaring success.
-up=0
-for _ in $(seq 1 20); do
-    if journalctl -u "$UNIT" -n 5 --no-pager -o cat 2>/dev/null | grep -q 'Initialization Sequence Completed'; then
-        up=1; break
-    fi
-    sleep 1
-done
-if [ "$up" = 1 ] && ip link show tun0 >/dev/null 2>&1; then
-    log "tunnel up: tun0 $(ip -4 -br addr show tun0 2>/dev/null | awk '{print $3}')"
-    log "SURF split VPN active until ${enddate:-unknown}"
+if [ "$(id -u)" -eq 0 ]; then
+    install -m 0600 -o root -g root "$src" "$candidate"
 else
-    log "WARNING: tunnel did not report 'Initialization Sequence Completed'; check: journalctl -u $UNIT"
-    exit 1
+    install -m 0600 "$src" "$candidate"
 fi
+
+metadata_json="$("$VALIDATOR" "$candidate")" \
+    || { log "profile validation failed" >&2; exit 1; }
+printf '%s\n' "$metadata_json" | jq -e \
+    '.profile == "medewerkers-split" and (.cert_sha256 | type == "string")' >/dev/null \
+    || { log "validator returned incomplete metadata" >&2; exit 1; }
+
+cert_sha256="$(printf '%s\n' "$metadata_json" | jq -r '.cert_sha256')"
+installed_sha256=""
+if [ -r "$STATUS_FILE" ]; then
+    installed_sha256="$(jq -r '.cert_sha256 // empty' "$STATUS_FILE" 2>/dev/null)"
+fi
+
+install -d -m 0755 "$dest_parent"
+dest_new="${DEST}.new"
+if [ "$(id -u)" -eq 0 ]; then
+    install -m 0600 -o root -g root "$candidate" "$dest_new"
+else
+    install -m 0600 "$candidate" "$dest_new"
+fi
+mv -f "$dest_new" "$DEST"
+
+canary_ip() {
+    "$GETENT" ahostsv4 "$CANARY_HOST" 2>/dev/null | awk '{print $1; exit}'
+}
+
+tunnel_health() {
+    local address route
+    "$SYSTEMCTL" is-active --quiet "$UNIT" || return 1
+    "$IP" link show tun0 >/dev/null 2>&1 || return 1
+    address="$(canary_ip)"
+    [ -n "$address" ] || return 1
+    route="$("$IP" route get "$address" 2>/dev/null | head -1)"
+    printf '%s\n' "$route" | grep -q ' dev tun0 '
+}
+
+write_status() {
+    local result="$1" address="$2" device="$3" status_tmp
+    status_tmp="$(mktemp /tmp/rg-surf-vpn-status.XXXXXX)"
+    printf '%s\n' "$metadata_json" \
+        | jq -c \
+            --arg result "$result" \
+            --arg installed_at "$(date --iso-8601=seconds)" \
+            --arg canary_host "$CANARY_HOST" \
+            --arg canary_ip "$address" \
+            --arg canary_device "$device" \
+            '. + {
+                result: $result,
+                installed_at: $installed_at,
+                canary_host: $canary_host,
+                canary_ip: $canary_ip,
+                canary_device: $canary_device
+            }' >"$status_tmp" \
+        || { unlink "$status_tmp"; return 1; }
+    install -d -m 0755 "$(dirname -- "$STATUS_FILE")"
+    install -m 0644 "$status_tmp" "${STATUS_FILE}.new"
+    mv -f "${STATUS_FILE}.new" "$STATUS_FILE"
+    unlink "$status_tmp"
+}
+
+if [ "$installed_sha256" = "$cert_sha256" ] && tunnel_health; then
+    address="$(canary_ip)"
+    write_status active "$address" tun0
+    log "certificate unchanged and tunnel healthy"
+    exit 0
+fi
+
+started_at="$(date --iso-8601=seconds)"
+"$SYSTEMCTL" restart "$UNIT" || {
+    write_status restart-failed "" ""
+    log "failed to restart $UNIT" >&2
+    exit 1
+}
+
+attempt=1
+while [ "$attempt" -le "$WAIT_ATTEMPTS" ]; do
+    initialized=0
+    "$JOURNALCTL" -u "$UNIT" --since "$started_at" --no-pager -o cat 2>/dev/null \
+        | grep -q 'Initialization Sequence Completed' && initialized=1
+    if [ "$initialized" -eq 1 ] && tunnel_health; then
+        address="$(canary_ip)"
+        write_status active "$address" tun0
+        log "SURF split tunnel active through tun0 until $(printf '%s\n' "$metadata_json" | jq -r '.not_after')"
+        exit 0
+    fi
+    "$SLEEP" 1
+    attempt=$((attempt + 1))
+done
+
+write_status tunnel-failed "" ""
+log "tunnel did not pass initialization, tun0, and route checks" >&2
+exit 1
