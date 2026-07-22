@@ -38,6 +38,12 @@ net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
 net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
 derp_targets="$repo/dot_local/bin/executable_rg-haozeke-derp-targets"
 net_cli="$repo/dot_local/bin/executable_rg-net"
+surf_validate="$repo/dot_local/bin/executable_rg-surf-vpn-validate"
+surf_apply="$repo/dot_local/bin/executable_rg-surf-vpn-apply"
+surf_export="$repo/dot_local/bin/executable_rg-surf-vpn-export"
+surf_refresh="$repo/dot_local/bin/executable_rg-surf-vpn-refresh"
+surf_refresh_service="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.service"
+surf_refresh_timer="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.timer"
 net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
 us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
@@ -56,6 +62,12 @@ test -r "$net_recover" || fail "missing one-shot network recovery helper"
 test -r "$net_heal" || fail "missing periodic network heal helper"
 test -x "$derp_targets" || fail "missing haozeke DERP target selector"
 test -r "$net_cli" || fail "missing rg-net entry point"
+test -x "$surf_validate" || fail "missing strict SURF profile validator"
+test -r "$surf_apply" || fail "missing SURF profile installer"
+test -x "$surf_export" || fail "missing authenticated SURF export adapter"
+test -x "$surf_refresh" || fail "missing SURF renewal orchestrator"
+test -r "$surf_refresh_service" || fail "missing SURF renewal user service"
+test -r "$surf_refresh_timer" || fail "missing SURF renewal user timer"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
@@ -298,6 +310,34 @@ rg -q 'rg-haozeke-derp-targets-sha256:' "$net_heal_script" \
     || fail "net heal provisioning must rerun when the DERP selector changes"
 rg -q 'rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets' "$net_cli" \
     || fail "rg-net drift must compare the installed DERP selector"
+rg -q 'rg-surf-vpn-apply-sha256:' "$net_heal_script" \
+    || fail "root provisioning must rerun when the SURF installer changes"
+rg -q 'rg-surf-vpn-validate-sha256:' "$net_heal_script" \
+    || fail "root provisioning must rerun when the SURF validator changes"
+rg -q 'install_bin "\$SURF_APPLY_SRC" /usr/local/sbin/rg-surf-vpn-apply' "$net_heal_script" \
+    || fail "root provisioning must install the SURF installer"
+rg -q 'install_bin "\$SURF_VALIDATE_SRC" /usr/local/sbin/rg-surf-vpn-validate' "$net_heal_script" \
+    || fail "root provisioning must install the SURF validator"
+rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
+    || fail "root provisioning must install the SURF spool path unit"
+rg -q 'PathChanged=/home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
+    || fail "SURF spool path unit must watch the authenticated export"
+rg -q 'ExecStart=/usr/local/sbin/rg-surf-vpn-apply /home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
+    || fail "SURF install unit must pass the watched profile to the strict installer"
+rg -q 'enable --now rg-surf-vpn-install\.path' "$net_heal_script" \
+    || fail "root provisioning must enable the SURF spool path unit"
+rg -q 'enable --now rg-surf-vpn-refresh\.timer' "$net_heal_script" \
+    || fail "network provisioning must enable the user SURF renewal timer"
+rg -q '^ExecStart=%h/\.local/bin/rg-surf-vpn-refresh --timer$' "$surf_refresh_service" \
+    || fail "SURF renewal service must invoke timer mode"
+rg -q '^TimeoutStartSec=15min$' "$surf_refresh_service" \
+    || fail "SURF renewal service must bound browser authorization"
+rg -q '^OnUnitActiveSec=1h$' "$surf_refresh_timer" \
+    || fail "SURF renewal timer cadence is not hourly"
+rg -q '^Persistent=true$' "$surf_refresh_timer" \
+    || fail "SURF renewal timer must catch up after missed runs"
+rg -q 'surf-renew\).*rg-surf-vpn-refresh.*--interactive' "$net_cli" \
+    || fail "rg-net must expose explicit SURF browser renewal"
 rg -q 'enable --now rg-net-doctor.timer' "$net_heal_script" \
     || fail "net heal provisioning must enable the periodic live doctor"
 net_doctor="$repo/dot_local/bin/executable_rg-net-doctor"
@@ -329,6 +369,16 @@ rg -q 'OLT residential egress' "$net_doctor" \
     || fail "doctor must audit the OLT residential carve-out"
 rg -q 'www\.olt\.com' "$net_doctor" \
     || fail "doctor must probe an OLT route"
+rg -q '/var/lib/rg-surf-vpn/status\.json' "$net_doctor" \
+    || fail "doctor must inspect nonsecret SURF installation metadata"
+rg -q 'not_after_epoch' "$net_doctor" \
+    || fail "doctor must check the installed SURF certificate expiry"
+rg -q 'ip link show tun0' "$net_doctor" \
+    || fail "doctor must require the SURF tunnel interface"
+rg -q 'servicedesk\.surf\.nl' "$net_doctor" \
+    || fail "doctor must audit the service desk split route"
+rg -q "dev tun0" "$net_doctor" \
+    || fail "doctor must require the SURF canary route through tun0"
 rg -q 'notify-send -u critical "net-doctor' "$net_doctor_alert" \
     || fail "doctor alert wrapper must raise a desktop notification on regression"
 rg_net="$repo/dot_local/bin/executable_rg-net"
