@@ -294,6 +294,10 @@ rg -q 'olt_residential_reachable' "$net_heal" \
     || fail "periodic network heal helper does not probe OLT on the residential path"
 rg -F -q 'if olt_residential_reachable "$olt_host" "$ip"; then' "$net_heal" \
     || fail "periodic network heal helper does not gate OLT carve-outs on reachability"
+rg -q 'declare -A olt_residential_probe_cache' "$net_heal" \
+    || fail "periodic network heal helper does not cache OLT probes by address"
+rg -F -q '${RG_OLT_CONNECT_TIMEOUT:-2}' "$net_heal" \
+    || fail "periodic network heal helper does not bound an OLT probe to two seconds"
 rg -F -q 'route_local_v4 "$ip" "olt:$olt_host"' "$net_heal" \
     || fail "periodic network heal helper does not send OLT hosts through the LAN"
 rg -q 'debug derp-map' "$net_heal" \
