@@ -45,6 +45,7 @@ surf_refresh="$repo/dot_local/bin/executable_rg-surf-vpn-refresh"
 surf_refresh_service="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.service"
 surf_refresh_timer="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.timer"
 net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
+chezmoi_ignore="$repo/.chezmoiignore"
 us_egress_guard_script="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 laptop_script="$repo/.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl"
 top_bar="$repo/dot_config/i3rust/i3_top.toml.tmpl"
@@ -69,6 +70,7 @@ test -x "$surf_refresh" || fail "missing SURF renewal orchestrator"
 test -r "$surf_refresh_service" || fail "missing SURF renewal user service"
 test -r "$surf_refresh_timer" || fail "missing SURF renewal user timer"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
+test -r "$chezmoi_ignore" || fail "missing host-specific chezmoi ignore policy"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
@@ -336,6 +338,8 @@ rg -q '^OnUnitActiveSec=1h$' "$surf_refresh_timer" \
     || fail "SURF renewal timer cadence is not hourly"
 rg -q '^Persistent=true$' "$surf_refresh_timer" \
     || fail "SURF renewal timer must catch up after missed runs"
+rg -U -q '(?s)\{\{ if ne \.chezmoi\.hostname "rgx1gen11" \}\}.*\.config/systemd/user/rg-surf-vpn-refresh\.service.*\.config/systemd/user/rg-surf-vpn-refresh\.timer.*\.local/bin/rg-surf-vpn-apply.*\.local/bin/rg-surf-vpn-export.*\.local/bin/rg-surf-vpn-refresh.*\.local/bin/rg-surf-vpn-validate.*\{\{ end \}\}' "$chezmoi_ignore" \
+    || fail "SURF renewal files must remain exclusive to the OpenVPN-owned laptop"
 rg -q 'surf-renew\).*rg-surf-vpn-refresh.*--interactive' "$net_cli" \
     || fail "rg-net must expose explicit SURF browser renewal"
 rg -q 'enable --now rg-net-doctor.timer' "$net_heal_script" \
