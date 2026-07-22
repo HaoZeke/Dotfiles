@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Behavior checks for the haozeke DERP target selector.
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-haozeke-derp-targets-selftest [selector]\n' >&2
+    exit 2
+fi
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+TARGET="${1:-$SCRIPT_DIR/rg-haozeke-derp-targets}"
+[ -x "$TARGET" ] || fail "target selector not executable: $TARGET"
+
+tmp_dir="$(mktemp -d)"
+trap 'rtrash -rf "$tmp_dir"' EXIT
+
+status_json="$tmp_dir/status.json"
+derp_json="$tmp_dir/derp-map.json"
+
+cat >"$status_json" <<'EOF'
+{
+  "Version": "1.98.4",
+  "TUN": false,
+  "BackendState": "Running",
+  "Self": {"Relay": "sao"},
+  "Peer": {
+    "nodekey:terra": {"HostName": "rgam5terra", "Relay": "ams"},
+    "nodekey:direct": {"HostName": "other", "Relay": ""}
+  }
+}
+EOF
+
+cat >"$derp_json" <<'EOF'
+{
+  "Regions": {
+    "14": {
+      "RegionID": 14,
+      "RegionCode": "ams",
+      "Nodes": [
+        {"Name": "14b", "RegionID": 14, "IPv4": "176.58.93.248"},
+        {"Name": "14c", "RegionID": 14, "IPv4": "176.58.93.147"},
+        {"Name": "14-private", "RegionID": 14, "IPv4": "192.168.5.5"}
+      ]
+    },
+    "21": {
+      "RegionID": 21,
+      "RegionCode": "sao",
+      "Nodes": [
+        {"Name": "21a", "RegionID": 21, "IPv4": "18.229.82.33"}
+      ]
+    },
+    "1": {
+      "RegionID": 1,
+      "RegionCode": "nyc",
+      "Nodes": [
+        {"Name": "1a", "RegionID": 1, "IPv4": "104.248.73.189"}
+      ]
+    }
+  }
+}
+EOF
+
+expected="$tmp_dir/expected"
+actual="$tmp_dir/actual"
+printf '%s\n' \
+    18.229.82.33 \
+    176.58.93.147 \
+    176.58.93.248 >"$expected"
+
+"$TARGET" "$status_json" "$derp_json" >"$actual"
+cmp -s "$expected" "$actual" || {
+    diff -u "$expected" "$actual" >&2 || true
+    fail "selector must return public nodes from active self and peer relay regions"
+}
+
+printf 'ok\n'
