@@ -7,6 +7,7 @@ import collections
 import datetime as dt
 import json
 import os
+import re
 import shlex
 import stat
 import subprocess
@@ -207,9 +208,17 @@ def validate(path: Path) -> dict[str, object]:
             raise ValidationError("client certificate has less than one hour remaining")
 
         tls_crypt = blocks["tls-crypt"].splitlines()
-        if len(tls_crypt) < 3 \
-            or tls_crypt[0] != "-----BEGIN OpenVPN Static key V1-----" \
-            or tls_crypt[-1] != "-----END OpenVPN Static key V1-----":
+        tls_header = [
+            "#",
+            "# 2048 bit OpenVPN static key",
+            "#",
+            "-----BEGIN OpenVPN Static key V1-----",
+        ]
+        tls_key_lines = tls_crypt[len(tls_header):-1]
+        if tls_crypt[:len(tls_header)] != tls_header \
+            or tls_crypt[-1:] != ["-----END OpenVPN Static key V1-----"] \
+            or len(tls_key_lines) != 16 \
+            or any(re.fullmatch(r"[0-9A-Fa-f]{32}", line) is None for line in tls_key_lines):
             raise ValidationError("tls-crypt block has an invalid static-key envelope")
 
         return {
