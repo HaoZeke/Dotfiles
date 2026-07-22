@@ -29,9 +29,9 @@
 #      benefits, benefits-adjacent, and similar public portals can reject or
 #      mis-handle the Houston egress. Resolve the known public-service host set
 #      on each run and route those /32s through the local uplink.
-#   6. OLT carve-out: OLT rejects or mis-handles authenticated traffic from the
-#      Houston exit. Resolve its public hosts and route only their current /32s
-#      through the local uplink.
+#   6. OLT carve-out: OLT can reject or mis-handle authenticated traffic from
+#      the Houston exit. Prefer the local uplink only when its HTTPS path works;
+#      otherwise omit the /32 so the reachable Houston path remains available.
 set -uo pipefail
 
 log() { logger -t rg-net-heal -- "$1"; }
