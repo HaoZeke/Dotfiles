@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+# Behavior checks for the eduVPN-core export adapter.
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+if [ $# -gt 1 ]; then
+    printf 'usage: rg-surf-vpn-export-selftest [exporter]\n' >&2
+    exit 2
+fi
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+EXPORTER="${1:-$SCRIPT_DIR/rg-surf-vpn-export}"
+[ -r "$EXPORTER" ] || fail "exporter not readable: $EXPORTER"
+
+tmp_dir="$(mktemp -d)"
+trap 'rtrash -rf "$tmp_dir"' EXIT
+fake_root="$tmp_dir/fake"
+mkdir -p "$fake_root/eduvpn" "$fake_root/eduvpn_common" "$tmp_dir/state" "$tmp_dir/bin"
+calls="$tmp_dir/calls"
+: >"$calls"
+
+cat >"$fake_root/eduvpn_common/state.py" <<'PY'
+from enum import IntEnum
+
+
+class StateType(IntEnum):
+    ENTER = 1
+    LEAVE = 2
+
+
+class State(IntEnum):
+    DEREGISTERED = 0
+    MAIN = 1
+    ADDING_SERVER = 2
+    OAUTH_STARTED = 3
+    GETTING_CONFIG = 4
+    ASK_LOCATION = 5
+    ASK_PROFILE = 6
+    GOT_CONFIG = 7
+    CONNECTING = 8
+    CONNECTED = 9
+    DISCONNECTING = 10
+    DISCONNECTED = 11
+PY
+
+cat >"$fake_root/eduvpn_common/event.py" <<'PY'
+def class_state_transition(state, state_type):
+    def decorate(function):
+        function._test_transition = (state, state_type)
+        return function
+    return decorate
+PY
+
+cat >"$fake_root/eduvpn_common/main.py" <<'PY'
+import json
+import os
+import time
+from enum import IntEnum
+
+from .state import State, StateType
+
+
+class ServerType(IntEnum):
+    UNKNOWN = 0
+    INSTITUTE_ACCESS = 1
+    SECURE_INTERNET = 2
+    CUSTOM = 3
+
+    def __str__(self):
+        if self == ServerType.INSTITUTE_ACCESS:
+            return "Institute Access Server"
+        return self.name
+
+
+class EduVPN:
+    def __init__(self, name, version, config_directory):
+        self.callbacks = []
+        self.cancelled = False
+        self.profile = None
+        self.token_getter = None
+        self.token_setter = None
+
+    def record(self, value):
+        with open(os.environ["RG_TEST_EDUVPN_CALLS"], "a", encoding="utf-8") as stream:
+            stream.write(value + "\n")
+
+    def register_class_callbacks(self, callback):
+        self.callbacks.append(callback)
+
+    def register(self):
+        self.record("register")
+
+    def deregister(self):
+        self.record("deregister")
+
+    def set_token_handler(self, getter, setter):
+        self.token_getter = getter
+        self.token_setter = setter
+
+    def emit(self, state, data):
+        for callback in self.callbacks:
+            for name in dir(callback):
+                method = getattr(callback, name)
+                if getattr(method, "_test_transition", None) == (state, StateType.ENTER):
+                    method(State.MAIN, data)
+
+    def cookie_reply(self, cookie, value):
+        self.profile = value
+        self.record("profile=" + value)
+
+    def cancel(self):
+        self.cancelled = True
+        self.record("cancel")
+
+    def get_config(self, server_type, identifier, prefer_tcp=False, startup=False):
+        profile_data = {
+            "cookie": 7,
+            "data": {
+                "map": {
+                    "medewerkers": {"display_name": {"en": "all"}},
+                    "medewerkers-split": {"display_name": {"en": "split"}}
+                },
+                "current": "medewerkers-split"
+            }
+        }
+        self.emit(State.ASK_PROFILE, json.dumps(profile_data))
+        for _ in range(100):
+            if self.profile:
+                break
+            time.sleep(0.001)
+        if self.profile != "medewerkers-split":
+            raise RuntimeError("wrong profile")
+
+        mode = os.environ.get("RG_TEST_EDUVPN_MODE", "success")
+        if mode in ("auth", "auth-success"):
+            self.emit(State.OAUTH_STARTED, "https://auth.invalid/secret-state")
+        if mode == "auth":
+            for _ in range(100):
+                if self.cancelled:
+                    break
+                time.sleep(0.001)
+            raise RuntimeError("cancelled")
+
+        tokens = self.token_getter(identifier, int(server_type))
+        parsed = json.loads(tokens)
+        if sorted(parsed) != ["access_token", "expires_at", "refresh_token"]:
+            raise RuntimeError("incomplete token getter")
+        self.record("token-load")
+        self.token_setter(
+            identifier,
+            int(server_type),
+            json.dumps({"access_token": "rotated-access", "refresh_token": "rotated-refresh", "expires_at": 1999999999}),
+        )
+        return json.dumps({
+            "config": "VALID PROFILE\n",
+            "protocol": 1,
+            "default_gateway": False,
+            "dns_search_domains": ["ia.surf.nl"],
+            "should_failover": False
+        })
+PY
+
+cat >"$fake_root/eduvpn/__init__.py" <<'PY'
+__version__ = "4.7.2-test"
+PY
+
+cat >"$fake_root/eduvpn/variants.py" <<'PY'
+from pathlib import Path
+
+
+class Variant:
+    client_id = "org.eduvpn.app.linux"
+    config_prefix = Path("/tmp/fake-eduvpn")
+    name = "eduVPN"
+
+
+EDUVPN = Variant()
+PY
+
+cat >"$fake_root/eduvpn/keyring.py" <<'PY'
+import json
+import os
+
+
+class DBusKeyring:
+    def __init__(self, variant):
+        pass
+
+    def load(self, attributes):
+        with open(os.environ["RG_TEST_EDUVPN_CALLS"], "a", encoding="utf-8") as stream:
+            stream.write("keyring-load\n")
+        return json.dumps({"access": "stored-access", "refresh": "stored-refresh", "expires_at": "1888888888"})
+
+    def save(self, label, attributes, secret):
+        parsed = json.loads(secret)
+        if sorted(parsed) != ["access", "expires_at", "refresh"]:
+            raise RuntimeError("incomplete keyring save")
+        with open(os.environ["RG_TEST_EDUVPN_CALLS"], "a", encoding="utf-8") as stream:
+            stream.write("keyring-save\n")
+PY
+
+cat >"$tmp_dir/bin/browser" <<'EOF'
+#!/usr/bin/env bash
+printf 'browser\n' >>"$RG_TEST_EDUVPN_CALLS"
+EOF
+chmod +x "$tmp_dir/bin/browser"
+
+stdout="$tmp_dir/stdout"
+stderr="$tmp_dir/stderr"
+pending="$tmp_dir/state/rg-surf-vpn/pending.ovpn"
+
+run_export() {
+    local mode="$1"
+    shift
+    set +e
+    PYTHONPATH="$fake_root" \
+    XDG_STATE_HOME="$tmp_dir/state" \
+    RG_TEST_EDUVPN_CALLS="$calls" \
+    RG_TEST_EDUVPN_MODE="$mode" \
+    RG_SURF_BROWSER="$tmp_dir/bin/browser" \
+    python3 "$EXPORTER" "$@" >"$stdout" 2>"$stderr"
+    rc=$?
+    set -e
+    return "$rc"
+}
+
+run_export success --noninteractive || fail "silent export failed"
+[ "$(cat "$pending")" = "VALID PROFILE" ] || fail "silent export did not spool the returned config"
+[ "$(stat -c '%a' "$pending")" = 600 ] || fail "spooled profile mode is not 0600"
+rg -q '^profile=medewerkers-split$' "$calls" || fail "exporter did not select medewerkers-split"
+rg -q '^token-load$' "$calls" || fail "exporter did not provide stored OAuth tokens"
+rg -q '^keyring-save$' "$calls" || fail "exporter did not persist rotated OAuth tokens"
+! rg -qi 'stored-access|stored-refresh|rotated-access|rotated-refresh|secret-state' "$stdout" "$stderr" \
+    || fail "exporter leaked OAuth material or authorization URL"
+
+mv "$pending" "$tmp_dir/success.ovpn"
+: >"$calls"
+if run_export auth --noninteractive; then
+    fail "noninteractive export succeeded despite required authorization"
+else
+    rc=$?
+fi
+[ "$rc" -eq 42 ] || fail "authorization-required exit code is $rc instead of 42"
+[ ! -e "$pending" ] || fail "authorization-required run wrote a pending profile"
+rg -q '^cancel$' "$calls" || fail "noninteractive authorization did not cancel the core request"
+! rg -qi 'secret-state' "$stdout" "$stderr" || fail "authorization-required output leaked the OAuth URL"
+
+: >"$calls"
+run_export auth-success --interactive || fail "interactive export failed"
+[ -f "$pending" ] || fail "interactive export did not spool the returned config"
+for _ in 1 2 3 4 5; do
+    rg -q '^browser$' "$calls" && break
+    sleep 0.05
+done
+rg -q '^browser$' "$calls" || fail "interactive authorization did not open the browser"
+! rg -qi 'secret-state' "$stdout" "$stderr" || fail "interactive output leaked the OAuth URL"
+
+printf 'ok\n'
