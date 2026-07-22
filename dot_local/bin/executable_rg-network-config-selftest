@@ -383,6 +383,12 @@ rg -q 'OLT residential egress' "$net_doctor" \
     || fail "doctor must audit the OLT residential carve-out"
 rg -q 'www\.olt\.com' "$net_doctor" \
     || fail "doctor must probe an OLT route"
+rg -F -q -- '--resolve "www.olt.com:443:$olt_ip"' "$net_doctor" \
+    || fail "doctor must probe OLT HTTPS through the selected route"
+rg -q 'reachable via US egress fallback' "$net_doctor" \
+    || fail "doctor must report a working OLT fallback"
+rg -q 'OLT HTTPS probe failed' "$net_doctor" \
+    || fail "doctor must fail when the selected OLT path is unreachable"
 rg -q '/var/lib/rg-surf-vpn/status\.json' "$net_doctor" \
     || fail "doctor must inspect nonsecret SURF installation metadata"
 rg -q 'not_after_epoch' "$net_doctor" \
