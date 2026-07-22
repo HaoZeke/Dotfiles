@@ -365,6 +365,12 @@ rg -q 'haozeke DERP source routes' "$net_doctor" \
     || fail "doctor must audit source-correct routes for active haozeke DERP nodes"
 rg -q 'rg-haozeke-derp-targets' "$net_doctor" \
     || fail "doctor must use the shared active-DERP selector"
+rg -q 'active DERP routes audited below' "$net_doctor" \
+    || fail "doctor must defer missing legacy backstops to the active-DERP audit"
+! rg -q 'bad "nft rg_hz_carveout ABSENT and no peer backstops' "$net_doctor" \
+    || fail "doctor must not fail before auditing active DERP routes"
+! rg -F -q '${terra_ep:-153.92.128.58}' "$net_doctor" \
+    || fail "doctor must not audit a stale static endpoint while Terra uses DERP"
 rg -q 'OLT residential egress' "$net_doctor" \
     || fail "doctor must audit the OLT residential carve-out"
 rg -q 'www\.olt\.com' "$net_doctor" \
