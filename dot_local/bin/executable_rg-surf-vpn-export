@@ -37,6 +37,16 @@ class ExportTransitions:
         self.browser = browser
         self.authorization_required = False
         self.browser_failed = False
+        self.cancellation_workers: list[threading.Thread] = []
+
+    def cancel_async(self, name: str) -> None:
+        worker = threading.Thread(target=self.common.cancel, name=name, daemon=True)
+        self.cancellation_workers.append(worker)
+        worker.start()
+
+    def wait_for_cancellations(self) -> None:
+        for worker in self.cancellation_workers:
+            worker.join()
 
     @class_state_transition(State.ASK_PROFILE, StateType.ENTER)
     def choose_profile(self, old_state: State, data: str) -> None:
@@ -48,7 +58,7 @@ class ExportTransitions:
             if PROFILE_ID not in profiles:
                 raise KeyError(PROFILE_ID)
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
-            threading.Thread(target=self.common.cancel, name="eduvpn-cancel-profile", daemon=True).start()
+            self.cancel_async("eduvpn-cancel-profile")
             raise ExportError("SURF server did not offer medewerkers-split") from error
         threading.Thread(
             target=self.common.cookie_reply,
@@ -80,7 +90,7 @@ class ExportTransitions:
                 daemon=True,
             ).start()
         else:
-            threading.Thread(target=self.common.cancel, name="eduvpn-cancel-oauth", daemon=True).start()
+            self.cancel_async("eduvpn-cancel-oauth")
 
 
 class SecretServiceTokens:
@@ -138,6 +148,7 @@ def request_config(interactive: bool, browser: str) -> tuple[str, bool]:
         common.set_token_handler(tokens.load, tokens.save)
         config_json = common.get_config(ServerType.INSTITUTE_ACCESS, SERVER_ID, False)
     except Exception as error:
+        transitions.wait_for_cancellations()
         if transitions.authorization_required and not interactive:
             raise ExportError("authorization required") from error
         if transitions.browser_failed:
