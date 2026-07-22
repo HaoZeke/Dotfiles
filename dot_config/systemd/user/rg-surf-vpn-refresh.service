@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew the SURF medewerkers-split profile through eduVPN
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-surf-vpn-refresh --timer
+TimeoutStartSec=15min

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check SURF eduVPN profile validity hourly
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

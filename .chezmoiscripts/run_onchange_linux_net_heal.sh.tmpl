@@ -7,6 +7,8 @@
 # rg-net-heal-sha256: {{ include "dot_local/bin/executable_rg-net-heal" | sha256sum }}
 # rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
 # rg-haozeke-derp-targets-sha256: {{ include "dot_local/bin/executable_rg-haozeke-derp-targets" | sha256sum }}
+# rg-surf-vpn-apply-sha256: {{ include "dot_local/bin/executable_rg-surf-vpn-apply" | sha256sum }}
+# rg-surf-vpn-validate-sha256: {{ include "dot_local/bin/executable_rg-surf-vpn-validate" | sha256sum }}
 set -euo pipefail
 
 # Root provisioning must never hang a plain `chezmoi apply` on a password
@@ -20,6 +22,8 @@ fi
 HEAL_SRC="$HOME/.local/bin/rg-net-heal"
 RECOVER_SRC="$HOME/.local/bin/rg-net-recover"
 DERP_TARGETS_SRC="$HOME/.local/bin/rg-haozeke-derp-targets"
+SURF_APPLY_SRC="$HOME/.local/bin/rg-surf-vpn-apply"
+SURF_VALIDATE_SRC="$HOME/.local/bin/rg-surf-vpn-validate"
 if [ ! -x "$HEAL_SRC" ]; then
     echo "chezmoi: rg-net-heal missing; skipping install." >&2
     exit 0
@@ -30,6 +34,14 @@ if [ ! -x "$RECOVER_SRC" ]; then
 fi
 if [ ! -x "$DERP_TARGETS_SRC" ]; then
     echo "chezmoi: rg-haozeke-derp-targets missing; skipping install." >&2
+    exit 0
+fi
+if [ ! -x "$SURF_APPLY_SRC" ]; then
+    echo "chezmoi: rg-surf-vpn-apply missing; skipping install." >&2
+    exit 0
+fi
+if [ ! -x "$SURF_VALIDATE_SRC" ]; then
+    echo "chezmoi: rg-surf-vpn-validate missing; skipping install." >&2
     exit 0
 fi
 
@@ -53,6 +65,8 @@ install_root() {
 install_bin "$HEAL_SRC" /usr/local/sbin/rg-net-heal
 install_bin "$RECOVER_SRC" /usr/local/sbin/rg-net-recover
 install_bin "$DERP_TARGETS_SRC" /usr/local/sbin/rg-haozeke-derp-targets
+install_bin "$SURF_APPLY_SRC" /usr/local/sbin/rg-surf-vpn-apply
+install_bin "$SURF_VALIDATE_SRC" /usr/local/sbin/rg-surf-vpn-validate
 
 install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
 [Unit]
@@ -78,9 +92,37 @@ AccuracySec=5
 WantedBy=timers.target
 EOF
 
+install_root /etc/systemd/system/rg-surf-vpn-install.service <<'EOF'
+[Unit]
+Description=Validate and install a pending SURF eduVPN profile
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-surf-vpn-apply /home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn
+TimeoutStartSec=90
+EOF
+
+install_root /etc/systemd/system/rg-surf-vpn-install.path <<'EOF'
+[Unit]
+Description=Watch for authenticated SURF eduVPN exports
+
+[Path]
+PathChanged=/home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn
+Unit=rg-surf-vpn-install.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now rg-net-heal.timer
+sudo systemctl enable --now rg-surf-vpn-install.path
 sudo systemctl start rg-net-heal.service || true
+if sudo test -f /home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn; then
+    sudo systemctl start rg-surf-vpn-install.service || true
+fi
 echo "chezmoi: rg-net-heal timer enabled"
 
 # Live-audit timer (user unit: needs the session bus for notify-send). Best
@@ -89,5 +131,8 @@ if systemctl --user daemon-reload >/dev/null 2>&1; then
     systemctl --user enable --now rg-net-doctor.timer >/dev/null 2>&1 \
         && echo "chezmoi: rg-net-doctor timer enabled" \
         || echo "chezmoi: rg-net-doctor timer not enabled yet (unit missing?)" >&2
+    systemctl --user enable --now rg-surf-vpn-refresh.timer >/dev/null 2>&1 \
+        && echo "chezmoi: rg-surf-vpn-refresh timer enabled" \
+        || echo "chezmoi: rg-surf-vpn-refresh timer not enabled yet (unit missing?)" >&2
 fi
 {{- end }}

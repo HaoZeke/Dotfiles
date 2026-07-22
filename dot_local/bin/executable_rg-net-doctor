@@ -10,6 +10,8 @@ HZ_TABLE="${RG_HZ_TABLE:-5151}"
 HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-$HOME/.local/bin/rg-haozeke-derp-targets}"
 TERRA_IP="${RG_TERRA_IP:-100.119.130.84}"
 SOCKS="${RG_HZ_SOCKS:-127.0.0.1:1055}"
+SURF_STATUS="${RG_SURF_STATUS_FILE:-/var/lib/rg-surf-vpn/status.json}"
+SURF_CANARY="${RG_SURF_CANARY_HOST:-servicedesk.surf.nl}"
 pass=0; fail=0; warn=0
 
 ok(){ printf '  OK  %s\n' "$*"; pass=$((pass+1)); }
@@ -193,10 +195,53 @@ fi
 if dig +time=2 +tries=1 +short google.com @127.0.0.1 >/dev/null 2>&1; then ok "dig @127.0.0.1 ok"; else bad "dig @127.0.0.1 failed"; fi
 
 printf '== SURF OpenVPN ==\n'
-if systemctl is-active --quiet 'openvpn-client@surf-split.service'; then
-  ok "openvpn-client@surf-split active (split routes on tun0)"
+if [ -r "$SURF_STATUS" ]; then
+  surf_result=$(jq -r '.result // empty' "$SURF_STATUS" 2>/dev/null)
+  surf_expiry=$(jq -r '.not_after_epoch // empty' "$SURF_STATUS" 2>/dev/null)
+  surf_fingerprint=$(jq -r '.cert_sha256 // empty' "$SURF_STATUS" 2>/dev/null)
+  if [ "$surf_result" = active ]; then
+    ok "validated profile metadata active (${surf_fingerprint:-no fingerprint})"
+  else
+    bad "latest SURF install result is ${surf_result:-missing}"
+  fi
+  case "$surf_expiry" in
+    ''|*[!0-9]*) bad "validated profile metadata has no certificate expiry" ;;
+    *)
+      if [ "$surf_expiry" -gt "$(date +%s)" ]; then
+        ok "SURF client certificate unexpired until $(date -d "@$surf_expiry" --iso-8601=seconds)"
+      else
+        bad "SURF client certificate expired at $(date -d "@$surf_expiry" --iso-8601=seconds)"
+      fi
+      ;;
+  esac
 else
-  wrn "openvpn-client@surf-split inactive"
+  bad "missing validated SURF metadata $SURF_STATUS"
+fi
+if systemctl is-active --quiet 'openvpn-client@surf-split.service'; then
+  ok "openvpn-client@surf-split active"
+else
+  bad "openvpn-client@surf-split inactive"
+fi
+if ip link show tun0 >/dev/null 2>&1; then
+  surf_address=$(ip -4 -br addr show tun0 2>/dev/null | awk '{print $3; exit}')
+  if [ -n "$surf_address" ]; then
+    ok "tun0 has IPv4 address $surf_address"
+  else
+    bad "tun0 has no IPv4 address"
+  fi
+else
+  bad "tun0 missing"
+fi
+surf_canary_ip=$(getent ahostsv4 "$SURF_CANARY" 2>/dev/null | awk '{print $1; exit}')
+if [ -n "$surf_canary_ip" ]; then
+  surf_route=$(ip route get "$surf_canary_ip" 2>/dev/null | head -1 || true)
+  if printf '%s\n' "$surf_route" | grep -q ' dev tun0 '; then
+    ok "$SURF_CANARY $surf_canary_ip route uses dev tun0"
+  else
+    bad "$SURF_CANARY $surf_canary_ip route bypasses tun0: ${surf_route:-no route}"
+  fi
+else
+  bad "$SURF_CANARY has no IPv4 answer"
 fi
 
 printf '== US egress WG ==\n'
