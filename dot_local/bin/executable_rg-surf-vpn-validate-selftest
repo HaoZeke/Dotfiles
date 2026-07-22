@@ -55,7 +55,25 @@ write_profile() {
         printf '%s\n' \
             '</key>' \
             '<tls-crypt>' \
+            '#' \
+            '# 2048 bit OpenVPN static key' \
+            '#' \
             '-----BEGIN OpenVPN Static key V1-----' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
+            '0123456789abcdef0123456789abcdef' \
             '0123456789abcdef0123456789abcdef' \
             '-----END OpenVPN Static key V1-----' \
             '</tls-crypt>' \
