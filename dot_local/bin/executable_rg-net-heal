@@ -226,6 +226,16 @@ kb.olt.com
 EOF
 }
 
+olt_residential_reachable() {
+    local host="$1" ip="$2"
+    command -v curl >/dev/null 2>&1 || return 1
+    curl -4 --noproxy '*' --interface "$dev" \
+        --connect-timeout "${RG_OLT_CONNECT_TIMEOUT:-4}" \
+        --max-time "${RG_OLT_MAX_TIME:-8}" \
+        --resolve "${host}:443:${ip}" \
+        -sS -o /dev/null "https://${host}/" >/dev/null 2>&1
+}
+
 # --- 1. x.ai tailscale ----------------------------------------------------
 systemctl is-active --quiet tailscaled.service || { systemctl start tailscaled.service >/dev/null 2>&1 || true; sleep 2; }
 ts_state="$(tailscale status --json 2>/dev/null \
@@ -332,7 +342,15 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     olt_hosts | sort -u | while read -r olt_host; do
         case "$olt_host" in ''|\#*) continue ;; esac
         getent ahostsv4 "$olt_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
-            route_local_v4 "$ip" "olt:$olt_host"
+            if olt_residential_reachable "$olt_host" "$ip"; then
+                route_local_v4 "$ip" "olt:$olt_host"
+            else
+                if ! grep -qxF "$ip" "$CARVE_STATE_NEW" 2>/dev/null \
+                    && ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw dev $dev"; then
+                    ip route del "$ip/32" table main 2>/dev/null \
+                        && log "olt:$olt_host residential path unreachable; using US egress fallback for $ip"
+                fi
+            fi
         done
     done
 fi
