@@ -239,14 +239,25 @@ kb.olt.com
 EOF
 }
 
+declare -A olt_residential_probe_cache=()
 olt_residential_reachable() {
-    local host="$1" ip="$2"
+    local host="$1" ip="$2" cached
+    cached="${olt_residential_probe_cache[$ip]:-}"
+    case "$cached" in
+        reachable) return 0 ;;
+        unreachable) return 1 ;;
+    esac
     command -v curl >/dev/null 2>&1 || return 1
-    curl -4 --noproxy '*' --interface "$dev" \
-        --connect-timeout "${RG_OLT_CONNECT_TIMEOUT:-4}" \
-        --max-time "${RG_OLT_MAX_TIME:-8}" \
+    if curl -4 --noproxy '*' --interface "$dev" \
+        --connect-timeout "${RG_OLT_CONNECT_TIMEOUT:-2}" \
+        --max-time "${RG_OLT_MAX_TIME:-4}" \
         --resolve "${host}:443:${ip}" \
-        -sS -o /dev/null "https://${host}/" >/dev/null 2>&1
+        -sS -o /dev/null "https://${host}/" >/dev/null 2>&1; then
+        olt_residential_probe_cache[$ip]=reachable
+        return 0
+    fi
+    olt_residential_probe_cache[$ip]=unreachable
+    return 1
 }
 
 # --- 1. x.ai tailscale ----------------------------------------------------
