@@ -290,6 +290,10 @@ rg -q '^kb\.olt\.com$' "$net_heal" \
     || fail "periodic network heal helper does not cover kb.olt.com"
 rg -q 'getent ahostsv4 "\$olt_host"' "$net_heal" \
     || fail "periodic network heal helper does not resolve OLT routes dynamically"
+rg -q 'olt_residential_reachable' "$net_heal" \
+    || fail "periodic network heal helper does not probe OLT on the residential path"
+rg -F -q 'if olt_residential_reachable "$olt_host" "$ip"; then' "$net_heal" \
+    || fail "periodic network heal helper does not gate OLT carve-outs on reachability"
 rg -F -q 'route_local_v4 "$ip" "olt:$olt_host"' "$net_heal" \
     || fail "periodic network heal helper does not send OLT hosts through the LAN"
 rg -q 'debug derp-map' "$net_heal" \
