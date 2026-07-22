@@ -173,18 +173,30 @@ else
   bad "ssh rg.terra failed"
 fi
 
-printf '== OLT residential egress ==\n'
+printf '== OLT residential egress / failover ==\n'
 olt_count=0
 while read -r olt_ip; do
   [ -n "$olt_ip" ] || continue
   olt_count=$((olt_count+1))
   olt_route=$(ip route get "$olt_ip" 2>/dev/null | head -1 || true)
-  if [ -n "$lan_dev" ] && [ -n "$lan_src" ] \
-    && printf '%s\n' "$olt_route" | grep -q " dev $lan_dev " \
-    && printf '%s\n' "$olt_route" | grep -q " src $lan_src"; then
-    ok "www.olt.com $olt_ip uses residential source $lan_src on $lan_dev"
+  olt_code=$(curl -4 --noproxy '*' \
+    --connect-timeout "${RG_OLT_DOCTOR_CONNECT_TIMEOUT:-8}" \
+    --max-time "${RG_OLT_DOCTOR_MAX_TIME:-20}" \
+    --resolve "www.olt.com:443:$olt_ip" \
+    -sS -L -o /dev/null -w '%{http_code}' https://www.olt.com/ 2>/dev/null)
+  olt_probe_rc=$?
+  if [ "$olt_probe_rc" -eq 0 ] && [ "$olt_code" != 000 ]; then
+    if [ -n "$lan_dev" ] && [ -n "$lan_src" ] \
+      && printf '%s\n' "$olt_route" | grep -q " dev $lan_dev " \
+      && printf '%s\n' "$olt_route" | grep -q " src $lan_src"; then
+      ok "www.olt.com $olt_ip reachable via residential source $lan_src on $lan_dev (HTTP $olt_code)"
+    elif printf '%s\n' "$olt_route" | grep -q ' dev rg-us-egress-wg '; then
+      wrn "www.olt.com $olt_ip reachable via US egress fallback (HTTP $olt_code; residential path unavailable)"
+    else
+      wrn "www.olt.com $olt_ip reachable via selected route (HTTP $olt_code): $olt_route"
+    fi
   else
-    bad "www.olt.com $olt_ip does not use the residential source: ${olt_route:-no route}"
+    bad "OLT HTTPS probe failed for www.olt.com $olt_ip (curl $olt_probe_rc, HTTP ${olt_code:-000}): ${olt_route:-no route}"
   fi
 done < <(getent ahostsv4 www.olt.com 2>/dev/null | awk '{print $1}' | sort -u)
 if [ "$olt_count" -eq 0 ]; then
