@@ -83,21 +83,26 @@ else
   elif [ -s /run/rg-hz-carveout.endpoints ]; then
     wrn "nft cgroup mark unavailable on this kernel; /32 peer backstops active ($(wc -l </run/rg-hz-carveout.endpoints) pinned)"
   else
-    bad "nft rg_hz_carveout ABSENT and no peer backstops — haozeke UDP likely hairpins via US WG; run: sudo rg-haozeke-tunnel-carveout up"
+    wrn "nft and direct-peer /32 backstops absent; active DERP routes audited below"
   fi
 fi
 
-# Prefer the live direct endpoint from the haozeke daemon; static fallback.
+# Direct peers require a residential endpoint route; relay peers use the
+# source-correct active DERP routes audited below.
 terra_ep=$(tailscale --socket="$HZ_SOCK" status 2>/dev/null \
   | grep -E "rgam5terra|${TERRA_IP}" | grep -oE 'direct [0-9.]+:' \
   | grep -oE '[0-9.]+' | head -1 || true)
-ep_route=$(ip route get "${terra_ep:-153.92.128.58}" 2>/dev/null | head -1 || true)
-if echo "$ep_route" | grep -q 'rg-us-egress-wg'; then
-  wrn "terra public endpoint routes via US WG (expected when carve-out broken): $ep_route"
-elif echo "$ep_route" | grep -qE 'wlan0|dev eth'; then
-  ok "terra public endpoint on LAN uplink: $ep_route"
+if [ -z "$terra_ep" ]; then
+  ok "terra peer uses DERP; active DERP routes audited below"
 else
-  wrn "terra endpoint route: $ep_route"
+  ep_route=$(ip route get "$terra_ep" 2>/dev/null | head -1 || true)
+  if echo "$ep_route" | grep -q 'rg-us-egress-wg'; then
+    bad "terra public endpoint routes via US WG: $ep_route"
+  elif echo "$ep_route" | grep -qE 'wlan0|dev eth'; then
+    ok "terra public endpoint on LAN uplink: $ep_route"
+  else
+    bad "terra endpoint lacks a residential route: $ep_route"
+  fi
 fi
 
 printf '== haozeke DERP source routes ==\n'
