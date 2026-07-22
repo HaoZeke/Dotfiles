@@ -1,0 +1,234 @@
+#!/home/rgoswami/.local/share/uv/tools/eduvpn-client/bin/python
+"""Retrieve a SURF OpenVPN export through the official eduVPN core."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+from pathlib import Path
+from typing import Any
+
+from eduvpn import __version__
+from eduvpn.keyring import DBusKeyring
+from eduvpn.variants import EDUVPN
+from eduvpn_common.event import class_state_transition
+from eduvpn_common.main import EduVPN, ServerType
+from eduvpn_common.state import State, StateType
+
+
+SERVER_ID = "https://surf.eduvpn.nl/"
+PROFILE_ID = "medewerkers-split"
+AUTHORIZATION_REQUIRED = 42
+
+
+class ExportError(Exception):
+    """A bounded error that cannot contain configuration or OAuth material."""
+
+
+class ExportTransitions:
+    def __init__(self, common: EduVPN, interactive: bool, browser: str) -> None:
+        self.common = common
+        self.interactive = interactive
+        self.browser = browser
+        self.authorization_required = False
+        self.browser_failed = False
+
+    @class_state_transition(State.ASK_PROFILE, StateType.ENTER)
+    def choose_profile(self, old_state: State, data: str) -> None:
+        del old_state
+        try:
+            payload = json.loads(data)
+            cookie = int(payload["cookie"])
+            profiles = payload["data"]["map"]
+            if PROFILE_ID not in profiles:
+                raise KeyError(PROFILE_ID)
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            threading.Thread(target=self.common.cancel, name="eduvpn-cancel-profile", daemon=True).start()
+            raise ExportError("SURF server did not offer medewerkers-split") from error
+        threading.Thread(
+            target=self.common.cookie_reply,
+            args=(cookie, PROFILE_ID),
+            name="eduvpn-select-profile",
+            daemon=True,
+        ).start()
+
+    def open_browser(self, url: str) -> None:
+        result = subprocess.run(
+            [self.browser, url],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if result.returncode != 0:
+            self.browser_failed = True
+            self.common.cancel()
+
+    @class_state_transition(State.OAUTH_STARTED, StateType.ENTER)
+    def oauth_started(self, old_state: State, url: str) -> None:
+        del old_state
+        self.authorization_required = True
+        if self.interactive:
+            threading.Thread(
+                target=self.open_browser,
+                args=(url,),
+                name="eduvpn-open-browser",
+                daemon=True,
+            ).start()
+        else:
+            threading.Thread(target=self.common.cancel, name="eduvpn-cancel-oauth", daemon=True).start()
+
+
+class SecretServiceTokens:
+    def __init__(self) -> None:
+        self.keyring = DBusKeyring(EDUVPN)
+
+    @staticmethod
+    def attributes(server_id: str, server_type: int) -> dict[str, str]:
+        return {"server": server_id, "category": str(ServerType(server_type))}
+
+    def load(self, server_id: str, server_type: int) -> str | None:
+        try:
+            secret = self.keyring.load(self.attributes(server_id, server_type))
+            if secret is None:
+                return None
+            stored = json.loads(secret)
+            return json.dumps(
+                {
+                    "access_token": stored["access"],
+                    "refresh_token": stored["refresh"],
+                    "expires_at": int(stored.get("expires_at", stored.get("expires"))),
+                }
+            )
+        except Exception as error:
+            raise ExportError("cannot load eduVPN OAuth tokens from Secret Service") from error
+
+    def save(self, server_id: str, server_type: int, tokens_json: str) -> None:
+        try:
+            tokens = json.loads(tokens_json)
+            secret = json.dumps(
+                {
+                    "access": tokens["access_token"],
+                    "refresh": tokens["refresh_token"],
+                    "expires_at": str(tokens["expires_at"]),
+                }
+            )
+            self.keyring.save(
+                f"{server_id} - OAuth Tokens",
+                self.attributes(server_id, server_type),
+                secret,
+            )
+        except Exception as error:
+            raise ExportError("cannot save rotated eduVPN OAuth tokens in Secret Service") from error
+
+
+def request_config(interactive: bool, browser: str) -> tuple[str, bool]:
+    common = EduVPN(EDUVPN.client_id, __version__, str(EDUVPN.config_prefix))
+    transitions = ExportTransitions(common, interactive, browser)
+    tokens = SecretServiceTokens()
+    common.register_class_callbacks(transitions)
+    registered = False
+    try:
+        common.register()
+        registered = True
+        common.set_token_handler(tokens.load, tokens.save)
+        config_json = common.get_config(ServerType.INSTITUTE_ACCESS, SERVER_ID, False)
+    except Exception as error:
+        if transitions.authorization_required and not interactive:
+            raise ExportError("authorization required") from error
+        if transitions.browser_failed:
+            raise ExportError("browser authorization could not be opened") from error
+        if isinstance(error, ExportError):
+            raise
+        raise ExportError(f"eduVPN configuration request failed ({type(error).__name__})") from error
+    finally:
+        if registered:
+            try:
+                common.deregister()
+            except Exception:
+                pass
+
+    try:
+        config_data: dict[str, Any] = json.loads(config_json)
+        profile = config_data["config"]
+        protocol = int(config_data["protocol"])
+        default_gateway = config_data["default_gateway"]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ExportError("eduVPN core returned an invalid configuration envelope") from error
+    if not isinstance(profile, str) or not profile or len(profile.encode("utf-8")) > 512 * 1024:
+        raise ExportError("eduVPN core returned an empty or oversized profile")
+    if "\x00" in profile:
+        raise ExportError("eduVPN core returned a profile containing a NUL byte")
+    if protocol != 1:
+        raise ExportError("eduVPN core did not return an OpenVPN profile")
+    if default_gateway is not False:
+        raise ExportError("eduVPN core returned a full-tunnel profile")
+    return profile, transitions.authorization_required
+
+
+def atomic_spool(profile: str, destination: Path) -> None:
+    destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(destination.parent, 0o700)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".pending.", suffix=".ovpn", dir=destination.parent)
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(profile)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+        os.chmod(destination, 0o600)
+    except Exception:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Retrieve a SURF medewerkers-split OpenVPN export")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--noninteractive", action="store_true", help="cancel and return 42 when browser authorization is required")
+    mode.add_argument("--interactive", action="store_true", help="open browser authorization when required")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str]) -> int:
+    arguments = parse_args(argv)
+    state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
+    destination = Path(os.environ.get("RG_SURF_PENDING", state_home / "rg-surf-vpn/pending.ovpn"))
+    browser = os.environ.get("RG_SURF_BROWSER", "xdg-open")
+    try:
+        profile, reauthorized = request_config(arguments.interactive, browser)
+        atomic_spool(profile, destination)
+    except ExportError as error:
+        if str(error) == "authorization required":
+            print("rg-surf-vpn-export: browser authorization required", file=sys.stderr)
+            return AUTHORIZATION_REQUIRED
+        print(f"rg-surf-vpn-export: {error}", file=sys.stderr)
+        return 1
+    except OSError as error:
+        print(f"rg-surf-vpn-export: cannot write pending profile ({error.strerror})", file=sys.stderr)
+        return 1
+
+    print(
+        json.dumps(
+            {
+                "result": "exported",
+                "authorization_performed": bool(reauthorized),
+                "pending": str(destination),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
