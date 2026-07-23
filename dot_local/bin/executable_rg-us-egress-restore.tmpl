@@ -50,6 +50,17 @@ if [ -x "$hz_carveout" ] && "$hz_carveout" up >/dev/null 2>&1; then
 else
     printf '  WARNING: haozeke carve-out failed; rg.terra may be unreachable\n' >&2
 fi
+# The haozeke carve-out only installs /32 backstops for peers reached directly.
+# rg.terra is reached over DERP, so it installs nothing for it and rg.terra goes
+# dark behind the full tunnel -- the reason a working tunnel still had to be
+# torn down by hand. rg-net-heal is what pins the DERP relays onto the local
+# uplink, so it has to run before the gate decides anything.
+printf '  re-asserting DERP and underlay carve-outs (rg-net-heal) ...\n'
+if timeout 120 systemctl start rg-net-heal.service 2>/dev/null; then
+    printf '  rg-net-heal done\n'
+else
+    printf '  WARNING: rg-net-heal did not complete; rg.terra may stay dark\n' >&2
+fi
 systemctl restart ctrld.service 2>/dev/null && printf '  ctrld resettled\n'
 sleep 3
 

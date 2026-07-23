@@ -559,6 +559,21 @@ test -n "$pin_line" && test -n "$restart_line" && test "$pin_line" -lt "$restart
     || fail "the endpoint must be pinned before the guard restarts wg-quick"
 rg -q 'no non-tunnel default route' "$us_egress_guard" \
     || fail "the guard must defer while the uplink has no default route"
+# The haozeke carve-out only backstops directly-reached peers. rg.terra arrives
+# over DERP, so restoring the full tunnel without re-pinning the DERP relays
+# leaves it dark -- which is what forced a working tunnel to be torn down.
+rg -q 'rg-net-heal.service' "$us_egress_guard" \
+    || fail "the guard must re-assert DERP carve-outs after restoring the tunnel"
+us_egress_restore="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-restore")"
+test -r "$us_egress_restore" || fail "missing US egress restore helper"
+rg -q 'rg-net-heal' "$us_egress_restore" \
+    || fail "restore must re-assert DERP carve-outs before judging the tunnel"
+heal_line=$(rg -n 'rg-net-heal' "$us_egress_restore" | head -n 1 | cut -d: -f1)
+gate_line=$(rg -n 'acceptance gate' "$us_egress_restore" | head -n 1 | cut -d: -f1)
+test -n "$heal_line" && test -n "$gate_line" && test "$heal_line" -lt "$gate_line" \
+    || fail "restore must heal the carve-outs before the acceptance gate runs"
+rg -q 'speed\.cloudflare\.com|bytes=' "$us_egress_restore" \
+    || fail "restore gate must move real payload; small requests survive an MTU blackhole"
 
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"

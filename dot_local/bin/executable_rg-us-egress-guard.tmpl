@@ -210,6 +210,11 @@ restore_egress() {
         $SYSTEMCTL restart ctrld.service 2>/dev/null || true
         # wg-quick restart does not re-apply the carve-out; do it so terra survives.
         reassert_carveout
+        # The carve-out only backstops peers reached directly. rg.terra comes in
+        # over DERP, so nothing is installed for it and it goes dark behind the
+        # restored full tunnel. rg-net-heal pins the DERP relays onto the local
+        # uplink; start it without blocking so a slow heal cannot stall the tick.
+        $SYSTEMCTL start --no-block rg-net-heal.service 2>/dev/null || true
         $LOG "restored egress on $iface"
     else
         $LOG "failed to restore $iface"
