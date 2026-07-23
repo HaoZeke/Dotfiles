@@ -52,6 +52,10 @@ cat >"$tmp/curl.sh" <<'CURL'
 mode="${RG_TEST_QUALITY:-ok}"
 case "$*" in
 *cloudflare*) mode="${RG_TEST_FALLBACK:-$mode}" ;;
+# The Control D upstreams are the uplink probe: they ride the local carve-out,
+# not the tunnel, so they answer whenever the uplink itself works. Default to a
+# healthy uplink so tunnel-specific cases stay tunnel-specific.
+*76.76.2.22*|*76.76.10.22*) mode="${RG_TEST_UNDERLAY:-ok}" ;;
 esac
 case "$mode" in
 ok) printf '401 0.250000 100.83.241.81\n'; exit 0 ;;
@@ -100,6 +104,7 @@ chmod +x "$tmp/ip.sh"
 
 calls="$tmp/calls"
 quality_state="$tmp/quality-state"
+restore_state="$tmp/restore-state"
 # Deterministic carve-out health: pretend the /32 peer backstops are pinned so
 # carveout_present() never depends on the host's real nft/run state.
 hz_state="$tmp/hz-endpoints"
@@ -117,8 +122,11 @@ run_case() {
         RG_GUARD_LOCK="$tmp/guard.lock" \
         RG_TEST_LOCKED="${RG_TEST_LOCKED:-0}" \
         RG_TEST_FALLBACK="${RG_TEST_FALLBACK:-}" \
+        RG_TEST_UNDERLAY="${RG_TEST_UNDERLAY:-}" \
         RG_HZ_STATE="$hz_state" \
         RG_US_EGRESS_QUALITY_STATE="$quality_state" \
+        RG_US_EGRESS_RESTORE_STATE="$restore_state" \
+        RG_US_EGRESS_RESTORE_COOLDOWN="${RG_TEST_RESTORE_COOLDOWN:-0}" \
         RG_US_EGRESS_QUALITY_FAIL_THRESHOLD=2 \
         RG_US_EGRESS_QUALITY_ATTEMPTS=1 \
         RG_GUARD_LOG="true" \
@@ -153,5 +161,34 @@ n=$(run_case 1 0 1 1 fail); [ "${n:-0}" = "0" ] || fail "pin-suspect runs must c
 rm -f "$quality_state"
 n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "1" ] || fail "interface up but not routing must restart (got $n)"
 n=$(run_case 1 0 0 0 ok); [ "${n:-0}" = "1" ] || fail "interface down must restart (got $n)"
+
+# A degraded uplink is not a broken tunnel. On a weak mobile link every probe
+# fails whether the tunnel is fine or not; restarting then drops a working
+# tunnel and its carve-outs and makes recovery slower. Defer instead -- this is
+# the thrash that made a bad connection worse than no connection.
+rm -f "$quality_state" "$restore_state"
+RG_TEST_UNDERLAY=fail n=$(run_case 1 0 0 0 ok)
+[ "${n:-0}" = "0" ] || fail "a missing interface must not restart while the uplink is down (got $n)"
+RG_TEST_UNDERLAY=fail n=$(run_case 1 0 1 0 ok)
+[ "${n:-0}" = "0" ] || fail "a non-routing interface must not restart while the uplink is down (got $n)"
+rm -f "$quality_state" "$restore_state"
+RG_TEST_UNDERLAY=fail n=$(run_case 1 0 1 1 fail)
+RG_TEST_UNDERLAY=fail n=$(run_case 1 0 1 1 fail)
+[ "${n:-0}" = "0" ] || fail "quality failures must not restart while the uplink is down (got $n)"
+unset RG_TEST_UNDERLAY
+# Uplink back: the same condition must act again, so deferring never latches.
+rm -f "$quality_state" "$restore_state"
+n=$(run_case 1 0 0 0 ok); [ "${n:-0}" = "1" ] || fail "restart must resume once the uplink recovers (got $n)"
+
+# Cooldown: one restart per window, so a flapping link cannot drive a storm.
+rm -f "$quality_state" "$restore_state"
+RG_TEST_RESTORE_COOLDOWN=3600 n=$(run_case 1 0 0 0 ok)
+[ "${n:-0}" = "1" ] || fail "first restart in the window must proceed (got $n)"
+RG_TEST_RESTORE_COOLDOWN=3600 n=$(run_case 1 0 0 0 ok)
+[ "${n:-0}" = "0" ] || fail "a second restart inside the cooldown must be suppressed (got $n)"
+rm -f "$restore_state"
+RG_TEST_RESTORE_COOLDOWN=3600 n=$(run_case 1 0 0 0 ok)
+[ "${n:-0}" = "1" ] || fail "restart must proceed once the cooldown window has passed (got $n)"
+unset RG_TEST_RESTORE_COOLDOWN
 
 printf 'ok\n'

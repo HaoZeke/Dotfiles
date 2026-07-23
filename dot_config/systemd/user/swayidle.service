@@ -5,9 +5,16 @@
 Description=Idle manager for Wayland
 Documentation=man:swayidle(1)
 PartOf=graphical-session.target
-# Bound restart attempts so a genuinely broken swayidle cannot spin forever.
-StartLimitIntervalSec=300
-StartLimitBurst=5
+After=graphical-session.target sway-session.target
+# Bound restart attempts so a genuinely broken swayidle cannot spin forever,
+# but keep the window wide enough to outlast compositor startup. swayidle exits
+# 253 when it cannot reach the compositor, and the unit can be started before
+# sway has exported WAYLAND_DISPLAY into the user manager. A narrow limit (5
+# tries at 2s) burned every attempt in seven seconds and latched the unit
+# failed for the whole session -- taking lock-on-suspend with it, so the laptop
+# suspended and resumed with no lock at all. Retry patiently instead.
+StartLimitIntervalSec=180
+StartLimitBurst=40
 
 [Service]
 Type=simple
@@ -23,6 +30,11 @@ RestartPreventExitStatus=SIGKILL
 # this unit is always the sole swayidle. The leading - keeps "no match"
 # non-fatal, and it runs before ExecStart so it never targets our own process.
 ExecStartPre=-/usr/bin/pkill -x swayidle
+# Wait for the compositor socket before launching. Without this the unit races
+# sway at login, and every retry that lands early is a wasted attempt against
+# the start limit. Bounded so a session that never brings up Wayland still
+# fails rather than hanging.
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 100 ]; do for s in "$XDG_RUNTIME_DIR"/wayland-*; do [ -S "$s" ] && exit 0; done; i=$((i+1)); sleep 0.2; done; echo "no wayland socket after 20s" >&2; exit 1'
 # Idle staircase:
 #   240s   dim the display by 30% (save -> -30%); restore on activity
 #   300s   lock the screen

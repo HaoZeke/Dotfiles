@@ -44,6 +44,9 @@ LOCK="${RG_GUARD_LOCK:-/run/rg-us-egress-guard.lock}"
 # Consecutive x.ai probe failures before a restart is warranted, and where the
 # count is persisted between guard ticks.
 quality_state="${RG_US_EGRESS_QUALITY_STATE:-/run/rg-us-egress-guard.quality-fails}"
+# Timestamp of the last restart and the minimum gap between two of them.
+restore_state="${RG_US_EGRESS_RESTORE_STATE:-/run/rg-us-egress-guard.last-restore}"
+restore_cooldown="${RG_US_EGRESS_RESTORE_COOLDOWN:-180}"
 quality_fail_threshold="${RG_US_EGRESS_QUALITY_FAIL_THRESHOLD:-3}"
 
 case "$quality_max_ms" in ''|*[!0-9]*) quality_max_ms=3000 ;; esac
@@ -153,7 +156,45 @@ EOF
     done
 }
 
+# Is the local uplink itself carrying traffic? The Control D upstreams are
+# carve-routed onto it by construction, so reaching one proves the uplink works
+# without involving the tunnel. On a weak mobile link every probe fails whether
+# the tunnel is healthy or not, and a restart then tears down a working tunnel,
+# drops the carve-outs, and leaves recovery slower than doing nothing.
+underlay_healthy() {
+    local upstream
+    command -v "$CURL" >/dev/null 2>&1 || return 0
+    for upstream in $ctrld_upstreams; do
+        case "$upstream" in
+        ''|*[!0-9.]*) continue ;;
+        esac
+        $CURL -4 -sS -k --connect-timeout 3 --max-time 5 -o /dev/null \
+            "https://$upstream/" >/dev/null 2>&1 && return 0
+    done
+    return 1
+}
+
 restore_egress() {
+    # Never tear the tunnel down over a dead uplink; the tunnel is not the fault
+    # and rebuilding it cannot succeed until the link comes back.
+    if ! underlay_healthy; then
+        $LOG "uplink is not carrying traffic; deferring instead of restarting $iface"
+        return 0
+    fi
+
+    # Cooldown. Without it a link that fails every probe drives a restart every
+    # tick forever -- the thrash that makes a weak connection worse than an
+    # absent one. One attempt per window, then leave it alone.
+    local now last
+    now="$(date +%s 2>/dev/null || echo 0)"
+    last="$(cat "$restore_state" 2>/dev/null || echo 0)"
+    case "$last" in ''|*[!0-9]*) last=0 ;; esac
+    if [ "$now" -gt 0 ] && [ "$last" -gt 0 ] && [ $((now - last)) -lt "$restore_cooldown" ]; then
+        $LOG "restored $iface $((now - last))s ago; holding off for $restore_cooldown s"
+        return 0
+    fi
+    printf '%s\n' "$now" >"$restore_state" 2>/dev/null || true
+
     $LOG "$1"
     $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
     # Pin the peer Endpoint to a literal address first. wg-quick resolves a
