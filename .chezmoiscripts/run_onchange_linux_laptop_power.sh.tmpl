@@ -63,10 +63,22 @@ disable_networkmanager_for_iwd() {
 
 write_ctrld_local_chain_dropin() {
     local unit_text cd_uid content
+    local priv_toml="$HOME/.local/share/terra-dns/private/ctrld.toml" exec_line=""
 
     command -v /usr/local/bin/ctrld >/dev/null 2>&1 || return 1
+
+    # The config path carries its own upstreams, so settle it before anything
+    # that depends on the old flag form. Deriving cd_uid below scrapes a --cd
+    # flag out of the running unit and gives up when it finds none -- and the
+    # flag form written here has no --cd, so once ctrld was installed this way
+    # the function returned early and could never reach the config form again.
+    if [ -r "$priv_toml" ] && grep -q '^[[:space:]]*bootstrap_ip' "$priv_toml"; then
+        sudo install -D -m 0600 -o root -g root "$priv_toml" /etc/controld/ctrld.toml
+        exec_line="ExecStart=/usr/local/bin/ctrld run --config=/etc/controld/ctrld.toml"
+    fi
+
     unit_text="$(sudo sh -c 'cat /etc/systemd/system/ctrld.service /etc/systemd/system/ctrld.service.d/*.conf 2>/dev/null' || true)"
-    [ -n "$unit_text" ] || return 1
+    [ -n "$unit_text" ] || [ -n "$exec_line" ] || return 1
     cd_uid="$(printf '%s\n' "$unit_text" \
         | awk '{
             for (i = 1; i <= NF; i++) {
@@ -82,19 +94,13 @@ write_ctrld_local_chain_dropin() {
             }
         }' \
         | head -n 1)"
-    [ -n "$cd_uid" ] || return 1
-
-    # Prefer the config file: the flag form gives ctrld no bootstrap address, so
-    # a failing upstream sends it to the OS resolver -- 127.0.0.53 -> unbound ->
-    # ctrld, a loop that turns one upstream blip into a machine-wide DNS stall.
-    # bootstrap_ip in the config keeps a failing upstream a failing upstream.
-    # The file carries the private resolver uid, so it lives in terra-dns/private
-    # (gitignored, sealed with nimvault) and only a redacted example is committed.
-    local priv_toml="$HOME/.local/share/terra-dns/private/ctrld.toml" exec_line
-    if [ -r "$priv_toml" ] && grep -q '^[[:space:]]*bootstrap_ip' "$priv_toml"; then
-        sudo install -D -m 0600 -o root -g root "$priv_toml" /etc/controld/ctrld.toml
-        exec_line="ExecStart=/usr/local/bin/ctrld run --config=/etc/controld/ctrld.toml"
-    else
+    # Only the flag form needs the scraped uid. Demanding it unconditionally is
+    # what stranded ctrld on the loop-prone flags.
+    if [ -z "$exec_line" ]; then
+        [ -n "$cd_uid" ] || return 1
+        # The flag form gives ctrld no bootstrap address, so a failing upstream
+        # sends it to the OS resolver -- 127.0.0.53 -> unbound -> ctrld, a loop
+        # that turns one upstream blip into a machine-wide DNS stall.
         echo "chezmoi: WARN $priv_toml missing or has no bootstrap_ip; ctrld keeps the loop-prone flag form" >&2
         exec_line="ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000"
     fi

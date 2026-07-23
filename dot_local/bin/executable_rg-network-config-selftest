@@ -622,6 +622,14 @@ rg -q -- '--config=/etc/controld/ctrld.toml' "$laptop_script" \
     || fail "Control D is not driven from a config file, so it cannot carry a bootstrap address"
 rg -q 'bootstrap_ip' "$laptop_script" \
     || fail "Control D config path does not require a bootstrap address"
+# The uid is scraped from a --cd flag that only the flag form writes, so once
+# ctrld was installed that way the scrape found nothing, the function returned
+# early, and the config form became unreachable. The config path must be
+# settled before anything that depends on the old form.
+ctrld_boot_line=$(rg -n "grep -q '\^\[\[:space:\]\]\*bootstrap_ip'" "$laptop_script" | head -n 1 | cut -d: -f1)
+ctrld_uid_gate=$(rg -n '\[ -n "\$cd_uid" \] \|\| return 1' "$laptop_script" | head -n 1 | cut -d: -f1)
+test -n "$ctrld_boot_line" && test -n "$ctrld_uid_gate" && test "$ctrld_boot_line" -lt "$ctrld_uid_gate" \
+    || fail "the Control D config path must not sit behind the scraped-uid guard"
 # eduroam provisioning. A host that can see eduroam but holds no
 # WPA-Enterprise profile cannot join it, and rgSURFLat runs NetworkManager with
 # no iwd, so the settings must render per supplicant rather than be copied
