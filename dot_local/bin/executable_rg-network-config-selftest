@@ -34,6 +34,8 @@ fix_local_dns="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-local-dns
 fix_nm_ctrld="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld")"
 profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
 us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
+us_egress_guard="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-guard")"
+us_egress_endpoint_pin="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-endpoint-pin")"
 net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
 net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
 derp_targets="$repo/dot_local/bin/executable_rg-haozeke-derp-targets"
@@ -59,6 +61,8 @@ test -r "$fix_local_dns" || fail "missing local DNS repair helper"
 test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$profile_selftest" || fail "missing live network profile selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
+test -r "$us_egress_guard" || fail "missing US egress guard"
+test -r "$us_egress_endpoint_pin" || fail "missing US egress endpoint pin helper"
 test -r "$net_recover" || fail "missing one-shot network recovery helper"
 test -r "$net_heal" || fail "missing periodic network heal helper"
 test -x "$derp_targets" || fail "missing haozeke DERP target selector"
@@ -511,6 +515,42 @@ test "$(rg -c '^PersistentKeepalive' "$rendered")" = "1" \
     || fail "an existing keepalive must be normalized, not duplicated"
 rg -q '^PersistentKeepalive = 25$' "$rendered" \
     || fail "an existing keepalive must be normalized to 25"
+# The peer Endpoint must reach the runtime conf as a literal address. wg-quick
+# resolves a hostname Endpoint through the resolver chain this tunnel carries
+# and deletes the interface when that fails, so a hostname here means one
+# resolver blip on resume leaves a tunnel no retry can rebuild.
+rendered="$(RG_US_EGRESS_ENDPOINT_IP=203.0.113.9 render_wg_case "[Interface]
+PrivateKey = xPRIVx
+Address = 10.10.10.2/32
+[Peer]
+PublicKey = xPUBx
+AllowedIPs = 0.0.0.0/0,::/0
+Endpoint = vpn.example.net:443" endpoint)"
+rg -q '^Endpoint = 203\.0\.113\.9:443$' "$rendered" \
+    || fail "a hostname Endpoint must be pinned to a literal address in the runtime conf"
+rg -q '^# RG-Endpoint-Host = vpn\.example\.net$' "$rendered" \
+    || fail "the original endpoint hostname must be preserved so the pin stays refreshable"
+test "$(rg -c '^Endpoint' "$rendered")" = "1" \
+    || fail "endpoint pinning must not duplicate the Endpoint line"
+rendered="$(render_wg_case "[Interface]
+PrivateKey = xPRIVx
+Address = 10.10.10.2/32
+[Peer]
+PublicKey = xPUBx
+AllowedIPs = 0.0.0.0/0,::/0
+Endpoint = vpn.example.net:443" endpoint_unset)"
+rg -q '^Endpoint = vpn\.example\.net:443$' "$rendered" \
+    || fail "the transform must leave the Endpoint alone when no address is supplied"
+
+rg -q 'ENDPOINT_PIN' "$us_egress_guard" \
+    || fail "the guard must pin the endpoint so a restart never depends on DNS"
+pin_line=$(rg -n '"\$ENDPOINT_PIN"' "$us_egress_guard" | head -n 1 | cut -d: -f1)
+restart_line=$(rg -n 'SYSTEMCTL restart "\$unit"' "$us_egress_guard" | head -n 1 | cut -d: -f1)
+test -n "$pin_line" && test -n "$restart_line" && test "$pin_line" -lt "$restart_line" \
+    || fail "the endpoint must be pinned before the guard restarts wg-quick"
+rg -q 'no non-tunnel default route' "$us_egress_guard" \
+    || fail "the guard must defer while the uplink has no default route"
+
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"
 rg -q 'disable --now rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \

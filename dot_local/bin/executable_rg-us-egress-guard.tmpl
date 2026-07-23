@@ -209,6 +209,13 @@ fi
 
 reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local uplink"
 
+# Keep the pinned endpoint fresh while the resolver works, so the cached
+# address is already warm when it stops working. Pinning only at restore time
+# would be too late on a machine that has never resolved the peer since boot:
+# the one tick that needs the cache is the tick that cannot fill it. Cheap --
+# a no-op unless the provider's address actually moved.
+[ -x "$ENDPOINT_PIN" ] && "$ENDPOINT_PIN" >/dev/null 2>&1
+
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
     && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
