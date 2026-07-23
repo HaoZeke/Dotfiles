@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Record whether the network heals itself across a real suspend/resume.
+#
+#   rg-resume-observer            watch (foreground)
+#   rg-resume-observer --daemon   watch detached
+#   rg-resume-observer --report   verdict from the resumes seen so far
+#   rg-resume-observer --stop     stop a detached watcher
+#
+# The failures this watches for used to need a reboot: a resolver blip during a
+# resume deleted the egress tunnel and no retry could rebuild it, and a guard
+# tick landing before the uplink settled tore down a tunnel nothing could
+# restore yet. Both are fixed, but only a real resume proves it, and a resume
+# cannot be simulated honestly -- the mocks in rg-us-egress-resume-selftest
+# prove the logic, this proves the machine.
+#
+# Samples every few seconds. A gap much larger than the interval means the host
+# was asleep, so the samples after it are the resume under test: did
+# connectivity return with nobody touching it, and how long did it take.
+set -uo pipefail
+
+LOG="${RG_RESUME_OBSERVER_LOG:-${XDG_STATE_HOME:-$HOME/.local/state}/rg-resume-observer.log}"
+PIDFILE="${RG_RESUME_OBSERVER_PID:-${XDG_RUNTIME_DIR:-/tmp}/rg-resume-observer.pid}"
+INTERVAL="${RG_RESUME_OBSERVER_INTERVAL:-3}"
+GAP="${RG_RESUME_OBSERVER_GAP:-25}"
+
+log() { printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG"; }
+
+net_ok() {
+    ip -4 route show default | grep -q . || return 1
+    timeout 4 getent ahostsv4 github.com >/dev/null 2>&1 || return 1
+    timeout 5 curl -4 -sS -o /dev/null --connect-timeout 3 --max-time 4 \
+        https://github.com 2>/dev/null
+}
+
+report() {
+    [ -r "$LOG" ] || { printf 'no observations yet (%s)\n' "$LOG"; return 0; }
+    local resumes recovered
+    # grep -c already prints 0 when nothing matches; a `|| echo 0` fallback
+    # would append a second count and break the comparisons below.
+    resumes=$(grep -c 'RESUME detected' "$LOG" 2>/dev/null); resumes=${resumes:-0}
+    recovered=$(grep -c 'VERDICT: network restored' "$LOG" 2>/dev/null); recovered=${recovered:-0}
+    printf 'resumes observed: %s\n' "$resumes"
+    printf 'self-healed:      %s\n' "$recovered"
+    if [ "$resumes" -eq 0 ]; then
+        printf '\nNo suspend/resume seen yet. Close the lid, wait ~30s, reopen.\n'
+    elif [ "$resumes" -eq "$recovered" ]; then
+        printf '\nEvery observed resume restored the network with no manual action.\n'
+    else
+        printf '\nA resume did NOT self-heal. Detail:\n'
+        grep -E 'RESUME detected|still down|VERDICT|route:|DNS failing|no default route' "$LOG" | tail -25
+    fi
+    printf '\nlast entries:\n'
+    tail -12 "$LOG" | sed 's/^/  /'
+}
+
+stop() {
+    [ -r "$PIDFILE" ] || { printf 'no pidfile at %s\n' "$PIDFILE"; return 0; }
+    local p; p="$(cat "$PIDFILE" 2>/dev/null)"
+    if [ -n "$p" ] && kill "$p" 2>/dev/null; then printf 'stopped %s\n' "$p"; else printf 'not running\n'; fi
+    rm -f "$PIDFILE"
+}
+
+watch_loop() {
+    install -d -m 0755 "$(dirname "$LOG")" 2>/dev/null || true
+    printf '%s\n' "$$" >"$PIDFILE" 2>/dev/null || true
+    trap 'rm -f "$PIDFILE"' EXIT
+    log "observer started (interval ${INTERVAL}s, resume gap ${GAP}s)"
+
+    local last now delta resuming=0 resume_at=0 elapsed
+    last=$(date +%s)
+    while :; do
+        now=$(date +%s)
+        delta=$((now - last))
+        if [ "$delta" -ge "$GAP" ]; then
+            log "RESUME detected after ${delta}s asleep"
+            resuming=1
+            resume_at=$now
+            log "  route: $(ip -4 route show default | head -1 || echo none)"
+        fi
+
+        if net_ok; then
+            if [ "$resuming" -eq 1 ]; then
+                log "RECOVERED $((now - resume_at))s after resume, no manual action"
+                log "  route:    $(ip -4 route show default | head -1)"
+                log "  tunnel:   $(ip -br link show rg-us-egress-wg 2>/dev/null | awk '{print $2}' || echo down)"
+                log "  swayidle: $(systemctl --user is-active swayidle 2>/dev/null)"
+                log "  VERDICT: network restored without a reboot"
+                resuming=0
+            fi
+        elif [ "$resuming" -eq 1 ]; then
+            elapsed=$((now - resume_at))
+            log "  still down ${elapsed}s after resume"
+            # Name the layer, so a failure is attributable instead of guessed at.
+            ip -4 route show default | grep -q . || log "    no default route"
+            timeout 4 getent ahostsv4 github.com >/dev/null 2>&1 || log "    DNS failing"
+        fi
+
+        last=$(date +%s)
+        sleep "$INTERVAL"
+    done
+}
+
+case "${1:-}" in
+--report) report ;;
+--stop)   stop ;;
+--daemon)
+    if [ -r "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+        printf 'already running (pid %s)\n' "$(cat "$PIDFILE")"
+        exit 0
+    fi
+    setsid nohup "$0" </dev/null >/dev/null 2>&1 &
+    sleep 1
+    printf 'watching; log: %s\n' "$LOG"
+    ;;
+--help|-h)
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+*) watch_loop ;;
+esac

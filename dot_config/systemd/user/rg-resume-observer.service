@@ -1,0 +1,22 @@
+# -*- systemd -*-
+[Unit]
+Description=Record whether the network heals itself across suspend/resume
+Documentation=file:%h/.local/bin/rg-resume-observer
+# The failures this watches for used to require a reboot: a resolver blip during
+# a resume deleted the US-egress tunnel and no retry could rebuild it. The logic
+# is covered by rg-us-egress-resume-selftest; only a real resume proves the
+# machine, and a resume cannot be simulated honestly.
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/rg-resume-observer
+Restart=on-failure
+RestartSec=5
+# Sampling loop: keep it out of the way of anything that matters.
+Nice=10
+IOSchedulingClass=idle
+OOMScoreAdjust=200
+
+[Install]
+WantedBy=default.target
