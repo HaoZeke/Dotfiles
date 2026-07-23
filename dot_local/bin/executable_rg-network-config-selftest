@@ -596,6 +596,19 @@ rg -q 'unbound.service' "$laptop_script" \
     || fail "local resolver service is not managed"
 rg -q 'systemctl enable --now systemd-networkd.service systemd-resolved.service' "$laptop_script" \
     || fail "networkd and resolved are not explicitly enabled for boot"
+# Waking on a different network flushes every carve-out pinned to the old
+# gateway. Nothing was wired to sleep.target, so the Control D upstreams and the
+# DERP relays that keep rg.terra reachable stayed broken until a timer happened
+# to fire, and the egress guard could judge a half-settled stack meanwhile.
+rg -q '98-rg-resume-network' "$laptop_script" \
+    || fail "no system-sleep hook re-asserts the network carve-outs after a resume"
+rg -q 'rg-net-heal.service' "$laptop_script" \
+    || fail "the resume hook does not re-assert the carve-outs"
+resume_route_line=$(rg -n 'no default route 30s after resume' "$laptop_script" | head -n 1 | cut -d: -f1)
+resume_heal_line=$(rg -n 'systemctl start rg-net-heal.service' "$laptop_script" | head -n 1 | cut -d: -f1)
+test -n "$resume_route_line" && test -n "$resume_heal_line" && test "$resume_route_line" -lt "$resume_heal_line" \
+    || fail "the resume hook must wait for a default route before pinning carve-outs to it"
+
 rg -q 'ctrld.service' "$laptop_script" \
     || fail "Control D daemon is not managed for local DNS chaining"
 rg -q '127\.0\.0\.1:5354' "$laptop_script" \

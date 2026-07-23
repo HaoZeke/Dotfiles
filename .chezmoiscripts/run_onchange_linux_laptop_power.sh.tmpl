@@ -562,6 +562,54 @@ TAILNETS_ENABLED_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_lin
 #     last frame until a full modeset came through).
 # The hook is executed by systemd-sleep(8) with $1 in {pre,post} and
 # $2 in {suspend,hibernate,suspend-then-hibernate,hybrid-sleep}.
+# Network side of a resume. Waking on a different network flushes every
+# carve-out pinned to the old gateway: the Control D upstreams, the DERP relays
+# that keep rg.terra reachable behind the full tunnel, and the residential
+# routes. Nothing was wired to sleep.target, so those stayed broken until a
+# 30s timer happened to fire, and the egress guard could act on a half-settled
+# stack in the meantime. Re-assert them as soon as the uplink has a route, in a
+# fixed order, so recovery is immediate and deterministic rather than a race
+# between two timers.
+# shellcheck disable=SC2016
+RESUME_NET_CONTENT='#!/usr/bin/env bash
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Re-assert the network carve-outs after a sleep/hibernate cycle.
+set -u
+
+case "$1/$2" in
+    post/suspend|post/hibernate|post/suspend-then-hibernate|post/hybrid-sleep) ;;
+    *) exit 0 ;;
+esac
+
+log() { /usr/bin/logger -t rg-resume-network "$*"; }
+
+# Wait for the uplink before touching anything: pinning a carve-out to a
+# gateway that is not there yet installs a route to nowhere, and the guard
+# already defers while there is no default route.
+for _ in $(seq 1 60); do
+    /usr/bin/ip -4 route show default 2>/dev/null | /usr/bin/grep -q . && break
+    sleep 0.5
+done
+if ! /usr/bin/ip -4 route show default 2>/dev/null | /usr/bin/grep -q .; then
+    log "no default route 30s after resume; leaving the timers to it"
+    exit 0
+fi
+
+# Re-pin the peer endpoint while the resolver is likely healthy, so a later
+# tunnel restart never has to resolve a hostname it cannot reach.
+[ -x /home/rgoswami/.local/bin/rg-us-egress-endpoint-pin ] &&
+    /home/rgoswami/.local/bin/rg-us-egress-endpoint-pin >/dev/null 2>&1
+
+# Heal before guarding: the guard judges the tunnel, and that judgement is only
+# meaningful once the carve-outs it depends on are back.
+/usr/bin/systemctl start rg-net-heal.service >/dev/null 2>&1 ||
+    log "rg-net-heal failed after resume"
+/usr/bin/systemctl start --no-block rg-us-egress-guard.service >/dev/null 2>&1
+
+log "network carve-outs re-asserted after resume"
+exit 0
+'
+
 # shellcheck disable=SC2016
 RESUME_KICK_CONTENT='#!/usr/bin/env bash
 # Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
@@ -802,6 +850,18 @@ if ! sudo test -f "$RESUME_KICK_PATH" \
     sudo install -D -m 0755 -o root -g root "$TMP" "$RESUME_KICK_PATH"
     rm -f "$TMP"
     echo "chezmoi: updated $RESUME_KICK_PATH"
+fi
+
+# Ordered before the sway kick (98 < 99): connectivity is what the rest of the
+# session is waiting on when the lid opens.
+RESUME_NET_PATH=/usr/lib/systemd/system-sleep/98-rg-resume-network
+if ! sudo test -f "$RESUME_NET_PATH" \
+   || ! printf "%s" "$RESUME_NET_CONTENT" | sudo cmp -s - "$RESUME_NET_PATH"; then
+    TMP=$(mktemp)
+    printf "%s" "$RESUME_NET_CONTENT" > "$TMP"
+    sudo install -D -m 0755 -o root -g root "$TMP" "$RESUME_NET_PATH"
+    rm -f "$TMP"
+    echo "chezmoi: updated $RESUME_NET_PATH"
 fi
 
 BTRBK_CHANGED=0
