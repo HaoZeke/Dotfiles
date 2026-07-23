@@ -276,6 +276,11 @@ dot_local/share/rg-sway-route-watcher-src/target/
 .config/davmail/*.token
 ~/.config/davmail/*.token
 
+# eduroam 802.1X profile (carries a credential) — nimvault only
+.local/share/rg-net/private/
+~/.local/share/rg-net/private/
+dot_local/share/rg-net/private/
+
 # Terra DNS private (ControlD path tokens) — nimvault only
 .local/share/terra-dns/private/
 ~/.local/share/terra-dns/private/

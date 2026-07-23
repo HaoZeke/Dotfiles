@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Install the sealed eduroam profile onto a host, targeting whichever supplicant
+# that host actually runs.
+#
+#   rg-eduroam-provision              provision this host
+#   rg-eduroam-provision rg.surf      provision a remote host over ssh
+#
+# rgSURFLat runs NetworkManager and has no iwd, so a profile copied verbatim
+# from an iwd host is useless there; the settings are stack-neutral in the env
+# file and rendered per stack here. A host that can see eduroam but holds no
+# WPA-Enterprise profile cannot join it -- that absence, not a fault, is the
+# usual reason a machine "cannot connect to eduroam".
+set -uo pipefail
+
+priv_dir="${RG_EDUROAM_PRIVATE_DIR:-$HOME/.local/share/rg-net/private}"
+env_file="${RG_EDUROAM_ENV:-$priv_dir/eduroam.env}"
+ca_file="${RG_EDUROAM_CA:-$priv_dir/eduroam-ca.pem}"
+target="${1:-}"
+
+die() { printf '%s\n' "$1" >&2; exit "${2:-1}"; }
+
+[ -r "$env_file" ] || die "no profile at $env_file (run rg-eduroam-export, or nimvault unseal)" 2
+# shellcheck disable=SC1090
+. "$env_file"
+
+: "${RG_EDUROAM_SSID:=eduroam}"
+[ -n "${RG_EDUROAM_IDENTITY:-}" ] || die "profile has no identity" 3
+[ -n "${RG_EDUROAM_PASSWORD:-}" ] || die "profile has no password" 3
+
+run() { if [ -n "$target" ]; then ssh "$target" "$@"; else bash -c "$@"; fi; }
+
+stack="$(run 'if systemctl is-active --quiet NetworkManager; then echo nm;
+    elif systemctl is-active --quiet iwd; then echo iwd; else echo unknown; fi')"
+printf 'target: %s  supplicant: %s\n' "${target:-localhost}" "$stack"
+
+case "$stack" in
+nm)
+    remote_ca=""
+    if [ -r "$ca_file" ]; then
+        remote_ca=/etc/NetworkManager/certs/eduroam-ca.pem
+        if [ -n "$target" ]; then
+            ssh "$target" "sudo install -d -m 0755 /etc/NetworkManager/certs && sudo tee $remote_ca >/dev/null && sudo chmod 0644 $remote_ca" <"$ca_file" \
+                || die "failed to install the CA cert on $target" 4
+        else
+            sudo install -d -m 0755 /etc/NetworkManager/certs
+            sudo install -m 0644 "$ca_file" "$remote_ca" || die "failed to install the CA cert" 4
+        fi
+        printf 'CA cert installed at %s\n' "$remote_ca"
+    else
+        printf 'WARNING: no CA cert; relying on the domain match alone\n' >&2
+    fi
+
+    # Secrets travel as environment, never as argv: argv is world-readable in
+    # /proc for the lifetime of the command.
+    payload='set -uo pipefail
+sudo nmcli connection delete "$E_SSID" >/dev/null 2>&1
+args=(type wifi con-name "$E_SSID" ssid "$E_SSID"
+      wifi-sec.key-mgmt wpa-eap
+      802-1x.eap "$E_EAP"
+      802-1x.phase2-auth "$E_PHASE2"
+      802-1x.identity "$E_ID"
+      802-1x.password "$E_PW")
+[ -n "$E_ANON" ] && args+=(802-1x.anonymous-identity "$E_ANON")
+[ -n "$E_CA" ]   && args+=(802-1x.ca-cert "$E_CA")
+[ -n "$E_DOM" ]  && args+=(802-1x.domain-suffix-match "$E_DOM")
+sudo nmcli connection add "${args[@]}" >/dev/null || { echo "nmcli add failed" >&2; exit 1; }
+# password-flags 0 keeps the secret with the system connection, so the profile
+# works before anyone logs in rather than waiting on a user agent.
+sudo nmcli connection modify "$E_SSID" 802-1x.password-flags 0 connection.autoconnect yes
+nmcli -t -f 802-1x.eap,802-1x.phase2-auth,802-1x.domain-suffix-match connection show "$E_SSID"'
+
+    env_prefix="E_SSID=$(printf '%q' "$RG_EDUROAM_SSID") \
+E_EAP=$(printf '%q' "${RG_EDUROAM_EAP:-peap}") \
+E_PHASE2=$(printf '%q' "${RG_EDUROAM_PHASE2:-mschapv2}") \
+E_ID=$(printf '%q' "$RG_EDUROAM_IDENTITY") \
+E_PW=$(printf '%q' "$RG_EDUROAM_PASSWORD") \
+E_ANON=$(printf '%q' "${RG_EDUROAM_ANON_IDENTITY:-}") \
+E_CA=$(printf '%q' "$remote_ca") \
+E_DOM=$(printf '%q' "${RG_EDUROAM_DOMAIN_SUFFIX:-}")"
+
+    if [ -n "$target" ]; then
+        ssh "$target" "$env_prefix bash -s" <<<"$payload" || die "provisioning failed on $target" 5
+    else
+        env E_SSID="$RG_EDUROAM_SSID" E_EAP="${RG_EDUROAM_EAP:-peap}" \
+            E_PHASE2="${RG_EDUROAM_PHASE2:-mschapv2}" E_ID="$RG_EDUROAM_IDENTITY" \
+            E_PW="$RG_EDUROAM_PASSWORD" E_ANON="${RG_EDUROAM_ANON_IDENTITY:-}" \
+            E_CA="$remote_ca" E_DOM="${RG_EDUROAM_DOMAIN_SUFFIX:-}" \
+            bash -c "$payload" || die "provisioning failed" 5
+    fi
+    ;;
+iwd)
+    printf 'iwd host: profile already lives at /var/lib/iwd/%s.8021x\n' "$RG_EDUROAM_SSID"
+    printf 'Nothing to do; export from here instead with rg-eduroam-export.\n'
+    exit 0
+    ;;
+*)
+    die "no recognised supplicant on ${target:-localhost}" 3
+    ;;
+esac
+
+printf '\nprofile installed. Connect with:\n'
+printf '  %snmcli connection up %s\n' \
+    "${target:+ssh $target sudo }" "$RG_EDUROAM_SSID"

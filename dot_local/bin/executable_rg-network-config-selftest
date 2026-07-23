@@ -594,6 +594,31 @@ rg -q -- '--config=/etc/controld/ctrld.toml' "$laptop_script" \
     || fail "Control D is not driven from a config file, so it cannot carry a bootstrap address"
 rg -q 'bootstrap_ip' "$laptop_script" \
     || fail "Control D config path does not require a bootstrap address"
+# eduroam provisioning. A host that can see eduroam but holds no
+# WPA-Enterprise profile cannot join it, and rgSURFLat runs NetworkManager with
+# no iwd, so the settings must render per supplicant rather than be copied
+# verbatim between hosts.
+eduroam_export="$repo/dot_local/bin/executable_rg-eduroam-export"
+eduroam_provision="$repo/dot_local/bin/executable_rg-eduroam-provision"
+eduroam_example="$repo/dot_local/share/rg-net/eduroam.env.example"
+test -x "$eduroam_export" || fail "missing eduroam profile exporter"
+test -x "$eduroam_provision" || fail "missing eduroam provisioner"
+test -r "$eduroam_example" || fail "missing redacted eduroam example"
+rg -q 'NetworkManager' "$eduroam_provision" \
+    || fail "eduroam provisioner does not handle the NetworkManager stack"
+rg -q 'wpa-eap' "$eduroam_provision" \
+    || fail "eduroam provisioner does not configure WPA-Enterprise"
+rg -q 'domain-suffix-match' "$eduroam_provision" \
+    || fail "eduroam provisioner omits the server domain match"
+rg -q '802-1x.ca-cert' "$eduroam_provision" \
+    || fail "eduroam provisioner never installs a CA certificate"
+rg -q 'rg-net/private' "$repo/.gitignore" \
+    || fail "eduroam private profile directory is not gitignored"
+rg -q '^RG_EDUROAM_PASSWORD=REPLACE' "$eduroam_example" \
+    || fail "eduroam example carries a real password; it must stay redacted"
+rg -q '^RG_EDUROAM_IDENTITY=REPLACE' "$eduroam_example" \
+    || fail "eduroam example carries a real identity; it must stay redacted"
+
 ctrld_example="$repo/dot_local/share/terra-dns/ctrld.toml.example"
 test -r "$ctrld_example" || fail "missing redacted Control D config example"
 rg -q 'bootstrap_ip = "76\.76\.2\.22"' "$ctrld_example" \
