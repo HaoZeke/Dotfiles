@@ -402,6 +402,13 @@ rg -q 'OLT HTTPS probe failed' "$net_doctor" \
 # than a regression -- which is how the check turned into ignorable noise.
 rg -q 'the US egress is down' "$net_doctor" \
     || fail "doctor must distinguish an OLT failure caused by a deliberately stopped egress"
+# A single 2s resolver timeout is routine while an upstream is briefly slow.
+# Raising a critical desktop alert for it trains the alert to be ignored, and
+# the resolver has usually recovered before anyone reads the notification.
+rg -q 'dig @127.0.0.1 failed 3x' "$net_doctor" \
+    || fail "doctor must retry the local resolver before condemning it"
+rg -q 'dns_local_ok' "$net_doctor" \
+    || fail "doctor has no retry loop around the local resolver probe"
 olt_bad_line=$(rg -n 'bad "OLT HTTPS probe failed' "$net_doctor" | head -n 1 | cut -d: -f1)
 olt_egress_line=$(rg -n 'is-active --quiet wg-quick@rg-us-egress-wg' "$net_doctor" | head -n 1 | cut -d: -f1)
 test -n "$olt_bad_line" && test -n "$olt_egress_line" && test "$olt_egress_line" -lt "$olt_bad_line" \

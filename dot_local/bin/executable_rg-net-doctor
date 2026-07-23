@@ -216,7 +216,20 @@ if systemctl is-active --quiet systemd-resolved.service; then ok "resolved activ
 if systemctl is-active --quiet ctrld.service; then
   wrn "ctrld active on :5354 (Control D) — upstream timeouts common on full-tunnel; not on main resolved path if DNS=127.0.0.1/unbound"
 fi
-if dig +time=2 +tries=1 +short google.com @127.0.0.1 >/dev/null 2>&1; then ok "dig @127.0.0.1 ok"; else bad "dig @127.0.0.1 failed"; fi
+# Retry before condemning the resolver. A single 2s timeout is routine while an
+# upstream is briefly slow, and raising a critical desktop alert for it trains
+# the alert to be ignored -- the resolver recovers on its own before anyone has
+# read the notification. Three misses in a row is a resolver that is actually
+# down.
+dns_local_ok=0
+for _ in 1 2 3; do
+    if dig +time=2 +tries=1 +short google.com @127.0.0.1 >/dev/null 2>&1; then
+        dns_local_ok=1
+        break
+    fi
+    sleep 1
+done
+if [ "$dns_local_ok" -eq 1 ]; then ok "dig @127.0.0.1 ok"; else bad "dig @127.0.0.1 failed 3x"; fi
 
 printf '== SURF OpenVPN ==\n'
 if [ -r "$SURF_STATUS" ]; then

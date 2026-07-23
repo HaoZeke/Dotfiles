@@ -315,3 +315,5 @@ dot_claude/private_claude-mcp-servers.json
 ~/.grok/skills/f2py-c-refcount/SKILL.md
 ~/.grok/skills/f2py-tasks/SKILL.md
 ~/.local/share/terra-dns/private/ctrld.toml
+~/.local/share/rg-net/private/eduroam.env
+~/.local/share/rg-net/private/eduroam-ca.pem
