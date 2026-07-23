@@ -14,18 +14,29 @@ dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
 hz_carveout="${RG_HZ_CARVEOUT_SCRIPT:-$script_dir/rg-haozeke-tunnel-carveout}"
 akamai_carveout="${RG_AKAMAI_CARVEOUT_SCRIPT:-$script_dir/rg-tunnel-akamai-carveout}"
 ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
+endpoint_state_dir="${RG_US_EGRESS_STATE_DIR:-/var/lib/rg-us-egress}"
+endpoint_cache="${RG_US_EGRESS_ENDPOINT_CACHE:-$endpoint_state_dir/endpoint.ip}"
 tmp_conf=""
 activation_started=0
 
 # Transform the provider WireGuard conf into the runtime conf: strip DNS=,
 # force a carrier-safe MTU, normalize PersistentKeepalive to 25 inside every
-# [Peer], and inject the policy-rule hooks into [Interface]. Pure text -> text
-# so it is testable without root (--render-conf below).
+# [Peer], rewrite a hostname Endpoint to a literal IP, and inject the
+# policy-rule hooks into [Interface]. Pure text -> text so it is testable
+# without root (--render-conf below); the IP arrives via RG_US_EGRESS_ENDPOINT_IP
+# so resolution stays out of the transform.
+#
+# The Endpoint rewrite is what keeps the tunnel recoverable. wg-quick resolves a
+# hostname Endpoint through the very resolver chain this tunnel carries, and its
+# failure path deletes the interface -- so a resolver that is briefly unavailable
+# (Wi-Fi moving to another network on resume) turns into a tunnel that no retry
+# can rebuild, because each retry needs the DNS the tunnel was restoring. A
+# literal IP makes bring-up depend on nothing.
 render_runtime_conf() {
     local src="$1" conf_mtu mtu
     conf_mtu="$(awk -F= '/^[[:space:]]*MTU[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2; exit}' "$src")"
     mtu="${RG_US_EGRESS_MTU:-${conf_mtu:-1280}}"
-    awk -v mtu="$mtu" '
+    awk -v mtu="$mtu" -v endpoint_ip="${RG_US_EGRESS_ENDPOINT_IP:-}" '
     BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
     function inject_hooks() {
         if (injected == 0) {
@@ -52,6 +63,23 @@ render_runtime_conf() {
     }
     /^[[:space:]]*DNS[[:space:]]*=/ { next }
     /^[[:space:]]*MTU[[:space:]]*=/ { next }
+    # Preserve the hostname in a comment so a later refresh can re-resolve it.
+    /^[[:space:]]*Endpoint[[:space:]]*=/ {
+        if (endpoint_ip == "") { print; next }
+        val = $0
+        sub(/^[^=]*=[[:space:]]*/, "", val)
+        sub(/[[:space:]]*$/, "", val)
+        port = val
+        sub(/^.*:/, "", port)
+        host = substr(val, 1, length(val) - length(port) - 1)
+        if (port ~ /^[0-9]+$/ && host != "" && host != endpoint_ip) {
+            print "# RG-Endpoint-Host = " host
+            print "Endpoint = " endpoint_ip ":" port
+            next
+        }
+        print
+        next
+    }
     /^[[:space:]]*PersistentKeepalive[[:space:]]*=/ { keepalive_seen = 1; print "PersistentKeepalive = 25"; next }
     /^[[:space:]]*\[Interface\][[:space:]]*$/ { print; print "MTU = " mtu; next }
     # The [Peer] header must consume the line here (next): letting it fall
@@ -63,6 +91,65 @@ render_runtime_conf() {
     { print }
     END { finish_peer(); inject_hooks() }
     ' "$src"
+}
+
+# Read the peer Endpoint host from a conf, preferring the preserved comment so
+# an already-pinned runtime conf still reports the hostname rather than the IP.
+endpoint_host_of() {
+    awk '
+    /^[[:space:]]*#[[:space:]]*RG-Endpoint-Host[[:space:]]*=/ && preserved == "" {
+        val = $0
+        sub(/^[^=]*=[[:space:]]*/, "", val)
+        gsub(/[[:space:]]/, "", val)
+        preserved = val
+        next
+    }
+    /^[[:space:]]*Endpoint[[:space:]]*=/ && literal == "" {
+        val = $0
+        sub(/^[^=]*=[[:space:]]*/, "", val)
+        gsub(/[[:space:]]/, "", val)
+        port = val
+        sub(/^.*:/, "", port)
+        if (port ~ /^[0-9]+$/) literal = substr(val, 1, length(val) - length(port) - 1)
+        else literal = val
+    }
+    END { print (preserved != "" ? preserved : literal) }
+    ' "$1"
+}
+
+# Resolve the endpoint hostname to an IPv4 literal, falling back to the last
+# known good answer. The cache is what survives a resume during which the
+# resolver is briefly dark: without it there is no way back to a working tunnel.
+resolve_endpoint_ipv4() {
+    local host="$1" ip="" cached
+
+    case "$host" in
+    ''|*[!0-9.]*) ;;
+    *) printf '%s\n' "$host"; return 0 ;;
+    esac
+
+    ip="$(getent ahostsv4 "$host" 2>/dev/null | awk '/STREAM|RAW/ {print $1; exit}')"
+    if [ -z "$ip" ] && command -v dig >/dev/null 2>&1; then
+        ip="$(dig @127.0.0.1 "$host" A +time=3 +tries=1 +short 2>/dev/null |
+            awk '/^[0-9.]+$/ {print; exit}')"
+    fi
+
+    if [ -n "$ip" ]; then
+        install -d -m 0700 "$(dirname -- "$endpoint_cache")" 2>/dev/null || true
+        printf '%s %s\n' "$host" "$ip" >"$endpoint_cache" 2>/dev/null || true
+        printf '%s\n' "$ip"
+        return 0
+    fi
+
+    cached="$(awk -v h="$host" '$1 == h {print $2; exit}' "$endpoint_cache" 2>/dev/null || true)"
+    if [ -n "$cached" ]; then
+        printf 'endpoint %s unresolvable; reusing cached %s\n' "$host" "$cached" >&2
+        printf '%s\n' "$cached"
+        return 0
+    fi
+
+    printf 'cannot resolve endpoint %s and no cached address is available\n' "$host" >&2
+    return 1
 }
 
 # Refuse to install a runtime conf whose keys sit in the wrong section; wg
@@ -359,6 +446,16 @@ disable_networkmanager_for_iwd
 
 printf '\n== install wg-quick runtime config ==\n'
 install -d -m 0700 /etc/wireguard
+# Pin the endpoint before rendering so the installed conf never carries a name
+# wg-quick would have to resolve at bring-up time.
+if [ -z "${RG_US_EGRESS_ENDPOINT_IP:-}" ]; then
+    endpoint_host="$(endpoint_host_of "$conf")"
+    if [ -n "$endpoint_host" ]; then
+        RG_US_EGRESS_ENDPOINT_IP="$(resolve_endpoint_ipv4 "$endpoint_host")" || exit 2
+        export RG_US_EGRESS_ENDPOINT_IP
+        printf 'endpoint %s pinned to %s\n' "$endpoint_host" "$RG_US_EGRESS_ENDPOINT_IP"
+    fi
+fi
 tmp_conf="$(mktemp)"
 # A conservative MTU lets WireGuard data survive carriers (mobile hotspots) that
 # pass the small handshake but silently drop full ~1420-byte payloads. Precedence:

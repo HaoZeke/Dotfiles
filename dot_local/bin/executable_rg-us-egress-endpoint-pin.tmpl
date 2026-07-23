@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Hostname gate: laptop DNS/network mutators must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+# Keep the installed US-egress WireGuard conf's Endpoint a literal IPv4.
+#
+# wg-quick resolves a hostname Endpoint through the resolver chain that this
+# very tunnel carries, and its failure path deletes the interface. A resolver
+# that is briefly dark -- exactly what a resume onto a different Wi-Fi network
+# produces -- therefore destroys the tunnel, and every retry fails the same way
+# because the DNS it needs was what the tunnel was restoring. Pinning the
+# Endpoint to an address makes bring-up depend on nothing.
+#
+# Run before any wg-quick restart. Refreshes the address while DNS works and
+# leaves the last known good one in place while it does not, so the conf is
+# always startable.
+set -uo pipefail
+
+iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+runtime_conf="${RG_US_EGRESS_RUNTIME_CONF:-/etc/wireguard/${iface}.conf}"
+endpoint_state_dir="${RG_US_EGRESS_STATE_DIR:-/var/lib/rg-us-egress}"
+endpoint_cache="${RG_US_EGRESS_ENDPOINT_CACHE:-$endpoint_state_dir/endpoint.ip}"
+LOG="${RG_PIN_LOG:-logger -t rg-us-egress-endpoint-pin}"
+
+[ -r "$runtime_conf" ] || exit 0
+
+# Preserved comment first: an already-pinned conf must still report its
+# hostname, otherwise the address could never be refreshed again.
+read_endpoint() {
+    awk '
+    /^[[:space:]]*#[[:space:]]*RG-Endpoint-Host[[:space:]]*=/ && preserved == "" {
+        val = $0
+        sub(/^[^=]*=[[:space:]]*/, "", val)
+        gsub(/[[:space:]]/, "", val)
+        preserved = val
+        next
+    }
+    /^[[:space:]]*Endpoint[[:space:]]*=/ && literal == "" {
+        val = $0
+        sub(/^[^=]*=[[:space:]]*/, "", val)
+        gsub(/[[:space:]]/, "", val)
+        port = val
+        sub(/^.*:/, "", port)
+        if (port ~ /^[0-9]+$/) {
+            literal = substr(val, 1, length(val) - length(port) - 1)
+            lport = port
+        } else {
+            literal = val
+        }
+    }
+    END { print (preserved != "" ? preserved : literal) "\t" lport }
+    ' "$1"
+}
+
+IFS="$(printf '\t')" read -r host port <<EOF
+$(read_endpoint "$runtime_conf")
+EOF
+
+[ -n "${host:-}" ] || exit 0
+[ -n "${port:-}" ] || exit 0
+
+# Already an address and no hostname was preserved: nothing to refresh.
+case "$host" in
+''|*[!0-9.]*) ;;
+*) exit 0 ;;
+esac
+
+ip="$(getent ahostsv4 "$host" 2>/dev/null | awk '/STREAM|RAW/ {print $1; exit}')"
+if [ -z "$ip" ] && command -v dig >/dev/null 2>&1; then
+    ip="$(dig @127.0.0.1 "$host" A +time=3 +tries=1 +short 2>/dev/null |
+        awk '/^[0-9.]+$/ {print; exit}')"
+fi
+
+if [ -n "$ip" ]; then
+    install -d -m 0700 "$(dirname -- "$endpoint_cache")" 2>/dev/null || true
+    printf '%s %s\n' "$host" "$ip" >"$endpoint_cache" 2>/dev/null || true
+else
+    ip="$(awk -v h="$host" '$1 == h {print $2; exit}' "$endpoint_cache" 2>/dev/null || true)"
+    [ -n "$ip" ] || { $LOG "cannot resolve $host and no cached address; leaving conf untouched"; exit 1; }
+    $LOG "$host unresolvable; pinning cached $ip so wg-quick can still start"
+fi
+
+current="$(awk '
+/^[[:space:]]*Endpoint[[:space:]]*=/ {
+    val = $0; sub(/^[^=]*=[[:space:]]*/, "", val); gsub(/[[:space:]]/, "", val); print val; exit
+}' "$runtime_conf")"
+
+[ "$current" = "${ip}:${port}" ] && exit 0
+
+tmp="$(mktemp)" || exit 1
+trap 'rm -f "$tmp"' EXIT
+# Emit the preserved-host comment exactly once, immediately before Endpoint.
+awk -v ip="$ip" -v port="$port" -v host="$host" '
+/^[[:space:]]*#[[:space:]]*RG-Endpoint-Host[[:space:]]*=/ { next }
+/^[[:space:]]*Endpoint[[:space:]]*=/ {
+    print "# RG-Endpoint-Host = " host
+    print "Endpoint = " ip ":" port
+    next
+}
+{ print }
+' "$runtime_conf" >"$tmp" || exit 1
+
+grep -q "^Endpoint = ${ip}:${port}$" "$tmp" || { $LOG "rewrite produced no Endpoint; keeping the existing conf"; exit 1; }
+
+chmod 0600 "$tmp"
+cat "$tmp" >"$runtime_conf" || exit 1
+$LOG "endpoint $host pinned to ${ip}:${port}"
+exit 0

@@ -36,6 +36,7 @@ CURL="${RG_GUARD_CURL:-curl}"
 FLOCK="${RG_GUARD_FLOCK:-flock}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
 CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
+ENDPOINT_PIN="${RG_US_EGRESS_ENDPOINT_PIN:-/home/rgoswami/.local/bin/rg-us-egress-endpoint-pin}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
 # Mutual-exclusion lock: the periodic timer and manual invocations can overlap,
 # so serialize them (set to "none" to disable, e.g. under test).
@@ -155,6 +156,12 @@ EOF
 restore_egress() {
     $LOG "$1"
     $SYSTEMCTL reset-failed "$unit" 2>/dev/null || true
+    # Pin the peer Endpoint to a literal address first. wg-quick resolves a
+    # hostname Endpoint through the resolver chain this tunnel carries and
+    # deletes the interface when that fails, so restarting into a hostname conf
+    # while DNS is settling destroys the tunnel and every later retry fails
+    # identically -- the "dead until reboot" mode. A pinned address cannot.
+    [ -x "$ENDPOINT_PIN" ] && "$ENDPOINT_PIN" >/dev/null 2>&1
     # restart (not start): re-applies wg-quick's routes and policy rules even when
     # the interface is already up but no longer routing.
     if $SYSTEMCTL restart "$unit"; then
@@ -188,6 +195,16 @@ if [ "$LOCK" != "none" ]; then
         # Better to guard unserialized than to never guard; log and continue.
         $LOG "cannot open lock $LOCK; proceeding without serialization"
     fi
+fi
+
+# Refuse to act without a usable underlay. wg-quick can only rebuild the tunnel
+# on top of a working default route, so a tick that fires while Wi-Fi is still
+# negotiating -- the seconds after a resume, or a move to another network --
+# tears down a tunnel nothing can rebuild yet and leaves the machine with no
+# egress at all. Waiting one tick costs nothing; acting early costs the network.
+if [ -z "$(main_ipv4_default)" ]; then
+    $LOG "no non-tunnel default route yet; deferring until the uplink settles"
+    exit 0
 fi
 
 reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local uplink"
