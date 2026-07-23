@@ -19,6 +19,12 @@ target="${1:-}"
 
 die() { printf '%s\n' "$1" >&2; exit "${2:-1}"; }
 
+# Run as yourself. Under `sudo su` the profile, the ssh host aliases and the
+# vault all resolve against /root instead of the account that owns them, so the
+# sealed profile is invisible and a Host alias like rg.surf does not exist.
+# Privilege is taken per command below, where a password prompt can be answered.
+[ "$(id -u)" -ne 0 ] || die "run as your normal user, not root: \$HOME, ~/.ssh/config and the vault belong to that account" 2
+
 [ -r "$env_file" ] || die "no profile at $env_file (run rg-eduroam-export, or nimvault unseal)" 2
 # shellcheck disable=SC1090
 . "$env_file"
@@ -39,7 +45,11 @@ nm)
     if [ -r "$ca_file" ]; then
         remote_ca=/etc/NetworkManager/certs/eduroam-ca.pem
         if [ -n "$target" ]; then
-            ssh "$target" "sudo install -d -m 0755 /etc/NetworkManager/certs && sudo tee $remote_ca >/dev/null && sudo chmod 0644 $remote_ca" <"$ca_file" \
+            # Stage without privilege, then take it once with a TTY: remote sudo
+            # cannot prompt for a password down a pipe.
+            scp -q "$ca_file" "$target:/tmp/rg-eduroam-ca.pem" \
+                || die "failed to copy the CA cert to $target" 4
+            ssh -t "$target" "sudo install -D -m 0644 /tmp/rg-eduroam-ca.pem $remote_ca; rm -f /tmp/rg-eduroam-ca.pem" \
                 || die "failed to install the CA cert on $target" 4
         else
             sudo install -d -m 0755 /etc/NetworkManager/certs
@@ -79,7 +89,15 @@ E_CA=$(printf '%q' "$remote_ca") \
 E_DOM=$(printf '%q' "${RG_EDUROAM_DOMAIN_SUFFIX:-}")"
 
     if [ -n "$target" ]; then
-        ssh "$target" "$env_prefix bash -s" <<<"$payload" || die "provisioning failed on $target" 5
+        # sudo on the far side needs a TTY, and a TTY cannot also carry the
+        # script on stdin. Stage a 0600 script owned by the login user, run it
+        # under a TTY, and remove it whether or not it succeeded.
+        remote_script=".rg-eduroam-provision.$$.sh"
+        printf '%s\n%s\n' "$env_prefix" "$payload" \
+            | ssh "$target" "umask 077; cat >~/$remote_script" \
+            || die "failed to stage the provisioning script on $target" 5
+        ssh -t "$target" "sudo -E bash ~/$remote_script; rc=\$?; rm -f ~/$remote_script; exit \$rc" \
+            || { ssh "$target" "rm -f ~/$remote_script" 2>/dev/null; die "provisioning failed on $target" 5; }
     else
         env E_SSID="$RG_EDUROAM_SSID" E_EAP="${RG_EDUROAM_EAP:-peap}" \
             E_PHASE2="${RG_EDUROAM_PHASE2:-mschapv2}" E_ID="$RG_EDUROAM_IDENTITY" \

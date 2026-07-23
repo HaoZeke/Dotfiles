@@ -18,6 +18,11 @@ ca_out="$priv_dir/eduroam-ca.pem"
 
 die() { printf '%s\n' "$1" >&2; exit "${2:-1}"; }
 
+# Run as yourself. Under `sudo su` the output lands in /root instead of the
+# account whose vault will seal it, leaving a credential in a directory nobody
+# is tracking. Privilege for reading the profile is taken per command below.
+[ "$(id -u)" -ne 0 ] || die "run as your normal user, not root: the profile must land in your \$HOME for nimvault to seal it" 2
+
 sudo test -r "$iwd_profile" 2>/dev/null \
     || die "cannot read $iwd_profile (run 'sudo -v' first, or set RG_EDUROAM_IWD_PROFILE)" 2
 
