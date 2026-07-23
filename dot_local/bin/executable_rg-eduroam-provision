@@ -60,6 +60,22 @@ nm)
         printf 'WARNING: no CA cert; relying on the domain match alone\n' >&2
     fi
 
+    # iwd's ServerDomainMask takes wildcards; NetworkManager's
+    # domain-suffix-match is a plain suffix compared against the server
+    # certificate, so a literal "*.hi.is" matches nothing and the tunnel fails
+    # TLS validation after associating. Strip the wildcard rather than drop the
+    # check: without any domain match, an access point merely broadcasting the
+    # SSID can present its own certificate and collect the credential.
+    nm_domain="${RG_EDUROAM_DOMAIN_SUFFIX:-}"
+    case "$nm_domain" in
+    '*.'*) nm_domain="${nm_domain#\*.}" ;;
+    esac
+    # A mask may list several domains; NetworkManager accepts one suffix.
+    nm_domain="${nm_domain%% *}"
+    [ "$nm_domain" = "${RG_EDUROAM_DOMAIN_SUFFIX:-}" ] \
+        || printf 'domain match: %s -> %s (NetworkManager takes no wildcard)\n' \
+            "${RG_EDUROAM_DOMAIN_SUFFIX:-}" "$nm_domain"
+
     # Secrets travel as environment, never as argv: argv is world-readable in
     # /proc for the lifetime of the command.
     payload='set -uo pipefail
@@ -86,7 +102,7 @@ E_ID=$(printf '%q' "$RG_EDUROAM_IDENTITY") \
 E_PW=$(printf '%q' "$RG_EDUROAM_PASSWORD") \
 E_ANON=$(printf '%q' "${RG_EDUROAM_ANON_IDENTITY:-}") \
 E_CA=$(printf '%q' "$remote_ca") \
-E_DOM=$(printf '%q' "${RG_EDUROAM_DOMAIN_SUFFIX:-}")"
+E_DOM=$(printf '%q' "$nm_domain")"
 
     if [ -n "$target" ]; then
         # sudo on the far side needs a TTY, and a TTY cannot also carry the
@@ -102,7 +118,7 @@ E_DOM=$(printf '%q' "${RG_EDUROAM_DOMAIN_SUFFIX:-}")"
         env E_SSID="$RG_EDUROAM_SSID" E_EAP="${RG_EDUROAM_EAP:-peap}" \
             E_PHASE2="${RG_EDUROAM_PHASE2:-mschapv2}" E_ID="$RG_EDUROAM_IDENTITY" \
             E_PW="$RG_EDUROAM_PASSWORD" E_ANON="${RG_EDUROAM_ANON_IDENTITY:-}" \
-            E_CA="$remote_ca" E_DOM="${RG_EDUROAM_DOMAIN_SUFFIX:-}" \
+            E_CA="$remote_ca" E_DOM="$nm_domain" \
             bash -c "$payload" || die "provisioning failed" 5
     fi
     ;;
