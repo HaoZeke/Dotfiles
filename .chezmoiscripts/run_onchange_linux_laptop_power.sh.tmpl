@@ -84,6 +84,21 @@ write_ctrld_local_chain_dropin() {
         | head -n 1)"
     [ -n "$cd_uid" ] || return 1
 
+    # Prefer the config file: the flag form gives ctrld no bootstrap address, so
+    # a failing upstream sends it to the OS resolver -- 127.0.0.53 -> unbound ->
+    # ctrld, a loop that turns one upstream blip into a machine-wide DNS stall.
+    # bootstrap_ip in the config keeps a failing upstream a failing upstream.
+    # The file carries the private resolver uid, so it lives in terra-dns/private
+    # (gitignored, sealed with nimvault) and only a redacted example is committed.
+    local priv_toml="$HOME/.local/share/terra-dns/private/ctrld.toml" exec_line
+    if [ -r "$priv_toml" ] && grep -q '^[[:space:]]*bootstrap_ip' "$priv_toml"; then
+        sudo install -D -m 0600 -o root -g root "$priv_toml" /etc/controld/ctrld.toml
+        exec_line="ExecStart=/usr/local/bin/ctrld run --config=/etc/controld/ctrld.toml"
+    else
+        echo "chezmoi: WARN $priv_toml missing or has no bootstrap_ip; ctrld keeps the loop-prone flag form" >&2
+        exec_line="ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000"
+    fi
+
     content="# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
 [Unit]
 Description=A highly configurable, multi-protocol DNS forwarding proxy
@@ -94,7 +109,7 @@ After=network.target nss-lookup.target
 [Service]
 StartLimitInterval=5
 StartLimitBurst=10
-ExecStart=/usr/local/bin/ctrld run --listen=127.0.0.1:5354 --primary_upstream=https://76.76.2.22/$cd_uid --secondary_upstream=https://76.76.10.22/$cd_uid --cache_size=10000
+$exec_line
 WorkingDirectory=/etc/controld
 Restart=always
 RestartSec=30

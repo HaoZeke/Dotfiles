@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Read-only verdict on the two things that used to need a reboot to recover:
+# lock-on-suspend, and the US-egress tunnel surviving a resume.
+#
+# Mutates nothing, so it is safe to run at any time. Pair it with
+# rg-us-egress-resume-selftest, which proves the logic; this reports the live
+# state that logic is running against.
+set -uo pipefail
+
+ok=0; bad=0
+say()  { printf '  %-44s %s\n' "$1" "$2"; }
+good() { say "$1" "OK    ${2:-}"; ok=$((ok + 1)); }
+bad()  { say "$1" "BAD   ${2:-}"; bad=$((bad + 1)); }
+skip() { say "$1" "SKIP  ${2:-}"; }
+
+printf '== lock on lid close ==\n'
+if systemctl --user is-active --quiet swayidle; then
+    good "swayidle running" "pid $(systemctl --user show -p MainPID --value swayidle)"
+else
+    bad "swayidle running" "$(systemctl --user is-active swayidle); nothing will lock"
+fi
+if pgrep -a swayidle 2>/dev/null | grep -q 'before-sleep .*rg-lockscreen'; then
+    good "before-sleep lock hook armed"
+else
+    bad "before-sleep lock hook armed" "suspend will not lock"
+fi
+if systemd-inhibit --list --no-pager 2>/dev/null | grep -q swayidle; then
+    good "sleep delay inhibitor held" "logind waits for the lock"
+else
+    bad "sleep delay inhibitor held" "suspend will not wait for the lock"
+fi
+lid="$(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager HandleLidSwitch 2>/dev/null |
+        awk '{gsub(/"/, "", $2); print $2}')"
+case "$lid" in
+suspend|suspend-then-hibernate) good "lid switch action" "$lid" ;;
+*) bad "lid switch action" "${lid:-unknown}" ;;
+esac
+
+printf '\n== egress tunnel ==\n'
+guard="$HOME/.local/bin/rg-us-egress-guard"
+for marker in ENDPOINT_PIN underlay_healthy restore_cooldown 'no non-tunnel default route'; do
+    if grep -q "$marker" "$guard" 2>/dev/null; then
+        good "guard carries: $marker"
+    else
+        bad "guard carries: $marker" "run: chezmoi apply $guard"
+    fi
+done
+conf=/etc/wireguard/rg-us-egress-wg.conf
+if sudo -n test -r "$conf" 2>/dev/null; then
+    ep="$(sudo -n grep -E '^Endpoint' "$conf" 2>/dev/null | head -1)"
+    if printf '%s' "$ep" | grep -qE '^Endpoint = [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$'; then
+        good "endpoint pinned to an address" "${ep#Endpoint = }"
+    else
+        bad "endpoint pinned to an address" "still a hostname; run rg-us-egress-restore"
+    fi
+else
+    skip "endpoint pinned to an address" "needs sudo: sudo grep ^Endpoint $conf"
+fi
+say "tunnel state" "$(ip -br link show rg-us-egress-wg 2>/dev/null | awk '{print $1, $2}' ||
+    echo 'down')"
+
+printf '\n== DNS chain ==\n'
+if systemctl is-active --quiet ctrld 2>/dev/null; then
+    good "ctrld active"
+else
+    bad "ctrld active"
+fi
+# Without a bootstrap address ctrld answers upstream failure by asking the OS
+# resolver, which is resolved -> unbound -> ctrld: a loop that stalls every
+# lookup on the machine.
+if sudo -n test -r /etc/controld/ctrld.toml 2>/dev/null; then
+    if sudo -n grep -q '^[[:space:]]*bootstrap_ip' /etc/controld/ctrld.toml 2>/dev/null; then
+        good "ctrld has a bootstrap address" "no OS-resolver loop"
+    else
+        bad "ctrld has a bootstrap address" "upstream failure will loop through unbound"
+    fi
+else
+    skip "ctrld has a bootstrap address" "needs sudo, or config not installed yet"
+fi
+if timeout 5 getent ahostsv4 github.com >/dev/null 2>&1; then
+    good "name resolution"
+else
+    bad "name resolution"
+fi
+
+printf '\n== live uplink ==\n'
+if ip -4 route show default | grep -q .; then
+    good "default route" "$(ip -4 route show default | head -1 | awk '{print $3, $5}')"
+else
+    bad "default route" "none"
+fi
+if timeout 6 curl -4 -sS -o /dev/null --connect-timeout 4 --max-time 5 \
+    https://76.76.2.22/ 2>/dev/null; then
+    good "uplink probe" "the guard gates restarts on this"
+else
+    bad "uplink probe" "uplink degraded; guard will defer restarts"
+fi
+
+printf '\n== %d ok, %d bad ==\n' "$ok" "$bad"
+[ "$bad" -eq 0 ] || printf 'Address the BAD lines above.\n'
+exit 0

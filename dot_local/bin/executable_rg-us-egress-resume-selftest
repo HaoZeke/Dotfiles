@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+# Replay the resume outage against the rendered guard and endpoint-pin helpers.
+#
+# The failure this pins down: wg-quick resolves a hostname Endpoint through the
+# resolver chain the tunnel itself carries, and its failure path deletes the
+# interface. One resolver blip during a resume therefore destroyed the tunnel,
+# and every retry failed the same way because the DNS each retry needed was what
+# the tunnel was restoring -- unrecoverable short of a reboot.
+#
+# Timeline, from the resume that prompted this:
+#   t0  carrier lost: no default route, resolver dark
+#   t1  re-associated to a different network, default route not up yet
+#   t2  default route appears, resolver still dark   <- the tick that killed it
+#   t3  resolver recovers
+#
+# A control run with an unpinned hostname must still die, otherwise the scenario
+# has stopped exercising the bug.
+set -uo pipefail
+
+repo="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+resolve_helper() {
+    local path="$1" out
+    if [ -r "$path" ]; then printf '%s\n' "$path"; return 0; fi
+    if [ -r "$path.tmpl" ]; then
+        out="$tmp/$(basename "$path")"
+        chezmoi --source "$repo" --no-tty --refresh-externals=never \
+            execute-template <"$path.tmpl" >"$out" || return 1
+        chmod +x "$out"
+        printf '%s\n' "$out"
+        return 0
+    fi
+    return 1
+}
+
+GUARD="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-guard")" \
+    || fail "cannot render the egress guard"
+PIN="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-endpoint-pin")" \
+    || fail "cannot render the endpoint pin helper"
+
+mkdir -p "$tmp/bin" "$tmp/state"
+STATE="$tmp/state"
+
+cat >"$tmp/live.conf" <<'EOF'
+[Interface]
+MTU = 1280
+PrivateKey = xPRIVx
+Address = 100.64.0.2/32
+
+[Peer]
+PublicKey = xPUBx
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = vpn.example.net:443
+PersistentKeepalive = 25
+EOF
+printf 'vpn.example.net 198.51.100.7\n' >"$STATE/endpoint.ip"
+
+cat >"$tmp/bin/ip" <<'IPEOF'
+#!/usr/bin/env bash
+S="$RG_SIM_STATE"; args="$*"
+case "$args" in
+*"link show"*)
+    [ -f "$S/iface_present" ] && { echo "9: rg-us-egress-wg: <POINTOPOINT,UP>"; exit 0; }
+    echo "Device does not exist." >&2; exit 1 ;;
+*"route show default table main"*|*"-4 route show default"*)
+    cat "$S/default_route" 2>/dev/null; exit 0 ;;
+*"route get"*)
+    [ -f "$S/iface_present" ] && { echo "1.1.1.1 dev rg-us-egress-wg"; exit 0; }
+    echo "1.1.1.1 via 10.0.0.1 dev wlan0"; exit 0 ;;
+*"rule show"*) echo "5190:	from all fwmark 0x5151 lookup 5151"; exit 0 ;;
+*"route show table 5151"*) echo "default via 10.0.0.1 dev wlan0"; exit 0 ;;
+*"route replace"*) echo "$args" >>"$S/route_replace.log"; exit 0 ;;
+esac
+exit 0
+IPEOF
+
+# Models wg-quick's real contract: it can only come up when the Endpoint needs
+# no resolution, and its failure path deletes the interface.
+cat >"$tmp/bin/systemctl" <<'SCEOF'
+#!/usr/bin/env bash
+S="$RG_SIM_STATE"
+case "$1" in
+is-enabled|reset-failed) exit 0 ;;
+restart)
+    case "$2" in
+    wg-quick@*)
+        echo "restart $2" >>"$S/restart.log"
+        if grep -qE '^Endpoint = [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$' "$RG_SIM_CONF"; then
+            touch "$S/iface_present"; exit 0
+        fi
+        if [ -f "$S/dns_down" ]; then rm -f "$S/iface_present"; exit 1; fi
+        touch "$S/iface_present"; exit 0 ;;
+    esac
+    exit 0 ;;
+esac
+exit 0
+SCEOF
+
+cat >"$tmp/bin/curl" <<'CURLEOF'
+#!/usr/bin/env bash
+case "$*" in
+*76.76.*) [ -f "$RG_SIM_STATE/underlay_down" ] && exit 7; exit 0 ;;
+esac
+[ -f "$RG_SIM_STATE/iface_present" ] && { echo "200 0.4 100.64.0.2"; exit 0; }
+exit 7
+CURLEOF
+
+cat >"$tmp/bin/getent" <<'GEOF'
+#!/usr/bin/env bash
+[ -f "$RG_SIM_STATE/dns_down" ] && exit 1
+echo "198.51.100.7 STREAM vpn.example.net"
+GEOF
+cat >"$tmp/bin/dig" <<'DEOF'
+#!/usr/bin/env bash
+[ -f "$RG_SIM_STATE/dns_down" ] && exit 1
+echo "198.51.100.7"
+DEOF
+chmod +x "$tmp"/bin/*
+
+export RG_SIM_STATE="$STATE" RG_SIM_CONF="$tmp/live.conf"
+export RG_US_EGRESS_RUNTIME_CONF="$tmp/live.conf"
+export RG_US_EGRESS_ENDPOINT_CACHE="$STATE/endpoint.ip"
+export RG_US_EGRESS_ENDPOINT_PIN="$PIN"
+export RG_PIN_LOG="true" RG_GUARD_LOG="true"
+export RG_GUARD_SYSTEMCTL="$tmp/bin/systemctl" RG_GUARD_IP="$tmp/bin/ip" RG_GUARD_CURL="$tmp/bin/curl"
+export RG_GUARD_LOCK=none RG_HZ_CARVEOUT=/nonexistent
+export RG_US_EGRESS_QUALITY_FAIL_THRESHOLD=1
+export RG_US_EGRESS_RESTORE_STATE="$STATE/last-restore"
+export RG_US_EGRESS_RESTORE_COOLDOWN=0
+export RG_HZ_STATE="$STATE/hz.endpoints"; : >"$RG_HZ_STATE"
+export PATH="$tmp/bin:$PATH"
+
+tick()     { bash "$GUARD" >/dev/null 2>&1; }
+iface()    { [ -f "$STATE/iface_present" ] && echo UP || echo GONE; }
+restarts() { [ -f "$STATE/restart.log" ] && wc -l <"$STATE/restart.log" || echo 0; }
+
+touch "$STATE/iface_present"
+printf 'default via 192.168.1.1 dev wlan0 proto dhcp src 192.168.1.50 metric 600\n' >"$STATE/default_route"
+
+# t0/t1: no default route. Restarting onto an underlay that is not there yet
+# tears down a tunnel nothing can rebuild.
+: >"$STATE/default_route"; touch "$STATE/dns_down"; rm -f "$STATE/iface_present"
+tick
+[ "$(restarts)" -eq 0 ] || fail "guard restarted while the uplink had no default route"
+tick
+[ "$(restarts)" -eq 0 ] || fail "guard restarted on the second tick without a default route"
+
+# t2: the tick that used to kill it. Route back, resolver still dark.
+printf 'default via 10.0.0.1 dev wlan0 proto dhcp src 10.0.0.50 metric 600\n' >"$STATE/default_route"
+tick
+[ "$(iface)" = "UP" ] || fail "tunnel was not rebuilt while the resolver was dark"
+grep -q '^Endpoint = 198\.51\.100\.7:443$' "$tmp/live.conf" \
+    || fail "endpoint was not pinned from the cache"
+grep -q '^# RG-Endpoint-Host = vpn\.example\.net$' "$tmp/live.conf" \
+    || fail "endpoint hostname was not preserved for later refresh"
+
+# t3: resolver recovers; nothing regresses.
+rm -f "$STATE/dns_down"
+tick
+[ "$(iface)" = "UP" ] || fail "tunnel dropped once the resolver recovered"
+grep -q '76\.76\.2\.22/32 via 10\.0\.0\.1' "$STATE/route_replace.log" 2>/dev/null \
+    || fail "Control D upstream was not re-pinned onto the new uplink"
+
+# A degraded uplink is not a broken tunnel: restarting cannot help and the
+# teardown makes recovery slower.
+rm -f "$STATE/restart.log" "$STATE/last-restore"
+touch "$STATE/underlay_down"; rm -f "$STATE/iface_present"
+tick
+[ "$(restarts)" -eq 0 ] || fail "guard restarted while the uplink itself was down"
+rm -f "$STATE/underlay_down"
+
+# Control: identical conditions -- tunnel down, resolver dark, hostname Endpoint
+# -- with the pin bypassed. wg-quick must attempt the restart and fail, leaving
+# the interface deleted. If this ever survives, the scenario has stopped
+# exercising the original defect and the assertions above prove nothing.
+reset_control() {
+    rm -f "$STATE/restart.log" "$STATE/last-restore" "$STATE/iface_present"
+    touch "$STATE/dns_down"
+    : >"$RG_HZ_STATE"
+    sed -i 's|^Endpoint = .*|Endpoint = vpn.example.net:443|; /RG-Endpoint-Host/d' "$tmp/live.conf"
+}
+
+reset_control
+RG_US_EGRESS_ENDPOINT_PIN=/nonexistent bash "$GUARD" >/dev/null 2>&1
+[ "$(restarts)" -ge 1 ] || fail "control run never attempted a restart, so it proves nothing"
+[ "$(iface)" = "GONE" ] \
+    || fail "control run survived; the scenario no longer reproduces the original failure"
+
+# Same conditions with the pin in place must succeed -- the difference between
+# the two runs is the whole fix.
+reset_control
+bash "$GUARD" >/dev/null 2>&1
+[ "$(iface)" = "UP" ] || fail "pinned run failed under the conditions the control dies on"
+
+printf 'ok\n'

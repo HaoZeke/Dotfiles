@@ -1,0 +1,41 @@
+# Control D daemon config for the laptop local DNS chain.
+#
+# Chain: systemd-resolved -> unbound (127.0.0.1:53) -> ctrld (127.0.0.1:5354)
+#        -> Control D DoH.
+#
+# bootstrap_ip is the point of this file. Without it ctrld falls back to the OS
+# resolver when an upstream fails, and the OS resolver is 127.0.0.53 -> unbound
+# -> ctrld: a loop that turns a brief upstream blip into a total DNS stall, with
+# every name lookup on the machine hanging until something is restarted. Pinning
+# the bootstrap address keeps a failing upstream a failing upstream.
+#
+# The endpoints carry a private resolver uid, so the real file lives in
+# terra-dns/private (gitignored, sealed with nimvault) and only this redacted
+# example is committed.
+
+[service]
+  log_level = "notice"
+  cache_enable = true
+  cache_size = 10000
+
+[listener.0]
+  ip = "127.0.0.1"
+  port = 5354
+
+[network.0]
+  name = "Any"
+  cidrs = ["0.0.0.0/0"]
+
+[upstream.0]
+  name = "Control D Primary"
+  type = "doh"
+  endpoint = "https://76.76.2.22/REPLACE_WITH_CONTROL_D_RESOLVER_UID"
+  bootstrap_ip = "76.76.2.22"
+  timeout = 5000
+
+[upstream.1]
+  name = "Control D Secondary"
+  type = "doh"
+  endpoint = "https://76.76.10.22/REPLACE_WITH_CONTROL_D_RESOLVER_UID"
+  bootstrap_ip = "76.76.10.22"
+  timeout = 5000

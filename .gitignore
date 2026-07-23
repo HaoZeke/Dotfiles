@@ -309,3 +309,4 @@ dot_claude/private_claude-mcp-servers.json
 ~/.claude/skills/f2py-c-refcount/SKILL.md
 ~/.grok/skills/f2py-c-refcount/SKILL.md
 ~/.grok/skills/f2py-tasks/SKILL.md
+~/.local/share/terra-dns/private/ctrld.toml

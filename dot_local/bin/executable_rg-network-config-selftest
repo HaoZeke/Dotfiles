@@ -578,6 +578,19 @@ rg -q '127\.0\.0\.1:5354' "$laptop_script" \
     || fail "Control D is not moved behind Unbound on a non-conflicting local port"
 rg -q -- '--primary_upstream=https://76\.76\.2\.22/' "$laptop_script" \
     || fail "Control D listener lacks an explicit upstream in no-config mode"
+# Without a bootstrap address ctrld answers an upstream failure by asking the OS
+# resolver, which is resolved -> unbound -> ctrld: a loop that stalls every name
+# lookup on the machine until something is restarted.
+rg -q -- '--config=/etc/controld/ctrld.toml' "$laptop_script" \
+    || fail "Control D is not driven from a config file, so it cannot carry a bootstrap address"
+rg -q 'bootstrap_ip' "$laptop_script" \
+    || fail "Control D config path does not require a bootstrap address"
+ctrld_example="$repo/dot_local/share/terra-dns/ctrld.toml.example"
+test -r "$ctrld_example" || fail "missing redacted Control D config example"
+rg -q 'bootstrap_ip = "76\.76\.2\.22"' "$ctrld_example" \
+    || fail "Control D example lacks the bootstrap address that breaks the resolver loop"
+! rg -q 'endpoint = "https://76\.76\.(2|10)\.22/[A-Za-z0-9]{6,}"' "$ctrld_example" \
+    || fail "Control D example carries a real resolver uid; it must stay redacted"
 rg -q -- '--secondary_upstream=https://76\.76\.10\.22/' "$laptop_script" \
     || fail "Control D listener lacks a secondary upstream"
 rg -q 'disable_networkmanager_for_iwd' "$laptop_script" \

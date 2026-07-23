@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Hostname gate: laptop DNS/network mutators must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+# Bring the US-egress tunnel back up in an order that cannot strand the machine.
+#
+# The tunnel is only enabled for self-healing after it is proven to carry
+# traffic, so a bad bring-up leaves a manually startable tunnel rather than a
+# guard timer fighting the user every thirty seconds.
+#
+# Refuses to proceed while the peer Endpoint is still a hostname: wg-quick
+# resolves it through the resolver chain this tunnel carries and deletes the
+# interface when that fails, which is what made a resume unrecoverable.
+set -uo pipefail
+
+iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+conf="/etc/wireguard/${iface}.conf"
+pin="${RG_US_EGRESS_ENDPOINT_PIN:-/home/rgoswami/.local/bin/rg-us-egress-endpoint-pin}"
+hz_carveout="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
+
+[ "$(id -u)" -eq 0 ] || { printf 'run as root: sudo %s\n' "$0" >&2; exit 2; }
+[ -r "$conf" ] || { printf 'no runtime conf at %s\n' "$conf" >&2; exit 2; }
+
+printf '== pin the peer endpoint ==\n'
+"$pin"
+grep -E '^Endpoint|^# RG-Endpoint-Host' "$conf"
+if ! grep -qE '^Endpoint = [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$' "$conf"; then
+    printf '\nEndpoint is still not a literal address; nothing enabled.\n' >&2
+    printf 'Restore DNS first, then re-run.\n' >&2
+    exit 1
+fi
+printf '  wg-quick has nothing to resolve at bring-up\n'
+
+printf '\n== start the tunnel (guard stays disabled) ==\n'
+systemctl reset-failed "wg-quick@${iface}.service" 2>/dev/null
+if ! systemctl start "wg-quick@${iface}.service"; then
+    printf 'wg-quick failed to start; leaving the guard disabled\n' >&2
+    journalctl -u "wg-quick@${iface}.service" -n 20 --no-pager >&2
+    exit 1
+fi
+ip -br link show "$iface"
+
+printf '\n== re-assert carve-outs ==\n'
+# A bare wg-quick start installs the 0/0 route but not the carve-outs, which
+# would leave rg.terra dark behind the full tunnel.
+if [ -x "$hz_carveout" ] && "$hz_carveout" up >/dev/null 2>&1; then
+    printf '  haozeke carve-out up\n'
+else
+    printf '  WARNING: haozeke carve-out failed; rg.terra may be unreachable\n' >&2
+fi
+systemctl restart ctrld.service 2>/dev/null && printf '  ctrld resettled\n'
+sleep 3
+
+printf '\n== acceptance gate ==\n'
+gate_failed=0
+printf '  exit geography:   '
+geo="$(timeout 15 curl -4 -sS --max-time 12 https://ipinfo.io/json 2>/dev/null |
+    tr -d '\n' | grep -oE '"(ip|city)": *"[^"]*"' | tr '\n' ' ')"
+printf '%s\n' "${geo:-unreachable}"
+[ -n "$geo" ] || gate_failed=1
+printf '  name resolution:  '
+if timeout 8 getent ahostsv4 github.com >/dev/null 2>&1; then printf 'OK\n'; else printf 'FAIL\n'; gate_failed=1; fi
+printf '  bulk transfer:    '
+# Small requests survive an MTU blackhole; only a real payload exposes one.
+if timeout 25 curl -4 -sS -o /dev/null --max-time 20 \
+    https://speed.cloudflare.com/__down?bytes=3000000 2>/dev/null; then
+    printf 'OK (3 MB)\n'
+else
+    printf 'FAIL -- small requests pass but bulk stalls; suspect MTU or a dead path\n'
+    gate_failed=1
+fi
+printf '  rg.terra:         '
+if timeout 15 ssh -o BatchMode=yes -o ConnectTimeout=8 rg.terra true 2>/dev/null; then
+    printf 'OK\n'
+else
+    printf 'FAIL (carve-out)\n'; gate_failed=1
+fi
+
+if [ "$gate_failed" -ne 0 ]; then
+    printf '\nAcceptance gate failed. The tunnel is up but not carrying usable traffic.\n' >&2
+    printf 'Leaving the self-healing units DISABLED so nothing fights you.\n' >&2
+    printf 'Stop it with: systemctl stop wg-quick@%s\n' "$iface" >&2
+    exit 1
+fi
+
+printf '\n== gate passed; enable self-healing ==\n'
+systemctl enable "wg-quick@${iface}.service" rg-us-egress.service >/dev/null 2>&1
+systemctl enable --now rg-us-egress-guard.timer >/dev/null 2>&1
+systemctl is-enabled "wg-quick@${iface}.service" rg-us-egress.service rg-us-egress-guard.timer
+
+printf '\nDone. rg-net-verify for the live verdict, rg-net-doctor for the full audit.\n'
