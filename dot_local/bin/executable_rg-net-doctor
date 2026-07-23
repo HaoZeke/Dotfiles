@@ -195,6 +195,13 @@ while read -r olt_ip; do
     else
       wrn "www.olt.com $olt_ip reachable via selected route (HTTP $olt_code): $olt_route"
     fi
+  elif ! systemctl is-active --quiet wg-quick@rg-us-egress-wg 2>/dev/null; then
+    # OLT falls back to the US egress when the residential path cannot reach it.
+    # With the tunnel deliberately down there is no fallback left, so a failure
+    # here is the expected consequence of that choice rather than a regression
+    # in the stack. Calling it BAD fires a critical alert for a state the user
+    # created on purpose, which is how this check became noise worth ignoring.
+    wrn "www.olt.com $olt_ip unreachable and the US egress is down (curl $olt_probe_rc, HTTP ${olt_code:-000}); expected until the tunnel is back"
   else
     bad "OLT HTTPS probe failed for www.olt.com $olt_ip (curl $olt_probe_rc, HTTP ${olt_code:-000}): ${olt_route:-no route}"
   fi

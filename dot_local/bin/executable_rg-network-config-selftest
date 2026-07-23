@@ -397,6 +397,15 @@ rg -q 'reachable via US egress fallback' "$net_doctor" \
     || fail "doctor must report a working OLT fallback"
 rg -q 'OLT HTTPS probe failed' "$net_doctor" \
     || fail "doctor must fail when the selected OLT path is unreachable"
+# OLT falls back to the US egress. With that tunnel deliberately down there is
+# no fallback left, so a critical alert reports a state the user chose rather
+# than a regression -- which is how the check turned into ignorable noise.
+rg -q 'the US egress is down' "$net_doctor" \
+    || fail "doctor must distinguish an OLT failure caused by a deliberately stopped egress"
+olt_bad_line=$(rg -n 'bad "OLT HTTPS probe failed' "$net_doctor" | head -n 1 | cut -d: -f1)
+olt_egress_line=$(rg -n 'is-active --quiet wg-quick@rg-us-egress-wg' "$net_doctor" | head -n 1 | cut -d: -f1)
+test -n "$olt_bad_line" && test -n "$olt_egress_line" && test "$olt_egress_line" -lt "$olt_bad_line" \
+    || fail "doctor must check the egress state before calling an OLT failure bad"
 rg -q '/var/lib/rg-surf-vpn/status\.json' "$net_doctor" \
     || fail "doctor must inspect nonsecret SURF installation metadata"
 rg -q 'not_after_epoch' "$net_doctor" \
