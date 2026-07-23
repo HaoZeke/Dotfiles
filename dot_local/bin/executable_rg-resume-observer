@@ -76,6 +76,27 @@ watch_loop() {
             resuming=1
             resume_at=$now
             log "  route: $(ip -4 route show default | head -1 || echo none)"
+            # Record which fixes were actually live. Parts of the stack install
+            # under root and can lag the rest, so a verdict without this is
+            # ambiguous between "the fix does not work" and "the fix was not
+            # installed yet" -- the two readings call for opposite next steps.
+            log "  active fixes:"
+            [ -x /usr/lib/systemd/system-sleep/98-rg-resume-network ] \
+                && log "    resume-network hook: installed" \
+                || log "    resume-network hook: NOT installed (chezmoi apply)"
+            grep -q 'underlay_healthy' "$HOME/.local/bin/rg-us-egress-guard" 2>/dev/null \
+                && log "    guard defer/cooldown: present" \
+                || log "    guard defer/cooldown: MISSING"
+            [ -x "$HOME/.local/bin/rg-us-egress-endpoint-pin" ] \
+                && log "    endpoint pin helper: present" \
+                || log "    endpoint pin helper: MISSING"
+            if [ -r /etc/controld/ctrld.toml ]; then
+                grep -q 'bootstrap_ip' /etc/controld/ctrld.toml 2>/dev/null \
+                    && log "    ctrld bootstrap: present" \
+                    || log "    ctrld bootstrap: MISSING"
+            else
+                log "    ctrld bootstrap: not readable here (root-owned or absent)"
+            fi
         fi
 
         if net_ok; then
