@@ -312,8 +312,10 @@ rg -F -q 'route_local_v4 "$ip" "haozeke derp"' "$net_heal" \
     || fail "periodic network heal helper does not route active DERP nodes through the LAN"
 rg -q 'stale carve-out pruned' "$net_heal" \
     || fail "periodic network heal helper must prune dynamic carve-outs that are no longer desired"
-rg -F -q 'if [ -s "$CARVE_STATE_NEW" ]; then' "$net_heal" \
+rg -F -q '[ -s "$CARVE_STATE_NEW" ]' "$net_heal" \
     || fail "periodic network heal helper must not prune on a run that resolved nothing"
+rg -F -q '[ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then' "$net_heal" \
+    || fail "periodic network heal helper must not prune while there is no gateway to compare"
 # A CDN answers with a rotating subset of its pool, so an address absent from
 # the newest answer has not left the pool. Pruning on absence alone rewrites
 # the route table on every run and leaves only the last-resolved subset carved

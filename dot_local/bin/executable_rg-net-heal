@@ -60,21 +60,33 @@ EOF
     return 0
 }
 
-# Dynamic /32 carve-outs are recorded per run so stale ones can be pruned: DNS
-# answers rotate, and a /32 left behind after a roam keeps a dead gateway and
-# blackholes that CDN edge for every site it serves. Static /24 carve-outs are
-# not recorded and never pruned.
+# Dynamic /32 carve-outs are recorded per run so stale ones can be pruned: a
+# /32 left behind after a roam keeps a dead gateway and blackholes that CDN
+# edge for every site it serves. Static /24 carve-outs are not recorded and
+# never pruned.
+#
+# A CDN answers with a rotating subset of its pool, so an address absent from
+# the newest answer has not left the pool. Each record therefore carries the
+# gateway it was pinned to and the time it was last seen: the departed-gateway
+# hazard above is caught by the gateway comparison, which needs no rotation
+# guesswork, and everything else ages out on a TTL that spans many runs.
 CARVE_STATE="${RG_CARVE_STATE:-/run/rg-net-heal.carves}"
 CARVE_STATE_NEW="$(mktemp)"
+CARVE_TTL="${RG_CARVE_TTL:-3600}"
+now="$(date +%s)"
 
 route_local_v4() {
     local ip="$1" label="${2:-host}"
     public_underlay_v4 "$ip" || return 0
-    printf '%s\n' "$ip" >>"$CARVE_STATE_NEW"
+    printf '%s %s %s %s\n' "$ip" "$gw" "$dev" "$now" >>"$CARVE_STATE_NEW"
     if ! ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw"; then
         ip route replace "$ip/32" via "$gw" dev "$dev" table main 2>/dev/null \
             && log "$label carve-out re-asserted: $ip via $gw dev $dev"
     fi
+}
+
+carved_this_run() {
+    awk -v ip="$1" '$1 == ip { found = 1 } END { exit !found }' "$CARVE_STATE_NEW" 2>/dev/null
 }
 
 ensure_hosts_record() {
@@ -369,7 +381,7 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
             if olt_residential_reachable "$olt_host" "$ip"; then
                 route_local_v4 "$ip" "olt:$olt_host"
             else
-                if ! grep -qxF "$ip" "$CARVE_STATE_NEW" 2>/dev/null \
+                if ! carved_this_run "$ip" \
                     && ip route show table main "$ip/32" 2>/dev/null | grep -q "via $gw dev $dev"; then
                     ip route del "$ip/32" table main 2>/dev/null \
                         && log "olt:$olt_host residential path unreachable; using US egress fallback for $ip"
@@ -480,18 +492,38 @@ for p in $EDUVPN_V6_DEAD; do
     ip -6 route show "$p" 2>/dev/null | grep -q unreachable || ip -6 route replace unreachable "$p" 2>/dev/null
 done
 
-# --- 5. prune dynamic /32 carve-outs that are no longer desired -------------
+# --- 5. age out dynamic /32 carve-outs that are no longer desired -----------
 # Skipped entirely when this run resolved nothing (total DNS outage must not
-# wipe a working carve-out set).
-if [ -s "$CARVE_STATE_NEW" ]; then
-    sort -u "$CARVE_STATE_NEW" -o "$CARVE_STATE_NEW"
+# wipe a working carve-out set) or when there is no gateway to compare against.
+if [ -s "$CARVE_STATE_NEW" ] && [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    carve_keep="$(mktemp)"
+    sort -u "$CARVE_STATE_NEW" >"$carve_keep"
     if [ -f "$CARVE_STATE" ]; then
-        comm -23 "$CARVE_STATE" "$CARVE_STATE_NEW" 2>/dev/null | while read -r ip; do
-            [ -n "$ip" ] || continue
-            ip route del "$ip/32" table main 2>/dev/null \
-                && log "stale carve-out pruned: $ip"
-        done
+        while read -r c_ip c_gw c_dev c_seen; do
+            [ -n "${c_ip:-}" ] || continue
+            carved_this_run "$c_ip" && continue
+            # A record written before carve-outs carried a gateway names only
+            # an address; adopt it under the current one rather than dropping
+            # a route that is still correct.
+            if [ -z "${c_gw:-}" ]; then
+                c_gw="$gw"
+                c_dev="$dev"
+                c_seen="$now"
+            fi
+            if [ "$c_gw" != "$gw" ] || [ "$c_dev" != "$dev" ]; then
+                ip route del "$c_ip/32" table main 2>/dev/null \
+                    && log "carve-out pruned (gateway changed): $c_ip via $c_gw dev $c_dev"
+                continue
+            fi
+            if [ $((now - c_seen)) -ge "$CARVE_TTL" ]; then
+                ip route del "$c_ip/32" table main 2>/dev/null \
+                    && log "stale carve-out pruned: $c_ip"
+                continue
+            fi
+            printf '%s %s %s %s\n' "$c_ip" "$c_gw" "$c_dev" "$c_seen" >>"$carve_keep"
+        done <"$CARVE_STATE"
     fi
-    install -m 0644 "$CARVE_STATE_NEW" "$CARVE_STATE"
+    install -m 0644 "$carve_keep" "$CARVE_STATE"
+    rm -f "$carve_keep"
 fi
 rm -f "$CARVE_STATE_NEW"
