@@ -394,12 +394,23 @@ UseDNS=no
 '
 
 NETWORKD_WLAN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
+# Wi-Fi re-associates several times a day, and each association that flushes
+# the interface kills every established socket bound to an address on it.
+# IgnoreCarrierLoss holds the addresses across a gap shorter than a rejoin, so
+# a same-network flap costs no connections. prefer-public sources traffic from
+# the address that persists across a rejoin instead of the RFC 4941 temporary
+# one, which SLAAC re-mints on every join. Token=prefixstable makes that
+# persistent address a per-prefix RFC 7217 hash rather than the MAC-derived
+# EUI-64 form, so preferring it does not expose the hardware address.
 [Match]
 Name=wlan*
 
+[Link]
+IgnoreCarrierLoss=10s
+
 [Network]
 DHCP=yes
-IPv6PrivacyExtensions=yes
+IPv6PrivacyExtensions=prefer-public
 
 [DHCPv4]
 RouteMetric=600
@@ -408,6 +419,7 @@ UseDNS=no
 [IPv6AcceptRA]
 RouteMetric=600
 UseDNS=no
+Token=prefixstable
 '
 
 IWD_MAIN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl)
