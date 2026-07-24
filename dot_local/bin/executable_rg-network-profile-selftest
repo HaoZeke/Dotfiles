@@ -16,6 +16,24 @@ for path in /etc/systemd/network/20-ethernet.network \
     rg -q 'UseDNS=no' "$path" || fail "$path accepts DHCP DNS"
 done
 
+# Wi-Fi associates and re-associates several times a day. Two properties keep
+# an established socket alive across that: the addresses must outlive a short
+# carrier gap, and the outbound source must be the per-prefix stable address
+# rather than the RFC 4941 temporary one that SLAAC re-mints on every join.
+wlan_profile=/etc/systemd/network/20-wlan.network
+rg -q '^IgnoreCarrierLoss=[1-9]' "$wlan_profile" \
+    || fail "$wlan_profile drops addresses on a brief carrier gap"
+rg -q '^IPv6PrivacyExtensions=prefer-public' "$wlan_profile" \
+    || fail "$wlan_profile sources traffic from the rotating temporary address"
+rg -q '^Token=prefixstable' "$wlan_profile" \
+    || fail "$wlan_profile derives its stable address from the MAC"
+
+test "$(sysctl -n net.ipv6.conf.wlan0.use_tempaddr 2>/dev/null || echo -)" = "1" \
+    || fail "wlan0 still prefers temporary IPv6 addresses for outbound traffic"
+if ip -6 addr show dev wlan0 scope global 2>/dev/null | rg -q 'ff:fe'; then
+    fail "wlan0 still carries an EUI-64 global address"
+fi
+
 test ! -e /etc/systemd/system/ctrld.service.d/50-rg-local-chain.conf \
     || fail "stale Control D drop-in still exists"
 if systemctl show ctrld.service -p Wants -p After | rg -q NetworkManager; then
