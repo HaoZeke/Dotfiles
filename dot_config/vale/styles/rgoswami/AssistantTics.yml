@@ -9,6 +9,16 @@ tokens:
   - '^\s*(sure|certainly|absolutely|definitely|of course)[,!.]'
   - '^\s*(great|excellent|good|nice) (question|catch|call|point)\b'
   - '\bfair point\b'
+  # Fake-casual team email / LinkedIn openers (Rohit never says these).
+  - '\bcount me in\b'
+  - '\bexcited to join\b'
+  - '\bthrilled to\b'
+  - '\blooking forward to collaborating\b'
+  - '\bcircle back\b'
+  - '\btouch base\b'
+  # Fake corporate email metaphors agents invent for Rohit.
+  - '\blab notebook\b'
+  - '\bpower seat\b'
   - '\byou''?re right\b'
   - '\bthat''?s right\b'
   # Process narration.
@@ -51,6 +61,8 @@ tokens:
   - '\bif you''?d like\b'
   - '\bif helpful\b'
   - '\bif that helps\b'
+  - '\bkind regards\b'
+  - '\byours sincerely\b'
   - '\bhope this helps\b'
   - '\bdoes that help\b'
   - '\bsay the word\b'
