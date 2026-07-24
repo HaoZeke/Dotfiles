@@ -314,6 +314,16 @@ rg -q 'stale carve-out pruned' "$net_heal" \
     || fail "periodic network heal helper must prune dynamic carve-outs that are no longer desired"
 rg -F -q 'if [ -s "$CARVE_STATE_NEW" ]; then' "$net_heal" \
     || fail "periodic network heal helper must not prune on a run that resolved nothing"
+# A CDN answers with a rotating subset of its pool, so an address absent from
+# the newest answer has not left the pool. Pruning on absence alone rewrites
+# the route table on every run and leaves only the last-resolved subset carved
+# out, which is the same as having no carve-out for the rest of the pool.
+rg -F -q '${RG_CARVE_TTL:-3600}' "$net_heal" \
+    || fail "periodic network heal helper does not age dynamic carve-outs out on a TTL"
+rg -F -q 'printf '\''%s %s %s %s\n'\'' "$ip" "$gw" "$dev" "$now"' "$net_heal" \
+    || fail "periodic network heal helper does not record the gateway a carve-out was pinned to"
+rg -q 'carve-out pruned \(gateway changed\)' "$net_heal" \
+    || fail "periodic network heal helper does not prune a carve-out left on a departed gateway"
 rg -q '/usr/local/sbin/rg-net-heal' "$us_egress_up" \
     || fail "US egress helper must reassert destination carve-outs at bring-up"
 rg -q 'install_bin "\$RECOVER_SRC" /usr/local/sbin/rg-net-recover' "$net_heal_script" \
