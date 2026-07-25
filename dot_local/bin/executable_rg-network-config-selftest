@@ -310,6 +310,19 @@ rg -q 'rg-haozeke-derp-targets' "$net_heal" \
     || fail "periodic network heal helper does not select active DERP nodes"
 rg -F -q 'route_local_v4 "$ip" "haozeke derp"' "$net_heal" \
     || fail "periodic network heal helper does not route active DERP nodes through the LAN"
+# An upstream hop on the IPv6 path carries less than the link MTU and drops the
+# oversize packet without returning the ICMPv6 Packet Too Big that would say so.
+# Path MTU discovery therefore never converges, and the peer keeps sending full
+# segments into a hole. tcp_mtu_probing cannot recover this: it resizes what the
+# host sends, while the losses are inbound, governed by the MSS this host
+# advertised at handshake. Only a route MTU lowers that advertisement.
+rg -F -q '${RG_V6_ROUTE_MTU:-1420}' "$net_heal" \
+    || fail "periodic network heal helper does not clamp the IPv6 route MTU"
+rg -q 'v6 default route MTU clamped' "$net_heal" \
+    || fail "periodic network heal helper does not log an IPv6 MTU clamp"
+rg -F -q 'ip -6 route show default' "$net_heal" \
+    || fail "periodic network heal helper does not read the live IPv6 default route"
+
 rg -q 'stale carve-out pruned' "$net_heal" \
     || fail "periodic network heal helper must prune dynamic carve-outs that are no longer desired"
 rg -F -q '[ -s "$CARVE_STATE_NEW" ]' "$net_heal" \
