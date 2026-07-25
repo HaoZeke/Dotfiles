@@ -488,6 +488,33 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
         route_local_v4 "$ip" "eduVPN disco"
     done
 fi
+# --- 4b. IPv6 route MTU clamp ----------------------------------------------
+# An upstream hop on the IPv6 path carries less than this link's 1500 and drops
+# the oversize packet without returning the ICMPv6 Packet Too Big that would
+# announce it, so path MTU discovery never converges. The damage is inbound: a
+# peer sizes its segments from the MSS this host advertised, which is derived
+# from the route MTU, so an unclamped route invites full-size packets into a
+# hole. Long transfers stall and reset while short ones look perfectly healthy.
+# tcp_mtu_probing does not help -- it resizes what this host sends, not what it
+# already told the peer it could receive. The route is RA-managed and refreshes
+# on its own schedule, dropping the clamp, so re-assert it every run.
+V6_ROUTE_MTU="${RG_V6_ROUTE_MTU:-1420}"
+# Two attributes the kernel reports cannot be echoed back: "expires" is
+# output-only, and "nhid" names a nexthop object that is mutually exclusive
+# with the via/dev pair reported alongside it. Drop both and the rest still
+# describes the route well enough to re-issue it unchanged apart from the clamp.
+v6_default="$(ip -6 route show default 2>/dev/null | head -1 \
+    | sed -e 's/ nhid [0-9]*//' -e 's/ expires [0-9]*sec//')"
+case "$v6_default" in
+"") ;;
+*"mtu $V6_ROUTE_MTU"*) ;;
+*)
+    if ip -6 route change $v6_default mtu "$V6_ROUTE_MTU" 2>/dev/null; then
+        log "v6 default route MTU clamped: $V6_ROUTE_MTU"
+    fi
+    ;;
+esac
+
 for p in $EDUVPN_V6_DEAD; do
     ip -6 route show "$p" 2>/dev/null | grep -q unreachable || ip -6 route replace unreachable "$p" 2>/dev/null
 done
