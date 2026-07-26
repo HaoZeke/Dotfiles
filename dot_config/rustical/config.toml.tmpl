@@ -1,0 +1,29 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[data_store.sqlite]
+db_url = "{{ .chezmoi.homeDir }}/.local/share/rustical/db.sqlite3"
+run_repairs = true
+skip_broken = true
+
+[http]
+bind = "127.0.0.1:4000"
+session_cookie_samesite_strict = false
+payload_limit_mb = 4
+
+[frontend]
+enabled = true
+allow_password_login = true
+
+[tracing]
+opentelemetry = false
+
+[dav_push]
+enabled = true
+
+[nextcloud_login]
+enabled = true
+
+[caldav]
+rfc7809 = true
+
+[maintenance]
+{{- end -}}

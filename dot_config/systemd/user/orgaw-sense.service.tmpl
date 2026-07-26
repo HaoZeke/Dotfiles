@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+[Unit]
+Description=orgaw-sense evidence sampler
+Documentation=https://github.com/HaoZeke/orgaw
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/orgaw-sense
+Restart=on-failure
+RestartSec=5
+PassEnvironment=SWAYSOCK WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_ID HYPRLAND_INSTANCE_SIGNATURE
+KillMode=control-group
+
+[Install]
+WantedBy=graphical-session.target
+{{- end -}}

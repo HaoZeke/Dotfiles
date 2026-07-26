@@ -1,0 +1,15 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=RustiCal CalDAV/CardDAV (loopback)
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/rustical -c %h/.config/rustical/config.toml
+Restart=on-failure
+RestartSec=3
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=default.target
+{{- end -}}

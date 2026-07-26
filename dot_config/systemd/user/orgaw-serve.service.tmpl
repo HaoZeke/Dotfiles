@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+[Unit]
+Description=orgaw HTTP clock API (loopback)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/orgaw serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+{{- end -}}
