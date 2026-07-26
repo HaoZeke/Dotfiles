@@ -317,3 +317,4 @@ dot_claude/private_claude-mcp-servers.json
 ~/.local/share/terra-dns/private/ctrld.toml
 ~/.local/share/rg-net/private/eduroam.env
 ~/.local/share/rg-net/private/eduroam-ca.pem
+~/.config/orgaw/config.toml
