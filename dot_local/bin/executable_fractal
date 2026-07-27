@@ -6,6 +6,10 @@
 set -euo pipefail
 
 BIN="${FRACTAL_BIN:-$HOME/.local/libexec/fractal-haozeke/fractal}"
+# Built-in PKGDATADIR for the haozeke binary; keep in sync with meson prefix.
+DATADIR="${FRACTAL_DATADIR:-$HOME/.local/share/fractal}"
+RESOURCES="${DATADIR}/resources.gresource"
+UI_RESOURCES="${DATADIR}/ui-resources.gresource"
 APP_ID=org.gnome.Fractal
 SWAYMSG="${RG_FRACTAL_SWAYMSG:-swaymsg}"
 
@@ -14,6 +18,18 @@ if [[ ! -x "$BIN" ]]; then
     "fractal: fork binary not found at $BIN" \
     "Install the stripped binary to ~/.local/libexec/fractal-haozeke/fractal" \
     "(built from github.com/HaoZeke/fractal branch haozeke)." >&2
+  exit 127
+fi
+
+missing=()
+[[ -f "$RESOURCES" ]] || missing+=("$RESOURCES")
+[[ -f "$UI_RESOURCES" ]] || missing+=("$UI_RESOURCES")
+if [[ ${#missing[@]} -gt 0 ]]; then
+  printf '%s\n' \
+    "fractal: missing gresource file(s) required by the fork binary:" \
+    "${missing[@]}" \
+    "Copy resources.gresource and ui-resources.gresource into ${DATADIR}" \
+    "(see install-local.sh in the HaoZeke/fractal repo)." >&2
   exit 127
 fi
 
