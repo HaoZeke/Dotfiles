@@ -120,6 +120,14 @@ default_floating_border pixel 2
     # bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/vissue-rofi'
     # bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/vissue-rofi new'
 
+    # orgaw: rofi clock in/out on vissue headings (intentional ledger)
+    #   $mod+t        — pick ready issue and clock in (or switch)
+    #   $mod+Shift+t  — clock out
+    #   $mod+Ctrl+t   — all issues (not only ready)
+    bindsym --no-repeat $mod+t exec '$HOME/.local/bin/orgaw-rofi'
+    bindsym --no-repeat $mod+Shift+t exec '$HOME/.local/bin/orgaw-rofi out'
+    bindsym --no-repeat $mod+Ctrl+t exec '$HOME/.local/bin/orgaw-rofi all'
+
     # Drag floating windows by holding down $mod and left mouse button.
     # Resize them with right mouse button + $mod.
     # Despite the name, also works for non-floating windows.
