@@ -1,0 +1,410 @@
+#!/home/rgoswami/.local/share/uv/tools/eduvpn-client/bin/python
+"""Manage rgx1gen11 SURF authorization and profile renewal."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from pathlib import Path
+from typing import Any
+
+from eduvpn import __version__
+from eduvpn.keyring import DBusKeyring
+from eduvpn.variants import EDUVPN
+from eduvpn_common.event import class_state_transition
+from eduvpn_common.main import EduVPN, ServerType
+from eduvpn_common.state import State, StateType
+
+
+SERVER_ID = "https://surf.eduvpn.nl/"
+PROFILE_ID = "medewerkers-split"
+DEFAULT_RENEW_THRESHOLD = 129600
+DEFAULT_NOTIFY_COOLDOWN = 21600
+DEFAULT_NOTIFY_TIMEOUT = 240
+
+
+class ExportError(Exception):
+    """A bounded error that cannot contain configuration or OAuth material."""
+
+
+class ExportTransitions:
+    def __init__(self, common: EduVPN, browser: str) -> None:
+        self.common = common
+        self.browser = browser
+        self.authorization_required = False
+        self.browser_failed = False
+        self.cancellation_workers: list[threading.Thread] = []
+
+    def cancel_async(self, name: str) -> None:
+        worker = threading.Thread(target=self.common.cancel, name=name, daemon=True)
+        self.cancellation_workers.append(worker)
+        worker.start()
+
+    def wait_for_cancellations(self) -> None:
+        for worker in self.cancellation_workers:
+            worker.join()
+
+    @class_state_transition(State.ASK_PROFILE, StateType.ENTER)
+    def choose_profile(self, old_state: State, data: str) -> None:
+        del old_state
+        try:
+            payload = json.loads(data)
+            cookie = int(payload["cookie"])
+            profiles = payload["data"]["map"]
+            if PROFILE_ID not in profiles:
+                raise KeyError(PROFILE_ID)
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            self.cancel_async("eduvpn-cancel-profile")
+            raise ExportError("SURF server did not offer medewerkers-split") from error
+        threading.Thread(
+            target=self.common.cookie_reply,
+            args=(cookie, PROFILE_ID),
+            name="eduvpn-select-profile",
+            daemon=True,
+        ).start()
+
+    def open_browser(self, url: str) -> None:
+        result = subprocess.run(
+            [self.browser, url],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if result.returncode != 0:
+            self.browser_failed = True
+            self.common.cancel()
+
+    @class_state_transition(State.OAUTH_STARTED, StateType.ENTER)
+    def oauth_started(self, old_state: State, url: str) -> None:
+        del old_state
+        self.authorization_required = True
+        threading.Thread(
+            target=self.open_browser,
+            args=(url,),
+            name="eduvpn-open-browser",
+            daemon=True,
+        ).start()
+
+
+class SecretServiceTokens:
+    def __init__(self) -> None:
+        self.keyring = DBusKeyring(EDUVPN)
+
+    @staticmethod
+    def attributes(server_id: str, server_type: int) -> dict[str, str]:
+        return {"server": server_id, "category": str(ServerType(server_type))}
+
+    def load(self, server_id: str, server_type: int) -> str | None:
+        try:
+            secret = self.keyring.load(self.attributes(server_id, server_type))
+            if secret is None:
+                return None
+            stored = json.loads(secret)
+            return json.dumps(
+                {
+                    "access_token": stored["access"],
+                    "refresh_token": stored["refresh"],
+                    "expires_at": int(stored.get("expires_at", stored.get("expires"))),
+                }
+            )
+        except Exception as error:
+            raise ExportError("cannot load eduVPN OAuth tokens from Secret Service") from error
+
+    def save(self, server_id: str, server_type: int, tokens_json: str) -> None:
+        try:
+            tokens = json.loads(tokens_json)
+            secret = json.dumps(
+                {
+                    "access": tokens["access_token"],
+                    "refresh": tokens["refresh_token"],
+                    "expires_at": str(tokens["expires_at"]),
+                }
+            )
+            self.keyring.save(
+                f"{server_id} - OAuth Tokens",
+                self.attributes(server_id, server_type),
+                secret,
+            )
+        except Exception as error:
+            raise ExportError("cannot save rotated eduVPN OAuth tokens in Secret Service") from error
+
+
+def ensure_server(common: EduVPN) -> None:
+    try:
+        payload = json.loads(common.get_servers())
+        institutes = payload.get("institute_access_servers", [])
+        configured = {
+            entry.get("identifier")
+            for entry in institutes
+            if isinstance(entry, dict)
+        }
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ExportError("eduVPN core returned an invalid configured-server list") from error
+    if SERVER_ID not in configured:
+        common.add_server(ServerType.INSTITUTE_ACCESS, SERVER_ID, int(time.time()))
+
+
+def request_config(browser: str, renew_session: bool) -> tuple[str, bool]:
+    common = EduVPN(EDUVPN.client_id, __version__, str(EDUVPN.config_prefix))
+    transitions = ExportTransitions(common, browser)
+    tokens = SecretServiceTokens()
+    common.register_class_callbacks(transitions)
+    registered = False
+    try:
+        common.register()
+        registered = True
+        common.set_token_handler(tokens.load, tokens.save)
+        ensure_server(common)
+        if renew_session:
+            common.renew_session()
+        config_json = common.get_config(ServerType.INSTITUTE_ACCESS, SERVER_ID, False)
+    except Exception as error:
+        transitions.wait_for_cancellations()
+        if transitions.browser_failed:
+            raise ExportError("browser authorization could not be opened") from error
+        if isinstance(error, ExportError):
+            raise
+        raise ExportError(f"eduVPN configuration request failed ({type(error).__name__})") from error
+    finally:
+        if registered:
+            try:
+                common.deregister()
+            except Exception:
+                pass
+
+    try:
+        config_data: dict[str, Any] = json.loads(config_json)
+        profile = config_data["config"]
+        protocol = int(config_data["protocol"])
+        default_gateway = config_data["default_gateway"]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ExportError("eduVPN core returned an invalid configuration envelope") from error
+    if not isinstance(profile, str) or not profile or len(profile.encode("utf-8")) > 512 * 1024:
+        raise ExportError("eduVPN core returned an empty or oversized profile")
+    if "\x00" in profile:
+        raise ExportError("eduVPN core returned a profile containing a NUL byte")
+    if protocol != 1:
+        raise ExportError("eduVPN core did not return an OpenVPN profile")
+    if default_gateway is not False:
+        raise ExportError("eduVPN core returned a full-tunnel profile")
+    return profile, transitions.authorization_required
+
+
+def validate_and_spool(profile: str, destination: Path, installer: str) -> None:
+    destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(destination.parent, 0o700)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".pending.", suffix=".ovpn", dir=destination.parent)
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(profile)
+            stream.flush()
+            os.fsync(stream.fileno())
+        validation = subprocess.run(
+            [installer, "--validate-only", str(temporary)],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+        )
+        if validation.returncode != 0:
+            raise ExportError("candidate profile validation failed")
+        try:
+            metadata = json.loads(validation.stdout)
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise ExportError("candidate validator returned invalid metadata") from error
+        if metadata.get("profile") != PROFILE_ID:
+            raise ExportError("candidate validator returned the wrong profile")
+        os.replace(temporary, destination)
+        os.chmod(destination, 0o600)
+    except Exception:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def integer_setting(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError as error:
+        raise ExportError(f"{name} must be an integer") from error
+
+
+def tunnel_healthy(status_file: Path) -> bool:
+    try:
+        status = json.loads(status_file.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    if status.get("result") != "active":
+        return False
+    systemctl = os.environ.get("RG_SURF_SYSTEMCTL", "systemctl")
+    unit = os.environ.get("RG_SURF_OPENVPN_UNIT", "openvpn-client@surf-split.service")
+    if subprocess.run([systemctl, "is-active", "--quiet", unit], check=False).returncode != 0:
+        return False
+    ip = os.environ.get("RG_SURF_IP", "ip")
+    if subprocess.run([ip, "link", "show", "tun0"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+        return False
+    getent = os.environ.get("RG_SURF_GETENT", "getent")
+    canary = os.environ.get("RG_SURF_CANARY_HOST", "servicedesk.surf.nl")
+    addresses = subprocess.run(
+        [getent, "ahostsv4", canary],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+    )
+    if addresses.returncode != 0 or not addresses.stdout.split():
+        return False
+    address = addresses.stdout.split()[0]
+    route = subprocess.run(
+        [ip, "route", "get", address],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+    )
+    return route.returncode == 0 and " dev tun0 " in f" {route.stdout.strip()} "
+
+
+def renewal_needed(status_file: Path) -> bool:
+    try:
+        status = json.loads(status_file.read_text(encoding="utf-8"))
+        expiry = int(status["not_after_epoch"])
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return True
+    now = integer_setting("RG_SURF_NOW", int(time.time()))
+    threshold = integer_setting("RG_SURF_RENEW_THRESHOLD", DEFAULT_RENEW_THRESHOLD)
+    return status.get("result") != "active" or expiry <= now + threshold or not tunnel_healthy(status_file)
+
+
+def notification_allowed(notification_state: Path) -> bool:
+    try:
+        last = int(notification_state.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        last = 0
+    now = integer_setting("RG_SURF_NOW", int(time.time()))
+    cooldown = integer_setting("RG_SURF_NOTIFY_COOLDOWN", DEFAULT_NOTIFY_COOLDOWN)
+    return now >= last + cooldown
+
+
+def record_notification(notification_state: Path) -> None:
+    now = integer_setting("RG_SURF_NOW", int(time.time()))
+    notification_state.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(notification_state.parent, 0o700)
+    temporary = notification_state.with_name(notification_state.name + ".new")
+    temporary.write_text(f"{now}\n", encoding="utf-8")
+    temporary.chmod(0o600)
+    temporary.replace(notification_state)
+
+
+def interactive_renewal(destination: Path, browser: str, installer: str) -> None:
+    profile, _ = request_config(browser, True)
+    validate_and_spool(profile, destination, installer)
+
+
+def prompt_for_authorization(notification_state: Path, destination: Path, browser: str, installer: str) -> None:
+    if not notification_allowed(notification_state):
+        print("rg-surf-vpn: browser authorization is required; notification is throttled")
+        return
+    record_notification(notification_state)
+    timeout = os.environ.get("RG_SURF_TIMEOUT", "timeout")
+    notify_send = os.environ.get("RG_SURF_NOTIFY_SEND", "notify-send")
+    notify_timeout = integer_setting("RG_SURF_NOTIFY_TIMEOUT", DEFAULT_NOTIFY_TIMEOUT)
+    action = subprocess.run(
+        [
+            timeout,
+            str(notify_timeout),
+            notify_send,
+            "-u",
+            "critical",
+            "-a",
+            "rg-surf-vpn",
+            "-A",
+            "authenticate=Authenticate",
+            "-A",
+            "later=Later",
+            "--wait",
+            "SURF eduVPN authorization required",
+            "Authenticate to renew medewerkers-split, or run: rg-net surf-renew",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+    ).stdout.strip()
+    if action == "authenticate":
+        interactive_renewal(destination, browser, installer)
+    else:
+        print("rg-surf-vpn: browser authorization is required; run: rg-net surf-renew")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Manage the SURF medewerkers-split OpenVPN profile")
+    commands = parser.add_subparsers(dest="command", required=True)
+    renew = commands.add_parser("renew", help="renew SURF authorization and profile")
+    mode = renew.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--interactive", action="store_true", help="renew the session through browser authorization")
+    mode.add_argument("--timer", action="store_true", help="check the renewal window without invalidating the active profile")
+    commands.add_parser("status", help="print bounded installed-profile status")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str]) -> int:
+    arguments = parse_args(argv)
+    state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
+    destination = Path(os.environ.get("RG_SURF_PENDING", state_home / "rg-surf-vpn/pending.ovpn"))
+    notification_state = state_home / "rg-surf-vpn/auth-notified-at"
+    status_file = Path(os.environ.get("RG_SURF_STATUS_FILE", "/var/lib/rg-surf-vpn/status.json"))
+    browser = os.environ.get("RG_SURF_BROWSER", "xdg-open")
+    installer = os.environ.get("RG_SURF_INSTALLER", str(Path(__file__).with_name("rg-surf-vpn-install")))
+    try:
+        if arguments.command == "status":
+            try:
+                status = json.loads(status_file.read_text(encoding="utf-8"))
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                status = {"result": "missing"}
+            status["tunnel_healthy"] = tunnel_healthy(status_file)
+            print(json.dumps(status, sort_keys=True))
+            return 0
+        if arguments.timer:
+            if not renewal_needed(status_file):
+                print("rg-surf-vpn: installed profile and tunnel are healthy")
+                return 0
+            prompt_for_authorization(notification_state, destination, browser, installer)
+            return 0
+        interactive_renewal(destination, browser, installer)
+    except ExportError as error:
+        print(f"rg-surf-vpn: {error}", file=sys.stderr)
+        return 1
+    except OSError as error:
+        print(f"rg-surf-vpn: cannot update pending profile ({error.strerror})", file=sys.stderr)
+        return 1
+
+    print(
+        json.dumps(
+            {
+                "result": "exported",
+                "authorization_performed": True,
+                "pending": str(destination),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
