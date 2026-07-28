@@ -361,6 +361,11 @@ for obsolete_target in \
 done
 rg -q 'RTRASH=.*command -v rtrash' "$net_heal_script" \
     || fail "SURF provisioning must resolve the recoverable deletion tool"
+user_cleanup_line="$(rg -n -F '"$HOME/.local/bin/rg-surf-vpn-apply"' "$net_heal_script" | head -1 | cut -d: -f1)"
+sudo_gate_line="$(rg -n -F 'if ! sudo -n true' "$net_heal_script" | head -1 | cut -d: -f1)"
+[ -n "$user_cleanup_line" ] && [ -n "$sudo_gate_line" ] \
+    && [ "$user_cleanup_line" -lt "$sudo_gate_line" ] \
+    || fail "user SURF cleanup must run without a cached sudo credential"
 rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must install the SURF spool path unit"
 rg -q 'PathChanged=/home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
