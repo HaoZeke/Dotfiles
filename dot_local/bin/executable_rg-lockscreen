@@ -67,11 +67,14 @@ resolve_preferred_image() {
         *) state_mode="dark" ;;
     esac
 
-    if [ -n "${RG_LOCKSCREEN_IMAGE:-}" ] \
-        && { [ -z "${RG_THEME_MODE:-}" ] || [ "$RG_THEME_MODE" = "$state_mode" ]; }; then
-        printf '%s\n' "$RG_LOCKSCREEN_IMAGE"
-        return
-    fi
+    case "${RG_LOCKSCREEN_IMAGE:-}" in
+        "$HOME"/*)
+            if [ -z "${RG_THEME_MODE:-}" ] || [ "$RG_THEME_MODE" = "$state_mode" ]; then
+                printf '%s\n' "$RG_LOCKSCREEN_IMAGE"
+                return
+            fi
+            ;;
+    esac
 
     candidate="$HOME/Pictures/Walls/lockscreen-$state_mode.png"
     if [ -r "$candidate" ]; then
