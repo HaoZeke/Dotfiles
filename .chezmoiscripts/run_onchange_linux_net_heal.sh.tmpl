@@ -10,6 +10,26 @@
 # rg-surf-vpn-install-sha256: {{ include "dot_local/bin/executable_rg-surf-vpn-install" | sha256sum }}
 set -euo pipefail
 
+RTRASH="$(command -v rtrash || true)"
+if [ -z "$RTRASH" ]; then
+    echo "chezmoi: rtrash missing; obsolete SURF helpers remain installed." >&2
+    exit 1
+fi
+for obsolete in \
+    "$HOME/.local/bin/rg-surf-vpn-apply" \
+    "$HOME/.local/bin/rg-surf-vpn-export" \
+    "$HOME/.local/bin/rg-surf-vpn-refresh" \
+    "$HOME/.local/bin/rg-surf-vpn-validate" \
+    "$HOME/.local/bin/rg-surf-vpn-apply-selftest" \
+    "$HOME/.local/bin/rg-surf-vpn-export-selftest" \
+    "$HOME/.local/bin/rg-surf-vpn-refresh-selftest" \
+    "$HOME/.local/bin/rg-surf-vpn-validate-selftest"; do
+    if [ -e "$obsolete" ]; then
+        echo "chezmoi: trashing obsolete SURF helper $obsolete"
+        "$RTRASH" "$obsolete"
+    fi
+done
+
 # Root provisioning must never hang a plain `chezmoi apply` on a password
 # prompt. Without cached sudo credentials, skip cleanly; `rg-net provision`
 # is the explicit interactive path.
@@ -61,25 +81,6 @@ install_bin "$RECOVER_SRC" /usr/local/sbin/rg-net-recover
 install_bin "$DERP_TARGETS_SRC" /usr/local/sbin/rg-haozeke-derp-targets
 install_bin "$SURF_INSTALL_SRC" /usr/local/sbin/rg-surf-vpn-install
 
-RTRASH="$(command -v rtrash || true)"
-if [ -z "$RTRASH" ]; then
-    echo "chezmoi: rtrash missing; obsolete SURF helpers remain installed." >&2
-    exit 1
-fi
-for obsolete in \
-    "$HOME/.local/bin/rg-surf-vpn-apply" \
-    "$HOME/.local/bin/rg-surf-vpn-export" \
-    "$HOME/.local/bin/rg-surf-vpn-refresh" \
-    "$HOME/.local/bin/rg-surf-vpn-validate" \
-    "$HOME/.local/bin/rg-surf-vpn-apply-selftest" \
-    "$HOME/.local/bin/rg-surf-vpn-export-selftest" \
-    "$HOME/.local/bin/rg-surf-vpn-refresh-selftest" \
-    "$HOME/.local/bin/rg-surf-vpn-validate-selftest"; do
-    if [ -e "$obsolete" ]; then
-        echo "chezmoi: trashing obsolete SURF helper $obsolete"
-        "$RTRASH" "$obsolete"
-    fi
-done
 for obsolete in \
     /usr/local/sbin/rg-surf-vpn-apply \
     /usr/local/sbin/rg-surf-vpn-validate; do
