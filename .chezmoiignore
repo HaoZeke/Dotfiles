@@ -67,10 +67,8 @@ Pictures/Walls/*
 .config/systemd/user/rg-surf-vpn-refresh.timer
 .config/systemd/user/turtleback-push.service
 .config/systemd/user/turtleback-push.timer
-.local/bin/rg-surf-vpn-apply
-.local/bin/rg-surf-vpn-export
-.local/bin/rg-surf-vpn-refresh
-.local/bin/rg-surf-vpn-validate
+.local/bin/rg-surf-vpn
+.local/bin/rg-surf-vpn-install
 .local/bin/rclone-pcloud
 .local/bin/rgpower
 .local/bin/turtleback-push

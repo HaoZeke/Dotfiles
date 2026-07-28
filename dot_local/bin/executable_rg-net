@@ -30,7 +30,7 @@ HEAVY MUTATORS (root; these CAN kill connectivity -- use rg-net wrappers)
   rg-us-egress-guard      tunnel keep-alive (30s root timer; serialized)
   rg-fix-local-dns        resolver chain rebuild (called by egress up)
   rg-fix-networkmanager-ctrld  DISABLES NetworkManager; laptop-only, never Terra
-  rg-surf-vpn-apply       install a fresh eduVPN profile + restart split VPN
+  rg-surf-vpn-install     validate and install the pending split profile
   rg-airplane             radios + tailnets off/on
 
 WHO OWNS WHAT AT RUNTIME (systemd)
@@ -54,8 +54,7 @@ drift() {
     for pair in \
         "$BIN/rg-net-heal:/usr/local/sbin/rg-net-heal" \
         "$BIN/rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets" \
-        "$BIN/rg-surf-vpn-apply:/usr/local/sbin/rg-surf-vpn-apply" \
-        "$BIN/rg-surf-vpn-validate:/usr/local/sbin/rg-surf-vpn-validate" \
+        "$BIN/rg-surf-vpn-install:/usr/local/sbin/rg-surf-vpn-install" \
         "$BIN/rg-net-recover:/usr/local/sbin/rg-net-recover" \
         "$BIN/rg-us-egress-guard:/usr/local/sbin/rg-us-egress-guard" \
         "$BIN/rg-tunnel-akamai-carveout:/usr/local/sbin/rg-tunnel-akamai-carveout"; do
@@ -94,7 +93,7 @@ case "${1:-map}" in
     up) exec sudo systemctl restart rg-us-egress.service ;;
     down) exec sudo systemctl stop rg-us-egress.service wg-quick@rg-us-egress-wg.service ;;
     recover) exec sudo /usr/local/sbin/rg-net-recover ;;
-    surf-renew) exec "$BIN/rg-surf-vpn-refresh" --interactive ;;
+    surf-renew) exec "$BIN/rg-surf-vpn" renew --interactive ;;
     provision) provision ;;
     *) map; exit 2 ;;
 esac
