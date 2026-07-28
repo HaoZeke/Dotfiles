@@ -40,10 +40,8 @@ net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
 net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
 derp_targets="$repo/dot_local/bin/executable_rg-haozeke-derp-targets"
 net_cli="$repo/dot_local/bin/executable_rg-net"
-surf_validate="$repo/dot_local/bin/executable_rg-surf-vpn-validate"
-surf_apply="$repo/dot_local/bin/executable_rg-surf-vpn-apply"
-surf_export="$repo/dot_local/bin/executable_rg-surf-vpn-export"
-surf_refresh="$repo/dot_local/bin/executable_rg-surf-vpn-refresh"
+surf_controller="$repo/dot_local/bin/executable_rg-surf-vpn"
+surf_installer="$repo/dot_local/bin/executable_rg-surf-vpn-install"
 surf_refresh_service="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.service"
 surf_refresh_timer="$repo/dot_config/systemd/user/rg-surf-vpn-refresh.timer"
 net_heal_script="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
@@ -67,10 +65,8 @@ test -r "$net_recover" || fail "missing one-shot network recovery helper"
 test -r "$net_heal" || fail "missing periodic network heal helper"
 test -x "$derp_targets" || fail "missing haozeke DERP target selector"
 test -r "$net_cli" || fail "missing rg-net entry point"
-test -x "$surf_validate" || fail "missing strict SURF profile validator"
-test -r "$surf_apply" || fail "missing SURF profile installer"
-test -x "$surf_export" || fail "missing authenticated SURF export adapter"
-test -x "$surf_refresh" || fail "missing SURF renewal orchestrator"
+test -x "$surf_controller" || fail "missing consolidated SURF controller"
+test -x "$surf_installer" || fail "missing consolidated SURF installer"
 test -r "$surf_refresh_service" || fail "missing SURF renewal user service"
 test -r "$surf_refresh_timer" || fail "missing SURF renewal user timer"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
@@ -349,25 +345,21 @@ rg -q 'rg-haozeke-derp-targets-sha256:' "$net_heal_script" \
     || fail "net heal provisioning must rerun when the DERP selector changes"
 rg -q 'rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets' "$net_cli" \
     || fail "rg-net drift must compare the installed DERP selector"
-rg -q 'rg-surf-vpn-apply-sha256:' "$net_heal_script" \
+rg -q 'rg-surf-vpn-install-sha256:' "$net_heal_script" \
     || fail "root provisioning must rerun when the SURF installer changes"
-rg -q 'rg-surf-vpn-validate-sha256:' "$net_heal_script" \
-    || fail "root provisioning must rerun when the SURF validator changes"
-rg -q 'install_bin "\$SURF_APPLY_SRC" /usr/local/sbin/rg-surf-vpn-apply' "$net_heal_script" \
-    || fail "root provisioning must install the SURF installer"
-rg -q 'install_bin "\$SURF_VALIDATE_SRC" /usr/local/sbin/rg-surf-vpn-validate' "$net_heal_script" \
-    || fail "root provisioning must install the SURF validator"
+rg -q 'install_bin "\$SURF_INSTALL_SRC" /usr/local/sbin/rg-surf-vpn-install' "$net_heal_script" \
+    || fail "root provisioning must install the consolidated SURF installer"
 rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must install the SURF spool path unit"
 rg -q 'PathChanged=/home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
     || fail "SURF spool path unit must watch the authenticated export"
-rg -q 'ExecStart=/usr/local/sbin/rg-surf-vpn-apply /home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
+rg -q 'ExecStart=/usr/local/sbin/rg-surf-vpn-install install /home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
     || fail "SURF install unit must pass the watched profile to the strict installer"
 rg -q 'enable --now rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must enable the SURF spool path unit"
 rg -q 'enable --now rg-surf-vpn-refresh\.timer' "$net_heal_script" \
     || fail "network provisioning must enable the user SURF renewal timer"
-rg -q '^ExecStart=%h/\.local/bin/rg-surf-vpn-refresh --timer$' "$surf_refresh_service" \
+rg -q '^ExecStart=%h/\.local/bin/rg-surf-vpn renew --timer$' "$surf_refresh_service" \
     || fail "SURF renewal service must invoke timer mode"
 rg -q '^TimeoutStartSec=15min$' "$surf_refresh_service" \
     || fail "SURF renewal service must bound browser authorization"
@@ -375,10 +367,22 @@ rg -q '^OnUnitActiveSec=1h$' "$surf_refresh_timer" \
     || fail "SURF renewal timer cadence is not hourly"
 rg -q '^Persistent=true$' "$surf_refresh_timer" \
     || fail "SURF renewal timer must catch up after missed runs"
-rg -U -q '(?s)\{\{ if ne \.chezmoi\.hostname "rgx1gen11" \}\}.*\.config/systemd/user/rg-surf-vpn-refresh\.service.*\.config/systemd/user/rg-surf-vpn-refresh\.timer.*\.local/bin/rg-surf-vpn-apply.*\.local/bin/rg-surf-vpn-export.*\.local/bin/rg-surf-vpn-refresh.*\.local/bin/rg-surf-vpn-validate.*\{\{ end \}\}' "$chezmoi_ignore" \
+rg -U -q '(?s)\{\{ if ne \.chezmoi\.hostname "rgx1gen11" \}\}.*\.config/systemd/user/rg-surf-vpn-refresh\.service.*\.config/systemd/user/rg-surf-vpn-refresh\.timer.*\.local/bin/rg-surf-vpn$.*\.local/bin/rg-surf-vpn-install.*\{\{ end \}\}' "$chezmoi_ignore" \
     || fail "SURF renewal files must remain exclusive to the OpenVPN-owned laptop"
-rg -q 'surf-renew\).*rg-surf-vpn-refresh.*--interactive' "$net_cli" \
+rg -q 'surf-renew\).*rg-surf-vpn.*renew.*--interactive' "$net_cli" \
     || fail "rg-net must expose explicit SURF browser renewal"
+for obsolete in \
+    executable_rg-surf-vpn-apply \
+    executable_rg-surf-vpn-export \
+    executable_rg-surf-vpn-refresh \
+    executable_rg-surf-vpn-validate \
+    executable_rg-surf-vpn-apply-selftest \
+    executable_rg-surf-vpn-export-selftest \
+    executable_rg-surf-vpn-refresh-selftest \
+    executable_rg-surf-vpn-validate-selftest; do
+    [ ! -e "$repo/dot_local/bin/$obsolete" ] \
+        || fail "obsolete SURF helper remains in the managed user path: $obsolete"
+done
 rg -q 'enable --now rg-net-doctor.timer' "$net_heal_script" \
     || fail "net heal provisioning must enable the periodic live doctor"
 net_doctor="$repo/dot_local/bin/executable_rg-net-doctor"

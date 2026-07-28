@@ -45,14 +45,10 @@ run "$REPO/dot_local/bin/executable_rg-power-config-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-network-config-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-haozeke-derp-targets-selftest" \
     "$REPO/dot_local/bin/executable_rg-haozeke-derp-targets"
-run "$REPO/dot_local/bin/executable_rg-surf-vpn-validate-selftest" \
-    "$REPO/dot_local/bin/executable_rg-surf-vpn-validate"
-run "$REPO/dot_local/bin/executable_rg-surf-vpn-apply-selftest" \
-    "$REPO/dot_local/bin/executable_rg-surf-vpn-apply"
-run "$REPO/dot_local/bin/executable_rg-surf-vpn-export-selftest" \
-    "$REPO/dot_local/bin/executable_rg-surf-vpn-export"
-run "$REPO/dot_local/bin/executable_rg-surf-vpn-refresh-selftest" \
-    "$REPO/dot_local/bin/executable_rg-surf-vpn-refresh"
+run "$REPO/scripts/rg-surf-vpn-install-selftest.sh" \
+    "$REPO/dot_local/bin/executable_rg-surf-vpn-install"
+run "$REPO/scripts/rg-surf-vpn-controller-selftest.sh" \
+    "$REPO/dot_local/bin/executable_rg-surf-vpn"
 run "$REPO/dot_local/bin/executable_rg-rgsurflat-system-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-kernel-build-selftest" "$REPO"
 run "$REPO/dot_local/bin/executable_rg-sway-config-selftest" "$REPO"
