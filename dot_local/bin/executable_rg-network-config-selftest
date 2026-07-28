@@ -349,6 +349,18 @@ rg -q 'rg-surf-vpn-install-sha256:' "$net_heal_script" \
     || fail "root provisioning must rerun when the SURF installer changes"
 rg -q 'install_bin "\$SURF_INSTALL_SRC" /usr/local/sbin/rg-surf-vpn-install' "$net_heal_script" \
     || fail "root provisioning must install the consolidated SURF installer"
+for obsolete_target in \
+    .local/bin/rg-surf-vpn-apply \
+    .local/bin/rg-surf-vpn-export \
+    .local/bin/rg-surf-vpn-refresh \
+    .local/bin/rg-surf-vpn-validate \
+    /usr/local/sbin/rg-surf-vpn-apply \
+    /usr/local/sbin/rg-surf-vpn-validate; do
+    rg -F -q "$obsolete_target" "$net_heal_script" \
+        || fail "SURF provisioning does not retire obsolete target: $obsolete_target"
+done
+rg -q 'RTRASH=.*command -v rtrash' "$net_heal_script" \
+    || fail "SURF provisioning must resolve the recoverable deletion tool"
 rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must install the SURF spool path unit"
 rg -q 'PathChanged=/home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
