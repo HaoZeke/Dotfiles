@@ -95,6 +95,8 @@
 {{- $claude_profile := "" -}}
 {{- if (hasKey . "claude_profile")}}
 {{- $claude_profile = .claude_profile -}}
+{{- else if eq .chezmoi.hostname "rgSURFLat" -}}
+{{- $claude_profile = "surf" -}}
 {{- else if eq $setup_claude "yes" -}}
 {{- $claude_profile = "full" -}}
 {{- else -}}
