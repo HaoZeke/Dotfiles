@@ -61,6 +61,12 @@ for prof in "$PROFILE"/proseguard-profiles/*.toml; do
     install -m 0644 "$prof" "$HOME_DIR/.config/proseguard/profiles/$(basename "$prof")"
 done
 
+# Self-test, so the profile can be checked without reconstructing the suite.
+if [ -f "$PROFILE/profile-selftest.sh" ]; then
+    install -Dm 0755 "$PROFILE/profile-selftest.sh" \
+        "$HOME_DIR/.local/bin/rg-surf-profile-selftest"
+fi
+
 # surf-work looks for its repo config under XDG before falling back to the
 # workstation checkout, so placing it here keeps the CLI working outside the
 # assistant session too, where the env block does not apply.
