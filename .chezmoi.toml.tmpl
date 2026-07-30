@@ -89,6 +89,17 @@
 {{- else}}
 {{- $setup_claude = promptString "setup_claude (yes / no)" -}}
 {{- end -}}
+{{- /* Which assistant profile this host gets. "full" is the personal set
+       delivered through the vault; "surf" is the curated work-laptop set
+       delivered as age-encrypted files; "none" opts out entirely. */ -}}
+{{- $claude_profile := "" -}}
+{{- if (hasKey . "claude_profile")}}
+{{- $claude_profile = .claude_profile -}}
+{{- else if eq $setup_claude "yes" -}}
+{{- $claude_profile = "full" -}}
+{{- else -}}
+{{- $claude_profile = "none" -}}
+{{- end -}}
 encrypted = {{ $encrypted | quote }}
 {{- if eq $encrypted "yes" }}
 encryption = "age"
@@ -113,6 +124,7 @@ use_rust = {{ $use_rust | quote }}
 tex_date = {{ $tex_date | quote }}
 have_cuda = {{ $have_cuda | quote }}
 setup_claude = {{ $setup_claude | quote }}
+claude_profile = {{ $claude_profile | quote }}
 
 {{- if eq .chezmoi.os "darwin" }}
 {{- $mmanager := ""}}

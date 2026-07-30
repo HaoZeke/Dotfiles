@@ -1,0 +1,98 @@
+#!/usr/bin/env -S bash --norc
+{{ $claudeProfile := "none" }}{{ if hasKey . "claude_profile" }}{{ $claudeProfile = .claude_profile }}{{ end }}{{ if eq $claudeProfile "surf" -}}
+# Install the curated work-laptop assistant profile.
+#
+# The profile tree at ~/.claude/profiles/surf is chezmoi-managed and
+# age-encrypted at rest. This script wires it into the locations the
+# assistant, git, and the prose tools actually read.
+#
+# Markdown is symlinked so `chezmoi edit` stays the single edit path.
+# settings.json is copied, because the client rewrites it in place and an
+# atomic rename would replace a symlink with a regular file.
+#
+# hash: {{ output "bash" "-c" (printf "cat %s/dot_claude/profiles/surf/**/*.age %s/dot_claude/profiles/surf/*.age 2>/dev/null | sha256sum | cut -d' ' -f1" .chezmoi.sourceDir .chezmoi.sourceDir) | trim }}
+
+set -euo pipefail
+
+HOME_DIR="{{ .chezmoi.homeDir }}"
+PROFILE="$HOME_DIR/.claude/profiles/surf"
+
+if [ ! -d "$PROFILE" ]; then
+    echo "claude-profile: $PROFILE missing, nothing to install" >&2
+    exit 0
+fi
+
+link() {
+    # link <target-path> <relative-source>
+    local dest="$1" src="$2"
+    mkdir -p "$(dirname "$dest")"
+    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+        mv -f "$dest" "$dest.pre-profile"
+        echo "claude-profile: kept previous $dest as $dest.pre-profile" >&2
+    fi
+    ln -sfn "$src" "$dest"
+}
+
+# Assistant prompt and style guides.
+link "$HOME_DIR/.claude/CLAUDE.md"          "profiles/surf/CLAUDE.md"
+link "$HOME_DIR/.claude/writing-style.md"   "profiles/surf/writing-style.md"
+link "$HOME_DIR/.claude/doc-guidelines.md"  "profiles/surf/doc-guidelines.md"
+link "$HOME_DIR/.claude/graphviz-style.md"  "profiles/surf/graphviz-style.md"
+
+# Rule manifest targets.
+for rule in "$PROFILE"/rules/*.md; do
+    [ -e "$rule" ] || continue
+    link "$HOME_DIR/.claude/rules/$(basename "$rule")" "../profiles/surf/rules/$(basename "$rule")"
+done
+
+# Client-writable settings: copy, do not link.
+install -m 0600 "$PROFILE/settings.json" "$HOME_DIR/.claude/settings.json"
+
+# leakguard: global config plus the git hooks that invoke it.
+install -Dm 0600 "$PROFILE/leakguard-config.toml" "$HOME_DIR/.config/leakguard/config.toml"
+install -Dm 0700 "$PROFILE/git-hooks/pre-commit"  "$HOME_DIR/.config/git/hooks/pre-commit"
+install -Dm 0700 "$PROFILE/git-hooks/commit-msg"  "$HOME_DIR/.config/git/hooks/commit-msg"
+git config --global core.hooksPath "$HOME_DIR/.config/git/hooks"
+
+# proseguard style profiles.
+mkdir -p "$HOME_DIR/.config/proseguard/profiles"
+for prof in "$PROFILE"/proseguard-profiles/*.toml; do
+    [ -e "$prof" ] || continue
+    install -m 0644 "$prof" "$HOME_DIR/.config/proseguard/profiles/$(basename "$prof")"
+done
+
+# gitguard: shadow the real binaries from the front of PATH. Only wire this
+# up when the binary is actually present -- a dangling `git` symlink would
+# take the whole toolchain down.
+if [ -x "$HOME_DIR/.local/bin/gitguard" ]; then
+    for tool in git gh glab lab tea; do
+        target="$HOME_DIR/.local/bin/$tool"
+        if [ -L "$target" ] || [ ! -e "$target" ]; then
+            ln -sfn "$HOME_DIR/.local/bin/gitguard" "$target"
+        else
+            echo "claude-profile: $target is a real file, not shadowing it" >&2
+        fi
+    done
+else
+    echo "claude-profile: gitguard not installed, skipping wrapper symlinks" >&2
+fi
+
+# MCP servers. The personal merge script is vault-owned and never lands on
+# this host, so the merge is done here from the profile's own snippet.
+SNIPPET="$PROFILE/claude-mcp-servers.json"
+TARGET="$HOME_DIR/.claude.json"
+if [ -f "$SNIPPET" ] && command -v jq >/dev/null 2>&1; then
+    EXPANDED=$(sed "s|__HOME__|$HOME_DIR|g" "$SNIPPET")
+    if [ ! -f "$TARGET" ]; then
+        echo "{\"mcpServers\": $EXPANDED}" | jq . > "$TARGET"
+    else
+        jq --argjson servers "$EXPANDED" \
+            '.mcpServers = (.mcpServers // {}) * $servers' "$TARGET" > "${TARGET}.tmp" \
+            && mv "${TARGET}.tmp" "$TARGET"
+    fi
+elif [ -f "$SNIPPET" ]; then
+    echo "claude-profile: jq not found, skipping MCP merge" >&2
+fi
+
+echo "claude-profile: surf profile installed"
+{{ end -}}

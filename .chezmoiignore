@@ -125,6 +125,21 @@ dot_omp/puppeteer/
 {{ if ne .chezmoi.hostname "rgSURFLat" }}
 .omp/agent/models.yml
 {{ end }}
+# Assistant profile. The work laptop gets a curated, age-encrypted subset;
+# the full personal set stays vault-owned and is never unsealed there.
+# Looked up through hasKey so hosts whose config predates the key still
+# render this file instead of failing the whole apply.
+{{- $claudeProfile := "none" -}}
+{{- if hasKey . "claude_profile" -}}
+{{- $claudeProfile = .claude_profile -}}
+{{- end }}
+{{ if ne $claudeProfile "surf" }}
+.claude/profiles/**
+{{ end }}
+{{ if eq $claudeProfile "surf" }}
+.claude/rules/conda-forge.md
+.claude/skills/conda-forge-author/**
+{{ end }}
 # Private assistant config (machine-specific state)
 dot_claude/backups/
 dot_claude/cache/
