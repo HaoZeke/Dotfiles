@@ -61,6 +61,15 @@ for prof in "$PROFILE"/proseguard-profiles/*.toml; do
     install -m 0644 "$prof" "$HOME_DIR/.config/proseguard/profiles/$(basename "$prof")"
 done
 
+# surf-work looks for its repo config under XDG before falling back to the
+# workstation checkout, so placing it here keeps the CLI working outside the
+# assistant session too, where the env block does not apply.
+SURF_SKILLS_REPO="$HOME_DIR/Git/Github/Tools/nimtasks-surf"
+if [ -f "$SURF_SKILLS_REPO/configs/surf-repos.json" ]; then
+    install -Dm 0644 "$SURF_SKILLS_REPO/configs/surf-repos.json" \
+        "$HOME_DIR/.config/surf-work/surf-repos.json"
+fi
+
 # gitguard: shadow the real binaries from the front of PATH. Only wire this
 # up when the binary is actually present -- a dangling `git` symlink would
 # take the whole toolchain down.
