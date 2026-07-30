@@ -23,10 +23,16 @@ mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
   "${HOME}/.config/surf-ai-hub" "${HOME}/.config/opencode" "${TOOLS}"
 
 # ---------- PATH durability (bash) ----------
-if [[ -f "${HOME}/.bashrc" ]] && ! grep -q '\.bun/bin' "${HOME}/.bashrc" 2>/dev/null; then
+# posix.d/05_paths.sh carries these for both shells. Appending to .bashrc as
+# well makes chezmoi strip the line on every apply and this script put it
+# straight back, so the host never reaches a clean state. Only fall back to
+# the append when the shared file is missing or does not carry the dirs.
+shared_paths="${HOME}/.config/shellrc/posix.d/05_paths.sh"
+if ! grep -q '\.bun/bin' "$shared_paths" 2>/dev/null \
+  && [[ -f "${HOME}/.bashrc" ]] && ! grep -q '\.bun/bin' "${HOME}/.bashrc" 2>/dev/null; then
   printf '\n# SURF OMP / tooling\nexport PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"\n' \
     >> "${HOME}/.bashrc"
-  log "appended PATH to .bashrc"
+  log "appended PATH to .bashrc (shared paths file did not carry it)"
 fi
 
 # ---------- bun + omp ----------
