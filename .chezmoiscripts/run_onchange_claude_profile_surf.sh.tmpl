@@ -81,6 +81,25 @@ if [ -d "$PONYTAIL/skills" ]; then
     done
 fi
 
+# The dispatch skill has to be visible to the local harnesses too, not just to
+# the assistant, or they never learn to hand work back. Each reads skills from
+# its own directory, so link the one copy into all three.
+DISPATCH="$SURF_SKILLS_REPO/skills/willma-dispatch"
+if [ -d "$DISPATCH" ]; then
+    for d in "$HOME_DIR/.local/share/omp-surf/skills/surf" "$HOME_DIR/.hermes/skills"; do
+        [ -d "$d" ] || continue
+        target="$d/willma-dispatch"
+        if [ -e "$target" ] && [ ! -L "$target" ]; then
+            echo "claude-profile: $target is a real directory, not linking" >&2
+            continue
+        fi
+        ln -sfn "$DISPATCH" "$target"
+    done
+    if [ -x "$DISPATCH/rg-farm-claude" ]; then
+        install -m 0755 "$DISPATCH/rg-farm-claude" "$HOME_DIR/.local/bin/rg-farm-claude"
+    fi
+fi
+
 # Self-test, so the profile can be checked without reconstructing the suite.
 if [ -f "$PROFILE/profile-selftest.sh" ]; then
     install -Dm 0755 "$PROFILE/profile-selftest.sh" \
