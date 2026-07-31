@@ -61,6 +61,8 @@ for prof in "$PROFILE"/proseguard-profiles/*.toml; do
     install -m 0644 "$prof" "$HOME_DIR/.config/proseguard/profiles/$(basename "$prof")"
 done
 
+SURF_SKILLS_REPO="$HOME_DIR/Git/Github/Tools/nimtasks-surf"
+
 # Third-party review skills. Cloned as a marketplace but linked directly,
 # because the plugin registry keys off a versioned cache directory that is not
 # safe to hand-write. Skills under ~/.claude/skills are discovered natively.
@@ -109,7 +111,6 @@ fi
 # surf-work looks for its repo config under XDG before falling back to the
 # workstation checkout, so placing it here keeps the CLI working outside the
 # assistant session too, where the env block does not apply.
-SURF_SKILLS_REPO="$HOME_DIR/Git/Github/Tools/nimtasks-surf"
 if [ -f "$SURF_SKILLS_REPO/configs/surf-repos.json" ]; then
     install -Dm 0644 "$SURF_SKILLS_REPO/configs/surf-repos.json" \
         "$HOME_DIR/.config/surf-work/surf-repos.json"
