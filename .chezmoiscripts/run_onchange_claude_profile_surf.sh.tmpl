@@ -97,9 +97,10 @@ if [ -d "$DISPATCH" ]; then
         fi
         ln -sfn "$DISPATCH" "$target"
     done
-    if [ -x "$DISPATCH/rg-farm-claude" ]; then
-        install -m 0755 "$DISPATCH/rg-farm-claude" "$HOME_DIR/.local/bin/rg-farm-claude"
-    fi
+    for helper in rg-farm-claude rg-willma-health; do
+        [ -x "$DISPATCH/$helper" ] || continue
+        install -m 0755 "$DISPATCH/$helper" "$HOME_DIR/.local/bin/$helper"
+    done
 fi
 
 # Self-test, so the profile can be checked without reconstructing the suite.
