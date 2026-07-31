@@ -61,6 +61,26 @@ for prof in "$PROFILE"/proseguard-profiles/*.toml; do
     install -m 0644 "$prof" "$HOME_DIR/.config/proseguard/profiles/$(basename "$prof")"
 done
 
+# Third-party review skills. Cloned as a marketplace but linked directly,
+# because the plugin registry keys off a versioned cache directory that is not
+# safe to hand-write. Skills under ~/.claude/skills are discovered natively.
+PONYTAIL="$HOME_DIR/.claude/plugins/marketplaces/ponytail"
+if [ ! -d "$PONYTAIL" ]; then
+    git clone -q git@github.com:DietrichGebert/ponytail.git "$PONYTAIL" 2>/dev/null || \
+        echo "claude-profile: could not clone the review skills, skipping" >&2
+fi
+if [ -d "$PONYTAIL/skills" ]; then
+    for skill in "$PONYTAIL"/skills/*/; do
+        [ -d "$skill" ] || continue
+        target="$HOME_DIR/.claude/skills/$(basename "$skill")"
+        if [ -e "$target" ] && [ ! -L "$target" ]; then
+            echo "claude-profile: $target is a real directory, not linking" >&2
+            continue
+        fi
+        ln -sfn "$skill" "$target"
+    done
+fi
+
 # Self-test, so the profile can be checked without reconstructing the suite.
 if [ -f "$PROFILE/profile-selftest.sh" ]; then
     install -Dm 0755 "$PROFILE/profile-selftest.sh" \
