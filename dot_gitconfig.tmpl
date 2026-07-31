@@ -1,7 +1,17 @@
 [user]
     name = Rohit Goswami
     email = rgoswami@ieee.org # If encrypted: {{ if eq .encrypted "yes" }}
-	signingkey = 9CCCE36402CB49A6
+	# Sign with the ssh key, not the GPG key. GPG signing needs a pinentry,
+	# and pinentry needs a terminal, so any unattended commit over ssh or in a
+	# detached session fails to sign at all. The ssh key is the same on every
+	# host and needs no prompt. GPG stays in use for the vault, not for git.
+	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
+
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	allowedSignersFile = {{ .chezmoi.homeDir }}/.config/git/allowed_signers
 
 [commit]
     gpgsign = true
