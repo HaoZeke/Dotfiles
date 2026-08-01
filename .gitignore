@@ -325,3 +325,13 @@ dot_config/rg-us-egress/
 .config/rg-us-egress/us-domains.txt
 ~/.local/share/rg-dns/private/ctrld.toml
 ~/.config/rg-geo-egress/in/domains.txt
+~/.config/rg-geo-egress/in/wireguard.conf
+
+# Destination lists and tunnel configs, vaulted, never public. The ~/ forms
+# above cannot match anything, since gitignore patterns are matched against
+# repo relative paths; these source-directory forms are the ones that hold, and
+# they are what stops a chezmoi add from putting a list back in a public repo.
+dot_config/rg-geo-egress/
+dot_config/rg-us-egress/
+private_dot_config/rg-geo-egress/
+private_dot_config/rg-us-egress/

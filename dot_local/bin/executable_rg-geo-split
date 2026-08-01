@@ -161,8 +161,18 @@ refresh_set() {
         [ -n "$host" ] || continue
         # Never admit an overlay or private address: Tailscale uses
         # 100.64.0.0/10 and split-DNS names can answer from inside it.
+        #
+        # 206.253.88.0/22 is refused for a different reason. Control D answers
+        # for its own redirected services with an address in that range, which
+        # is the entry point to its proxy. Marking one sends the traffic to the
+        # tunnel exit first and only then to Control D, so it arrives twice
+        # proxied and from an address Control D never saw make the query, which
+        # is precisely how their proxy decides to drop it. It also replaces a
+        # residential exit with a datacenter one, the wrong direction for
+        # anything doing fraud scoring. A host answering from that range is
+        # already handled and does not belong in a list here.
         v4=$(resolve "$host" | grep -E '^[0-9]+\.' \
-            | grep -vE '^(100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.)' \
+            | grep -vE '^(100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.|206\.253\.(8[89]|9[01])\.)' \
             | paste -sd, -)
         v6=$(resolve "$host" | grep ':' | grep -vE '^(fd|fe80|::1)' | paste -sd, -)
         [ -n "$v4" ] && nft add element inet "$NFT_TABLE" dst_v4 "{ $v4 }" 2>/dev/null || true
@@ -227,6 +237,25 @@ case "${1:-}" in
             done < "$f"
         done
         [ "$dup" -eq 0 ] && printf '  no host is listed in more than one region\n'
+        # The other way a host ends up on two paths at once: Control D already
+        # redirects it. That is invisible in the lists themselves and only
+        # shows up in what the name resolves to.
+        printf '\n  already handled by Control D, remove from the list above:\n'
+        cd_found=0
+        for r in $REGIONS; do
+            f="$BASE/$r/domains.txt"
+            [ -r "$f" ] || continue
+            while read -r h; do
+                h="${h%%#*}"; h="$(printf '%s' "$h" | tr -d '[:space:]')"
+                [ -n "$h" ] || continue
+                a=$(getent ahostsv4 "$h" 2>/dev/null | awk '{print $1}' | head -1)
+                case "$a" in
+                    206.253.8[89].*|206.253.9[01].*)
+                        printf '    %-28s %-16s (%s)\n' "$h" "$a" "$r"; cd_found=1 ;;
+                esac
+            done < "$f"
+        done
+        [ "$cd_found" -eq 0 ] && printf '    none\n'
         exit 0 ;;
     list)
         for r in $REGIONS; do

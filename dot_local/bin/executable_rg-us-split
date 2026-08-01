@@ -27,11 +27,16 @@ set -Eeuo pipefail
 # Under sudo, $HOME is /root, so every default path would point at a config
 # that lives in the invoking user's home and does not exist there. Resolve the
 # real user's home instead of trusting $HOME.
+# systemd starts services with no user environment at all, so HOME is unset
+# and `set -u` turns a bare $HOME into a fatal error. Fall back through the
+# passwd database rather than assuming any variable exists.
 real_home() {
     if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
         getent passwd "$SUDO_USER" | cut -d: -f6
-    else
+    elif [ -n "${HOME:-}" ]; then
         printf '%s' "$HOME"
+    else
+        getent passwd "$(id -u)" | cut -d: -f6
     fi
 }
 HOME_DIR="$(real_home)"
@@ -233,6 +238,9 @@ ConditionPathExists=$LIST
 
 [Service]
 Type=oneshot
+Environment=RG_US_SPLIT_CONF=$SRC_CONF
+Environment=RG_US_SPLIT_LIST=$LIST
+Environment=RG_US_SPLIT_IFACE=$IFACE
 ExecStart=$self refresh
 EOF
     cat > /etc/systemd/system/rg-us-split-refresh.timer <<'EOF'
