@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# rg-us-split - send only a named list of destinations out through the US
+# WireGuard exit, leaving every other route on this machine alone.
+#
+#   sudo rg-us-split up      bring the tunnel and the policy route up
+#   sudo rg-us-split down    remove everything this script added
+#   rg-us-split status       show what is currently routed
+#   sudo rg-us-split refresh  re-resolve the domain list into the set
+#
+# Why not a full tunnel: this host already runs three things that must not be
+# disturbed. Tailscale owns fwmark 0x80000/0xff0000, ip rules 5210-5270 and
+# table 52. OpenVPN holds tun0 for the institutional split tunnel. Both would
+# break under a 0.0.0.0/0 WireGuard route. So nothing here touches the main
+# table or the default route.
+#
+# How it works: destinations on the list are collected into an nftables set,
+# packets to them get fwmark 0x5553, and one ip rule below Tailscale's block
+# sends only those packets to a private table whose default is the WireGuard
+# interface. Everything unmarked follows the normal path.
+#
+# The set is filled by resolving the domain list with the SAME resolver the
+# applications use. Resolving it anywhere else would put addresses in the set
+# that the browser never contacts, and the marking would silently miss.
+
+set -Eeuo pipefail
+
+IFACE="${RG_US_SPLIT_IFACE:-rg-us-wg}"
+SRC_CONF="${RG_US_SPLIT_CONF:-$HOME/.config/rg-us-egress/wireguard.conf}"
+LIST="${RG_US_SPLIT_LIST:-$HOME/.config/rg-us-egress/us-domains.txt}"
+RT_TABLE="${RG_US_SPLIT_TABLE:-5553}"
+FWMARK="${RG_US_SPLIT_MARK:-0x5553}"
+RULE_PRIO="${RG_US_SPLIT_PRIO:-5300}"
+NFT_TABLE="rg_us_split"
+SET_TTL="${RG_US_SPLIT_TTL:-1h}"
+RUNTIME_CONF="/etc/wireguard/${IFACE}.conf"
+
+die() { printf 'rg-us-split: %s\n' "$*" >&2; exit 1; }
+need_root() { [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0 $*"; }
+
+# Resolve with whatever the system resolver is, because that is what the
+# applications will use. A different resolver yields different CDN edges.
+resolve() {
+    local host="$1"
+    { getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}'
+      getent ahostsv6 "$host" 2>/dev/null | awk '{print $1}'; } | sort -u
+}
+
+render_conf() {
+    [ -r "$SRC_CONF" ] || die "no WireGuard config at $SRC_CONF"
+    install -d -m 0700 /etc/wireguard
+    # Table = off is the whole point: wg-quick must not install a default
+    # route. AllowedIPs stays 0.0.0.0/0 so the peer still accepts our traffic;
+    # what reaches the interface is decided by the policy rule, not by wg.
+    awk '
+        BEGIN { seen_table = 0 }
+        /^[[:space:]]*Table[[:space:]]*=/ { print "Table = off"; seen_table = 1; next }
+        /^[[:space:]]*\[Peer\]/ && !seen_table { print "Table = off"; seen_table = 1 }
+        { print }
+        END { if (!seen_table) print "Table = off" }
+    ' "$SRC_CONF" > "$RUNTIME_CONF"
+    chmod 0600 "$RUNTIME_CONF"
+}
+
+nft_setup() {
+    nft list table inet "$NFT_TABLE" >/dev/null 2>&1 && return 0
+    nft -f - <<EOF
+table inet $NFT_TABLE {
+    set us_v4 { type ipv4_addr; flags timeout; timeout $SET_TTL; }
+    set us_v6 { type ipv6_addr; flags timeout; timeout $SET_TTL; }
+
+    # type route so the kernel re-evaluates routing after the mark is set;
+    # a plain filter hook would mark too late to change the path.
+    chain mark_out {
+        type route hook output priority mangle; policy accept;
+        ip daddr @us_v4 meta mark set $FWMARK
+        ip6 daddr @us_v6 meta mark set $FWMARK
+    }
+}
+EOF
+}
+
+refresh_set() {
+    [ -r "$LIST" ] || die "no domain list at $LIST"
+    nft list table inet "$NFT_TABLE" >/dev/null 2>&1 || die "not up; run: sudo $0 up"
+    local host v4 v6 n=0
+    while read -r host; do
+        host="${host%%#*}"; host="$(printf '%s' "$host" | tr -d '[:space:]')"
+        [ -n "$host" ] || continue
+        v4=$(resolve "$host" | grep -E '^[0-9]+\.' | paste -sd, -)
+        v6=$(resolve "$host" | grep ':' | paste -sd, -)
+        [ -n "$v4" ] && nft add element inet "$NFT_TABLE" us_v4 "{ $v4 }" 2>/dev/null || true
+        [ -n "$v6" ] && nft add element inet "$NFT_TABLE" us_v6 "{ $v6 }" 2>/dev/null || true
+        [ -n "$v4$v6" ] && n=$((n + 1))
+    done < "$LIST"
+    printf 'rg-us-split: refreshed %d host(s) into the set\n' "$n"
+}
+
+up() {
+    need_root up
+    command -v wg-quick >/dev/null || die "wg-quick missing"
+    render_conf
+    ip link show "$IFACE" >/dev/null 2>&1 || wg-quick up "$IFACE"
+
+    # Private table, default out the tunnel. Nothing else consults it.
+    ip route replace default dev "$IFACE" table "$RT_TABLE"
+    ip -6 route replace default dev "$IFACE" table "$RT_TABLE" 2>/dev/null || true
+
+    # Below Tailscale's 5210-5270 block, so Tailscale still gets first refusal
+    # on its own destinations and only unclaimed marked traffic lands here.
+    ip rule list | grep -q "fwmark $FWMARK" \
+        || ip rule add fwmark "$FWMARK/0xffff" table "$RT_TABLE" priority "$RULE_PRIO"
+    ip -6 rule list 2>/dev/null | grep -q "fwmark $FWMARK" \
+        || ip -6 rule add fwmark "$FWMARK/0xffff" table "$RT_TABLE" priority "$RULE_PRIO" 2>/dev/null || true
+
+    nft_setup
+    refresh_set
+    printf 'rg-us-split: up on %s, list %s\n' "$IFACE" "$LIST"
+}
+
+down() {
+    need_root down
+    ip rule del fwmark "$FWMARK/0xffff" table "$RT_TABLE" priority "$RULE_PRIO" 2>/dev/null || true
+    ip -6 rule del fwmark "$FWMARK/0xffff" table "$RT_TABLE" priority "$RULE_PRIO" 2>/dev/null || true
+    ip route flush table "$RT_TABLE" 2>/dev/null || true
+    ip -6 route flush table "$RT_TABLE" 2>/dev/null || true
+    nft delete table inet "$NFT_TABLE" 2>/dev/null || true
+    ip link show "$IFACE" >/dev/null 2>&1 && wg-quick down "$IFACE" 2>/dev/null || true
+    printf 'rg-us-split: down, main routing untouched\n'
+}
+
+status() {
+    printf '== interface ==\n'
+    ip -br addr show "$IFACE" 2>/dev/null || printf '  %s not up\n' "$IFACE"
+    printf '== policy rule ==\n'
+    ip rule list | grep -E "fwmark $FWMARK" || printf '  no rule\n'
+    printf '== table %s ==\n' "$RT_TABLE"
+    ip route show table "$RT_TABLE" 2>/dev/null | sed 's/^/  /' || true
+    printf '== destinations in the set ==\n'
+    nft list set inet "$NFT_TABLE" us_v4 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -u | sed 's/^/  /' || printf '  (none)\n'
+    printf '== untouched ==\n'
+    printf '  tailscale rules: %s\n' "$(ip rule list | grep -c '0x80000')"
+    printf '  default route  : %s\n' "$(ip route show default | head -1)"
+}
+
+# CDN answers rotate, and set entries expire by design, so the list has to be
+# re-resolved periodically or the marking quietly stops matching. A system
+# timer rather than a user one: populating the set needs root.
+install_timer() {
+    need_root install-timer
+    local self; self="$(readlink -f "$0")"
+    cat > /etc/systemd/system/rg-us-split-refresh.service <<EOF
+[Unit]
+Description=Re-resolve the US split-tunnel destination list
+After=network-online.target
+ConditionPathExists=$LIST
+
+[Service]
+Type=oneshot
+ExecStart=$self refresh
+EOF
+    cat > /etc/systemd/system/rg-us-split-refresh.timer <<'EOF'
+[Unit]
+Description=Refresh the US split-tunnel destination list
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
+EOF
+    systemctl daemon-reload
+    systemctl enable --now rg-us-split-refresh.timer
+    printf 'rg-us-split: refresh timer installed, every 15 minutes\n'
+}
+
+case "${1:-status}" in
+    up)            up ;;
+    down)          down ;;
+    refresh)       need_root refresh; refresh_set ;;
+    install-timer) install_timer ;;
+    status)        status ;;
+    *)             die "usage: $0 {up|down|refresh|status|install-timer}" ;;
+esac
