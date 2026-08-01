@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Mirror the TurtleTech mailboxes, then archive them into their own borg repo
+# and push that offsite. Same sequential-under-flock shape as the personal mail
+# backup on this host, so rclone can never observe a repo mid-write.
+#
+# The sync runs first and its failure is NOT fatal: an unreachable mail server
+# must not cost you the day's archive of what was already mirrored. A failed
+# archive, by contrast, is fatal, because there is then nothing new to ship.
+#
+# Silence must never mean "no backup", so a run that has not succeeded within
+# STALE_DAYS raises an alert rather than quietly doing nothing.
+set -uo pipefail
+
+RC="${RG_TTECH_RC:-$HOME/.config/isync/ttech.rc}"
+BM_CONF="${RG_TTECH_BM:-$HOME/.config/borgmatic-ttech/config.yaml}"
+REPO_LOCAL="${RG_TTECH_REPO:-$HOME/Backups/borg/TurtleTech}"
+REMOTE="${RG_TTECH_REMOTE:-pcloud-dav:Backups/Borg/TurtleTech}"
+STAMP="${RG_TTECH_STAMP:-$HOME/.local/state/rg-ttech-backup.last}"
+STALE_DAYS="${RG_TTECH_STALE_DAYS:-7}"
+LOCK="${RG_TTECH_LOCK:-/run/user/$(id -u)/rg-ttech-backup.lock}"
+
+alert() {
+    notify-send -u critical "TurtleTech mail backup" "$1" 2>/dev/null || true
+    logger -t rg-ttech-backup -- "$1"
+}
+stale_check() {
+    if [ -z "$(find "$STAMP" -mtime "-$STALE_DAYS" 2>/dev/null)" ]; then
+        alert "$1; no successful TurtleTech backup in ${STALE_DAYS}+ days."
+    fi
+}
+
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
+
+# Pull-only and append-only; see the comments in ttech.rc. A sync failure is
+# reported and then stepped over.
+if ! mbsync -c "$RC" ttech; then
+    alert "mbsync failed; archiving whatever is already mirrored"
+fi
+
+if [ ! -d "$REPO_LOCAL/data" ]; then
+    stale_check "TurtleTech repo missing at $REPO_LOCAL"
+    exit 1
+fi
+
+if ! borgmatic -c "$BM_CONF" --verbosity -1 --stats; then
+    stale_check "borgmatic failed"
+    alert "borgmatic failed; see journalctl --user -u rg-ttech-backup"
+    exit 1
+fi
+
+if ! rclone sync "$REPO_LOCAL" "$REMOTE" --transfers 8 --checkers 8; then
+    stale_check "rclone sync to pCloud failed"
+    alert "offsite sync failed; the local TurtleTech archive is fine but the remote copy is stale"
+    exit 1
+fi
+
+mkdir -p "$(dirname "$STAMP")"
+touch "$STAMP"
+echo "ttech mirror + archive + offsite sync ok"
