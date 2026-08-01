@@ -1,4 +1,4 @@
-{{ if and (hasKey . "machine_role") (eq .machine_role "buildbot") }}{{ template "buildbot-agent-contract.md" . }}{{ else if and (hasKey . "machine_role") (eq .machine_role "surfwork") }}{{ template "surfwork-agent-contract.md" . }}{{ else }}# Chezmoi Dotfiles
+{{ if and (hasKey . "machine_role") (eq .machine_role "buildbot") }}{{ template "roles/buildbot-agent-contract.md" . }}{{ else if and (hasKey . "machine_role") (eq .machine_role "surfwork") }}{{ template "roles/surfwork-agent-contract.md" . }}{{ else }}# Chezmoi Dotfiles
 
 This repo manages dotfiles via [chezmoi](https://www.chezmoi.io/).
 Secrets are stored as opaque GPG blobs using [nimvault](https://github.com/HaoZeke/nimvault).
@@ -40,6 +40,17 @@ Secrets are stored as opaque GPG blobs using [nimvault](https://github.com/HaoZe
 - **Why vault all of this**: AI config contains prompt instructions, API credentials, tool routing, writing style preferences, local infrastructure details (SSH hosts, ports, model names), and delegation logic. Leaking any of it exposes workflow internals and potentially credentials.
 - When adding new AI-related files, always: `nimvault add <path> && nimvault seal`
 - Verify with `nimvault status` before committing
+
+## Agent-config layering
+
+Agent instruction files are composed from fragments under
+`.chezmoitemplates/`: `lib/` (shared clauses, single source each), `roles/`
+(machine-role contracts selected by the local `machine_role` data value),
+`harness/` (per-tool global bodies). The deployed files
+(`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.grok/AGENTS.md`, home-root
+`~/CLAUDE.md`/`~/AGENTS.md`) are thin templates including those fragments;
+the OMP harness consumes `lib/` clauses as individual encrypted rules in its
+rules directory. Edit the fragment, never the rendered file.
 
 ## Vault operations
 
