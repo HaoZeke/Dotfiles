@@ -318,3 +318,8 @@ dot_claude/private_claude-mcp-servers.json
 ~/.local/share/rg-net/private/eduroam.env
 ~/.local/share/rg-net/private/eduroam-ca.pem
 ~/.config/orgaw/config.toml
+~/.config/rg-us-egress/us-domains.txt
+
+# US split-tunnel destination list (vaulted, never public)
+dot_config/rg-us-egress/
+.config/rg-us-egress/us-domains.txt
