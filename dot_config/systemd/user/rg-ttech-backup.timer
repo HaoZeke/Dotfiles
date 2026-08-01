@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily TurtleTech mail backup
+
+[Timer]
+# Offset from the personal mail backup at 03:45 so the two never contend for
+# the pCloud link or the disk at the same time.
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=20min
+# A laptop or a rebooted server must still catch up rather than skip a day.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

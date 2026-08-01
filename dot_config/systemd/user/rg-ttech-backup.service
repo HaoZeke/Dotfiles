@@ -1,0 +1,14 @@
+[Unit]
+Description=TurtleTech mail mirror + Borg archive, synced to pCloud
+Documentation=file:///home/rgoswami/.config/isync/ttech.rc
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/rgoswami/.local/bin/rg-ttech-backup
+# The mirror talks to a remote IMAP server and the archive ships offsite, so
+# give it room without letting a hung socket occupy the slot forever.
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle
