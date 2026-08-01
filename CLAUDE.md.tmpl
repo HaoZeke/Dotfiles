@@ -1,0 +1,113 @@
+{{ if and (hasKey . "machine_role") (eq .machine_role "buildbot") }}{{ template "buildbot-agent-contract.md" . }}{{ else }}# Chezmoi Dotfiles
+
+This repo manages dotfiles via [chezmoi](https://www.chezmoi.io/).
+Secrets are stored as opaque GPG blobs using [nimvault](https://github.com/HaoZeke/nimvault).
+
+## Vault rules
+
+- **ALL AI-related configuration MUST be vaulted.** This covers three categories:
+
+### Claude Code and global config
+  - `~/.claude/CLAUDE.md` -- global prompt instructions, workflow rules
+  - `~/.claude/settings.json` -- permission model, allowed tools
+  - `~/.claude/.credentials.json` -- API authentication
+  - `~/.claude/claude-mcp-servers.json` -- MCP server definitions (delegate-local, context7, etc.)
+  - `~/.claude/hooks/` -- hook scripts (rtk-rewrite.sh, etc.)
+  - `~/.claude/statusline-command.sh` -- status bar integration
+  - `~/.claude/RTK.md` -- Rust Token Killer proxy docs
+  - `~/.claude/writing-style.md`, `~/.claude/doc-guidelines.md` -- style guides
+  - `~/.codex/AGENTS.md` -- global Codex routing and durable rules
+  - `~/.codex/TOOLING.md` -- Codex MCP/tooling conventions
+  - `~/.codex/RTK.md` -- Codex RTK usage rules
+  - `~/.codex/config.toml` -- Codex model, trust, and MCP server definitions
+
+### Agent definitions, memories, and local LLM infrastructure
+  - `~/.claude/agents/*.md` -- custom agent system prompts, tool permissions, workflow rules
+  - `~/.claude/projects/*/memory/*.md` -- per-project accumulated context (feedback, references, user prefs)
+  - `~/.claude/gpu-llm.md` -- GPU LLM server config (SSH tunnels, ports, model tiers, MCP delegation routing, ICM memory, RAG indexing)
+  - MCP server configs that reference `delegate_to_local`, `pi-coding-agent`, or any local model endpoints
+  - Any shell functions or scripts that wire up `pi-fast`, `pi-write`, `claude-local`, or `gpu-llm-up/down/status`
+  - pi-coding-agent configuration (system prompts, model endpoints, tool permissions)
+  - ICM memory databases and RAG indexes contain project-specific knowledge and should not be committed
+  - Codex MCP configs that reference private local binaries, API keys, or vault paths
+  - Codex histories, memories, and session state when they embed project-specific context or credentials
+  - `~/.omp/mcp.json`, `~/.omp/agent/AGENTS.md`, `~/.omp/agent/config.yml`, `~/.omp/agent/models.yml`, `~/.omp/agent/mcp.json`, and related OMP harness config
+
+### Per-project CLAUDE.md files
+  - Any CLAUDE.md managed through chezmoi for external repos (e.g. `~/Git/.../CLAUDE.md`)
+  - These contain project-specific prompt rules, often referencing internal tooling or private patterns
+
+- **Why vault all of this**: AI config contains prompt instructions, API credentials, tool routing, writing style preferences, local infrastructure details (SSH hosts, ports, model names), and delegation logic. Leaking any of it exposes workflow internals and potentially credentials.
+- When adding new AI-related files, always: `nimvault add <path> && nimvault seal`
+- Verify with `nimvault status` before committing
+
+## Vault operations
+
+```bash
+nimvault list          # Show all tracked files
+nimvault status        # Check sync state
+nimvault seal          # Encrypt all tracked files (before git push)
+nimvault unseal        # Decrypt all tracked files (after git pull)
+nimvault add <path>    # Track a new file
+nimvault rm <path>     # Stop tracking a file
+```
+
+## chezmoi integration
+
+The `run_before` template script calls `nimvault unseal` during `chezmoi apply`,
+so secrets are restored automatically on new machines (requires GPG key via Keybase).
+
+## What NOT to vault
+
+- Public dotfiles (shell rc, git config, editor config) stay as normal chezmoi templates
+- Only vault files that contain secrets, credentials, or AI-specific configuration
+
+## Commit-message and source policy
+
+This repo's `origin` is **public** (`HaoZeke/dotfiles`). Enforcement of
+the public-source ban list is the `leakguard` Rust tool, wired as the
+global `pre-commit` hook (`core.hooksPath = ~/.config/git/hooks`); it
+blocks any staged content that mentions LLM/agent/client internals,
+internal hostnames, vault paths, vissue IDs, profiling anecdotes, or
+private home-dir paths. The authoritative ban list lives in
+`nimtasks/tools/leakguard/src/patterns.rs` -- do not paraphrase it
+here.
+
+Use generic scope subjects only:
+
+- `chore(vault): update sealed blobs`
+- `chore(rules): tighten global style`
+- `chore(config): trim duplicated section`
+- `feat(<neutral-tool-name>): <surface-level change>`
+
+Long reasoning that would leak private source material lives in vault
+notes (`~/Git/Gitlab/obsidian-notes/Software/...`), not in the commit.
+
+### Install the pre-push hook (new clones)
+
+The canonical hook is sealed at `~/.local/share/chezmoi/hooks/pre-push`. After `nimvault unseal`:
+
+```bash
+ln -sf ../../hooks/pre-push ~/.local/share/chezmoi/.git/hooks/pre-push
+```
+
+(Or `cp + chmod +x` if symlinks are awkward on your filesystem.)
+
+### Pre-push audit (belt-and-braces)
+
+The global `leakguard staged` pre-commit gate catches new leaks at
+commit time. For force-pushes that rewrite history, also audit the
+push range against the committed log:
+
+```bash
+leakguard --no-fail scan .  # scan the current working tree
+git log origin/chezmoi..HEAD --format='%H%n%s%n%b%n---' | leakguard --no-fail files -
+```
+
+### History recovery
+
+Scrub with `git filter-repo` + message-callback. The 2026-04-24 scrub
+used the callback saved in vault-side notes. Re-run it over the full
+history if a new leak is spotted; deleting one commit won't help
+because any ancestor can re-expose the string.
+{{ end }}

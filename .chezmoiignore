@@ -194,3 +194,7 @@ dot_gemini/history/
 dot_gemini/tmp/
 dot_gemini/installation_id
 dot_gemini/state.json
+{{ if not (and (hasKey . "machine_role") (eq .machine_role "buildbot")) }}
+# Buildbot-only agent docs
+AGENTS.md
+{{ end }}
