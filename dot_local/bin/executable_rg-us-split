@@ -103,6 +103,18 @@ table inet $NFT_TABLE {
         ip daddr @us_v4 meta mark set $FWMARK
         ip6 daddr @us_v6 meta mark set $FWMARK
     }
+
+    # Source address selection happens on the FIRST route lookup, before the
+    # mark above exists. So a marked packet leaves with the LAN address as its
+    # source and is then re-routed out the tunnel, where the peer drops it as
+    # a foreign source and no reply can ever find its way back. Rewriting the
+    # source on the way out is what makes marked TCP work; ICMP bound with
+    # \`ping -I\` sidesteps this by fixing the source up front, which is why
+    # ping succeeded while every TCP connection timed out.
+    chain snat_out {
+        type nat hook postrouting priority srcnat; policy accept;
+        oifname "$IFACE" masquerade
+    }
 }
 EOF
 }
@@ -164,7 +176,16 @@ status() {
     printf '== table %s ==\n' "$RT_TABLE"
     ip route show table "$RT_TABLE" 2>/dev/null | sed 's/^/  /' || true
     printf '== destinations in the set ==\n'
-    nft list set inet "$NFT_TABLE" us_v4 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -u | sed 's/^/  /' || printf '  (none)\n'
+    # Reading nftables needs root. Say so rather than printing an empty list,
+    # which reads as "nothing is routed" and sent one debugging session down
+    # the wrong path entirely.
+    if [ "$(id -u)" -ne 0 ]; then
+        printf '  (needs root to read; re-run: sudo %s status)\n' "$(basename "$0")"
+    else
+        nft list set inet "$NFT_TABLE" us_v4 2>/dev/null \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -u | sed 's/^/  /' \
+            || printf '  (set empty)\n'
+    fi
     printf '== untouched ==\n'
     printf '  tailscale rules: %s\n' "$(ip rule list | grep -c '0x80000')"
     printf '  default route  : %s\n' "$(ip route show default | head -1)"
