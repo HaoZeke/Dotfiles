@@ -343,3 +343,10 @@ private_dot_config/rg-us-egress/
 ~/.local/share/terra-mail/ttech/isync-ttech.rc
 ~/.local/share/terra-mail/ttech/borgmatic-ttech.yaml
 .chezmoitemplates/surfwork-agent-contract.md
+
+# Test fixtures and runtime state that reached the tree through a broad add.
+# chezmoi reads the source directory rather than the index, so anything left
+# here is deployed to every host: exit-1 stubs for dig and getent would break
+# name resolution wherever they landed on PATH.
+cache/
+stub/
