@@ -44,6 +44,8 @@ FWMARK="${RG_US_SPLIT_MARK:-0x5553}"
 RULE_PRIO="${RG_US_SPLIT_PRIO:-5300}"
 NFT_TABLE="rg_us_split"
 SET_TTL="${RG_US_SPLIT_TTL:-1h}"
+# Tunnel MTU 1280 minus 40 bytes of IPv4 + TCP header.
+CLAMP_MSS="${RG_US_SPLIT_MSS:-1240}"
 RUNTIME_CONF="/etc/wireguard/${IFACE}.conf"
 
 die() { printf 'rg-us-split: %s\n' "$*" >&2; exit 1; }
@@ -114,6 +116,22 @@ table inet $NFT_TABLE {
     chain snat_out {
         type nat hook postrouting priority srcnat; policy accept;
         oifname "$IFACE" masquerade
+    }
+
+    # The socket is created against the LAN route, so it also inherits that
+    # route's PMTU (1500) and keeps emitting segments the 1280 tunnel cannot
+    # carry; they are dropped and sit in the send queue while the connection
+    # looks established. Clamping the outgoing SYN only limits what the peer
+    # sends us. Clamping the SYN-ACK on the way in is what limits what WE
+    # send, and without it TLS hangs after a successful handshake.
+    chain mss_clamp {
+        type filter hook postrouting priority mangle; policy accept;
+        oifname "$IFACE" tcp flags syn tcp option maxseg size set rt mtu
+    }
+
+    chain mss_in {
+        type filter hook prerouting priority mangle; policy accept;
+        iifname "$IFACE" tcp flags syn tcp option maxseg size set $CLAMP_MSS
     }
 }
 EOF
