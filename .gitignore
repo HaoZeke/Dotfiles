@@ -335,3 +335,5 @@ dot_config/rg-geo-egress/
 dot_config/rg-us-egress/
 private_dot_config/rg-geo-egress/
 private_dot_config/rg-us-egress/
+~/.config/rg-geo-egress/us/domains.txt
+~/.config/rg-geo-egress/us/wireguard.conf
