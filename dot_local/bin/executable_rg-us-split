@@ -144,8 +144,18 @@ refresh_set() {
     while read -r host; do
         host="${host%%#*}"; host="$(printf '%s' "$host" | tr -d '[:space:]')"
         [ -n "$host" ] || continue
-        v4=$(resolve "$host" | grep -E '^[0-9]+\.' | paste -sd, -)
-        v6=$(resolve "$host" | grep ':' | paste -sd, -)
+        # Hard rail: never tunnel an address that belongs to another overlay.
+        # Tailscale hands out 100.64.0.0/10, and several teachx.ai and
+        # xai-enterprise.com names are split-DNS routed to in-tailnet
+        # resolvers. If one of those ever answers with a tailnet address and it
+        # landed in this set, the tailnet itself would be routed down the
+        # WireGuard exit and the work connection would drop.
+        v4=$(resolve "$host" | grep -E '^[0-9]+\.' \
+            | grep -vE '^(100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.)' \
+            | paste -sd, -)
+        v6=$(resolve "$host" | grep ':' \
+            | grep -vE '^(fd|fe80|::1)' \
+            | paste -sd, -)
         [ -n "$v4" ] && nft add element inet "$NFT_TABLE" us_v4 "{ $v4 }" 2>/dev/null || true
         [ -n "$v6" ] && nft add element inet "$NFT_TABLE" us_v6 "{ $v6 }" 2>/dev/null || true
         [ -n "$v4$v6" ] && n=$((n + 1))
