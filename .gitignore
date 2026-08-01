@@ -337,3 +337,5 @@ private_dot_config/rg-geo-egress/
 private_dot_config/rg-us-egress/
 ~/.config/rg-geo-egress/us/domains.txt
 ~/.config/rg-geo-egress/us/wireguard.conf
+~/.local/share/rg-dns/private/unbound-rg-local.conf
+~/.local/share/rg-dns/private/README.org
