@@ -323,3 +323,4 @@ dot_claude/private_claude-mcp-servers.json
 # US split-tunnel destination list (vaulted, never public)
 dot_config/rg-us-egress/
 .config/rg-us-egress/us-domains.txt
+~/.local/share/rg-dns/private/ctrld.toml
