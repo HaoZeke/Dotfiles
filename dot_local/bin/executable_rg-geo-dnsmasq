@@ -50,8 +50,37 @@ nft_table_for() { [ "$1" = "us" ] && printf 'rg_us_split' || printf 'rg_geo_%s' 
 set_v4_for()    { [ "$1" = "us" ] && printf 'us_v4' || printf 'dst_v4'; }
 set_v6_for()    { [ "$1" = "us" ] && printf 'us_v6' || printf 'dst_v6'; }
 
+# A name already redirected by Control D must never be handed to dnsmasq. Its
+# answer is the address of Control D's own proxy, and dnsmasq's nftset writes
+# whatever it answers straight into the set with no filter of its own, so the
+# traffic would go to the tunnel exit first and Control D second: twice
+# proxied, from a datacenter address instead of the residential one, and from a
+# source Control D never saw query, which is how it drops proxied traffic. The
+# observed symptom is a TLS "wrong version number" against a port that is open.
+#
+# rg-geo-split guards its own resolver, but that guard cannot cover this path,
+# so the check belongs here too, at the point where names are handed over.
+#
+# The check must not go through the system resolver. While the previous
+# generation is still loaded, a lookup for a listed name reaches dnsmasq, which
+# writes the answer into the nftables set as it replies: the probe would insert
+# exactly the address it exists to keep out. Querying ctrld directly gets the
+# same answer with no set as a side effect.
+CD_RANGE_RE='^206\.253\.(8[89]|9[01])\.'
+is_controld() {
+    local a
+    if command -v dig >/dev/null 2>&1; then
+        a=$(dig +short +timeout=3 +tries=1 @127.0.0.1 -p 5354 "$1" A 2>/dev/null \
+            | grep -E '^[0-9]+\.' | head -1)
+    fi
+    # No fallback to getent: it resolves through dnsmasq and would populate the
+    # set. Better to treat an unanswered name as not redirected and let the
+    # refresh-time guard in rg-geo-split catch it than to poison the set here.
+    [ -n "$a" ] && printf '%s' "$a" | grep -qE "$CD_RANGE_RE"
+}
+
 generate() {
-    local regions="" r host tbl s4 s6 n=0
+    local regions="" r host tbl s4 s6 n=0 skipped=0
     for r in us in uk de sg; do [ -r "$BASE/$r/domains.txt" ] && regions="$regions $r"; done
     [ -n "$regions" ] || die "no region lists under $BASE"
 
@@ -74,6 +103,12 @@ generate() {
             while read -r host; do
                 host="${host%%#*}"; host="$(printf '%s' "$host" | tr -d '[:space:]')"
                 [ -n "$host" ] || continue
+                if is_controld "$host"; then
+                    printf '# skipped %s: already redirected by Control D\n' "$host"
+                    printf 'rg-geo-dnsmasq: skipping %s, Control D already handles it\n' "$host" >&2
+                    skipped=$((skipped + 1))
+                    continue
+                fi
                 printf 'nftset=/%s/inet#%s#%s,inet#%s#%s\n' "$host" "$tbl" "$s4" "$tbl" "$s6"
                 n=$((n + 1))
             done < "$BASE/$r/domains.txt"
@@ -91,13 +126,19 @@ generate() {
             while read -r host; do
                 host="${host%%#*}"; host="$(printf '%s' "$host" | tr -d '[:space:]')"
                 [ -n "$host" ] || continue
+                # Skipped names must not get a zone either: with no matching
+                # nftset line the detour through dnsmasq would buy nothing and
+                # only add a hop.
+                is_controld "$host" && continue
                 printf 'forward-zone:\n    name: "%s."\n    forward-addr: 127.0.0.1@%s\n    forward-addr: %s\n' \
                     "$host" "$DNSMASQ_PORT" "$CTRLD"
             done < "$BASE/$r/domains.txt"
         done
     } > "$UNBOUND_CONF"
 
-    printf 'rg-geo-dnsmasq: wrote %d names across regions:%s\n' "$n" "$regions"
+    printf 'rg-geo-dnsmasq: wrote %d name(s) across regions:%s' "$n" "$regions"
+    [ "$skipped" -gt 0 ] && printf ', skipped %d already handled by Control D' "$skipped"
+    printf '\n'
 }
 
 apply() {

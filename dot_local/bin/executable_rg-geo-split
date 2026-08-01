@@ -89,6 +89,8 @@ setup_region() {
         *)  die "no mark allocated for region $REGION" ;;
     esac
     if [ "$REGION" = "us" ]; then NFT_TABLE="rg_us_split"; else NFT_TABLE="rg_geo_${REGION}"; fi
+    # The US table predates the multi-region layout and kept its own set names.
+    if [ "$REGION" = "us" ]; then SET_V4="us_v4"; SET_V6="us_v6"; else SET_V4="dst_v4"; SET_V6="dst_v6"; fi
     SRC_CONF="$BASE/$REGION/wireguard.conf"
     [ -r "$SRC_CONF" ] || SRC_CONF="$HOME_DIR/.config/rg-us-egress/wireguard.conf"
     LIST="$BASE/$REGION/domains.txt"
@@ -125,13 +127,13 @@ nft_setup() {
     nft list table inet "$NFT_TABLE" >/dev/null 2>&1 && return 0
     nft -f - <<EOF
 table inet $NFT_TABLE {
-    set dst_v4 { type ipv4_addr; flags timeout; timeout $SET_TTL; }
-    set dst_v6 { type ipv6_addr; flags timeout; timeout $SET_TTL; }
+    set $SET_V4 { type ipv4_addr; flags timeout; timeout $SET_TTL; }
+    set $SET_V6 { type ipv6_addr; flags timeout; timeout $SET_TTL; }
 
     chain mark_out {
         type route hook output priority mangle; policy accept;
-        ip daddr @dst_v4 meta mark set $FWMARK
-        ip6 daddr @dst_v6 meta mark set $FWMARK
+        ip daddr @$SET_V4 meta mark set $FWMARK
+        ip6 daddr @$SET_V6 meta mark set $FWMARK
     }
 
     chain snat_out {
@@ -175,11 +177,26 @@ refresh_set() {
             | grep -vE '^(100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.|206\.253\.(8[89]|9[01])\.)' \
             | paste -sd, -)
         v6=$(resolve "$host" | grep ':' | grep -vE '^(fd|fe80|::1)' | paste -sd, -)
-        [ -n "$v4" ] && nft add element inet "$NFT_TABLE" dst_v4 "{ $v4 }" 2>/dev/null || true
-        [ -n "$v6" ] && nft add element inet "$NFT_TABLE" dst_v6 "{ $v6 }" 2>/dev/null || true
+        [ -n "$v4" ] && nft add element inet "$NFT_TABLE" "$SET_V4" "{ $v4 }" 2>/dev/null || true
+        [ -n "$v6" ] && nft add element inet "$NFT_TABLE" "$SET_V6" "{ $v6 }" 2>/dev/null || true
         [ -n "$v4$v6" ] && n=$((n + 1))
     done < "$LIST"
-    printf 'rg-geo-split[%s]: refreshed %d host(s)\n' "$REGION" "$n"
+
+    # Filtering what this adds is not sufficient on its own. Resolution here
+    # goes through the system resolver on purpose, so it sees what applications
+    # see, and that path runs through dnsmasq, which writes every answer into
+    # the set as it replies. A name that becomes Control D redirected between
+    # regenerations therefore lands in the set behind this filter. Sweep the
+    # range out afterwards so the set converges even when that happens.
+    local purged=0 addr
+    for addr in $(nft list set inet "$NFT_TABLE" "$SET_V4" 2>/dev/null \
+                  | grep -oE '206\.253\.(8[89]|9[01])\.[0-9]+' | sort -u); do
+        nft delete element inet "$NFT_TABLE" "$SET_V4" "{ $addr }" 2>/dev/null \
+            && purged=$((purged + 1))
+    done
+    printf 'rg-geo-split[%s]: refreshed %d host(s)' "$REGION" "$n"
+    [ "$purged" -gt 0 ] && printf ', purged %d Control D address(es)' "$purged"
+    printf '\n'
 }
 
 up() {
@@ -212,7 +229,7 @@ status() {
         printf '  destinations: (needs root to read)\n'
     else
         printf '  destinations: %s address(es)\n' \
-            "$(nft list set inet "$NFT_TABLE" dst_v4 2>/dev/null | grep -coE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo 0)"
+            "$(nft list set inet "$NFT_TABLE" "$SET_V4" 2>/dev/null | grep -coE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo 0)"
     fi
 }
 
