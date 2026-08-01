@@ -209,3 +209,24 @@ AGENTS.md
 .config/systemd/user/rg-ttech-backup.timer
 .local/bin/rg-ttech-backup
 {{ end }}
+
+# The work laptop takes its prose configuration from a branch of the private
+# proseguard repo, installed by symlink so a pull is the whole update step.
+# Rendering the same files here as well would give two sources of truth, and
+# worse: vale loads every directory under StylesPath as a pack, so the
+# displaced originals get loaded a second time under a backup name and every
+# finding is reported twice.
+#
+# The rest of this block is the no-secrets-at-rest rule for that host. It asks
+# a broker over the tailnet for the one entry it may read, so anything here
+# that would place a personal credential or a personal agent profile on
+# hardware another organisation administers is excluded rather than encrypted.
+{{ if eq .chezmoi.hostname "rgSURFLat" }}
+.config/vale/**
+.config/proseguard/**
+.config/rustical/**
+.hermes/**
+.omp/agent/AGENTS.md
+.omp/agent/config.yml
+.omp/mcp.json
+{{ end }}
