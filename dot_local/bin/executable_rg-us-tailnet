@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# rg-us-tailnet - make the work tailnet reach its peers from the US exit, so
+# the other side sees a US endpoint and a US relay instead of Amsterdam.
+#
+#   rg-us-tailnet on       route the system tailscaled out through Houston
+#   rg-us-tailnet off      put it back on the direct path
+#   rg-us-tailnet status   show which way it is going, and the latency cost
+#
+# Scope: ONLY the system tailscaled, /system.slice/tailscaled.service, which
+# is the work tailnet. The second daemon in the user slice
+# (tailscale-haozeke.service) carries the personal tailnet and the rg.terra
+# path; it is never marked, so those sessions keep their direct route and
+# their latency.
+#
+# Requires rg-us-split to be up: this reuses that tunnel and its table.
+#
+# Why a separate mark and a rule ahead of Tailscale's: tailscaled stamps its
+# own outbound packets with 0x80000 so they cannot re-enter its own tunnel,
+# and its rules at priority 5210-5250 resolve anything carrying that mark
+# against the main table. A rule sitting after those never sees the packets.
+# So this marks by cgroup with a distinct value and installs the rule at 5200,
+# just ahead of Tailscale's block, matching nothing else.
+#
+# MEASURED RESULT, 2026-08-01: this does not achieve the goal. With it on,
+# tailscaled's packets genuinely traverse the tunnel, but the daemon still
+# discovers and advertises its local public endpoint (84.107.2.248:41641) and
+# still selects the Amsterdam relay. The cost was real and the benefit was
+# not: round trip to the work connector went 132ms -> 208ms. Left in place
+# because the scoping is correct and reusable, but do not switch it on
+# expecting the far side to see a US location. Note also that
+# `tailscale netcheck` runs from the CLI's own cgroup, not the daemon's, so it
+# reports the direct path and cannot be used to verify this either way.
+#
+# What this does NOT change: your address on the tailnet. Peers reach you at
+# your 100.x tailnet address either way, and that address says nothing about
+# where you are. What moves is the endpoint peers observe and the relay region
+# chosen, which is what actually carries a location.
+
+set -Eeuo pipefail
+
+IFACE="${RG_US_SPLIT_IFACE:-rg-us-wg}"
+RT_TABLE="${RG_US_SPLIT_TABLE:-5553}"
+MARK="${RG_US_TAILNET_MARK:-0x5554}"
+PRIO="${RG_US_TAILNET_PRIO:-5200}"
+NFT_TABLE="rg_us_tailnet"
+CGROUP="${RG_US_TAILNET_CGROUP:-system.slice/tailscaled.service}"
+
+die() { printf 'rg-us-tailnet: %s\n' "$*" >&2; exit 1; }
+
+need_root() {
+    [ "$(id -u)" -eq 0 ] && return 0
+    command -v sudo >/dev/null || die "needs root and sudo is not installed"
+    exec sudo RG_US_SPLIT_IFACE="$IFACE" RG_US_SPLIT_TABLE="$RT_TABLE" \
+        RG_US_TAILNET_MARK="$MARK" RG_US_TAILNET_PRIO="$PRIO" \
+        RG_US_TAILNET_CGROUP="$CGROUP" "$(readlink -f "$0")" "$@"
+}
+
+on() {
+    need_root on
+    ip link show "$IFACE" >/dev/null 2>&1 || die "$IFACE is down; run: rg-us-split up"
+    ip route show table "$RT_TABLE" | grep -q default \
+        || die "table $RT_TABLE has no default; run: rg-us-split up"
+
+    nft list table inet "$NFT_TABLE" >/dev/null 2>&1 || nft -f - <<EOF
+table inet $NFT_TABLE {
+    chain mark_tailnet {
+        type route hook output priority mangle; policy accept;
+        # Only the work daemon. Never destinations inside an overlay range:
+        # peer-to-peer tailnet traffic must stay on tailscale0.
+        socket cgroupv2 level 2 "$CGROUP" ip daddr != 100.64.0.0/10 meta mark set $MARK
+    }
+}
+EOF
+
+    ip rule list | grep -q "fwmark $MARK" \
+        || ip rule add fwmark "$MARK/0xffff" table "$RT_TABLE" priority "$PRIO"
+
+    printf 'rg-us-tailnet: on. Restart the daemon so it re-picks a relay:\n'
+    printf '  systemctl restart tailscaled\n'
+}
+
+off() {
+    need_root off
+    ip rule del fwmark "$MARK/0xffff" table "$RT_TABLE" priority "$PRIO" 2>/dev/null || true
+    nft delete table inet "$NFT_TABLE" 2>/dev/null || true
+    printf 'rg-us-tailnet: off. Restart the daemon to return to the nearest relay:\n'
+    printf '  systemctl restart tailscaled\n'
+}
+
+status() {
+    printf '== work tailnet (system daemon) ==\n'
+    if ip rule list | grep -q "fwmark $MARK"; then
+        printf '  routing : through the US exit\n'
+    else
+        printf '  routing : direct\n'
+    fi
+    printf '  relay   : %s\n' "$(tailscale status --json 2>/dev/null | jq -r '.Self.Relay // "?"')"
+    printf '  address : %s (unchanged either way)\n' \
+        "$(tailscale status --json 2>/dev/null | jq -r '.Self.TailscaleIPs[0] // "?"')"
+    printf '== personal tailnet (user daemon, rg.terra) ==\n'
+    printf '  routing : direct, never marked by this tool\n'
+    if command -v tailscale >/dev/null && [ -S /tmp/ts-hz.sock ]; then
+        printf '  peers   : %s reachable\n' \
+            "$(tailscale --socket /tmp/ts-hz.sock status 2>/dev/null | grep -cvE 'offline|^$' || echo '?')"
+    fi
+}
+
+case "${1:-status}" in
+    on)     on ;;
+    off)    off ;;
+    status) status ;;
+    *)      die "usage: $0 {on|off|status}" ;;
+esac
