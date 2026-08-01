@@ -104,3 +104,16 @@ export PATH="$HOME/.opencode/bin:$PATH"
 export PATH="$HOME/.grok/bin:$PATH"
 [[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
 # <<< grok installer <<<
+
+# Host-local shell setup, kept out of this file on purpose.
+#
+# Two kinds of line end up in a managed .bashrc and neither belongs here. One
+# is genuinely host-specific (a cluster alias that means nothing elsewhere).
+# The other is appended by tool installers -- cargo, uv, pixi -- which write to
+# .bashrc directly and will do it again after every update. Managing this file
+# then becomes a standing fight: apply deletes their lines, the next installer
+# run puts them back, and the diff never settles.
+#
+# Anything host-specific goes in ~/.bashrc.local, which is not managed here and
+# is never overwritten. Sourced last so it can override anything above it.
+[[ -r "$HOME/.bashrc.local" ]] && . "$HOME/.bashrc.local"
