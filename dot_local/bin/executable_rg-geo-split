@@ -27,6 +27,16 @@
 # datacenter and shared VPN ranges directly and will usually refuse. Do not
 # list them and then read the refusal as a bug here.
 #
+# Regions must not share a destination. Both regions install an output hook at
+# the same nftables priority, so a host present in two sets is marked by
+# whichever chain runs first, which is not defined. Keep each host in exactly
+# one region's list; `rg-geo-split overlap` reports any that are not.
+#
+# Windscribe issues one keypair per account, so every region config carries the
+# same client key and the same interface address. That turns out to be fine:
+# both tunnels handshake and route at once, verified with US and India up
+# together reaching different exits.
+#
 # All three fixes the single-region version needed apply per region: the
 # socket is created against the LAN route and takes its source address and its
 # PMTU, so each region needs masquerade on egress plus MSS clamping in BOTH
@@ -197,6 +207,27 @@ status() {
 }
 
 case "${1:-}" in
+    overlap)
+        # A host in two regions is ambiguous, so make it easy to find.
+        need_root overlap
+        declare -A seen=()
+        dup=0
+        for r in $REGIONS; do
+            f="$BASE/$r/domains.txt"
+            [ -r "$f" ] || continue
+            while read -r h; do
+                h="${h%%#*}"; h="$(printf '%s' "$h" | tr -d '[:space:]')"
+                [ -n "$h" ] || continue
+                if [ -n "${seen[$h]:-}" ]; then
+                    printf '  %-28s in both %s and %s\n' "$h" "${seen[$h]}" "$r"
+                    dup=1
+                else
+                    seen[$h]="$r"
+                fi
+            done < "$f"
+        done
+        [ "$dup" -eq 0 ] && printf '  no host is listed in more than one region\n'
+        exit 0 ;;
     list)
         for r in $REGIONS; do
             d="$BASE/$r"
