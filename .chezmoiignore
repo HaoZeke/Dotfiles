@@ -230,3 +230,10 @@ AGENTS.md
 .omp/agent/config.yml
 .omp/mcp.json
 {{ end }}
+
+# Belt and braces for the above: even if these reappear in the source
+# directory, they must never be applied to a target.
+cache
+cache/**
+stub
+stub/**
