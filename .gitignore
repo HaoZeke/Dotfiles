@@ -342,3 +342,4 @@ private_dot_config/rg-us-egress/
 .chezmoitemplates/buildbot-agent-contract.md
 ~/.local/share/terra-mail/ttech/isync-ttech.rc
 ~/.local/share/terra-mail/ttech/borgmatic-ttech.yaml
+.chezmoitemplates/surfwork-agent-contract.md
