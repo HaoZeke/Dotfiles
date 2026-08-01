@@ -1,3 +1,15 @@
+{{ if eq .machine_role "buildbot" -}}
+# Disk-backed TMPDIR, aged by tmpfiles.d. /tmp here is a 24G tmpfs, which is
+# RAM: a build that fills it does not merely run out of scratch space, it
+# exhausts memory and swap, and then every write to /tmp on the machine starts
+# failing. Small ephemera only belong there.
+#
+# Set before the non-interactive guard below on purpose. Build jobs run in
+# non-interactive shells, which return at that guard, so anything placed after
+# it would apply to exactly the sessions that do not need it.
+export TMPDIR=/var/lib/builds/tmp
+
+{{ end -}}
 if [[ $- != *i* ]]; then
 	# shell is non-interactive. Do nothing and return
 	return
