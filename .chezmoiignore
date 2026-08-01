@@ -194,7 +194,18 @@ dot_gemini/history/
 dot_gemini/tmp/
 dot_gemini/installation_id
 dot_gemini/state.json
-{{ if not (and (hasKey . "machine_role") (eq .machine_role "buildbot")) }}
-# Buildbot-only agent docs
+{{ if not (and (hasKey . "machine_role") (or (eq .machine_role "buildbot") (eq .machine_role "surfwork"))) }}
+# Role-scoped agent docs
 AGENTS.md
+{{ end }}
+
+# The business mailbox archive belongs to exactly one host. Terra owns the
+# durable mail state, holds the credentials and the borg repository, and is the
+# only machine where these units can do anything but fail. On a work laptop
+# they would also be plainly inappropriate: company correspondence should not
+# be mirrored onto hardware administered by a different organisation.
+{{ if ne .chezmoi.hostname "rgam5terra" }}
+.config/systemd/user/rg-ttech-backup.service
+.config/systemd/user/rg-ttech-backup.timer
+.local/bin/rg-ttech-backup
 {{ end }}
