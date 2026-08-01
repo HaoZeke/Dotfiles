@@ -8,6 +8,18 @@ LOG="${HOME}/.local/state/surf-vault-gate.log"
 VT_SERVE_CMD='/home/rgoswami/.local/bin/vault-tools serve --root /home/rgoswami/Git/Gitlab/obsidian-notes'
 VISSUE_BIN='/home/rgoswami/.local/bin/vissue'
 
+# Entries the work laptop may read, named one by one. It holds no secrets of
+# its own; it asks for these over the tailnet and keeps the answer in memory
+# for the life of one process.
+#
+# An allowlist rather than a prefix or the whole store: the restricted key is
+# on hardware administered by someone else, so the blast radius of that key
+# being taken has to be exactly this list and nothing that gets added to the
+# store later. Adding an entry here is a deliberate act.
+SECRET_ALLOW='
+surf/ai-hub/token
+'
+
 reject() {
     mkdir -p "$(dirname "$LOG")"
     printf '%s reject: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${SSH_ORIGINAL_COMMAND:-<empty>}" >>"$LOG" 2>/dev/null
@@ -27,6 +39,30 @@ case "$cmd" in
         ;;
     "$VT_SERVE_CMD")
         exec /home/rgoswami/.local/bin/vault-tools serve --root /home/rgoswami/Git/Gitlab/obsidian-notes
+        ;;
+    'secret '*)
+        # `secret <entry>` prints one allowlisted secret on stdout and nothing
+        # else. Matched against the list by exact string, so no traversal, no
+        # glob and no prefix can widen it.
+        want="${cmd#secret }"
+        case "$want" in
+            *[!A-Za-z0-9._/-]*) reject ;;
+        esac
+        ok=0
+        while read -r entry; do
+            [ -n "$entry" ] || continue
+            [ "$entry" = "$want" ] && { ok=1; break; }
+        done <<<"$SECRET_ALLOW"
+        [ "$ok" -eq 1 ] || reject
+        # Every read is recorded. A secret leaving this machine is worth a line
+        # in the log even when it was permitted.
+        mkdir -p "$(dirname "$LOG")"
+        printf '%s secret: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$want" >>"$LOG" 2>/dev/null
+        exec /usr/bin/pass show "$want"
+        ;;
+    'secret-list')
+        printf '%s\n' "$SECRET_ALLOW" | sed '/^$/d'
+        exit 0
         ;;
 esac
 

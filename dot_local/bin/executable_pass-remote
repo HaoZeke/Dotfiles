@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# pass-remote - answer `pass` lookups from a broker over the tailnet, so a
+# machine that needs secrets does not have to hold any.
+#
+# Installed as `pass` ahead of the real one on PATH. It speaks the small part
+# of the pass interface that tools actually use for reading:
+#
+#   pass show <entry>     fetch one allowlisted secret from the broker
+#   pass <entry>          same, pass's own default form
+#   pass ls | list        what the broker is willing to serve
+#
+# Anything that would write (insert, edit, generate, rm, git, init) is refused
+# rather than silently forwarded: the authoritative store lives on the broker
+# and a write here would either be lost or create a second source of truth.
+#
+# The secret is written to stdout and never to disk. Callers that want it in a
+# file are the problem this exists to avoid.
+#
+# The broker decides what may be read; this side cannot widen that. Asking for
+# an entry outside the broker's allowlist fails there, not here, which is the
+# property that matters when this host is administered by someone else.
+
+set -uo pipefail
+
+BROKER="${PASS_REMOTE_BROKER:-rgx1gen11}"
+FALLBACK="${PASS_REMOTE_FALLBACK:-rg.terra}"
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
+
+die() { printf 'pass-remote: %s\n' "$*" >&2; exit 1; }
+
+ask() {
+    local host="$1" cmd="$2" out rc
+    out=$(ssh "${SSH_OPTS[@]}" "$host" "$cmd" 2>/dev/null); rc=$?
+    [ "$rc" -eq 0 ] && [ -n "$out" ] || return 1
+    printf '%s\n' "$out"
+}
+
+# Try the primary broker, then the always-on one. A laptop that is asleep is
+# the expected case, not an error worth failing on before trying the other.
+broker_ask() {
+    ask "$BROKER" "$1" && return 0
+    ask "$FALLBACK" "$1" && return 0
+    return 1
+}
+
+usage_refuse() {
+    die "this host holds no password store; '$1' would write to a store that is not here.
+       Run it on $BROKER, then add the entry to the gate allowlist if this host needs to read it."
+}
+
+sub="${1:-}"
+case "$sub" in
+    ''|ls|list)
+        broker_ask 'secret-list' \
+            || die "no broker reachable ($BROKER, $FALLBACK); secret-backed paths are unavailable offline"
+        ;;
+    show)
+        entry="${2:-}"
+        [ -n "$entry" ] || die "usage: pass show <entry>"
+        broker_ask "secret $entry" \
+            || die "could not read '$entry': either no broker is reachable, or the gate does not allow this entry.
+       Allowed entries: pass ls"
+        ;;
+    insert|edit|generate|rm|mv|cp|init|git|grep|find)
+        usage_refuse "$sub"
+        ;;
+    -h|--help|help)
+        sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+        ;;
+    *)
+        # `pass <entry>` with no subcommand is pass's own shorthand for show.
+        broker_ask "secret $sub" \
+            || die "could not read '$sub': either no broker is reachable, or the gate does not allow this entry.
+       Allowed entries: pass ls"
+        ;;
+esac
