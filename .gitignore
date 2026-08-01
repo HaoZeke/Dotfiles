@@ -340,3 +340,5 @@ private_dot_config/rg-us-egress/
 ~/.local/share/rg-dns/private/unbound-rg-local.conf
 ~/.local/share/rg-dns/private/README.org
 .chezmoitemplates/buildbot-agent-contract.md
+~/.local/share/terra-mail/ttech/isync-ttech.rc
+~/.local/share/terra-mail/ttech/borgmatic-ttech.yaml
