@@ -1,0 +1,12 @@
+[Unit]
+Description=Reclaim RAM held by unused scratch in tmpfs
+Documentation=man:tmpfs(5)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-tmp-sweep --apply
+# Walking a few thousand entries and asking lsof about each is not urgent and
+# must never compete with a build for the disk.
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=20min

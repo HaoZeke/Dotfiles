@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# rg-tmp-sweep - reclaim RAM held by scratch directories nobody is using.
+#
+#   rg-tmp-sweep            report what would go, change nothing
+#   rg-tmp-sweep --apply    remove it
+#   rg-tmp-sweep --age N    override the age threshold in days
+#
+# Why this exists rather than a tmpfiles.d rule: on this host /tmp and /dev/shm
+# are tmpfs, which is RAM. A 4G scratch directory there is not disk that can sit
+# around harmlessly, it is 4G the machine cannot use, and once memory runs short
+# the kernel pushes those pages to swap and the whole box crawls. That is not
+# hypothetical here: /tmp and /dev/shm together reached 25G on a 46G machine and
+# every write to /tmp began failing with what looked like a quota error.
+#
+# The buildbot convention ages its own scratch at 7 days. That threshold is
+# useless for this: the directories here are one to six days old and turn over
+# faster than a week, so nothing ever qualifies while the total only grows.
+#
+# Two guards, and the second is the one that matters. Age alone would delete the
+# scratch of a job that is still running, so anything holding an open file
+# descriptor is skipped no matter how old it looks. A build that has run for
+# days is exactly the thing worth not destroying.
+#
+# Only entries owned by the invoking user are ever considered, and the sockets
+# and lock directories that make a session work are never candidates.
+
+set -Eeuo pipefail
+
+AGE_DAYS="${RG_TMP_SWEEP_AGE:-3}"
+DIRS=("${RG_TMP_SWEEP_DIRS:-/tmp /dev/shm}")
+APPLY=0
+
+# Never candidates: session plumbing, not scratch. Removing any of these breaks
+# a running desktop, an ssh agent or systemd's own private directories.
+PROTECT='^(\.X11-unix|\.XIM-unix|\.ICE-unix|\.font-unix|\.Test-unix|systemd-private-.*|snap\..*|ssh-[A-Za-z0-9]+|gnupg|pulse-.*|dbus-.*|\.mutagen.*|krb5cc_.*|sm_segment\..*|__KMP_REGISTERED_LIB_.*|libpod_.*|sem\..*|mono\..*|\.nfs.*|nix-.*)$'
+
+# Nothing below this is worth reclaiming and everything below it is dangerous.
+# The small entries in these directories are locks, semaphores and runtime
+# registrations, not scratch: OpenMP writes a __KMP_REGISTERED_LIB_ file per
+# process, podman keeps its rootless lock here. Freeing a kilobyte is worth
+# nothing; removing one out from under a running job costs the job. A size
+# floor excludes that entire class by construction rather than by trying to
+# name every one of them above.
+MIN_BYTES="${RG_TMP_SWEEP_MIN_BYTES:-10485760}"
+
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --apply) APPLY=1 ;;
+        --age)   AGE_DAYS="${2:?--age needs a number}"; shift ;;
+        -h|--help) usage ;;
+        *) printf 'rg-tmp-sweep: unknown argument: %s\n' "$1" >&2; exit 2 ;;
+    esac
+    shift
+done
+
+human() { numfmt --to=iec --suffix=B "${1:-0}" 2>/dev/null || printf '%sB' "${1:-0}"; }
+
+total=0 removed=0 skipped_open=0 skipped_protected=0 skipped_small=0
+me="$(id -un)"
+
+for dir in ${DIRS[*]}; do
+    [ -d "$dir" ] || continue
+    while IFS= read -r -d '' path; do
+        name="$(basename "$path")"
+        if printf '%s' "$name" | grep -qE "$PROTECT"; then
+            skipped_protected=$((skipped_protected + 1)); continue
+        fi
+
+        # The load-bearing check. `find -mtime` says when the directory was last
+        # written, which says nothing about whether a process still has it open;
+        # a long build writes its output once and then holds the handle.
+        # A plain file's size is one stat; a directory's needs a walk. Most
+        # entries here are small files, so doing the cheap thing first keeps a
+        # sweep of a few thousand entries from taking minutes.
+        if [ -d "$path" ]; then sz=$( { du -sb "$path" 2>/dev/null || true; } | cut -f1 )
+        else                    sz=$(stat -c %s "$path" 2>/dev/null || true); fi
+        sz="${sz:-0}"
+        if [ "$sz" -lt "$MIN_BYTES" ]; then
+            skipped_small=$((skipped_small + 1)); continue
+        fi
+
+        # `+D` descends a directory and does not apply to a plain file, so a
+        # file checked that way always looks unused. Pick the form that matches
+        # what this actually is.
+        if command -v lsof >/dev/null 2>&1; then
+            # lsof exits 1 when it finds nothing, which is the ordinary result
+            # for scratch nobody is using. Under `set -o pipefail` that makes
+            # the assignment fail and `set -e` ends the run, so the sweeper
+            # died on the first candidate it was supposed to collect. Swallow
+            # the status and keep the count.
+            if [ -d "$path" ]; then
+                open=$( { lsof +D "$path" 2>/dev/null || true; } | tail -n +2 | wc -l )
+            else
+                open=$( { lsof -- "$path" 2>/dev/null || true; } | tail -n +2 | wc -l )
+            fi
+            if [ "$open" -gt 0 ]; then
+                printf '  keep   %-52s in use\n' "${path:0:52}"
+                skipped_open=$((skipped_open + 1)); continue
+            fi
+        else
+            # Without lsof there is no safe way to tell a finished job from a
+            # running one, so do nothing rather than guess.
+            printf 'rg-tmp-sweep: lsof missing; refusing to sweep blind\n' >&2
+            exit 1
+        fi
+
+        total=$((total + sz))
+        if [ "$APPLY" -eq 1 ]; then
+            rm -rf -- "$path" 2>/dev/null && removed=$((removed + 1))
+            printf '  remove %-52s %s\n' "${path:0:52}" "$(human "$sz")"
+        else
+            printf '  would %-53s %s\n' "${path:0:53}" "$(human "$sz")"
+        fi
+    done < <(find "$dir" -mindepth 1 -maxdepth 1 -user "$me" -mtime "+$AGE_DAYS" -print0 2>/dev/null)
+done
+
+printf 'rg-tmp-sweep: %s %s across %s; kept %s in use, %s protected, %s below %s (age > %sd)\n' \
+    "$([ "$APPLY" -eq 1 ] && echo 'reclaimed' || echo 'would reclaim')" \
+    "$(human "$total")" "${DIRS[*]}" "$skipped_open" "$skipped_protected" \
+    "$skipped_small" "$(human "$MIN_BYTES")" "$AGE_DAYS"
+# Guarded with an explicit if: under `set -e` a bare `[ ... ] && cmd` that
+# tests false is a failing command, so a dry run exited non-zero and a timer
+# would have reported every no-op sweep as a failure.
+if [ "$APPLY" -eq 1 ]; then
+    logger -t rg-tmp-sweep -- "reclaimed $(human "$total") from ${DIRS[*]}"
+fi
+exit 0

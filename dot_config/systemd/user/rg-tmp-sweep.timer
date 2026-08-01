@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily tmpfs scratch sweep
+
+[Timer]
+# Ahead of both backups (03:45 and 04:30) so they run on a machine that has
+# just had its memory back rather than one paging into swap.
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
