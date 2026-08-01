@@ -350,3 +350,11 @@ private_dot_config/rg-us-egress/
 # name resolution wherever they landed on PATH.
 cache/
 stub/
+.chezmoitemplates/lib/machine-contract-override.md
+.chezmoitemplates/harness/claude-global.md
+.chezmoitemplates/harness/codex-global.md
+.chezmoitemplates/harness/grok-global.md
+# Agent-config fragment library: sealed via nimvault, never committed plain
+.chezmoitemplates/roles/
+.chezmoitemplates/harness/
+.chezmoitemplates/lib/
