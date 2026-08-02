@@ -5,7 +5,16 @@
 	# and pinentry needs a terminal, so any unattended commit over ssh or in a
 	# detached session fails to sign at all. The ssh key is the same on every
 	# host and needs no prompt. GPG stays in use for the vault, not for git.
+	# Per-machine signing identity. The work laptop no longer holds the
+	# shared key, deliberately: a key that grants shell on the personal
+	# host has no business sitting on hardware another organisation
+	# administers. It signs with its own, listed in allowed_signers
+	# alongside the others.
+{{- if eq .chezmoi.hostname "rgSURFLat" }}
+	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_signing_ed25519.pub
+{{- else }}
 	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
+{{- end }}
 
 [gpg]
 	format = ssh
