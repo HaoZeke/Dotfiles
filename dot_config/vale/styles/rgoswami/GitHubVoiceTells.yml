@@ -1,0 +1,14 @@
+extends: existence
+message: "GitHub-voice tell ('%s'): scene-setting, explainer tail, narrated methodology, or endorsement-leaning. Cause-first, facts carry the argument; see numpy/numpy#30983."
+level: error
+ignorecase: true
+raw:
+  - '(?i)everything (below|above) (is|are)|'
+  - '(?i)the following (section|table|paragraph)s? (show|report|contain)|'
+  - '(?i)\bwhich is (the entire|exactly the|precisely the)|'
+  - '(?i)so (it|this|that it) can be (reproduced|verified|checked)|'
+  - '(?i)\bwhich (confirms|demonstrates|proves) (that|the)|'
+  - '(?i)only counted when|care was taken|we made sure|it should be noted|'
+  - '(?i)\bas suggested by [A-Z@]|in line with the maintainer|'
+  - "(?i)'s (comment|suggestion) (there|here) (suggested|proposed)|"
+  - '(?i)\bbyte-identical\b'
