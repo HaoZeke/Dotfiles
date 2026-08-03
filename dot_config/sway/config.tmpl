@@ -113,14 +113,13 @@ default_floating_border pixel 2
     # Lookup copied items
     bindsym --no-repeat $mod+Shift+v exec 'rofi -modi clipboard:~/.local/bin/cliphist-rofi-img -show clipboard -show-icons'
 
-    # vissue: rofi-driven launcher for vault issues. Default mode lists
-    # actionable items (TODO/STARTED, no open blocker) and opens the chosen
-    # one in $EDITOR at the heading's line. Shift variant prompts for a
-    # project then a title and creates a new issue.
-    # bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/vissue-rofi'
-    # bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/vissue-rofi new'
+    # rofi launcher for the notes tracker. Default mode lists actionable
+    # items and opens the chosen one in $EDITOR at its heading. The shift
+    # variant prompts for a project and a title, then creates a new entry.
+    # bindsym --no-repeat $mod+i       exec '$HOME/.local/bin/tracker-rofi'
+    # bindsym --no-repeat $mod+Shift+i exec '$HOME/.local/bin/tracker-rofi new'
 
-    # orgaw: rofi clock in/out on vissue headings (intentional ledger)
+    # rofi clock in/out against those headings (intentional time ledger)
     #   $mod+t        — pick ready issue and clock in (or switch)
     #   $mod+Shift+t  — clock out
     #   $mod+Ctrl+t   — all issues (not only ready)
@@ -392,6 +391,18 @@ input type:keyboard {
 input type:touchpad {
     natural_scroll enabled
     tap enabled
+
+    # Do NOT disable the touchpad while the trackpoint is in use.
+    #
+    # The trackpoint on this machine drifts: with nothing touching it, it emits
+    # roughly eight motion events a second. libinput reads that as continuous
+    # trackpoint use and, with dwtp on, suppresses the touchpad for as long as
+    # it continues. The touchpad then appears dead while the keyboard and the
+    # touchscreen keep working, which reads as a hardware fault and is not one.
+    #
+    # dwt stays on: suppressing the touchpad while TYPING is genuinely useful,
+    # and the keyboard does not lie about whether it is being used.
+    dwtp disabled
 }
 
 input type:pointer {

@@ -1,0 +1,9 @@
+# Unstick a frozen pointer.
+#
+# The compositor's pointer path can wedge under CPU contention while the
+# keyboard and touchscreen keep working. That is precisely why this is a
+# keybinding: when it happens, the keyboard is the only thing left to reach for,
+# so a fix that needs a working cursor is not a fix.
+#
+# $mod+Shift+p, chosen to be reachable one-handed.
+bindsym $mod+Shift+p exec $HOME/.local/bin/rg-pointer-reset
