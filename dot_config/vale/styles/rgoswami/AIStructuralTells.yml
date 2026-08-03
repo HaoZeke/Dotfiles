@@ -173,3 +173,28 @@ tokens:
   - lands cleanly
   - really lands
   - ships cleaner
+  # Announcing that a thing matters instead of stating the thing (2026-08-02,
+  # rsx BMC: "This identity matters computationally:").
+  - matters computationally
+  - matters here because
+  - this matters because
+  - why this matters
+  - the important thing here
+  - the key point is
+  - it is worth noting that
+  - it is worth emphasising that
+  - it is worth emphasizing that
+  # Counting the points before making them (2026-08-02, rsx BMC: "Two choices
+  # set rsx apart from typical RAD-seq tooling. First ... Second ...").
+  - two choices set
+  - two things set
+  - three things set
+  - two factors set
+  - sets it apart from typical
+  - sets them apart from typical
+  - there are two reasons
+  - there are three reasons
+  - for two reasons
+  - rests on two
+  - comes down to two
+  - comes down to three
