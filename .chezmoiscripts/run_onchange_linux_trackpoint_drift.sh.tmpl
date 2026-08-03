@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Pointing-stick drift, ThinkPad X1 Gen 11 only.
+#
+# The stick is a strain gauge with no absolute zero. Firmware stores a baseline
+# it believes is "at rest" and reports deflection from it. As the machine warms,
+# stem and gauges expand at different rates, the true rest point moves away from
+# that baseline, and the device reports a force nobody is applying: measured at
+# roughly eight phantom motion events per second with nothing touching it.
+#
+# The damage is indirect. libinput reads sustained stick motion as the stick
+# being in use and, with disable-while-trackpointing on, suppresses the TOUCHPAD
+# for as long as it lasts. The touchpad then looks dead while keyboard and
+# touchscreen still work, the compositor reports the device enabled, and the
+# kernel logs nothing, because drift is valid-looking input rather than an error.
+#
+# Sensitivity is the threshold below which deflection is ignored. The stock 128
+# lets the drift through; 50 rejects it while leaving the stick usable. Lower
+# starts costing real input.
+#
+# A udev rule rather than a boot-time write: the attribute belongs to the device
+# and has to be reapplied whenever the device appears, not once at startup.
+set -euo pipefail
+
+RULE=/etc/udev/rules.d/60-thinkpad-trackpoint-drift.rules
+WANT='ACTION=="add", SUBSYSTEM=="serio", DRIVERS=="psmouse", ATTR{sensitivity}=="?*", ATTR{sensitivity}="50"'
+
+tmp=$(mktemp)
+printf '%s\n' "$WANT" >"$tmp"
+
+if ! sudo test -f "$RULE" || ! sudo cmp -s "$tmp" "$RULE"; then
+    sudo install -D -m 0644 -o root -g root "$tmp" "$RULE"
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    # The rule alone only fires on the next device add, so apply once now.
+    for s in /sys/devices/platform/i8042/serio*/sensitivity; do
+        [ -e "$s" ] || continue
+        printf '50\n' | sudo tee "$s" >/dev/null 2>&1 || true
+    done
+    printf 'trackpoint: sensitivity pinned to 50 via %s\n' "$RULE"
+fi
+rm -f "$tmp"
+{{- end }}

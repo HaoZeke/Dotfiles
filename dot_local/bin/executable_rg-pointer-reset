@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# rg-pointer-reset - unstick a frozen pointer without touching the kernel.
+#
+# The failure this recovers from: the cursor stops responding while the
+# keyboard and the touchscreen keep working. That combination rules out the
+# hardware. sway still lists the devices as enabled and the kernel logs no
+# input errors; what has stalled is the pointer path inside the compositor,
+# usually because something else starved it of CPU long enough for the input
+# queue to wedge.
+#
+# Toggling send_events makes libinput tear the device down and re-create it,
+# which clears that state. No root, no module reload, and nothing that could
+# lose a session.
+#
+# Bound to a key on purpose: when this happens the keyboard is the only thing
+# still working, so a fix that needs a pointer to reach is no fix.
+#
+# Addressed by device TYPE rather than by identifier. Device ids carry bus and
+# vendor numbers that change across a docking event or a kernel bump, and a
+# recovery tool that stops matching after an unrelated update is worse than
+# none, because it fails at exactly the moment it is needed.
+
+set -uo pipefail
+
+types=("${@:-pointer touchpad}")
+[ $# -gt 0 ] || types=(pointer touchpad)
+
+for t in "${types[@]}"; do
+    swaymsg input "type:$t" events disabled >/dev/null 2>&1
+done
+
+# Long enough for libinput to notice the removal. Without a pause the enable
+# can land before the teardown completes and the device comes back in the same
+# stuck state it was in.
+sleep 1
+
+ok=0
+for t in "${types[@]}"; do
+    if swaymsg input "type:$t" events enabled >/dev/null 2>&1; then
+        printf 'rg-pointer-reset: %s re-enabled\n' "$t"
+        ok=1
+    else
+        printf 'rg-pointer-reset: %s not present\n' "$t" >&2
+    fi
+done
+
+[ "$ok" -eq 1 ] || { printf 'rg-pointer-reset: nothing re-enabled; is sway running?\n' >&2; exit 1; }
+
+# Report the usual cause alongside the fix. This stalls under CPU contention,
+# and knowing what was competing is the difference between resetting it again
+# in five minutes and dealing with the reason.
+if command -v top >/dev/null 2>&1; then
+    hog=$(top -bn2 -d0.4 2>/dev/null | awk '/^ *PID/{h=NR} h&&NR>h&&NR<=h+1{printf "%s at %s%%", $12, $9}')
+    [ -n "$hog" ] && printf 'rg-pointer-reset: top consumer was %s\n' "$hog"
+fi
