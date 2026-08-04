@@ -78,6 +78,7 @@ class EduVPN:
         self.profile = None
         self.token_getter = None
         self.token_setter = None
+        self.cancelled = False
 
     def record(self, value):
         with open(os.environ["RG_TEST_EDUVPN_CALLS"], "a", encoding="utf-8") as stream:
@@ -109,6 +110,7 @@ class EduVPN:
 
     def cancel(self):
         self.record("cancel")
+        self.cancelled = True
 
     def get_servers(self):
         missing = os.environ.get("RG_TEST_SERVER_MODE", "present") == "missing"
@@ -129,11 +131,30 @@ class EduVPN:
         self.record("add-server=" + identifier)
 
     def renew_session(self):
+        # The controller must never call this: from the Main state the real
+        # library rejects the transition to OAuthStarted.
         self.record("renew-session")
-        self.emit(State.OAUTH_STARTED, "https://auth.invalid/secret-state")
+        raise RuntimeError("fsm invalid transition attempt from 'Main' to 'OAuthStarted'")
 
     def get_config(self, server_type, identifier, prefer_tcp=False, startup=False):
         self.record("get-config")
+        stored = self.token_getter(identifier, int(server_type))
+        oauth_forced = os.environ.get("RG_TEST_OAUTH_MODE", "tokens") == "required"
+        if stored is None or oauth_forced:
+            # No usable tokens: the real core starts OAuth from inside the
+            # config request. A silent caller cancels here; an interactive
+            # caller opens the browser and the flow continues.
+            self.emit(State.OAUTH_STARTED, "https://auth.invalid/secret-state")
+            # Give a silent caller's async cancel time to land.
+            for _ in range(200):
+                if self.cancelled:
+                    break
+                time.sleep(0.001)
+            if self.cancelled:
+                raise RuntimeError("cancelled through client")
+            self.record("oauth-complete")
+        elif sorted(json.loads(stored)) != ["access_token", "expires_at", "refresh_token"]:
+            raise RuntimeError("incomplete token getter")
         profile_data = {
             "cookie": 7,
             "data": {
@@ -151,9 +172,6 @@ class EduVPN:
             time.sleep(0.001)
         if self.profile != "medewerkers-split":
             raise RuntimeError("wrong profile")
-        tokens = json.loads(self.token_getter(identifier, int(server_type)))
-        if sorted(tokens) != ["access_token", "expires_at", "refresh_token"]:
-            raise RuntimeError("incomplete token getter")
         self.token_setter(
             identifier,
             int(server_type),
@@ -272,36 +290,45 @@ status_file="$tmp_dir/status.json"
 
 run_controller() {
     set +e
-    PYTHONPATH="$fake_root" \
-    XDG_STATE_HOME="$tmp_dir/state" \
-    RG_TEST_EDUVPN_CALLS="$calls" \
-    RG_TEST_CALLS="$calls" \
-    RG_SURF_BROWSER="$tmp_dir/bin/browser" \
-    RG_SURF_INSTALLER="$tmp_dir/bin/installer" \
-    RG_SURF_STATUS_FILE="$status_file" \
-    RG_SURF_NOTIFY_SEND="$tmp_dir/bin/notify-send" \
-    RG_SURF_TIMEOUT="$tmp_dir/bin/timeout" \
-    RG_SURF_SYSTEMCTL="$tmp_dir/bin/systemctl" \
-    RG_SURF_IP="$tmp_dir/bin/ip" \
-    RG_SURF_GETENT="$tmp_dir/bin/getent" \
-    RG_SURF_NOW=1000000000 \
-    RG_SURF_NOTIFY_COOLDOWN=0 \
-    RG_SURF_NOTIFY_TIMEOUT=1 \
-    RG_TEST_SERVER_MODE="${RG_TEST_SERVER_MODE:-present}" \
-    RG_TEST_VALIDATE_MODE="${RG_TEST_VALIDATE_MODE:-success}" \
-    RG_TEST_NOTIFY_ACTION="${RG_TEST_NOTIFY_ACTION:-later}" \
-    python3 "$controller" "$@" >"$stdout" 2>"$stderr"
+    local -a environment=(
+        PYTHONPATH="$fake_root"
+        XDG_STATE_HOME="$tmp_dir/state"
+        RG_TEST_EDUVPN_CALLS="$calls"
+        RG_TEST_CALLS="$calls"
+        RG_SURF_BROWSER="$tmp_dir/bin/browser"
+        RG_SURF_INSTALLER="$tmp_dir/bin/installer"
+        RG_SURF_STATUS_FILE="$status_file"
+        RG_SURF_NOTIFY_SEND="$tmp_dir/bin/notify-send"
+        RG_SURF_TIMEOUT="$tmp_dir/bin/timeout"
+        RG_SURF_SYSTEMCTL="$tmp_dir/bin/systemctl"
+        RG_SURF_IP="$tmp_dir/bin/ip"
+        RG_SURF_GETENT="$tmp_dir/bin/getent"
+        RG_SURF_NOW=1000000000
+        RG_SURF_NOTIFY_TIMEOUT=1
+        RG_TEST_SERVER_MODE="${RG_TEST_SERVER_MODE:-present}"
+        RG_TEST_VALIDATE_MODE="${RG_TEST_VALIDATE_MODE:-success}"
+        RG_TEST_NOTIFY_ACTION="${RG_TEST_NOTIFY_ACTION:-later}"
+        RG_TEST_OAUTH_MODE="${RG_TEST_OAUTH_MODE:-tokens}"
+    )
+    # The escalation scenarios exercise the built-in cooldown defaults.
+    if [ "${RG_TEST_COOLDOWN_DEFAULTS:-0}" != 1 ]; then
+        environment+=(RG_SURF_NOTIFY_COOLDOWN=0)
+    fi
+    env "${environment[@]}" python3 "$controller" "$@" >"$stdout" 2>"$stderr"
     rc=$?
     set -e
     return "$rc"
 }
 
+# Interactive renewal forces a fresh OAuth through get_config; the illegal
+# renew_session transition must never be attempted.
 RG_TEST_SERVER_MODE=missing run_controller renew --interactive \
     || fail "interactive renewal with missing server failed"
 [ "$(cat "$pending")" = "VALID PROFILE" ] || fail "interactive renewal did not spool the validated profile"
 rg -q '^add-server=https://surf.eduvpn.nl/$' "$calls" || fail "missing server was not repaired"
-rg -q '^renew-session$' "$calls" || fail "interactive renewal did not renew the official-core session"
+! rg -q '^renew-session$' "$calls" || fail "interactive renewal used the illegal renew_session transition"
 rg -q '^browser$' "$calls" || fail "interactive renewal did not open browser authorization"
+rg -q '^oauth-complete$' "$calls" || fail "interactive renewal did not complete a fresh OAuth"
 rg -q '^get-config$' "$calls" || fail "interactive renewal did not retrieve a profile"
 rg -q '^validate --validate-only ' "$calls" || fail "candidate was not validated before spooling"
 ! rg -qi 'stored-access|stored-refresh|rotated-access|rotated-refresh|secret-state' "$stdout" "$stderr" \
@@ -315,14 +342,52 @@ if RG_TEST_VALIDATE_MODE=fail run_controller renew --interactive; then
 fi
 [ "$(cat "$pending")" = "OLD PROFILE" ] || fail "rejected candidate replaced the pending profile"
 
+# Near expiry with a working refresh token: the timer renews silently, with
+# no browser and no notification.
+cat >"$status_file" <<'JSON'
+{"result":"active","not_after_epoch":1000003600,"cert_sha256":"11:22"}
+JSON
+printf 'OLD PROFILE\n' >"$pending"
+: >"$calls"
+run_controller renew --timer || fail "near-expiry silent renewal failed"
+rg -q '^get-config$' "$calls" || fail "near-expiry timer did not attempt a silent renewal"
+! rg -q '^browser$' "$calls" || fail "silent renewal opened a browser"
+! rg -q '^notify$' "$calls" || fail "silent renewal raised a notification"
+[ "$(cat "$pending")" = "VALID PROFILE" ] || fail "silent renewal did not spool the renewed profile"
+
+# Near expiry when SURF demands reauthorization: the silent attempt cancels
+# without a browser and the operator is notified.
+cat >"$status_file" <<'JSON'
+{"result":"active","not_after_epoch":1000003600,"cert_sha256":"11:22"}
+JSON
+printf 'OLD PROFILE\n' >"$pending"
+: >"$calls"
+RG_TEST_OAUTH_MODE=required run_controller renew --timer \
+    || fail "authorization-required timer check failed"
+rg -q '^cancel$' "$calls" || fail "silent attempt did not cancel the OAuth flow"
+! rg -q '^browser$' "$calls" || fail "silent attempt opened a browser"
+rg -q '^notify$' "$calls" || fail "authorization-required timer did not notify"
+[ "$(cat "$pending")" = "OLD PROFILE" ] || fail "authorization-required timer changed the pending profile"
+
+# Escalation: with built-in cooldown defaults, a recent notification throttles
+# the near-expiry reminder but not the expired-tunnel reminder.
+printf '999995000\n' >"$tmp_dir/state/rg-surf-vpn/auth-notified-at"
 cat >"$status_file" <<'JSON'
 {"result":"active","not_after_epoch":1000003600,"cert_sha256":"11:22"}
 JSON
 : >"$calls"
-run_controller renew --timer || fail "near-expiry timer check failed"
-rg -q '^notify$' "$calls" || fail "near-expiry timer did not request interactive authorization"
-! rg -q '^get-config$' "$calls" || fail "near-expiry timer invalidated the active certificate"
-[ "$(cat "$pending")" = "OLD PROFILE" ] || fail "near-expiry timer changed the pending profile"
+RG_TEST_COOLDOWN_DEFAULTS=1 RG_TEST_OAUTH_MODE=required run_controller renew --timer \
+    || fail "throttled near-expiry timer check failed"
+! rg -q '^notify$' "$calls" || fail "near-expiry reminder ignored the six-hour cooldown"
+
+printf '999995000\n' >"$tmp_dir/state/rg-surf-vpn/auth-notified-at"
+cat >"$status_file" <<'JSON'
+{"result":"active","not_after_epoch":999999999,"cert_sha256":"11:22"}
+JSON
+: >"$calls"
+RG_TEST_COOLDOWN_DEFAULTS=1 RG_TEST_OAUTH_MODE=required run_controller renew --timer \
+    || fail "expired escalation timer check failed"
+rg -q '^notify$' "$calls" || fail "expired tunnel did not escalate past the cooldown"
 
 cat >"$status_file" <<'JSON'
 {"result":"active","not_after_epoch":2000000000,"cert_sha256":"11:22"}
