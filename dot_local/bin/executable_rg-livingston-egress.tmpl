@@ -20,7 +20,12 @@ exit 0
 {{- end }}
 set -uo pipefail
 
-BASE_CONF="${RG_LIV_BASE_CONF:-$HOME/.config/rg-us-egress/wireguard.conf}"
+# This runs under sudo, where $HOME is /root and the config lives in the
+# calling account's home. Resolving it against $HOME made the documented
+# invocation fail on a file that was there the whole time.
+OWNER="${SUDO_USER:-$(id -un)}"
+OWNER_HOME="$(getent passwd "$OWNER" | cut -d: -f6)"
+BASE_CONF="${RG_LIV_BASE_CONF:-${OWNER_HOME:-$HOME}/.config/rg-us-egress/wireguard.conf}"
 IFACE="${RG_LIV_IFACE:-rg-liv-wg}"   # must be <=15 chars (IFNAMSIZ)
 RUNTIME="/etc/wireguard/${IFACE}.conf"
 SOCKS_HOST="${RG_LIV_SOCKS_HOST:-socks-us.windscribe.com}"
