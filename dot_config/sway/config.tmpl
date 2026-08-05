@@ -409,6 +409,18 @@ input type:pointer {
     natural_scroll enabled
 }
 
+# The touchscreen digitizer reports a contact at one fixed point about ten
+# times a second with nothing near the screen, always at the same coordinates.
+# Every one of those is a click wherever the pointer happens to be, so the
+# touchpad and trackpoint appear to fire at random while they are working
+# correctly. There is no software setting that filters a stuck point, and the
+# panel is the only thing that can produce it.
+#
+# Remove this block to test a repaired or replaced panel.
+input type:touch {
+    events disabled
+}
+
 # xwayland force scale 2
 exec xsettingsd
 # Here: https://www.reddit.com/r/swaywm/comments/p9ah2v/completely_hide_mouse_pointer_wayland/
