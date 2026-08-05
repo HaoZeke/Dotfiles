@@ -42,7 +42,8 @@ Options:
   -h, --help       Show this help.
 
 Environment:
-  RG_LIVINGSTON_SKIP_EGRESS_CHECK=1  Do not warn when public IP is not Texas.
+  RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1  Launch even when egress is not US. The
+                                      browser then shows the real address.
   RG_LIVINGSTON_PROXY_BYPASS=LIST     Override proxy bypass hosts.
 USAGE
 }
@@ -88,6 +89,14 @@ pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
 pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
+relay_bin="${RG_LIVINGSTON_RELAY_BIN:-$HOME/.local/bin/rg-socks-auth-relay}"
+relay_port="${RG_LIVINGSTON_RELAY_PORT:-11080}"
+relay_log="${RG_LIVINGSTON_RELAY_LOG:-$HOME/.local/state/rg-socks-auth-relay.log}"
+relay_pid=""
+upstream_host=""
+upstream_user=""
+upstream_pass=""
+proxy_needs_relay=0
 slack_url_default="${RG_LIVINGSTON_SLACK_URL:-https://app.slack.com/client/T061A7A7K0U}"
 grok_url_default="${RG_LIVINGSTON_GROK_URL:-https://grok.com/}"
 browser_window_width="${RG_LIVINGSTON_BROWSER_WIDTH:-1920}"
@@ -155,7 +164,7 @@ print_env() {
 }
 
 load_proxy_from_pass() {
-    local candidate host username password
+    local candidate
     [ -z "$proxy" ] || return 0
     [ "${RG_LIVINGSTON_PROXY_FROM_PASS:-1}" = "1" ] || return 0
     command -v "$pass_bin" >/dev/null 2>&1 || return 0
@@ -169,21 +178,100 @@ load_proxy_from_pass() {
         fi
     fi
 
-    host="$("$pass_bin" show "$windscribe_socks_pass_prefix/USloc" 2>/dev/null \
+    upstream_host="$("$pass_bin" show "$windscribe_socks_pass_prefix/USloc" 2>/dev/null \
         | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
-    username="$("$pass_bin" show "$windscribe_socks_pass_prefix/username" 2>/dev/null \
+    upstream_user="$("$pass_bin" show "$windscribe_socks_pass_prefix/username" 2>/dev/null \
         | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
-    password="$("$pass_bin" show "$windscribe_socks_pass_prefix/password" 2>/dev/null \
+    upstream_pass="$("$pass_bin" show "$windscribe_socks_pass_prefix/password" 2>/dev/null \
         | sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' || true)"
-    [ -n "$host" ] || return 0
-    if [ -n "$username" ] && [ -n "$password" ]; then
-        candidate="socks5://$username:$password@$host"
+    [ -n "$upstream_host" ] || return 0
+
+    # Credentials never reach the browser command line. Chromium cannot
+    # authenticate to a SOCKS5 proxy at all (ERR_NO_SUPPORTED_PROXIES), and a
+    # password containing "=" or ";" makes --proxy-server parse as Chromium's
+    # scheme=uri proxy-rules list instead of a URL. Such a list matches no
+    # scheme, and an unmatched scheme means DIRECT, so the flag reads as
+    # configured while every request leaves on the local address. An
+    # authenticated upstream therefore gets a local relay in front of it.
+    if [ -n "$upstream_user" ] && [ -n "$upstream_pass" ]; then
+        proxy_needs_relay=1
+        proxy=""
     else
-        candidate="socks5://$host"
+        proxy="socks5://$upstream_host"
+    fi
+}
+
+# Chromium reads --proxy-server either as a single proxy URL or, the moment it
+# sees "=", as a semicolon-separated scheme=uri rule list. Anything carrying
+# those characters is ambiguous, and the ambiguous reading fails open.
+assert_browser_proxy_safe() {
+    local value="$1"
+    case "$value" in
+        *=* | *\;*)
+            die "refusing proxy '$value': = and ; make Chromium read it as proxy rules and fall back to DIRECT"
+            ;;
+        *@*)
+            die "refusing proxy '$value': Chromium cannot authenticate to a SOCKS5 proxy"
+            ;;
+    esac
+}
+
+relay_running() {
+    [ -n "$relay_pid" ] && kill -0 "$relay_pid" 2>/dev/null
+}
+
+stop_relay() {
+    relay_running || return 0
+    kill "$relay_pid" 2>/dev/null || true
+    relay_pid=""
+}
+
+# Bring up the local SOCKS5 front end and hand back its address. The browser
+# only ever sees 127.0.0.1, so no credential and no ambiguous character can
+# reach the command line.
+# mode "soft" reports failure to the caller; anything else is fatal, because a
+# launch path that continues past a dead relay is a launch onto the local
+# address.
+start_relay() {
+    local mode="${1:-hard}" port attempt
+
+    fail() {
+        if [ "$mode" = "soft" ]; then
+            stop_relay
+            return 1
+        fi
+        stop_relay
+        die "$1"
+    }
+
+    if ! [ -x "$relay_bin" ]; then
+        fail "missing SOCKS relay: $relay_bin" || return 1
     fi
 
-    [ -n "$candidate" ] || return 0
-    proxy="$candidate"
+    port="$relay_port"
+    mkdir -p "$(dirname "$relay_log")" 2>/dev/null || true
+    printf '%s\n%s\n' "$upstream_user" "$upstream_pass" \
+        | "$relay_bin" --port "$port" --upstream "$upstream_host" --credentials-stdin \
+            >>"$relay_log" 2>&1 &
+    relay_pid=$!
+
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        if ! kill -0 "$relay_pid" 2>/dev/null; then
+            fail "SOCKS relay exited at startup; see $relay_log" || return 1
+            return 1
+        fi
+        # Probe inside a subshell so the descriptor closes with it. Closing it
+        # here with a bare `exec` would apply this function's redirections to
+        # the whole script and silence every later diagnostic.
+        if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+            proxy="socks5://127.0.0.1:$port"
+            return 0
+        fi
+        sleep 0.3
+    done
+
+    fail "SOCKS relay did not start listening on 127.0.0.1:$port; see $relay_log" || return 1
+    return 1
 }
 
 as_root() {
@@ -251,14 +339,25 @@ print_egress_info() {
     printf 'egress_org=%s\n' "${org:-unknown}"
 }
 
-warn_egress_location() {
-    local json ip city region country timezone
-    [ "${RG_LIVINGSTON_SKIP_EGRESS_CHECK:-}" != "1" ] || return 0
+# Refuse to launch unless traffic demonstrably leaves the United States, and
+# measure it through the very proxy string the browser is about to receive. An
+# unverifiable egress counts as a failure: the whole point of this profile is
+# that the local address is never the one a site records, and a check that
+# returns success when it could not reach the network provides no evidence of
+# that at all.
+require_us_egress() {
+    local json ip city region country timezone allow
 
+    allow="${RG_LIVINGSTON_ALLOW_LOCAL_EGRESS:-0}"
     json="$(fetch_egress_json || true)"
+
     if [ -z "$json" ]; then
-        echo "rg-livingston-profile: warning: public egress location could not be checked" >&2
-        return 0
+        if [ "$allow" = "1" ]; then
+            echo "rg-livingston-profile: egress unverified, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
+            return 0
+        fi
+        stop_relay
+        die "egress could not be verified${proxy:+ through $proxy}; refusing to launch. Bring the tunnel up (sudo rg-livingston-egress up), or set RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1 to launch on the local address."
     fi
 
     ip="$(json_field "$json" ip)"
@@ -267,10 +366,21 @@ warn_egress_location() {
     country="$(json_field "$json" country)"
     timezone="$(json_field "$json" timezone)"
 
-    if [ "$country" != "US" ] || [ "$region" != "Texas" ]; then
-        echo "rg-livingston-profile: warning: public egress appears as ${city:-unknown}, ${region:-unknown}, ${country:-unknown} (${timezone:-unknown}, ${ip:-unknown})" >&2
-        echo "rg-livingston-profile: server-side sites can still show that location until traffic exits through Texas" >&2
+    if [ "$country" != "US" ]; then
+        if [ "$allow" = "1" ]; then
+            echo "rg-livingston-profile: egress is ${city:-unknown}, ${country:-unknown} (${ip:-unknown}), launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
+            return 0
+        fi
+        stop_relay
+        die "egress appears as ${city:-unknown}, ${region:-unknown}, ${country:-unknown} (${timezone:-unknown}, ${ip:-unknown}); refusing to launch a Livingston browser that would record that address"
     fi
+
+    if [ "$region" != "Texas" ]; then
+        echo "rg-livingston-profile: egress is ${city:-unknown}, ${region:-unknown}, US (${ip:-unknown}); US but not Texas" >&2
+    fi
+
+    printf 'rg-livingston-profile: egress verified as %s, %s, %s (%s)\n' \
+        "${city:-unknown}" "${region:-unknown}" "${country:-unknown}" "${ip:-unknown}" >&2
 }
 
 run_cmd() {
@@ -463,9 +573,16 @@ run_browser() {
         "--load-extension=$extension_dir"
     )
 
+    if [ "$dry_run" -eq 0 ] && [ "$proxy_needs_relay" -eq 1 ]; then
+        start_relay
+    fi
+
     if [ -n "$proxy" ]; then
+        assert_browser_proxy_safe "$proxy"
         browser_args+=("--proxy-server=$proxy")
         browser_args+=("--proxy-bypass-list=$proxy_bypass")
+    elif [ "$dry_run" -eq 0 ]; then
+        die "no proxy configured; refusing to launch a Livingston browser straight onto the local address"
     fi
 
     if [ "$browser_name" = "vivaldi" ]; then
@@ -478,8 +595,20 @@ run_browser() {
     fi
     browser_args+=("$@")
     if [ "$dry_run" -eq 0 ]; then
-        warn_egress_location
+        require_us_egress
     fi
+
+    if relay_running; then
+        # Supervise rather than exec: the relay carries every byte the browser
+        # sends, so it lives and dies with the browser instead of outliving it
+        # as an orphan holding a port the next launch wants.
+        replace_process=0
+        trap 'stop_relay' EXIT HUP INT TERM
+        run_cmd "${browser_args[@]}"
+        stop_relay
+        return 0
+    fi
+
     run_cmd "${browser_args[@]}"
 }
 
@@ -645,6 +774,16 @@ print_system_location_dry_run() {
 print_doctor() {
     local system_tz geolocation_values geoclue_override processes
     load_proxy_from_pass
+    # Measure through the relay, not around it. Reporting a direct-path egress
+    # here would describe a route the browser never takes.
+    if [ "$proxy_needs_relay" -eq 1 ]; then
+        if start_relay soft; then
+            printf 'relay=127.0.0.1:%s\n' "$relay_port"
+        else
+            printf 'relay=failed (see %s)\n' "$relay_log"
+        fi
+    fi
+    trap 'stop_relay' EXIT HUP INT TERM
 
     printf 'profile=%s\n' "$PROFILE_NAME"
     printf 'profile_timezone=%s\n' "$TZ_NAME"

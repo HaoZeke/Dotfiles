@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+# Managed by chezmoi (dot_local/bin/executable_rg-socks-auth-relay).
+#
+# Local SOCKS5 front end that terminates username/password authentication and
+# forwards to an authenticated upstream SOCKS5 proxy.
+#
+# Chromium-family browsers cannot authenticate to a SOCKS5 proxy: given
+# --proxy-server=socks5://user:pass@host they answer ERR_NO_SUPPORTED_PROXIES,
+# and when the password holds an "=" or ";" the flag parses as Chromium's
+# proxy-rules syntax instead, matches no URL scheme, and every request goes
+# DIRECT. Pointing the browser at an unauthenticated 127.0.0.1 listener keeps
+# credentials out of the command line entirely, so neither failure mode has a
+# way to occur.
+#
+#   rg-socks-auth-relay --port 11080 --upstream host:port \
+#       --username-file - --password-file -
+#
+# Credentials arrive on stdin (username newline password) or in files, never in
+# argv, where any process on the machine could read them.
+
+import argparse
+import os
+import selectors
+import socket
+import struct
+import sys
+import threading
+
+SOCKS_VERSION = 5
+AUTH_NONE = 0x00
+AUTH_USERPASS = 0x02
+AUTH_UNACCEPTABLE = 0xFF
+CMD_CONNECT = 0x01
+ATYP_IPV4 = 0x01
+ATYP_DOMAIN = 0x03
+ATYP_IPV6 = 0x04
+REP_OK = 0x00
+REP_GENERAL_FAILURE = 0x01
+REP_HOST_UNREACHABLE = 0x04
+REP_CMD_UNSUPPORTED = 0x07
+
+CONNECT_TIMEOUT = 20
+PUMP_BUFFER = 65536
+
+
+def log(message):
+    print(f"rg-socks-auth-relay: {message}", file=sys.stderr, flush=True)
+
+
+def recv_exact(sock, count):
+    """Read exactly count bytes or raise; short reads are protocol errors."""
+    chunks = []
+    remaining = count
+    while remaining:
+        chunk = sock.recv(remaining)
+        if not chunk:
+            raise ConnectionError("peer closed mid-message")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+class Upstream:
+    """An authenticated SOCKS5 proxy this relay forwards CONNECTs to."""
+
+    def __init__(self, host, port, username, password):
+        self.host = host
+        self.port = port
+        self.username = username.encode("utf-8")
+        self.password = password.encode("utf-8")
+
+    def connect(self, atyp, addr_bytes, dest_port):
+        sock = socket.create_connection((self.host, self.port), CONNECT_TIMEOUT)
+        try:
+            sock.settimeout(CONNECT_TIMEOUT)
+            sock.sendall(bytes([SOCKS_VERSION, 1, AUTH_USERPASS]))
+            reply = recv_exact(sock, 2)
+            if reply[0] != SOCKS_VERSION:
+                raise ConnectionError("upstream is not SOCKS5")
+            if reply[1] != AUTH_USERPASS:
+                raise ConnectionError(
+                    f"upstream refused username/password auth (method {reply[1]:#04x})"
+                )
+
+            # RFC 1929 username/password subnegotiation.
+            sock.sendall(
+                bytes([0x01, len(self.username)])
+                + self.username
+                + bytes([len(self.password)])
+                + self.password
+            )
+            auth_reply = recv_exact(sock, 2)
+            if auth_reply[1] != 0x00:
+                raise ConnectionError("upstream rejected the credentials")
+
+            sock.sendall(
+                bytes([SOCKS_VERSION, CMD_CONNECT, 0x00, atyp])
+                + addr_bytes
+                + struct.pack("!H", dest_port)
+            )
+            head = recv_exact(sock, 4)
+            if head[1] != REP_OK:
+                raise ConnectionError(f"upstream CONNECT failed (reply {head[1]:#04x})")
+            # Drain the bound address so the stream starts at payload.
+            bound_atyp = head[3]
+            if bound_atyp == ATYP_IPV4:
+                recv_exact(sock, 4)
+            elif bound_atyp == ATYP_IPV6:
+                recv_exact(sock, 16)
+            elif bound_atyp == ATYP_DOMAIN:
+                length = recv_exact(sock, 1)[0]
+                recv_exact(sock, length)
+            else:
+                raise ConnectionError("upstream returned an unknown address type")
+            recv_exact(sock, 2)
+            sock.settimeout(None)
+            return sock
+        except Exception:
+            sock.close()
+            raise
+
+
+def pump(client, upstream):
+    """Shuttle bytes both ways until either side closes."""
+    sel = selectors.DefaultSelector()
+    sel.register(client, selectors.EVENT_READ, upstream)
+    sel.register(upstream, selectors.EVENT_READ, client)
+    try:
+        while True:
+            # No timeout: an idle websocket is a live connection, and dropping
+            # one silently would look exactly like the leak this relay exists
+            # to prevent.
+            for key, _ in sel.select(timeout=None):
+                data = key.fileobj.recv(PUMP_BUFFER)
+                if not data:
+                    return
+                key.data.sendall(data)
+    except (OSError, ConnectionError):
+        return
+    finally:
+        sel.close()
+
+
+def handle_client(client, upstream_cfg):
+    client_closed = False
+    try:
+        client.settimeout(CONNECT_TIMEOUT)
+        head = recv_exact(client, 2)
+        if head[0] != SOCKS_VERSION:
+            return
+        methods = recv_exact(client, head[1])
+        if AUTH_NONE not in methods:
+            client.sendall(bytes([SOCKS_VERSION, AUTH_UNACCEPTABLE]))
+            return
+        client.sendall(bytes([SOCKS_VERSION, AUTH_NONE]))
+
+        request = recv_exact(client, 4)
+        if request[0] != SOCKS_VERSION:
+            return
+        if request[1] != CMD_CONNECT:
+            client.sendall(
+                bytes([SOCKS_VERSION, REP_CMD_UNSUPPORTED, 0x00, ATYP_IPV4])
+                + b"\x00\x00\x00\x00\x00\x00"
+            )
+            return
+
+        atyp = request[3]
+        if atyp == ATYP_IPV4:
+            addr_bytes = recv_exact(client, 4)
+        elif atyp == ATYP_IPV6:
+            addr_bytes = recv_exact(client, 16)
+        elif atyp == ATYP_DOMAIN:
+            length = recv_exact(client, 1)[0]
+            addr_bytes = bytes([length]) + recv_exact(client, length)
+        else:
+            client.sendall(
+                bytes([SOCKS_VERSION, REP_GENERAL_FAILURE, 0x00, ATYP_IPV4])
+                + b"\x00\x00\x00\x00\x00\x00"
+            )
+            return
+        dest_port = struct.unpack("!H", recv_exact(client, 2))[0]
+
+        try:
+            upstream = upstream_cfg.connect(atyp, addr_bytes, dest_port)
+        except Exception as exc:  # noqa: BLE001
+            log(f"upstream connect failed: {exc}")
+            client.sendall(
+                bytes([SOCKS_VERSION, REP_HOST_UNREACHABLE, 0x00, ATYP_IPV4])
+                + b"\x00\x00\x00\x00\x00\x00"
+            )
+            return
+
+        client.sendall(
+            bytes([SOCKS_VERSION, REP_OK, 0x00, ATYP_IPV4]) + b"\x00\x00\x00\x00\x00\x00"
+        )
+        client.settimeout(None)
+        with upstream:
+            pump(client, upstream)
+            client_closed = True
+    except (OSError, ConnectionError):
+        return
+    finally:
+        if not client_closed:
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        client.close()
+
+
+def read_credentials(args):
+    if args.credentials_stdin:
+        data = sys.stdin.read().split("\n")
+        if len(data) < 2:
+            raise SystemExit("rg-socks-auth-relay: stdin needs username then password")
+        return data[0], data[1]
+    username = os.environ.get("RG_RELAY_USERNAME", "")
+    password = os.environ.get("RG_RELAY_PASSWORD", "")
+    if not username or not password:
+        raise SystemExit("rg-socks-auth-relay: no credentials supplied")
+    return username, password
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Local unauthenticated SOCKS5 front end for an authenticated upstream."
+    )
+    parser.add_argument("--port", type=int, required=True, help="127.0.0.1 port to listen on")
+    parser.add_argument("--upstream", required=True, help="upstream SOCKS5 host:port")
+    parser.add_argument(
+        "--credentials-stdin",
+        action="store_true",
+        help="read username then password from stdin instead of the environment",
+    )
+    args = parser.parse_args()
+
+    if ":" not in args.upstream:
+        raise SystemExit("rg-socks-auth-relay: --upstream must be host:port")
+    up_host, _, up_port = args.upstream.rpartition(":")
+    if not up_port.isdigit():
+        raise SystemExit("rg-socks-auth-relay: --upstream port must be numeric")
+
+    username, password = read_credentials(args)
+    upstream_cfg = Upstream(up_host, int(up_port), username, password)
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", args.port))
+    server.listen(128)
+    log(f"listening on 127.0.0.1:{args.port} -> {up_host}:{up_port}")
+
+    while True:
+        try:
+            client, _ = server.accept()
+        except KeyboardInterrupt:
+            break
+        except OSError:
+            continue
+        thread = threading.Thread(
+            target=handle_client, args=(client, upstream_cfg), daemon=True
+        )
+        thread.start()
+
+
+if __name__ == "__main__":
+    main()
