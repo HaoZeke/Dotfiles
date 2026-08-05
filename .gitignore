@@ -358,3 +358,4 @@ stub/
 .chezmoitemplates/roles/
 .chezmoitemplates/harness/
 .chezmoitemplates/lib/
+~/.claude/profiles/surf/claude-mcp-servers.json
