@@ -80,7 +80,10 @@ x_home() {
 
 dry_run=0
 proxy="${RG_LIVINGSTON_PROXY:-}"
-proxy_bypass="${RG_LIVINGSTON_PROXY_BYPASS:-*.ia.surf.nl;*.surf.nl;surf.nl;*.ia.surfsara.nl;*.surfsara.nl;surfsara.nl;<local>}"
+# teachx.ai reaches the tailnet through its own app connector, so it wants the
+# host's routes, not the tunnel. Sent through the tunnel it arrives from a
+# commercial VPN range and the site's edge blocks it.
+proxy_bypass="${RG_LIVINGSTON_PROXY_BYPASS:-*.ia.surf.nl;*.surf.nl;surf.nl;*.ia.surfsara.nl;*.surfsara.nl;surfsara.nl;*.teachx.ai;teachx.ai;<local>}"
 replace_process=1
 timedatectl_bin="${RG_LIVINGSTON_TIMEDATECTL:-timedatectl}"
 sudo_bin="${RG_LIVINGSTON_SUDO:-sudo}"
@@ -96,6 +99,7 @@ pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
 netns_proxy_addr="${RG_LIVINGSTON_NETNS_PROXY:-10.201.0.2:1080}"
+bypass_route_check="${RG_LIVINGSTON_BYPASS_ROUTE_CHECK:-starfleet.teachx.ai}"
 relay_bin="${RG_LIVINGSTON_RELAY_BIN:-$HOME/.local/bin/rg-socks-auth-relay}"
 relay_port="${RG_LIVINGSTON_RELAY_PORT:-11080}"
 relay_log="${RG_LIVINGSTON_RELAY_LOG:-$HOME/.local/state/rg-socks-auth-relay.log}"
@@ -410,6 +414,29 @@ require_us_egress() {
         "${city:-unknown}" "${region:-unknown}" "${country:-unknown}" "${ip:-unknown}" >&2
 }
 
+# Hosts on the bypass list skip the tunnel on purpose, which means their safety
+# rests on a route this script does not own. teachx.ai is reached through a
+# tailnet app connector; if that route is gone the requests do not fail, they
+# quietly leave on the local address, which is the same silent fall-through the
+# proxy flag used to produce.
+require_bypass_routes() {
+    local host ip route
+    for host in $bypass_route_check; do
+        ip="$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n 1)"
+        [ -n "$ip" ] || continue
+        route="$(ip route get "$ip" 2>/dev/null | head -n 1)"
+        case "$route" in
+            *tailscale*) continue ;;
+        esac
+        if [ "${RG_LIVINGSTON_ALLOW_LOCAL_EGRESS:-0}" = "1" ]; then
+            echo "rg-livingston-profile: $host does not route over the tailnet, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
+            continue
+        fi
+        stop_relay
+        die "$host is on the proxy bypass list but no longer routes over the tailnet, so it would leave on the local address; check tailscale status"
+    done
+}
+
 run_cmd() {
     if [ "$dry_run" -eq 1 ]; then
         quote_cmd env "${profile_env[@]}" "$@"
@@ -623,6 +650,7 @@ run_browser() {
     browser_args+=("$@")
     if [ "$dry_run" -eq 0 ]; then
         require_us_egress
+        require_bypass_routes
     fi
 
     if relay_running; then
