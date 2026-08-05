@@ -60,6 +60,25 @@ def recv_exact(sock, count):
     return b"".join(chunks)
 
 
+class DirectEgress:
+    """Open the connection here rather than forwarding to another proxy.
+
+    Used when the relay runs inside a network namespace whose only route is a
+    VPN tunnel. Every CONNECT, and every name it resolves, can then leave only
+    through that tunnel, so there is no configuration mistake that can put the
+    browser back on the local address.
+    """
+
+    def connect(self, atyp, addr_bytes, dest_port):
+        if atyp == ATYP_IPV4:
+            host = socket.inet_ntop(socket.AF_INET, addr_bytes)
+        elif atyp == ATYP_IPV6:
+            host = socket.inet_ntop(socket.AF_INET6, addr_bytes)
+        else:
+            host = addr_bytes[1:].decode("idna")
+        return socket.create_connection((host, dest_port), CONNECT_TIMEOUT)
+
+
 class Upstream:
     """An authenticated SOCKS5 proxy this relay forwards CONNECTs to."""
 
@@ -225,8 +244,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Local unauthenticated SOCKS5 front end for an authenticated upstream."
     )
-    parser.add_argument("--port", type=int, required=True, help="127.0.0.1 port to listen on")
-    parser.add_argument("--upstream", required=True, help="upstream SOCKS5 host:port")
+    parser.add_argument("--port", type=int, required=True, help="port to listen on")
+    parser.add_argument("--bind", default="127.0.0.1", help="address to listen on")
+    parser.add_argument("--upstream", help="upstream SOCKS5 host:port")
+    parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="connect from this process instead of forwarding to an upstream proxy",
+    )
     parser.add_argument(
         "--credentials-stdin",
         action="store_true",
@@ -234,20 +259,28 @@ def main():
     )
     args = parser.parse_args()
 
-    if ":" not in args.upstream:
-        raise SystemExit("rg-socks-auth-relay: --upstream must be host:port")
-    up_host, _, up_port = args.upstream.rpartition(":")
-    if not up_port.isdigit():
-        raise SystemExit("rg-socks-auth-relay: --upstream port must be numeric")
-
-    username, password = read_credentials(args)
-    upstream_cfg = Upstream(up_host, int(up_port), username, password)
+    if args.direct:
+        if args.upstream:
+            raise SystemExit("rg-socks-auth-relay: --direct takes no --upstream")
+        upstream_cfg = DirectEgress()
+        target = "direct (this namespace's routes)"
+    else:
+        if not args.upstream:
+            raise SystemExit("rg-socks-auth-relay: need --upstream or --direct")
+        if ":" not in args.upstream:
+            raise SystemExit("rg-socks-auth-relay: --upstream must be host:port")
+        up_host, _, up_port = args.upstream.rpartition(":")
+        if not up_port.isdigit():
+            raise SystemExit("rg-socks-auth-relay: --upstream port must be numeric")
+        username, password = read_credentials(args)
+        upstream_cfg = Upstream(up_host, int(up_port), username, password)
+        target = f"{up_host}:{up_port}"
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind(("127.0.0.1", args.port))
+    server.bind((args.bind, args.port))
     server.listen(128)
-    log(f"listening on 127.0.0.1:{args.port} -> {up_host}:{up_port}")
+    log(f"listening on {args.bind}:{args.port} -> {target}")
 
     while True:
         try:

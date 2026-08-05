@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-livingston-netns.tmpl).
+#
+# Give the Livingston browser a network namespace whose only route is the US
+# WireGuard tunnel, and a SOCKS5 door into it.
+#
+# The browser-proxy approach it replaces could fail open: --proxy-server is a
+# hint a browser is free to misparse, and when it does, requests leave on the
+# local address with nothing in the interface to say so. A namespace cannot
+# fail that way. Inside it there is one route and it is the tunnel, so a
+# request either leaves through Texas or does not leave.
+#
+# Everything else on the machine keeps the LAN default route: this is not a
+# full tunnel, and rg.terra, tailscale and SURF traffic are untouched.
+#
+#   sudo rg-livingston-netns up | down | status
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+set -uo pipefail
+
+NETNS="${RG_LIV_NETNS:-livingston}"
+WG_IFACE="${RG_LIV_NS_IFACE:-rg-liv-ns}"
+VETH_HOST="${RG_LIV_VETH_HOST:-rg-liv-vh}"
+VETH_NS="${RG_LIV_VETH_NS:-rg-liv-vn}"
+HOST_ADDR="${RG_LIV_HOST_ADDR:-10.201.0.1}"
+NS_ADDR="${RG_LIV_NS_ADDR:-10.201.0.2}"
+PREFIX="${RG_LIV_PREFIX:-30}"
+RELAY_PORT="${RG_LIV_RELAY_PORT:-1080}"
+MTU="${RG_LIV_MTU:-1280}"
+
+# Root runs this, so $HOME is /root. Resolve the caller's files against the
+# account that owns them: the tunnel config and the relay live in a user home,
+# and looking for them under /root is why `sudo rg-livingston-egress up` could
+# never read its own base config.
+OWNER="${SUDO_USER:-rgoswami}"
+OWNER_HOME="$(getent passwd "$OWNER" | cut -d: -f6)"
+OWNER_UID="$(id -u "$OWNER" 2>/dev/null)"
+OWNER_GID="$(id -g "$OWNER" 2>/dev/null)"
+
+BASE_CONF="${RG_LIV_BASE_CONF:-$OWNER_HOME/.config/rg-us-egress/wireguard.conf}"
+RELAY_BIN="${RG_LIV_RELAY_BIN:-$OWNER_HOME/.local/bin/rg-socks-auth-relay}"
+RELAY_LOG="${RG_LIV_RELAY_LOG:-/run/rg-livingston-netns-relay.log}"
+RELAY_PID="${RG_LIV_RELAY_PID:-/run/rg-livingston-netns-relay.pid}"
+
+die() { printf 'rg-livingston-netns: %s\n' "$*" >&2; exit 1; }
+need_root() { [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0 $*"; }
+
+conf_value() {
+    sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$BASE_CONF" | head -n 1
+}
+
+up() {
+    need_root
+    [ -r "$BASE_CONF" ] || die "base WireGuard conf not readable: $BASE_CONF"
+    [ -x "$RELAY_BIN" ] || die "relay not executable: $RELAY_BIN"
+    [ -n "$OWNER_UID" ] || die "cannot resolve uid for $OWNER"
+
+    local addrs dns wg_conf
+    addrs="$(conf_value Address)"
+    dns="$(conf_value DNS)"
+    [ -n "$addrs" ] || die "no Address in $BASE_CONF"
+
+    down >/dev/null 2>&1
+
+    ip netns add "$NETNS" || die "cannot create netns $NETNS"
+
+    # The interface is created here and then moved. WireGuard keeps its UDP
+    # socket in the namespace it was created in, so the encrypted packets still
+    # leave over the LAN while the plaintext side lives inside the namespace.
+    ip link add "$WG_IFACE" type wireguard || die "cannot create $WG_IFACE"
+
+    # wg setconf rejects the wg-quick-only keys, so hand it just the crypto.
+    wg_conf="$(mktemp)"
+    chmod 600 "$wg_conf"
+    grep -viE '^[[:space:]]*(Address|DNS|MTU|Table|PostUp|PostDown|PreUp|PreDown)[[:space:]]*=' \
+        "$BASE_CONF" >"$wg_conf"
+    wg setconf "$WG_IFACE" "$wg_conf" || { rm -f "$wg_conf"; die "wg setconf failed"; }
+    rm -f "$wg_conf"
+
+    ip link set "$WG_IFACE" netns "$NETNS" || die "cannot move $WG_IFACE into $NETNS"
+    ip -n "$NETNS" link set lo up
+    ip -n "$NETNS" link set "$WG_IFACE" mtu "$MTU"
+
+    local addr
+    IFS=',' read -ra addr <<<"$addrs"
+    for a in "${addr[@]}"; do
+        a="$(printf '%s' "$a" | tr -d '[:space:]')"
+        [ -n "$a" ] || continue
+        ip -n "$NETNS" addr add "$a" dev "$WG_IFACE"
+    done
+    ip -n "$NETNS" link set "$WG_IFACE" up
+    ip -n "$NETNS" route add default dev "$WG_IFACE"
+    ip -n "$NETNS" -6 route add default dev "$WG_IFACE" 2>/dev/null || true
+
+    # A door into the namespace for the browser, which stays outside it.
+    ip link add "$VETH_HOST" type veth peer name "$VETH_NS" || die "cannot create veth"
+    ip link set "$VETH_NS" netns "$NETNS"
+    ip addr add "$HOST_ADDR/$PREFIX" dev "$VETH_HOST"
+    ip link set "$VETH_HOST" up
+    ip -n "$NETNS" addr add "$NS_ADDR/$PREFIX" dev "$VETH_NS"
+    ip -n "$NETNS" link set "$VETH_NS" up
+
+    # Resolvers reachable only through the tunnel, so name lookups cannot leak
+    # to the LAN resolver either.
+    install -d -m 0755 "/etc/netns/$NETNS"
+    if [ -n "$dns" ]; then
+        : >"/etc/netns/$NETNS/resolv.conf"
+        local server
+        IFS=',' read -ra server <<<"$dns"
+        for s in "${server[@]}"; do
+            s="$(printf '%s' "$s" | tr -d '[:space:]')"
+            [ -n "$s" ] && printf 'nameserver %s\n' "$s" >>"/etc/netns/$NETNS/resolv.conf"
+        done
+    fi
+
+    # The relay runs unprivileged inside the namespace. It has no upstream
+    # proxy and no credentials: its route table is what sends traffic to Texas.
+    ip netns exec "$NETNS" \
+        setpriv --reuid="$OWNER_UID" --regid="$OWNER_GID" --clear-groups \
+        "$RELAY_BIN" --bind "$NS_ADDR" --port "$RELAY_PORT" --direct \
+        >>"$RELAY_LOG" 2>&1 &
+    echo $! >"$RELAY_PID"
+
+    local attempt
+    for attempt in $(seq 1 20); do
+        if timeout 2 bash -c "cat < /dev/null > /dev/tcp/$NS_ADDR/$RELAY_PORT" 2>/dev/null; then
+            printf 'rg-livingston-netns up: socks5://%s:%s -> %s (default route on LAN, untouched)\n' \
+                "$NS_ADDR" "$RELAY_PORT" "$WG_IFACE"
+            return 0
+        fi
+        sleep 0.3
+    done
+    die "relay did not come up inside $NETNS; see $RELAY_LOG"
+}
+
+down() {
+    need_root
+    if [ -f "$RELAY_PID" ]; then
+        kill "$(cat "$RELAY_PID")" 2>/dev/null || true
+        rm -f "$RELAY_PID"
+    fi
+    ip netns pids "$NETNS" 2>/dev/null | while read -r pid; do
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null
+    done
+    ip netns delete "$NETNS" >/dev/null 2>&1 || true
+    ip link delete "$VETH_HOST" >/dev/null 2>&1 || true
+    ip link delete "$WG_IFACE" >/dev/null 2>&1 || true
+    rm -rf "/etc/netns/$NETNS"
+    printf 'rg-livingston-netns down\n'
+}
+
+status() {
+    echo "== namespace =="
+    ip netns list 2>/dev/null | grep -w "$NETNS" || echo "  (absent)"
+    echo "== routes inside the namespace (must be $WG_IFACE only) =="
+    ip netns exec "$NETNS" ip route show 2>/dev/null || echo "  (none)"
+    echo "== handshake =="
+    ip netns exec "$NETNS" wg show "$WG_IFACE" latest-handshakes 2>/dev/null || echo "  (no tunnel)"
+    echo "== relay door =="
+    if timeout 2 bash -c "cat < /dev/null > /dev/tcp/$NS_ADDR/$RELAY_PORT" 2>/dev/null; then
+        echo "  socks5://$NS_ADDR:$RELAY_PORT open"
+    else
+        echo "  socks5://$NS_ADDR:$RELAY_PORT closed"
+    fi
+    echo "== host default route (must be LAN) =="
+    ip -4 route show default | head -1
+    echo "== egress through the namespace =="
+    curl -fsS --max-time 10 --proxy "socks5h://$NS_ADDR:$RELAY_PORT" https://ipinfo.io/json 2>/dev/null \
+        | sed -n 's/.*"\(ip\|city\|region\|country\)": *"\([^"]*\)".*/  \1=\2/p' \
+        || echo "  (unreachable)"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+    up) up ;;
+    down) down ;;
+    status) status ;;
+    *) echo "usage: $0 {up|down|status}" >&2; exit 2 ;;
+esac
