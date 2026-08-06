@@ -29,17 +29,11 @@
   ;; all -- and the force-exit chord cannot help, because the wedged process is
   ;; not reading it either. Whichever keyboard is not the daily driver stays
   ;; ungrabbed as the way back in.
-{{- if eq .chezmoi.hostname "rgSURFLat" }}
-  ;; Docked: the external keyboard is the one typed on, so it gets the
-  ;; remapping and the built-in keyboard is the escape hatch.
-  linux-dev-names-include (
-    "Dell KB216 Wired Keyboard"
-  )
-{{- else }}
+  ;; The built-in keyboard is the one typed on. Any external keyboard stays
+  ;; ungrabbed and is therefore the way back in.
   linux-dev-names-include (
     "AT Translated Set 2 keyboard"
   )
-{{- end }}
   linux-continue-if-no-devs-found no
   ;; On Colemak, physical 'u' key produces 'l', so tell kanata
   ;; which keycode sends the 'u' keysym for unicode input (Ctrl+Shift+U)
