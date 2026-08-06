@@ -29,10 +29,23 @@
   ;; all -- and the force-exit chord cannot help, because the wedged process is
   ;; not reading it either. Whichever keyboard is not the daily driver stays
   ;; ungrabbed as the way back in.
-  ;; The built-in keyboard is the one typed on. Any external keyboard stays
-  ;; ungrabbed and is therefore the way back in.
+  ;; Every real keyboard, so the layout is the same whichever one is typed on.
+  ;; Listed by name rather than by path: a path match survives neither a change
+  ;; of USB port nor a second keyboard, and a keyboard that is silently left out
+  ;; types raw QWERTY with no Extend layer, which reads as the remapping being
+  ;; broken rather than as never having covered it.
+  ;;
+  ;; Named explicitly rather than letting kanata autodetect, so the hotkey and
+  ;; consumer-control nodes these keyboards also publish stay out of the grab.
+  ;;
+  ;; Recovery, since nothing is left ungrabbed: this kanata can wedge with the
+  ;; process still alive, and a grabbed keyboard forwards nothing while that
+  ;; lasts. Reach the machine over ssh and `systemctl --user stop kanata`; the
+  ;; grabs release on exit. The force-exit chord will not help, because a
+  ;; wedged process is not reading it either.
   linux-dev-names-include (
     "AT Translated Set 2 keyboard"
+    "Dell KB216 Wired Keyboard"
   )
   linux-continue-if-no-devs-found no
   ;; On Colemak, physical 'u' key produces 'l', so tell kanata
