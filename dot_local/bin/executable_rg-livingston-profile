@@ -183,15 +183,41 @@ load_proxy_from_netns() {
     [ -z "$proxy" ] || return 0
     host="${netns_proxy_addr%:*}"
     port="${netns_proxy_addr##*:}"
-    if (exec 3<>"/dev/tcp/$host/$port") 2>/dev/null; then
+    # Bounded, because "is the door there" must not become "wait for TCP to give
+    # up". When the namespace is down and a full tunnel is up, this address has
+    # no route and the packets are swallowed rather than refused, so an
+    # unbounded connect hangs the launcher for minutes with nothing on screen.
+    if timeout 2 bash -c "exec 3<>/dev/tcp/$host/$port" 2>/dev/null; then
         proxy="socks5://$netns_proxy_addr"
         return 0
     fi
     return 1
 }
 
+# Cached so a launch asks the network where it comes out at most once.
+host_egress_json=""
+host_egress_country() {
+    if [ -z "$host_egress_json" ]; then
+        host_egress_json="$("$curl_bin" -fsS --max-time 15 https://ipinfo.io/json 2>/dev/null || true)"
+    fi
+    json_field "$host_egress_json" country
+}
+
 load_proxy() {
-    load_proxy_from_netns || load_proxy_from_pass
+    load_proxy_from_netns && return 0
+
+    # A proxy is a means, not the goal. When the host is already on a tunnel out
+    # of the country the browser needs nothing added, and insisting on one is
+    # how a working machine gets refused: the remaining proxy route points at an
+    # upstream that no longer answers, so building it can only turn a correct
+    # launch into a failed one.
+    if [ "$(host_egress_country)" = "US" ]; then
+        proxy=""
+        proxy_needs_relay=0
+        return 0
+    fi
+
+    load_proxy_from_pass
 }
 
 load_proxy_from_pass() {
@@ -338,9 +364,13 @@ fetch_egress_json() {
         case "$curl_proxy" in
             socks5://*) curl_proxy="socks5h://${curl_proxy#socks5://}" ;;
         esac
-        "$curl_bin" -fsS --max-time 8 --proxy "$curl_proxy" https://ipinfo.io/json 2>/dev/null
+        "$curl_bin" -fsS --max-time 15 --proxy "$curl_proxy" https://ipinfo.io/json 2>/dev/null
     else
-        "$curl_bin" -fsS --max-time 4 https://ipinfo.io/json 2>/dev/null
+        # Generous, because a refusal to launch is the failure mode here. On a
+        # full tunnel the round trip crosses an ocean and the resolver ahead of
+        # it can be slow, so a tight budget reports "cannot tell" for a machine
+        # that is in fact exiting exactly where it should.
+        "$curl_bin" -fsS --max-time 15 https://ipinfo.io/json 2>/dev/null
     fi
 }
 
@@ -635,9 +665,13 @@ run_browser() {
         assert_browser_proxy_safe "$proxy"
         browser_args+=("--proxy-server=$proxy")
         browser_args+=("--proxy-bypass-list=$proxy_bypass")
-    elif [ "$dry_run" -eq 0 ]; then
-        die "no proxy configured; refusing to launch a Livingston browser straight onto the local address"
     fi
+    # No proxy is not automatically wrong: when the host itself is on a full
+    # tunnel, the browser leaves the country without one, and demanding a proxy
+    # there refuses a launch that was already correct. The egress check below
+    # measures whichever path applies, through the proxy when there is one and
+    # directly when there is not, so the question it answers is the one that
+    # matters: where does this browser's traffic come out.
 
     if [ "$browser_name" = "vivaldi" ]; then
         browser_args+=("--start-maximized")
