@@ -369,6 +369,32 @@ cd_uid=$(
         }' |
         head -n 1
 )
+
+# The unit file is not a reliable place to read the uid back from. ctrld
+# rewrites its own unit on install and upgrade, and the form it writes points at
+# a config file instead of carrying the upstreams on the command line, so the
+# uid vanishes from the unit and every later run of this script aborts here on
+# a machine whose DNS is otherwise working. The sealed config is the source
+# that survives that, so ask it before giving up.
+if [ -z "$cd_uid" ]; then
+    for cd_conf in \
+        "{{ .chezmoi.homeDir }}/.local/share/rg-dns/private/ctrld.toml" \
+        "{{ .chezmoi.homeDir }}/.local/share/terra-dns/private/ctrld.toml" \
+        /etc/controld/ctrld.toml; do
+        [ -r "$cd_conf" ] || continue
+        cd_uid=$(
+            grep -oE 'https://76\.76\.(2|10)\.22/[A-Za-z0-9]+' "$cd_conf" 2>/dev/null |
+                head -n 1 |
+                sed 's#.*/##'
+        )
+        [ -n "$cd_uid" ] && break
+    done
+fi
+
+if [ -z "$cd_uid" ]; then
+    printf 'no Control D resolver uid found; unseal the vault or pass RG_CD_UID\n' >&2
+fi
+cd_uid="${RG_CD_UID:-$cd_uid}"
 test -n "$cd_uid"
 
 step "start Control D high-port resolver"
