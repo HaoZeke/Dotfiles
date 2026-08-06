@@ -14,12 +14,20 @@
 
 (defcfg
   process-unmapped-keys yes
-  ;; Exclusively grab the built-in keyboard so sway never sees the raw
-  ;; QWERTY events alongside kanata's Colemak-remapped uinput output.
-  ;; Kanata opens this path with EVIOCGRAB; the grab releases
-  ;; automatically when kanata exits, so the built-in keyboard becomes
-  ;; live in sway again on crash -- that is the fallback path.
-  linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd
+  ;; Exclusively grab the keyboards so sway never sees the raw QWERTY events
+  ;; alongside kanata's Colemak-remapped uinput output. Kanata opens these with
+  ;; EVIOCGRAB; the grab releases automatically when kanata exits, so the
+  ;; keyboards become live in sway again on crash -- that is the fallback path.
+  ;;
+  ;; Matched by name rather than by path. A single built-in path silently left
+  ;; every external keyboard unmapped: plugging one in produced QWERTY with no
+  ;; Extend layer and no CapsLock Backspace, which reads as the remapping
+  ;; having broken rather than as never having covered that keyboard. Names
+  ;; also survive a move between USB ports, which by-path does not.
+  linux-dev-names-include (
+    "AT Translated Set 2 keyboard"
+    "Dell KB216 Wired Keyboard"
+  )
   linux-continue-if-no-devs-found no
   ;; On Colemak, physical 'u' key produces 'l', so tell kanata
   ;; which keycode sends the 'u' keysym for unicode input (Ctrl+Shift+U)
