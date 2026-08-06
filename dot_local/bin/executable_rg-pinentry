@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-pinentry).
+#
+# Pick a pinentry that can draw where the request actually came from.
+#
+# gpg-agent runs one pinentry for every caller, and a single hardcoded choice
+# cannot serve them all. A curses pinentry has nowhere to draw when the caller
+# is a GUI program or a background service, and it does not fail politely: gpg
+# reports "Inappropriate ioctl for device" and the decrypt fails. On a laptop
+# that runs both a graphical session and unattended jobs, that means Emacs dies
+# during init and anything reading the vault gets nothing, while the key sits
+# there perfectly usable.
+#
+# gpg-agent passes the caller's DISPLAY and tty through to this process, so the
+# environment here describes the caller, not the agent.
+
+set -u
+
+GUI_PINENTRY="${RG_PINENTRY_GUI:-/usr/bin/pinentry-gnome3}"
+TTY_PINENTRY="${RG_PINENTRY_TTY:-/usr/bin/pinentry-curses}"
+
+runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+have_gui() {
+    [ -x "$GUI_PINENTRY" ] || return 1
+    [ -n "${DISPLAY:-}" ] && return 0
+    [ -n "${WAYLAND_DISPLAY:-}" ] && return 0
+    return 1
+}
+
+have_tty() {
+    [ -x "$TTY_PINENTRY" ] || return 1
+    [ -n "${GPG_TTY:-}" ] && return 0
+    [ -t 0 ] && return 0
+    return 1
+}
+
+session_has_display() {
+    # No caller-supplied display and no tty: an unattended job. If a graphical
+    # session is running, prompting on it beats failing, because somebody is
+    # sitting in front of it.
+    compgen -G "$runtime_dir/wayland-*" >/dev/null 2>&1 && return 0
+    compgen -G "/tmp/.X11-unix/X*" >/dev/null 2>&1 && return 0
+    return 1
+}
+
+if have_gui; then
+    exec "$GUI_PINENTRY" "$@"
+fi
+
+if have_tty; then
+    exec "$TTY_PINENTRY" "$@"
+fi
+
+if session_has_display && [ -x "$GUI_PINENTRY" ]; then
+    # Give the graphical session a display to draw on; the agent did not pass
+    # one because the caller had none.
+    export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+    export DISPLAY="${DISPLAY:-:0}"
+    exec "$GUI_PINENTRY" "$@"
+fi
+
+exec "$TTY_PINENTRY" "$@"
