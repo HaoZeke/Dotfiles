@@ -19,15 +19,27 @@
   ;; EVIOCGRAB; the grab releases automatically when kanata exits, so the
   ;; keyboards become live in sway again on crash -- that is the fallback path.
   ;;
-  ;; Matched by name rather than by path. A single built-in path silently left
-  ;; every external keyboard unmapped: plugging one in produced QWERTY with no
-  ;; Extend layer and no CapsLock Backspace, which reads as the remapping
-  ;; having broken rather than as never having covered that keyboard. Names
-  ;; also survive a move between USB ports, which by-path does not.
+  ;; Matched by name rather than by path, which survives a move between USB
+  ;; ports. Exactly one keyboard is left out of the grab on purpose.
+  ;;
+  ;; This kanata wedges: the poll loop stops remapping while the process stays
+  ;; alive, which is why a watchdog exists to bounce it. A grabbed keyboard
+  ;; forwards nothing while that lasts, so grabbing every keyboard on the
+  ;; machine turns a recoverable wedge into a machine you cannot type on at
+  ;; all -- and the force-exit chord cannot help, because the wedged process is
+  ;; not reading it either. Whichever keyboard is not the daily driver stays
+  ;; ungrabbed as the way back in.
+{{- if eq .chezmoi.hostname "rgSURFLat" }}
+  ;; Docked: the external keyboard is the one typed on, so it gets the
+  ;; remapping and the built-in keyboard is the escape hatch.
   linux-dev-names-include (
-    "AT Translated Set 2 keyboard"
     "Dell KB216 Wired Keyboard"
   )
+{{- else }}
+  linux-dev-names-include (
+    "AT Translated Set 2 keyboard"
+  )
+{{- end }}
   linux-continue-if-no-devs-found no
   ;; On Colemak, physical 'u' key produces 'l', so tell kanata
   ;; which keycode sends the 'u' keysym for unicode input (Ctrl+Shift+U)
