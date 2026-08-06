@@ -3,8 +3,15 @@
 {{ if eq .chezmoi.os "darwin" -}}
 pinentry-program /usr/local/bin/pinentry-mac
 {{ else if eq .chezmoi.os "linux" -}}
-{{ if or (eq .chezmoi.hostname "rgam5terra") (eq .chezmoi.hostname "rgSURFLat") -}}
+{{ if eq .chezmoi.hostname "rgam5terra" -}}
+# Headless: there is never a display to draw on.
 pinentry-program /usr/bin/pinentry-curses
+{{ else if eq .chezmoi.hostname "rgSURFLat" -}}
+# Runs a graphical session and unattended jobs at the same time, so the choice
+# has to follow the caller. A fixed curses pinentry has nowhere to draw for a
+# GUI or background caller and fails the decrypt outright, which takes Emacs
+# init and every vault reader down with it.
+pinentry-program {{ .chezmoi.homeDir }}/.local/bin/rg-pinentry
 {{ else -}}
 pinentry-program /usr/bin/pinentry-gnome3
 {{ end -}}
@@ -13,7 +20,7 @@ allow-preset-passphrase
 allow-loopback-pinentry
 
 {{ if eq .chezmoi.hostname "rgam5terra" -}}
-# Always-on serve box (vault-tools serve --git-sync, unattended commits): one
+# Always-on serve box (long-running service, unattended commits): one
 # interactive prime per week covers it instead of every 8 hours.
 default-cache-ttl 86400
 max-cache-ttl 604800
