@@ -5,7 +5,7 @@
 set -eo pipefail
 # nounset off: x-cmd sources private vars before init
 export PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${HOME}/.cargo/bin:${HOME}/.opencode/bin:${PATH}"
-log() { printf 'chezmoi rgsurflat-devtools: %s\n' "$*"; }
+log() { printf 'devtools: %s\n' "$*"; }
 
 mkdir -p "${HOME}/.local/bin"
 
@@ -102,10 +102,14 @@ fi
 [ ! -f "${HOME}/.x-cmd.root/X" ] || . "${HOME}/.x-cmd.root/X"
 
 if command -v x >/dev/null 2>&1 || [[ -f "${HOME}/.x-cmd.root/X" ]]; then
+  # Registry names, which are not always the command name: the binary for
+  # bottom is btm and the binary for miller is mlr. Asking for the command
+  # name gets "not found pkg meta information" and the tool silently never
+  # arrives.
   tools=(
-    atuin bat btm delta difft dust eza fd grex hyperfine hexyl navi ouch
+    atuin bat bottom delta difft dust eza fd grex hyperfine hexyl navi ouch
     pueue starship tokei watchexec zoxide
-    bun fzf uv vale shfmt miller pandoc
+    bun fzf uv vale shfmt miller pandoc sd
   )
   for item in "${tools[@]}"; do
     x env use "$item" 2>/dev/null \
@@ -126,6 +130,27 @@ if ! command -v zoxide >/dev/null 2>&1; then
   if ! command -v zoxide >/dev/null 2>&1; then
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh \
       | bash 2>/dev/null || log "WARN: zoxide fallback failed"
+  fi
+fi
+
+# ---------- gibo (not carried by the x-cmd registry) ----------
+if ! command -v gibo >/dev/null 2>&1; then
+  log "installing gibo from its release tarball"
+  gibo_tag=$(curl -fsSL https://api.github.com/repos/simonwhitaker/gibo/releases/latest 2>/dev/null \
+    | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -n 1)
+  if [[ -n "$gibo_tag" ]]; then
+    gibo_tmp=$(mktemp -d)
+    if curl -fsSL -o "$gibo_tmp/gibo.tgz" \
+        "https://github.com/simonwhitaker/gibo/releases/download/${gibo_tag}/gibo_Linux_x86_64.tar.gz" \
+        && tar -C "$gibo_tmp" -xzf "$gibo_tmp/gibo.tgz" gibo; then
+      install -m755 "$gibo_tmp/gibo" "${HOME}/.local/bin/gibo"
+      log "gibo ${gibo_tag} installed"
+    else
+      log "WARN: gibo download failed"
+    fi
+    rm -rf "$gibo_tmp"
+  else
+    log "WARN: could not resolve latest gibo tag"
   fi
 fi
 
