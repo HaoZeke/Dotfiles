@@ -121,6 +121,23 @@ ro_if_present "$home/.local/bin"
 ro_if_present "$home/.bun"
 ro_if_present "$home/.npm-global"
 ro_if_present "$home/.nvm"
+# Where the tools are actually installed. A launcher on PATH is usually a
+# symlink into a versioned directory elsewhere, and binding the link without its
+# target fails with "No such file or directory" naming a command that plainly
+# exists. Resolved rather than listed, so a tool installed anywhere under the
+# home directory works without being named here and nothing goes stale when an
+# installer changes its layout. Read-only: a tool should run from its
+# installation, not rewrite it.
+seen_dirs=""
+for link in "$home/.local/bin"/* "$home/.bun/bin"/*; do
+    [ -L "$link" ] || continue
+    resolved="$(readlink -f -- "$link" 2>/dev/null)" || continue
+    case "$resolved" in "$home"/*) ;; *) continue ;; esac
+    dir="$(dirname -- "$resolved")"
+    case ":$seen_dirs:" in *":$dir:"*) continue ;; esac
+    seen_dirs="$seen_dirs:$dir"
+    ro_if_present "$dir"
+done
 
 # Seat state, writable because sessions and caches are written here.
 rw_if_present "$home/.grok"
@@ -131,6 +148,26 @@ for extra in ${allow_paths+"${allow_paths[@]}"}; do
     [ -e "$extra" ] || die "--allow path does not exist: $extra"
     args+=(--bind "$extra" "$extra")
 done
+
+# Bind whatever the command actually resolves to. Launchers are commonly
+# symlinks on PATH pointing into a checkout elsewhere, and binding the link
+# without its target produces "No such file or directory" naming the command
+# that plainly exists, because inside here it points at nothing.
+target="$(command -v -- "$1" 2>/dev/null || true)"
+if [ -n "$target" ]; then
+    real="$(readlink -f -- "$target" 2>/dev/null || printf '%s' "$target")"
+    real_dir="$(dirname -- "$real")"
+    case "$real_dir" in
+        "$home"/*)
+            # Bind the project the launcher lives in, not just its bin
+            # directory, since a launcher generally reads files beside itself.
+            project="$real_dir"
+            [ "$(basename -- "$real_dir")" = "bin" ] && project="$(dirname -- "$real_dir")"
+            printf '%s\n' "${allow_paths[@]:-}" | grep -qxF "$project" 2>/dev/null \
+                || args+=(--ro-bind "$project" "$project")
+            ;;
+    esac
+fi
 
 # Deliberately absent, and worth naming so the list is auditable rather than
 # implied: ssh keys, gpg keys, the password store, the dotfiles vault, mail,
