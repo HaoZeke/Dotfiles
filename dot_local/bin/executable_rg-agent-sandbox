@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-agent-sandbox).
+#
+# Run a coding agent so that the only files it can read are the ones the work
+# needs.
+#
+# An agent that uploads context can only upload what it can open. Trusting it to
+# choose well puts every key, token and unrelated repo on the machine one bad
+# heuristic away from leaving; a filesystem that does not contain them removes
+# the question. The home directory inside here is an empty tmpfs with a short
+# list of things bound back in, so anything not named below is not merely
+# unreadable, it does not exist.
+#
+#   rg-agent-sandbox [--allow PATH]... [--net none] -- COMMAND [ARGS...]
+#
+# The working directory is bound read-write. Everything else defaults to out.
+
+set -euo pipefail
+
+die() {
+    echo "rg-agent-sandbox: $*" >&2
+    exit 2
+}
+
+command -v bwrap >/dev/null 2>&1 || die "bubblewrap (bwrap) is not installed"
+
+allow_paths=()
+net_mode="share"
+workdir="$PWD"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --allow)
+            [ $# -ge 2 ] || die "--allow needs a path"
+            allow_paths+=("$2")
+            shift 2
+            ;;
+        --net)
+            [ $# -ge 2 ] || die "--net needs share or none"
+            net_mode="$2"
+            shift 2
+            ;;
+        --workdir)
+            [ $# -ge 2 ] || die "--workdir needs a path"
+            workdir="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -h | --help)
+            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            die "unknown argument: $1"
+            ;;
+    esac
+done
+
+[ $# -gt 0 ] || die "no command given (use -- COMMAND ...)"
+[ -d "$workdir" ] || die "working directory does not exist: $workdir"
+
+home="$HOME"
+runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+args=(
+    --unshare-all
+    --die-with-parent
+    --new-session
+    # System, read-only. The agent needs an interpreter and CA roots, not the
+    # ability to modify either.
+    --ro-bind /usr /usr
+    --ro-bind /etc/ssl /etc/ssl
+    --ro-bind /etc/ca-certificates /etc/ca-certificates
+    --ro-bind /etc/resolv.conf /etc/resolv.conf
+    --ro-bind /etc/hosts /etc/hosts
+    --ro-bind /etc/nsswitch.conf /etc/nsswitch.conf
+    --ro-bind /etc/passwd /etc/passwd
+    --ro-bind /etc/group /etc/group
+    --symlink usr/lib /lib
+    --symlink usr/lib64 /lib64
+    --symlink usr/bin /bin
+    --symlink usr/sbin /sbin
+    --proc /proc
+    --dev /dev
+    --tmpfs /tmp
+    # An empty home. Everything the agent may see is bound back in below.
+    --tmpfs "$home"
+    --setenv HOME "$home"
+    --setenv GROKOS_SANDBOX 1
+)
+
+if [ "$net_mode" = "share" ]; then
+    args+=(--share-net)
+elif [ "$net_mode" != "none" ]; then
+    die "--net takes share or none"
+fi
+
+# The work itself.
+args+=(--bind "$workdir" "$workdir")
+
+# Runtime sockets the seat protocol needs, without exposing the rest of the
+# runtime directory.
+[ -d "$runtime" ] && args+=(--tmpfs "$runtime")
+
+ro_if_present() {
+    [ -e "$1" ] && args+=(--ro-bind "$1" "$1")
+    return 0
+}
+
+rw_if_present() {
+    [ -e "$1" ] && args+=(--bind "$1" "$1")
+    return 0
+}
+
+# Interpreters and the agent's own code, read-only: it should run from these,
+# not rewrite them.
+ro_if_present "$home/.local/bin"
+ro_if_present "$home/.bun"
+ro_if_present "$home/.npm-global"
+ro_if_present "$home/.nvm"
+
+# Seat state, writable because sessions and caches are written here.
+rw_if_present "$home/.grok"
+rw_if_present "$home/.pi"
+rw_if_present "$home/.hermes"
+
+for extra in ${allow_paths+"${allow_paths[@]}"}; do
+    [ -e "$extra" ] || die "--allow path does not exist: $extra"
+    args+=(--bind "$extra" "$extra")
+done
+
+# Deliberately absent, and worth naming so the list is auditable rather than
+# implied: ssh keys, gpg keys, the password store, the dotfiles vault, mail,
+# browser profiles, and every repository other than the working directory.
+
+exec bwrap "${args[@]}" --chdir "$workdir" -- "$@"
