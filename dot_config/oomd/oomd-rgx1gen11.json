@@ -42,37 +42,11 @@
         {
           "name": "kill_by_memory_size_or_growth",
           "args": {
-            "cgroup": "user.slice/*",
+            "cgroup": "user.slice/*/user@*.service/*",
             "recursive": "true",
             "size_threshold": "35",
             "min_growth_ratio": "1.20",
             "post_action_delay": "20"
-          }
-        }
-      ]
-    },
-    {
-      "name": "swap pressure guard",
-      "post_action_delay": "30",
-      "detectors": [
-        [
-          "swap is low",
-          {
-            "name": "swap_free",
-            "args": {
-              "threshold_pct": "15"
-            }
-          }
-        ]
-      ],
-      "actions": [
-        {
-          "name": "kill_by_swap_usage",
-          "args": {
-            "cgroup": "user.slice/*",
-            "recursive": "true",
-            "threshold": "256M",
-            "post_action_delay": "30"
           }
         }
       ]
@@ -98,7 +72,7 @@
         {
           "name": "kill_by_pressure",
           "args": {
-            "cgroup": "user.slice/*",
+            "cgroup": "user.slice/*/user@*.service/*",
             "resource": "io",
             "recursive": "true",
             "post_action_delay": "20"

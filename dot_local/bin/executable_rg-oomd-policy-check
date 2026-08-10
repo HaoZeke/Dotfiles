@@ -112,11 +112,30 @@ for pattern in \
     '"pressure_rising_beyond"' \
     '"pressure_above"' \
     '"kill_by_memory_size_or_growth"' \
-    '"kill_by_swap_usage"' \
+    'user.slice/\*/user@\*.service/\*' \
     '"resource": "memory"' \
     '"resource": "io"'; do
     require_pattern /etc/oomd/oomd.json "$pattern" "facebook oomd profile contains $pattern"
 done
+
+profile=$(host_path /etc/oomd/oomd.json)
+if [[ -r $profile ]]; then
+    if rg -q '"cgroup": "user.slice/\*"' "$profile"; then
+        fail "facebook oomd profile must not kill user.slice/* (that destroys session-*.scope)"
+    else
+        pass "facebook oomd kills stay under user@*.service (seat spared)"
+    fi
+    if rg -q '"name": "swap_free"' "$profile"; then
+        fail "facebook oomd profile must not use swap_free (zram fullness is not OOM)"
+    else
+        pass "facebook oomd profile has no swap_free detector"
+    fi
+    if rg -q '"name": "kill_by_swap_usage"' "$profile"; then
+        fail "facebook oomd profile must not use kill_by_swap_usage"
+    else
+        pass "facebook oomd profile has no kill_by_swap_usage action"
+    fi
+fi
 
 require_pattern /etc/systemd/system.conf.d/20-rg-resource-accounting.conf \
     'DefaultMemoryAccounting=true' \
