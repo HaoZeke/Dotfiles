@@ -3,7 +3,9 @@
 
 set -euo pipefail
 
-repo=${1:-"$HOME/.local/share/chezmoi"}
+script_dir=$(cd "$(dirname "$0")" && pwd)
+repo=${1:-$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null || true)}
+[ -n "$repo" ] || fail "missing source repo (pass as arg1)"
 script="$repo/dot_local/bin/executable_rg-oomd-policy-check"
 profile="$repo/dot_config/oomd/oomd-rgx1gen11.json"
 
@@ -148,7 +150,7 @@ rg -q 'exit 1' "$install_helper" \
 
 onchange="$repo/.chezmoiscripts/run_onchange_linux_rgx1gen11_oomd.sh.tmpl"
 test -r "$onchange" || fail "missing rgx1gen11 Meta oomd onchange script"
-rg -q 'eq \.chezmoi\.hostname "rgx1gen11"' "$onchange" \
+rg -F '.chezmoi.hostname "rgx1gen11"' "$onchange" \
     || fail "oomd onchange must be gated to rgx1gen11"
 rg -q 'rg-oomd-install-from-stage' "$onchange" \
     || fail "oomd onchange must install from terra stage when binary missing"
@@ -163,5 +165,16 @@ rg -q 'oomd --check-config' "$stage_helper" \
 # Profile must not ship reap_memory (unknown to Meta oomd 0.5.0)
 ! rg -q 'reap_memory' "$profile" \
     || fail "oomd-rgx1gen11.json must not use reap_memory (invalid on v0.5.0)"
+
+# Seat protection: zram+swappiness=100 fills swap by design. swap_free then
+# kill_by_swap_usage on user.slice/* destroys session-*.scope (sway+herdr).
+rg -q 'user.slice/\*/user@\*.service/\*' "$profile" \
+    || fail "oomd-rgx1gen11.json must target user@*.service, not the seat"
+! rg -q '"cgroup": "user.slice/\*"' "$profile" \
+    || fail "oomd-rgx1gen11.json must not kill unrestricted user.slice/*"
+! rg -q '"name": "swap_free"' "$profile" \
+    || fail "oomd-rgx1gen11.json must not use swap_free on zram"
+! rg -q '"name": "kill_by_swap_usage"' "$profile" \
+    || fail "oomd-rgx1gen11.json must not use kill_by_swap_usage"
 
 printf 'ok\n'
