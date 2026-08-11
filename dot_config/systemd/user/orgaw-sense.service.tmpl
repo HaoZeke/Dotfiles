@@ -21,4 +21,22 @@ KillMode=control-group
 
 [Install]
 WantedBy=sway-session.target
+{{- else if eq .chezmoi.hostname "rgSURFLat" -}}
+# SURF desk. Linger + default.target so SSH-only days still sample
+# git; discover_swaysock picks up the office compositor when it exists.
+[Unit]
+Description=orgaw-sense evidence sampler (rg.surf)
+Documentation=https://github.com/HaoZeke/orgaw
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/orgaw-sense
+Restart=on-failure
+RestartSec=5
+PassEnvironment=SWAYSOCK WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_ID
+KillMode=control-group
+
+[Install]
+WantedBy=default.target
 {{- end -}}
