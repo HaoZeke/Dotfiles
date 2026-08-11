@@ -26,8 +26,14 @@ df -h /
 echo
 echo "=== step 1: disk alarm ==="
 install -m 0644 "$STAGED" /etc/netdata/health.d/disk-space-buildbot.conf
-systemctl reload netdata
-echo "installed and reloaded"
+# netdata.service declares CanReload=no, so systemctl cannot reload it.
+# netdatacli re-reads the health files in place and keeps collected history.
+if netdatacli reload-health; then
+    echo "installed, health config reloaded"
+else
+    echo "netdatacli failed, restarting the service instead"
+    systemctl restart netdata
+fi
 
 echo
 echo "=== step 2: delete root timeline snapshots ==="
