@@ -1,20 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo=${1:-$(cd "$(dirname "$0")/../.." && pwd)}
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
-doctor="$repo/dot_local/bin/executable_rg-net-doctor"
-alert="$repo/dot_local/bin/executable_rg-net-doctor-alert"
-heal="$repo/dot_local/bin/executable_rg-net-heal"
-carveout="$repo/dot_local/bin/executable_rg-haozeke-tunnel-carveout.tmpl"
-tailnet="$repo/dot_local/bin/executable_rg-us-tailnet"
-tailscaled="$repo/dot_config/systemd/user/tailscale-haozeke.service.tmpl"
-provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
+if [[ $# -gt 0 ]]; then
+    repo=$1
+    bindir="$repo/dot_local/bin"
+    doctor="$bindir/executable_rg-net-doctor"
+    alert="$bindir/executable_rg-net-doctor-alert"
+    heal="$bindir/executable_rg-net-heal"
+    carveout="$bindir/executable_rg-haozeke-tunnel-carveout.tmpl"
+    tailnet="$bindir/executable_rg-us-tailnet"
+    tailscaled="$repo/dot_config/systemd/user/tailscale-haozeke.service.tmpl"
+    provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
+    guard="$bindir/executable_rg-us-egress-guard.tmpl"
+    guard_test="$bindir/executable_rg-us-egress-guard-selftest"
+    alert_test="$bindir/executable_rg-net-doctor-alert-selftest"
+else
+    bindir=$(cd "$(dirname "$0")" && pwd)
+    doctor="$bindir/rg-net-doctor"
+    alert="$bindir/rg-net-doctor-alert"
+    heal="$bindir/rg-net-heal"
+    carveout="$bindir/rg-haozeke-tunnel-carveout"
+    tailnet="$bindir/rg-us-tailnet"
+    tailscaled="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/tailscale-haozeke.service"
+    provision=
+    guard="$bindir/rg-us-egress-guard"
+    guard_test="$bindir/rg-us-egress-guard-selftest"
+    alert_test="$bindir/rg-net-doctor-alert-selftest"
+fi
 
 bash -n "$doctor" "$alert" "$heal" "$tailnet" \
-    "$repo/dot_local/bin/executable_rg-net-doctor-alert-selftest" \
-    "$repo/dot_local/bin/executable_rg-us-egress-guard-selftest"
+    "$alert_test" "$guard_test"
 
 rg -q '^RuntimeDirectory=tailscale-haozeke$' "$tailscaled" \
     || fail "missing tailscale runtime directory"
@@ -23,11 +40,13 @@ rg -F -q -- '--socket=%t/tailscale-haozeke/tailscaled.sock' "$tailscaled" \
 ! rg -q '/tmp/ts-hz\.sock' "$doctor" "$heal" "$carveout" "$tailnet" "$tailscaled" \
     || fail "a stale /tmp tailscale socket consumer remains"
 
-rg -q '^Wants=network-online.target rg-us-egress-guard.timer$' "$provision" \
-    || fail "managed egress does not pull in its guard timer"
-rg -q '^PartOf=rg-us-egress.service$' "$provision" \
-    || fail "guard timer lifecycle is not coupled to managed egress"
-rg -q 'is-active --quiet "\$managed_unit"' "$repo/dot_local/bin/executable_rg-us-egress-guard.tmpl" \
+if [[ -n $provision ]]; then
+    rg -q '^Wants=network-online.target rg-us-egress-guard.timer$' "$provision" \
+        || fail "managed egress does not pull in its guard timer"
+    rg -q '^PartOf=rg-us-egress.service$' "$provision" \
+        || fail "guard timer lifecycle is not coupled to managed egress"
+fi
+rg -q 'is-active --quiet "\$managed_unit"' "$guard" \
     || fail "guard does not treat an active managed egress as desired"
 
 rg -q 'grok models.*grok-4\.6|grok-4\.6.*grok models' "$doctor" \
@@ -41,7 +60,7 @@ rg -q 'sha256sum' "$alert" || fail "alert does not hash the normalized BAD set"
 rg -q 'LC_ALL=C sort -u' "$alert" || fail "alert does not normalize the complete BAD set"
 rg -q 'stack recovered' "$alert" || fail "alert has no recovery notification"
 
-bash "$repo/dot_local/bin/executable_rg-us-egress-guard-selftest"
-bash "$repo/dot_local/bin/executable_rg-net-doctor-alert-selftest"
+bash "$guard_test"
+bash "$alert_test"
 
 printf 'ok\n'
