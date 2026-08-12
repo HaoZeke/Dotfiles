@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp" >/dev/null 2>&1 || true' EXIT
+script_dir=$(cd "$(dirname "$0")" && pwd)
+alert="$script_dir/rg-net-doctor-alert"
+if [ ! -f "$alert" ]; then
+    alert="$script_dir/executable_rg-net-doctor-alert"
+fi
+test -f "$alert" || fail "alert wrapper not found"
+
+cat >"$tmp/doctor" <<'EOF'
+#!/usr/bin/env bash
+printf '%b' "${RG_TEST_DOCTOR_OUTPUT:-}"
+exit "${RG_TEST_DOCTOR_RC:-0}"
+EOF
+cat >"$tmp/notify" <<'EOF'
+#!/usr/bin/env bash
+printf '%q ' "$@" >>"$RG_TEST_NOTIFICATIONS"
+printf '\n' >>"$RG_TEST_NOTIFICATIONS"
+EOF
+cat >"$tmp/logger" <<'EOF'
+#!/usr/bin/env bash
+while [ "$#" -gt 0 ]; do shift; done
+cat >>"$RG_TEST_JOURNAL"
+EOF
+chmod 755 "$tmp/doctor" "$tmp/notify" "$tmp/logger"
+
+notifications="$tmp/notifications"
+journal="$tmp/journal"
+state="$tmp/state"
+run_alert() {
+    RG_NET_DOCTOR="$tmp/doctor" \
+    RG_NET_DOCTOR_NOTIFY="$tmp/notify" \
+    RG_NET_DOCTOR_LOGGER="$tmp/logger" \
+    RG_NET_DOCTOR_STATE_DIR="$state" \
+    RG_TEST_NOTIFICATIONS="$notifications" \
+    RG_TEST_JOURNAL="$journal" \
+    RG_TEST_DOCTOR_RC="$1" \
+    RG_TEST_DOCTOR_OUTPUT="$2" \
+        bash "$alert" >/dev/null 2>&1
+    return 0
+}
+
+run_alert 1 $'  BAD beta\n  BAD alpha\n'
+test "$(wc -l <"$notifications")" = 1 || fail "first failure must notify once"
+
+run_alert 1 $'  BAD alpha\n  BAD beta\n  BAD alpha\n'
+test "$(wc -l <"$notifications")" = 1 || fail "unchanged normalized BAD set must stay quiet"
+
+run_alert 1 $'  BAD beta\n  BAD gamma\n'
+test "$(wc -l <"$notifications")" = 2 || fail "changed BAD set must notify"
+
+run_alert 0 $'  OK stack healthy\n'
+test "$(wc -l <"$notifications")" = 3 || fail "first recovery must notify"
+tail -n 1 "$notifications" | grep -q 'stack.*recovered' || fail "recovery notification missing"
+
+run_alert 0 $'  OK stack healthy\n'
+test "$(wc -l <"$notifications")" = 3 || fail "repeated healthy run must stay quiet"
+
+printf 'ok\n'

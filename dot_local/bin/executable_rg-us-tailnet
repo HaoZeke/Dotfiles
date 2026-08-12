@@ -99,9 +99,10 @@ status() {
         "$(tailscale status --json 2>/dev/null | jq -r '.Self.TailscaleIPs[0] // "?"')"
     printf '== personal tailnet (user daemon, rg.terra) ==\n'
     printf '  routing : direct, never marked by this tool\n'
-    if command -v tailscale >/dev/null && [ -S /tmp/ts-hz.sock ]; then
+    hz_sock="${RG_HZ_TS_SOCK:-/run/user/1001/tailscale-haozeke/tailscaled.sock}"
+    if command -v tailscale >/dev/null && [ -S "$hz_sock" ]; then
         printf '  peers   : %s reachable\n' \
-            "$(tailscale --socket /tmp/ts-hz.sock status 2>/dev/null | grep -cvE 'offline|^$' || echo '?')"
+            "$(tailscale --socket "$hz_sock" status 2>/dev/null | grep -cvE 'offline|^$' || echo '?')"
     fi
 }
 

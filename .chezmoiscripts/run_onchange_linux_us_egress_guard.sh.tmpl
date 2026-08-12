@@ -2,7 +2,7 @@
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
 # Install US-egress WireGuard helpers without making base networking depend on
 # the full-tunnel path. Deliberate autostart is controlled by
-# RG_US_EGRESS_AUTOSTART=1 in chezmoi's environment:
+# RG_US_EGRESS_AUTOSTART=1 in the deployment environment:
 #   1. networkd is told not to reap foreign routes/policy rules, so a networkd
 #      restart cannot flush wg-quick's full-tunnel routing.
 #   2. the tunnel + tailscale interfaces are marked Unmanaged so networkd never
@@ -13,7 +13,7 @@
 #      the 30s serialized guard covers its job without the restart races.
 set -euo pipefail
 
-# Root provisioning must never hang a plain `chezmoi apply` on a password
+# Root provisioning must never hang a noninteractive configuration apply on a password
 # prompt. Without cached sudo credentials, skip cleanly; `rg-net provision`
 # is the explicit interactive path.
 if ! sudo -n true 2>/dev/null; then
@@ -105,6 +105,7 @@ EOF
 install_root /etc/systemd/system/rg-us-egress-guard.timer 0644 <<'EOF'
 [Unit]
 Description=Periodic check that the US-egress tunnel stays up
+PartOf=rg-us-egress.service
 
 [Timer]
 OnBootSec=20s
@@ -121,7 +122,7 @@ EOF
 install_root /etc/systemd/system/rg-us-egress.service 0644 <<'EOF'
 [Unit]
 Description=rg US (Houston) full-tunnel egress
-Wants=network-online.target
+Wants=network-online.target rg-us-egress-guard.timer
 After=network-online.target tailscaled.service
 
 [Service]

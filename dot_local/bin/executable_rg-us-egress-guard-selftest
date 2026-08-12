@@ -16,14 +16,20 @@ if [ ! -f "$GUARD" ]; then
     [ -f "$guard_template" ] || guard_template="$SCRIPT_DIR/../bin/executable_rg-us-egress-guard.tmpl"
     [ -f "$guard_template" ] || fail "rg-us-egress-guard template not found"
     GUARD="$tmp/rg-us-egress-guard"
-    chezmoi execute-template <"$guard_template" >"$GUARD"
+    printf '#!/usr/bin/env bash\n' >"$GUARD"
+    awk 'emit || /^set -uo pipefail$/ { emit = 1; print }' "$guard_template" >>"$GUARD"
 fi
 
-# Mock systemctl: is-enabled honours RG_TEST_WG_ENABLED/RG_TEST_SERVICE_ENABLED;
-# restart is logged.
+# Mock systemctl: is-active/is-enabled honour their test markers; restart is logged.
 cat >"$tmp/systemctl.sh" <<'SC'
 #!/usr/bin/env bash
 case "$1" in
+is-active)
+    case "$3" in
+    rg-us-egress.service) [ "${RG_TEST_SERVICE_ACTIVE:-0}" = "1" ] && exit 0 || exit 1 ;;
+    *) exit 1 ;;
+    esac
+    ;;
 is-enabled)
     case "$3" in
     wg-quick@*) [ "${RG_TEST_WG_ENABLED:-0}" = "1" ] && exit 0 || exit 1 ;;
@@ -110,10 +116,12 @@ restore_state="$tmp/restore-state"
 hz_state="$tmp/hz-endpoints"
 printf '203.0.113.7\n' >"$hz_state"
 
-# run_case WG_ENABLED SERVICE_ENABLED IFACE_UP ROUTE_OK QUALITY -> echoes the restart count
+# run_case WG_ENABLED SERVICE_ENABLED IFACE_UP ROUTE_OK QUALITY [SERVICE_ACTIVE]
+# -> echoes the restart count
 run_case() {
     : >"$calls"
     RG_TEST_WG_ENABLED="$1" RG_TEST_SERVICE_ENABLED="$2" RG_TEST_IFACE_UP="$3" RG_TEST_ROUTE_OK="$4" RG_TEST_QUALITY="$5" \
+        RG_TEST_SERVICE_ACTIVE="${6:-0}" \
         RG_TEST_CALLS="$calls" \
         RG_GUARD_SYSTEMCTL="$tmp/systemctl.sh" \
         RG_GUARD_IP="$tmp/ip.sh" \
@@ -143,6 +151,9 @@ test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 
 n=$(run_case 0 1 1 1 ok); [ "${n:-0}" = "0" ] || fail "managed egress service marker must not restart a healthy tunnel (got $n)"
 test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
     || fail "managed egress service marker must keep Control D upstreams on the local uplink"
+n=$(run_case 0 0 1 1 ok 1); [ "${n:-0}" = "0" ] || fail "active managed service must keep a healthy tunnel guarded (got $n)"
+test "$(grep -c '^route replace 76\.76\.\(2\.22\|10\.22\)/32 via 10\.81\.17\.39 dev wlan0 src 10\.81\.17\.57 metric 40$' "$calls" 2>/dev/null || true)" = "2" \
+    || fail "active managed service must keep Control D upstreams on the local uplink"
 RG_TEST_LOCKED=1 n=$(run_case 1 0 1 0 ok); [ "${n:-0}" = "0" ] || fail "locked guard must not restart (got $n)"
 test "$(grep -c '^route replace' "$calls" 2>/dev/null || true)" = "0" \
     || fail "locked guard must not alter Control D routes"

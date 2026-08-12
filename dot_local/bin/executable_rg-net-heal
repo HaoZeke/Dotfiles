@@ -391,17 +391,18 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
     done
 fi
 
-# --- 3. Haozeke (cosmolab / Terra) tailnet underlay carve-out ---------------
-# The second tailscaled runs userspace-networking on /tmp/ts-hz.sock; its peer
+# --- 3. Personal Terra tailnet underlay carve-out ----------------------------
+# The second tailscaled runs userspace-networking on its user runtime socket; its peer
 # transport must stay on the LOCAL uplink, or the direct path dies inside the
 # US 0/0 tunnel and the peer becomes unreachable. The desired set is recorded
 # so the x.ai anti-carve below never deletes an IP the haozeke path needs
 # (Terra reachability outranks x.ai visibility on shared infrastructure).
 hz_underlay_set="$(mktemp)"
 HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-/usr/local/sbin/rg-haozeke-derp-targets}"
-if [ -n "${gw:-}" ] && [ -n "${dev:-}" ] && [ -S /tmp/ts-hz.sock ] \
+HZ_SOCK="${RG_HZ_TS_SOCK:-/run/user/1001/tailscale-haozeke/tailscaled.sock}"
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ] && [ -S "$HZ_SOCK" ] \
     && command -v tailscale >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
-    hz_status_json="$(tailscale --socket=/tmp/ts-hz.sock status --json 2>/dev/null || true)"
+    hz_status_json="$(tailscale --socket="$HZ_SOCK" status --json 2>/dev/null || true)"
     printf '%s\n' "$hz_status_json" | python3 -c '
 import json
 import sys
@@ -434,7 +435,7 @@ for peer in (data.get("Peer") or {}).values():
     done
 
     if [ -x "$HZ_DERP_TARGETS" ] && [ -n "$hz_status_json" ]; then
-        hz_derp_map_json="$(tailscale --socket=/tmp/ts-hz.sock debug derp-map 2>/dev/null || true)"
+        hz_derp_map_json="$(tailscale --socket="$HZ_SOCK" debug derp-map 2>/dev/null || true)"
         if [ -n "$hz_derp_map_json" ]; then
             hz_derp_ips="$("$HZ_DERP_TARGETS" \
                 <(printf '%s\n' "$hz_status_json") \
