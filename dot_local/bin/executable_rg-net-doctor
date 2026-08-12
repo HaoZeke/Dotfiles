@@ -4,7 +4,7 @@
 #   + haozeke userspace tailscale SOCKS :1055 (rg.terra path).
 set -uo pipefail
 
-HZ_SOCK="${RG_HZ_TS_SOCK:-/tmp/ts-hz.sock}"
+HZ_SOCK="${RG_HZ_TS_SOCK:-/run/user/1001/tailscale-haozeke/tailscaled.sock}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
 HZ_TABLE="${RG_HZ_TABLE:-5151}"
 HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-$HOME/.local/bin/rg-haozeke-derp-targets}"
@@ -303,15 +303,14 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     bad "tailscale-marked traffic on LAN: ${marked:-no route}"
   fi
 
-  printf '== x.ai model visibility (THE acceptance gate) ==\n'
-  # The models are gated on the Houston presence; v9-stickynote visible in the
-  # authenticated model list is the user-defined ground truth that the whole
-  # x.ai path works. Everything else in this section is supporting detail.
+  printf '== Grok configuration/catalog ==\n'
+  # Catalog visibility confirms the configured name, not inference access.
+  # Deployment acceptance runs a bounded grok-4.6 xhigh inference separately.
   if command -v grok >/dev/null 2>&1 && [ -r "$HOME/.grok/auth.json" ]; then
-    if timeout 20 grok models 2>/dev/null | grep -q 'v9-stickynote'; then
-      ok "v9-stickynote visible in grok models"
+    if timeout 20 grok models 2>/dev/null | grep -q 'grok-4.6'; then
+      ok "grok-4.6 visible in grok models (catalog only)"
     else
-      bad "v9-stickynote NOT visible — x.ai sees the wrong exit or auth expired (check: rg-net doctor route/pin lines, then grok login)"
+      bad "grok-4.6 not visible in grok models (catalog/config check)"
     fi
   else
     wrn "grok CLI or auth missing; model-visibility gate skipped"

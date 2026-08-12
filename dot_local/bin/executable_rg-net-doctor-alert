@@ -6,13 +6,34 @@
 set -uo pipefail
 
 DOCTOR="${RG_NET_DOCTOR:-$HOME/.local/bin/rg-net-doctor}"
+NOTIFY="${RG_NET_DOCTOR_NOTIFY:-notify-send}"
+LOGGER="${RG_NET_DOCTOR_LOGGER:-logger}"
+STATE_DIR="${RG_NET_DOCTOR_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/rg-net-doctor}"
+STATUS_FILE="$STATE_DIR/status"
+HASH_FILE="$STATE_DIR/bad-set.sha256"
+
+mkdir -p "$STATE_DIR"
 
 out="$("$DOCTOR" 2>&1)"
 rc=$?
-printf '%s\n' "$out" | logger -t rg-net-doctor
+printf '%s\n' "$out" | "$LOGGER" -t rg-net-doctor
 if [ "$rc" -ne 0 ]; then
-    bad="$(printf '%s\n' "$out" | grep -E '^  BAD' | head -n 5)"
-    notify-send -u critical "net-doctor: stack regression" \
-        "${bad:-doctor failed; journalctl -t rg-net-doctor}" 2>/dev/null || true
+    bad="$(printf '%s\n' "$out" | grep -E '^  BAD' | LC_ALL=C sort -u)"
+    [ -n "$bad" ] || bad="doctor failed; journalctl -t rg-net-doctor"
+    bad_hash="$(printf '%s\n' "$bad" | sha256sum | awk '{print $1}')"
+    previous_status="$(cat "$STATUS_FILE" 2>/dev/null || true)"
+    previous_hash="$(cat "$HASH_FILE" 2>/dev/null || true)"
+    if [ "$previous_status" != failed ] || [ "$previous_hash" != "$bad_hash" ]; then
+        "$NOTIFY" -u critical "net-doctor: stack regression" "$bad" 2>/dev/null || true
+    fi
+    printf '%s\n' "$bad_hash" >"$HASH_FILE.tmp" && mv "$HASH_FILE.tmp" "$HASH_FILE"
+    printf '%s\n' failed >"$STATUS_FILE.tmp" && mv "$STATUS_FILE.tmp" "$STATUS_FILE"
+else
+    previous_status="$(cat "$STATUS_FILE" 2>/dev/null || true)"
+    if [ "$previous_status" = failed ]; then
+        "$NOTIFY" -u normal "net-doctor: stack recovered" \
+            "All live network checks have recovered." 2>/dev/null || true
+    fi
+    printf '%s\n' healthy >"$STATUS_FILE.tmp" && mv "$STATUS_FILE.tmp" "$STATUS_FILE"
 fi
 exit "$rc"

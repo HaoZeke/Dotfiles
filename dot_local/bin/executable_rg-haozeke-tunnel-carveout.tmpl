@@ -27,8 +27,8 @@ MARK="${RG_HZ_MARK:-0x5151}"
 TABLE="${RG_HZ_TABLE:-5151}"
 PREF="${RG_HZ_PREF:-5190}"          # above wg-quick rules (~32764), distinct from tailscale (5210+)
 NFT_TABLE="rg_hz_carveout"           # family inet, isolated from any host firewall
-SVC_MATCH="${RG_HZ_SVC_MATCH:-ts-hz.sock}"   # uniquely identifies the userspace tailscaled
-TS_SOCK="${RG_HZ_TS_SOCK:-/tmp/ts-hz.sock}"  # haozeke userspace tailscaled control socket
+SVC_MATCH="${RG_HZ_SVC_MATCH:-tailscale-haozeke/tailscaled.sock}"   # uniquely identifies the userspace tailscaled
+TS_SOCK="${RG_HZ_TS_SOCK:-/run/user/1001/tailscale-haozeke/tailscaled.sock}"  # haozeke userspace tailscaled control socket
 STATE="${RG_HZ_STATE:-/run/rg-hz-carveout.endpoints}"  # /32 backstops we installed
 
 die(){ printf 'rg-haozeke-carveout: %s\n' "$*" >&2; exit 1; }

@@ -35,8 +35,8 @@ IP="${RG_GUARD_IP:-ip}"
 CURL="${RG_GUARD_CURL:-curl}"
 FLOCK="${RG_GUARD_FLOCK:-flock}"
 LOG="${RG_GUARD_LOG:-logger -t rg-us-egress-guard}"
-CARVEOUT="${RG_HZ_CARVEOUT:-/home/rgoswami/.local/bin/rg-haozeke-tunnel-carveout}"
-ENDPOINT_PIN="${RG_US_EGRESS_ENDPOINT_PIN:-/home/rgoswami/.local/bin/rg-us-egress-endpoint-pin}"
+CARVEOUT="${RG_HZ_CARVEOUT:-{{ .chezmoi.homeDir }}/.local/bin/rg-haozeke-tunnel-carveout}"
+ENDPOINT_PIN="${RG_US_EGRESS_ENDPOINT_PIN:-{{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-endpoint-pin}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
 # Mutual-exclusion lock: the periodic timer and manual invocations can overlap,
 # so serialize them (set to "none" to disable, e.g. under test).
@@ -222,7 +222,9 @@ restore_egress() {
 }
 
 egress_desired() {
-    $SYSTEMCTL is-enabled --quiet "$unit" || $SYSTEMCTL is-enabled --quiet "$managed_unit"
+    $SYSTEMCTL is-active --quiet "$managed_unit" \
+        || $SYSTEMCTL is-enabled --quiet "$unit" \
+        || $SYSTEMCTL is-enabled --quiet "$managed_unit"
 }
 
 # Desired-up marker: the unit is enabled. Skip entirely otherwise.

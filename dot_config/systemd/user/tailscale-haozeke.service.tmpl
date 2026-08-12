@@ -8,11 +8,13 @@ StartLimitBurst=8
 
 [Service]
 Type=simple
+RuntimeDirectory=tailscale-haozeke
+RuntimeDirectoryMode=0700
 # Bind SOCKS to IPv4 loopback only — "localhost" can resolve to ::1 and break
 # OpenBSD nc -x 127.0.0.1:1055 clients after dual-stack flaps.
-# Socket path /tmp/ts-hz.sock is part of the public contract (carveout SVC_MATCH,
-# doctor, coexist-test); do not rename without a coordinated bump.
-ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=127.0.0.1:1055 --port=0 --statedir=%h/.local/share/tailscale-haozeke --socket=/tmp/ts-hz.sock
+# The user manager owns the socket directory, so stale /tmp cleanup cannot
+# detach clients from a live daemon.
+ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=127.0.0.1:1055 --port=0 --statedir=%h/.local/share/tailscale-haozeke --socket=%t/tailscale-haozeke/tailscaled.sock
 # Clear ambient proxies so DERP/control never inherit a broken session proxy.
 Environment=ALL_PROXY= HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= HTTPS_PROXY= all_proxy=
 Restart=always

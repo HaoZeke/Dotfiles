@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-$(cd "$(dirname "$0")/../.." && pwd)}
+fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+
+doctor="$repo/dot_local/bin/executable_rg-net-doctor"
+alert="$repo/dot_local/bin/executable_rg-net-doctor-alert"
+heal="$repo/dot_local/bin/executable_rg-net-heal"
+carveout="$repo/dot_local/bin/executable_rg-haozeke-tunnel-carveout.tmpl"
+tailnet="$repo/dot_local/bin/executable_rg-us-tailnet"
+tailscaled="$repo/dot_config/systemd/user/tailscale-haozeke.service.tmpl"
+provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
+
+bash -n "$doctor" "$alert" "$heal" "$tailnet" \
+    "$repo/dot_local/bin/executable_rg-net-doctor-alert-selftest" \
+    "$repo/dot_local/bin/executable_rg-us-egress-guard-selftest"
+
+rg -q '^RuntimeDirectory=tailscale-haozeke$' "$tailscaled" \
+    || fail "missing tailscale runtime directory"
+rg -F -q -- '--socket=%t/tailscale-haozeke/tailscaled.sock' "$tailscaled" \
+    || fail "tailscale socket is not under the user runtime directory"
+! rg -q '/tmp/ts-hz\.sock' "$doctor" "$heal" "$carveout" "$tailnet" "$tailscaled" \
+    || fail "a stale /tmp tailscale socket consumer remains"
+
+rg -q '^Wants=network-online.target rg-us-egress-guard.timer$' "$provision" \
+    || fail "managed egress does not pull in its guard timer"
+rg -q '^PartOf=rg-us-egress.service$' "$provision" \
+    || fail "guard timer lifecycle is not coupled to managed egress"
+rg -q 'is-active --quiet "\$managed_unit"' "$repo/dot_local/bin/executable_rg-us-egress-guard.tmpl" \
+    || fail "guard does not treat an active managed egress as desired"
+
+rg -q 'grok models.*grok-4\.6|grok-4\.6.*grok models' "$doctor" \
+    || fail "doctor does not report grok-4.6 catalog visibility"
+! rg -q 'v9-stickynote' "$doctor" \
+    || fail "doctor still probes the retired model alias"
+! rg -q '^[[:space:]]*(sudo[[:space:]]+)?(systemctl (start|restart)|ip .*route (add|replace|del)|nft (add|delete))' "$doctor" \
+    || fail "doctor contains a network mutation"
+
+rg -q 'sha256sum' "$alert" || fail "alert does not hash the normalized BAD set"
+rg -q 'LC_ALL=C sort -u' "$alert" || fail "alert does not normalize the complete BAD set"
+rg -q 'stack recovered' "$alert" || fail "alert has no recovery notification"
+
+bash "$repo/dot_local/bin/executable_rg-us-egress-guard-selftest"
+bash "$repo/dot_local/bin/executable_rg-net-doctor-alert-selftest"
+
+printf 'ok\n'
