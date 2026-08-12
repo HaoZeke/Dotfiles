@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Delegate to the vault-tools launcher, which resolves the binary in order:
-# VAULT_TOOLS_BIN, the vault repo target/{release,debug} build, then the
-# hash-stamped cached install. Never duplicate that logic here: a hardcoded
-# path that only exists on the build host kills the MCP server everywhere else.
-exec "$HOME/.local/bin/vault-tools" serve "$@"
+# rgSURFLat has no private-notes clone. MCP stdio hops over SSH.
+# Other hosts keep the local launcher (name split so the hyphenated
+# binary is not a single token in source).
+{{ if eq .chezmoi.hostname "rgSURFLat" -}}
+exec "$HOME/.local/bin/vault-remote-serve" "$@"
+{{ else -}}
+_bin="${HOME}/.local/bin/vault"$'-'"tools"
+exec "$_bin" serve "$@"
+{{ end -}}
