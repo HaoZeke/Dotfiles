@@ -3,8 +3,14 @@
 # Per-LSP memory ceiling so a runaway rust-analyzer on a large workspace
 # cannot starve the whole user session. Paired with the PATH shim at
 # ~/.local/bin/rust-analyzer (dot_local/bin/executable_rust-analyzer).
+#
+# Ceilings cover the whole slice, not one instance, and each editor or session
+# starts its own server. Observed peaks here are 3.3G to 7.6G per instance, so
+# a 10G soft ceiling never throttled and a 14G hard ceiling was half the
+# machine. Swap is worse than the kill it postpones: an indexer paging against
+# a full swap file stalls the compositor, so it gets none.
 [Slice]
-MemoryHigh=10G
-MemoryMax=14G
-MemorySwapMax=6G
+MemoryHigh=3G
+MemoryMax=4G
+MemorySwapMax=0
 CPUWeight=50
