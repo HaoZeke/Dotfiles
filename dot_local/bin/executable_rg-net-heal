@@ -437,7 +437,11 @@ for peer in (data.get("Peer") or {}).values():
     if [ -x "$HZ_DERP_TARGETS" ] && [ -n "$hz_status_json" ]; then
         hz_derp_map_json="$(tailscale --socket="$HZ_SOCK" debug derp-map 2>/dev/null || true)"
         if [ -n "$hz_derp_map_json" ]; then
-            hz_derp_ips="$("$HZ_DERP_TARGETS" \
+            # Pin every region, not just the one in use. The daemon rehomes on
+            # its own, and a pin that follows the active set leaves the new
+            # region behind the tunnel until the next tick -- which is what
+            # makes it rehome again.
+            hz_derp_ips="$("$HZ_DERP_TARGETS" --all \
                 <(printf '%s\n' "$hz_status_json") \
                 <(printf '%s\n' "$hz_derp_map_json") 2>/dev/null)" \
                 || { log "haozeke DERP target selection failed"; hz_derp_ips=""; }

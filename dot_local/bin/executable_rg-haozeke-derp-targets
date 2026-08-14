@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Print public DERP IPv4 nodes used by a userspace Tailscale daemon."""
+"""Print public DERP IPv4 nodes for a userspace Tailscale daemon.
+
+By default only the regions currently in use are printed, which is what an
+audit wants. Pass --all for every region in the map, which is what pinning
+wants: the daemon changes region on its own, and a pin that tracks only the
+active set leaves the new region uncarved until the next tick. Losing DERP is
+itself what makes the daemon switch region, so the gap feeds itself. The whole
+map is under a hundred addresses, so pinning all of it costs nothing and has
+no such window.
+"""
 
 from __future__ import annotations
 
@@ -39,7 +48,11 @@ def relay_codes(status: dict[str, Any]) -> set[str]:
     return codes
 
 
-def active_derp_ipv4(status: dict[str, Any], derp_map: dict[str, Any]) -> list[ipaddress.IPv4Address]:
+def active_derp_ipv4(
+    status: dict[str, Any],
+    derp_map: dict[str, Any],
+    every_region: bool = False,
+) -> list[ipaddress.IPv4Address]:
     active_codes = relay_codes(status)
     addresses: set[ipaddress.IPv4Address] = set()
     regions = derp_map.get("Regions")
@@ -47,7 +60,9 @@ def active_derp_ipv4(status: dict[str, Any], derp_map: dict[str, Any]) -> list[i
         return []
 
     for region in regions.values():
-        if not isinstance(region, dict) or region.get("RegionCode") not in active_codes:
+        if not isinstance(region, dict):
+            continue
+        if not every_region and region.get("RegionCode") not in active_codes:
             continue
         nodes = region.get("Nodes")
         if not isinstance(nodes, list):
@@ -65,17 +80,22 @@ def active_derp_ipv4(status: dict[str, Any], derp_map: dict[str, Any]) -> list[i
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
-        print("usage: rg-haozeke-derp-targets STATUS_JSON DERP_MAP_JSON", file=sys.stderr)
+    args = [arg for arg in argv[1:] if arg != "--all"]
+    every_region = "--all" in argv[1:]
+    if len(args) != 2:
+        print(
+            "usage: rg-haozeke-derp-targets [--all] STATUS_JSON DERP_MAP_JSON",
+            file=sys.stderr,
+        )
         return 2
     try:
-        status = load_json(Path(argv[1]))
-        derp_map = load_json(Path(argv[2]))
+        status = load_json(Path(args[0]))
+        derp_map = load_json(Path(args[1]))
     except ValueError as error:
         print(f"rg-haozeke-derp-targets: {error}", file=sys.stderr)
         return 1
 
-    for address in active_derp_ipv4(status, derp_map):
+    for address in active_derp_ipv4(status, derp_map, every_region):
         print(address)
     return 0
 
