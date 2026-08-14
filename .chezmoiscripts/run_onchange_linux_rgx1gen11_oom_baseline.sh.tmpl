@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Give the user session manager a negative oom_score_adj baseline.
+#
+# An unprivileged manager can raise oom_score_adj but never lower it below its
+# own, and the user manager starts at 100. Every OOMScoreAdjust=-500 in the
+# user units is therefore inert -- dunst and kanata both ask for -500 and run
+# at 100 -- so under memory pressure the whole session is a more attractive
+# kill target than a tty-spawned compiler. Setting the manager's baseline is
+# what makes those existing declarations mean anything; units that should be
+# reaped first still raise themselves above it.
+set -euo pipefail
+
+# Root provisioning must never hang a noninteractive apply on a password
+# prompt, and must not half-apply either.
+if ! sudo -n true 2>/dev/null; then
+    echo "no cached sudo credentials; skipping oom baseline" >&2
+    exit 0
+fi
+
+dropin="/etc/systemd/system/user@$(id -u).service.d/50-rg-oom-baseline.conf"
+content='# Managed centrally: see .chezmoiscripts/run_onchange_linux_rgx1gen11_oom_baseline.sh.tmpl
+# Session plumbing (compositor helpers, notification daemon, keyboard
+# remapper, relay bridges) must outlive a build or an agent session under
+# memory pressure. Without this the manager sits at 100 and nothing beneath it
+# can go lower.
+[Service]
+OOMScoreAdjust=-500
+'
+
+if ! sudo test -f "$dropin" || ! printf "%s" "$content" | sudo cmp -s - "$dropin"; then
+    tmp=$(mktemp)
+    printf "%s" "$content" >"$tmp"
+    sudo install -D -m 0644 -o root -g root "$tmp" "$dropin"
+    rm -f "$tmp"
+    sudo systemctl daemon-reload
+    echo "updated $dropin (takes effect on next login session)"
+fi
+{{- end }}
