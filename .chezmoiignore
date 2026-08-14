@@ -140,6 +140,12 @@ dot_omp/puppeteer/
 .claude/rules/conda-forge.md
 .claude/skills/conda-forge-author/**
 {{ end }}
+# Owned by the sealed store, not by this one. Two writers for one file meant
+# whichever ran last silently reverted the other: an apply would put back the
+# model the store last saw, discarding a change made in the UI. The store is
+# the single owner now, and unseal is what writes it.
+.claude/settings.json
+
 # Private assistant config (machine-specific state)
 dot_claude/backups/
 dot_claude/cache/
@@ -208,6 +214,13 @@ AGENTS.md
 .config/systemd/user/rg-ttech-backup.service
 .config/systemd/user/rg-ttech-backup.timer
 .local/bin/rg-ttech-backup
+{{ end }}
+
+# Buildbot Terra is headless and does not run the graphical Astroid client.
+# Keeping its encrypted desktop config out of the manifest avoids requiring the
+# workstation-only age identity during a buildbot apply.
+{{ if eq .chezmoi.hostname "rgam5terra" }}
+.config/astroid/**
 {{ end }}
 
 # The work laptop takes its prose configuration from a branch of the private
