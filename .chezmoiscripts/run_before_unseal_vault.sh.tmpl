@@ -1,34 +1,7 @@
 #!/usr/bin/env bash
 {{ if and (eq .setup_claude "yes") (eq .encrypted "yes") -}}
-# The sealed store lives in its own private repository, not in this one. A
-# store kept inside a public repo archives its ciphertext permanently: clones
-# and forks keep copies, and GitHub serves those objects through the fork
-# network even after a history rewrite.
-#
-# The pointer file here names that repository, and the CLI reads it, so the
-# unseal below needs no flag once the repository is present.
-set -uo pipefail
-cd "{{ .chezmoi.sourceDir }}" || exit 0
-
-STORE="$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' .nimvault 2>/dev/null | head -1 | xargs || true)"
-STORE="${STORE/#\~/$HOME}"
-
-if [[ -n "$STORE" && ! -d "$STORE/.vault" ]]; then
-    # Fresh machine. Without this the unseal below finds nothing and exits
-    # quietly, leaving the machine looking configured while every secret is
-    # missing. Say so, and try once.
-    echo "chezmoi: sealed store not present at $STORE" >&2
-    if command -v git >/dev/null 2>&1; then
-        mkdir -p "$(dirname "$STORE")"
-        if ! git clone git@github.com:HaoZeke/dotfiles-vault.git "$STORE" 2>/dev/null; then
-            echo "chezmoi: clone it by hand, then re-run apply" >&2
-        fi
-    fi
-fi
-
-# No `command -v` guard: the call already tolerates a missing binary, and
-# naming it twice bought nothing.
-if command -v gpg >/dev/null 2>&1; then
+cd "{{ .chezmoi.sourceDir }}"
+if command -v nimvault &>/dev/null && command -v gpg &>/dev/null; then
     nimvault unseal 2>/dev/null || true
 fi
 {{ end -}}
