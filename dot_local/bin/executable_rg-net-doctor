@@ -307,7 +307,21 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
   # Catalog visibility confirms the configured name, not inference access.
   # Deployment acceptance runs a bounded grok-4.6 xhigh inference separately.
   if command -v grok >/dev/null 2>&1 && [ -r "$HOME/.grok/auth.json" ]; then
-    if timeout 20 grok models 2>/dev/null | grep -q 'grok-4.6'; then
+    # `grok models` aborts on its own often enough to matter (SIGABRT, a dozen
+    # cores a day). A listing that never printed says nothing about the
+    # catalog, so retry once and report a crash as a crash: piping a dead
+    # command into grep reads as "model missing" and alarms on a config
+    # regression that did not happen.
+    grok_catalog=""
+    grok_rc=1
+    for _ in 1 2; do
+      grok_catalog=$(timeout 20 grok models 2>/dev/null)
+      grok_rc=$?
+      [ "$grok_rc" -eq 0 ] && [ -n "$grok_catalog" ] && break
+    done
+    if [ "$grok_rc" -ne 0 ] || [ -z "$grok_catalog" ]; then
+      wrn "grok models did not complete (exit ${grok_rc}); catalog unverified"
+    elif printf '%s\n' "$grok_catalog" | grep -q 'grok-4.6'; then
       ok "grok-4.6 visible in grok models (catalog only)"
     else
       bad "grok-4.6 not visible in grok models (catalog/config check)"
