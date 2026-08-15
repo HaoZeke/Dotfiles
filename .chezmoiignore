@@ -242,6 +242,10 @@ AGENTS.md
 .omp/agent/AGENTS.md
 .omp/agent/config.yml
 .omp/mcp.json
+# Its template is guarded to the laptop and renders empty here, which chezmoi
+# reads as "remove the target". This host runs the service and needs the file,
+# so leave it to the machine rather than deleting it on every apply.
+.config/orgaw/config.toml
 {{ end }}
 
 # Belt and braces for the above: even if these reappear in the source
