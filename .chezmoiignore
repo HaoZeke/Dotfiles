@@ -246,6 +246,10 @@ AGENTS.md
 # reads as "remove the target". This host runs the service and needs the file,
 # so leave it to the machine rather than deleting it on every apply.
 .config/orgaw/config.toml
+# This host runs the compiled CLI, built from its own repository; the copy
+# here is the older shell shim. Applying it replaces a 2 MB binary with a
+# 2 KB script, so the machine keeps ownership of this one.
+.local/bin/vissue
 {{ end }}
 
 # Belt and braces for the above: even if these reappear in the source
