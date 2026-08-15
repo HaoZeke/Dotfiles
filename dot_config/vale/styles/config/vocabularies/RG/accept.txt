@@ -507,3 +507,7 @@ ScalarEvolution
 lcssa
 AddRec
 PerfSmell
+dmenu
+[Rr]ofi
+[Ss]ummonable
+[Vv]issue
