@@ -4,7 +4,12 @@ Description=Timer for zazu-agent host metrics push
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=1min
+# Wall-clock rather than OnUnitActiveSec=. That form schedules relative to the
+# service's last activation, so a service left in a failed state stops re-arming
+# it: the timer reports active while its next elapse is infinity, and the push
+# stops for good with nothing to show for it. OnCalendar is independent of the
+# service's outcome, so a run that fails is retried a minute later.
+OnCalendar=*:0/1
 AccuracySec=10s
 Persistent=true
 Unit=zazu-agent-push.service
