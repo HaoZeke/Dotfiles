@@ -1,0 +1,15 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+[Unit]
+Description=Fire due calendar reminders from the local CalDAV store to Telegram
+After=network-online.target rustical.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/terra-calendar-reminders
+Nice=10
+OnFailure=terra-notify-failure@%n.service
+
+[Install]
+WantedBy=default.target
+{{- end }}

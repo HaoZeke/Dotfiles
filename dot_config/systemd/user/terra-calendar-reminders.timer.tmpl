@@ -1,0 +1,17 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
+[Unit]
+Description=Timer for calendar reminder delivery
+
+[Timer]
+OnBootSec=3min
+# Wall-clock, for the same reason as the metrics push: OnUnitActiveSec= stops
+# re-arming once the service is left failed, and a reminder that stops firing
+# looks exactly like a day with nothing due.
+OnCalendar=*:0/15
+AccuracySec=1min
+Persistent=true
+Unit=terra-calendar-reminders.service
+
+[Install]
+WantedBy=timers.target
+{{- end }}

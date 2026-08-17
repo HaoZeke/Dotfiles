@@ -1,0 +1,133 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") -}}
+#!/usr/bin/env python3
+"""Fire calendar reminders from the local CalDAV store into Telegram.
+
+A VALARM only rings where a desktop client is running to ring it, so a
+reminder that matters cannot live in the client alone. Rustical runs here on
+loopback, so this reads the events directly and hands anything due to
+terra-notify-telegram, which reaches the phone whether or not a laptop is
+awake.
+
+Each (event, alarm) pair fires once. The state file records what has gone
+out, so a reminder is not repeated on the next tick, and an alarm whose time
+passed while the host was down still fires on the next run within the grace
+window rather than being skipped silently.
+"""
+
+import base64
+import datetime as dt
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import urllib.request
+
+BASE = "http://127.0.0.1:4000"
+COLLECTION = "/caldav/principal/rgoswami/personal/"
+USER = "rgoswami"
+TOKEN_FILE = pathlib.Path.home() / ".config/rustical/app-token.evolution"
+STATE = pathlib.Path.home() / ".local/state/terra-reminders/sent"
+NOTIFY = pathlib.Path.home() / ".local/share/terra-observability/bin/terra-notify-telegram"
+# An alarm missed while the host was down still fires, but only for a day, so
+# a machine off for a week does not wake up and replay a month of reminders.
+GRACE = dt.timedelta(hours=24)
+
+
+def request(method, url, body=None, depth=None):
+    token = TOKEN_FILE.read_text().strip()
+    auth = base64.b64encode(f"{USER}:{token}".encode()).decode()
+    headers = {"Authorization": f"Basic {auth}"}
+    if depth is not None:
+        headers["Depth"] = depth
+    if body is not None:
+        headers["Content-Type"] = "application/xml"
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def unfold(text):
+    # RFC 5545 folds long lines with a leading space or tab on continuations.
+    return re.sub(r"\r?\n[ \t]", "", text)
+
+
+def parse_dt(value, params):
+    if "VALUE=DATE" in params:
+        d = dt.datetime.strptime(value, "%Y%m%d")
+        return d.replace(tzinfo=None), True
+    if value.endswith("Z"):
+        d = dt.datetime.strptime(value, "%Y%m%dT%H%M%SZ")
+        return d.replace(tzinfo=dt.timezone.utc).astimezone().replace(tzinfo=None), False
+    return dt.datetime.strptime(value, "%Y%m%dT%H%M%S"), False
+
+
+def parse_duration(text):
+    m = re.fullmatch(r"(-)?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", text)
+    if not m:
+        return None
+    sign = -1 if m.group(1) else 1
+    weeks, days, hours, mins, secs = (int(g or 0) for g in m.groups()[1:])
+    return sign * dt.timedelta(weeks=weeks, days=days, hours=hours, minutes=mins, seconds=secs)
+
+
+def events(ics):
+    """Yield (uid, summary, start, all_day, [alarm_trigger_text]) per VEVENT."""
+    for block in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", unfold(ics), re.S):
+        uid = summary = start = None
+        all_day = False
+        triggers = []
+        for line in block.splitlines():
+            name, _, rest = line.partition(":")
+            key, *params = name.split(";")
+            key = key.upper()
+            if key == "UID":
+                uid = rest.strip()
+            elif key == "SUMMARY":
+                summary = rest.strip()
+            elif key == "DTSTART":
+                start, all_day = parse_dt(rest.strip(), ";".join(params))
+            elif key == "TRIGGER":
+                triggers.append(rest.strip())
+        if uid and start:
+            yield uid, summary or "(no summary)", start, all_day, triggers
+
+
+def main():
+    now = dt.datetime.now()
+    listing = request("PROPFIND", BASE + COLLECTION, b"", depth="1")
+    hrefs = [h for h in re.findall(r"<[^>]*href>([^<]+)</[^>]*href>", listing) if h.endswith(".ics")]
+
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    sent = set(STATE.read_text().split()) if STATE.exists() else set()
+    fired = []
+
+    for href in hrefs:
+        try:
+            ics = request("GET", BASE + href)
+        except Exception as exc:  # a single unreadable object must not stop the rest
+            print(f"skip {href}: {exc}", file=sys.stderr)
+            continue
+        for uid, summary, start, all_day, triggers in events(ics):
+            for trigger in triggers or []:
+                delta = parse_duration(trigger)
+                if delta is None:
+                    continue
+                when = start + delta
+                key = f"{uid}@{trigger}@{when.isoformat()}"
+                if key in sent or not (when <= now < when + GRACE):
+                    continue
+                day = start.strftime("%Y-%m-%d") if all_day else start.strftime("%Y-%m-%d %H:%M")
+                msg = f"Reminder: {summary} ({day})"
+                subprocess.run([str(NOTIFY), msg], check=False)
+                fired.append(key)
+                print(f"fired: {msg}")
+
+    if fired:
+        with STATE.open("a") as fh:
+            fh.write("\n".join(fired) + "\n")
+
+
+if __name__ == "__main__":
+    main()
+{{- end }}
