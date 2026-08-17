@@ -6,8 +6,22 @@ ENV_FILE="${HOME}/.config/terra-observability/env"
 # shellcheck disable=SC1090
 [[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
 MSG=${1:-terra notify}
-[[ -n "${TERRA_TELEGRAM_BOT_TOKEN:-}" && -n "${TERRA_TELEGRAM_CHAT_ID:-}" ]] || exit 0
-curl -fsS -X POST "https://api.telegram.org/bot${TERRA_TELEGRAM_BOT_TOKEN}/sendMessage" \
+
+# Exit 0 on every path: this runs from OnFailure= and from canaries, and a
+# broken notifier must not mask the failure it was called to report. Say so on
+# stderr, though, so the journal records a dropped message. A silent success
+# here is indistinguishable from a delivered one, which hides an unconfigured
+# channel for as long as nobody looks.
+if [[ -z "${TERRA_TELEGRAM_BOT_TOKEN:-}" || -z "${TERRA_TELEGRAM_CHAT_ID:-}" ]]; then
+  echo "terra-notify-telegram: no credentials in $ENV_FILE, dropped: $MSG" >&2
+  exit 0
+fi
+
+if ! resp=$(curl -fsS -X POST \
+  "https://api.telegram.org/bot${TERRA_TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${TERRA_TELEGRAM_CHAT_ID}" \
-  --data-urlencode "text=$MSG" >/dev/null || true
+  --data-urlencode "text=$MSG" 2>&1); then
+  echo "terra-notify-telegram: send failed, dropped: $MSG (${resp//${TERRA_TELEGRAM_BOT_TOKEN}/<token>})" >&2
+  exit 0
+fi
 {{- end -}}
