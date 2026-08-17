@@ -32,6 +32,8 @@
 #   6. OLT carve-out: OLT can reject or mis-handle authenticated traffic from
 #      the Houston exit. Prefer the local uplink only when its HTTPS path works;
 #      otherwise omit the /32 so the reachable Houston path remains available.
+#   7. CECAM HQ (www.cecam.org): the EPFL VM blackholes TLS from the Houston
+#      egress (TCP 443 connects, handshake dies). LAN uplink gets HTTP 200.
 set -uo pipefail
 
 log() { logger -t rg-net-heal -- "$1"; }
@@ -360,6 +362,16 @@ if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
         getent ahostsv4 "$gl_host" 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
             route_local_v4 "$ip" "gitlab"
         done
+    done
+fi
+
+# --- 2d. CECAM HQ (www.cecam.org) ----------------------------------------
+# Houston egress completes TCP 443 then the TLS handshake dies. Direct LAN
+# uplink returns 200. Pin the current A and whatever www.cecam.org resolves to.
+if [ -n "${gw:-}" ] && [ -n "${dev:-}" ]; then
+    route_local_v4 "${RG_CECAM_DIRECT:-128.178.218.154}" "cecam"
+    getent ahostsv4 www.cecam.org 2>/dev/null | awk '{print $1}' | sort -u | while read -r ip; do
+        route_local_v4 "$ip" "cecam"
     done
 fi
 
