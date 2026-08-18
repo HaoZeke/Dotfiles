@@ -34,7 +34,9 @@ if ! command -v rclone >/dev/null 2>&1; then
     exit 127
 fi
 
-PCLOUD_ENTRY=$(pass show services/pcloud 2>/dev/null) || {
+# Bounded and off the caller's stdin: gpg asks for a passphrase over its own
+# socket, so an unattended run otherwise waits forever on a prompt nobody sees.
+PCLOUD_ENTRY=$(timeout 15 pass show services/pcloud 2>/dev/null </dev/null) || {
     echo "rclone-pcloud: pass entry services/pcloud missing" >&2
     exit 1
 }
@@ -59,7 +61,7 @@ export RCLONE_CONFIG_PCLOUD_PASS
 
 # Crypt-wrapped remote: zero-knowledge encryption before upload.
 # The crypt passphrase itself is in pass at local/borg-pcloud.
-CRYPT_PASS=$(pass show local/borg-pcloud 2>/dev/null | sed -n '1p') || CRYPT_PASS=""
+CRYPT_PASS=$(timeout 15 pass show local/borg-pcloud 2>/dev/null </dev/null | sed -n '1p') || CRYPT_PASS=""
 if [ -n "$CRYPT_PASS" ]; then
     export RCLONE_CONFIG_PCRYPT_TYPE=crypt
     export RCLONE_CONFIG_PCRYPT_REMOTE="pcloud:backup-rgx1gen11"
