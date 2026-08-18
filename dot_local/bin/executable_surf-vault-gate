@@ -7,6 +7,20 @@ set -u
 LOG="${HOME}/.local/state/surf-vault-gate.log"
 VT_SERVE_CMD='/home/rgoswami/.local/bin/vault-tools serve --root /home/rgoswami/Git/Gitlab/obsidian-notes'
 VISSUE_BIN='/home/rgoswami/.local/bin/vissue'
+SECRET_STORE="${HOME}/.config/rg-broker-secrets"
+SVC_VAULT="${NIMVAULT_SVC_REPO:-${HOME}/svc}"
+# A forced command runs with a minimal PATH, so the other binaries here are
+# named absolutely. This one has to be too: resolving it through PATH silently
+# failed over to a store that no longer exists, and the gate answered "no store
+# here can produce it" for a secret it was holding all along.
+NIMVAULT_BIN="${NIMVAULT_BIN:-/home/rgoswami/.local/bin/nimvault}"
+
+# Naming the binary absolutely is not enough: it shells out to helpers of its
+# own, and an age-backed vault needs `age` on PATH. A forced command starts
+# with a minimal one, so the read failed with "no age binary found" while the
+# gate itself was working perfectly.
+PATH="/home/rgoswami/.local/bin:${PATH}"
+export PATH
 
 # Entries the work laptop may read, named one by one. It holds no secrets of
 # its own; it asks for these over the tailnet and keeps the answer in memory
@@ -58,7 +72,34 @@ case "$cmd" in
         # in the log even when it was permitted.
         mkdir -p "$(dirname "$LOG")"
         printf '%s secret: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$want" >>"$LOG" 2>/dev/null
-        exec /usr/bin/pass show "$want"
+
+        # Two stores, because the two hosts that can act as broker differ in
+        # what they can decrypt without a person present. A laptop has an
+        # unlocked agent, so `pass` answers. The always-on host does not: its
+        # key needs a pinentry, which is exactly why naming it as the fallback
+        # produced a fallback that could never answer. There it reads a small
+        # store encrypted to a passphraseless key holding only allowlisted
+        # entries, so availability does not depend on somebody having logged in
+        # recently.
+        if command -v pass >/dev/null 2>&1 && pass show "$want" 2>/dev/null; then
+            exit 0
+        fi
+        # The service vault, read one entry at a time. Going through the CLI
+        # rather than gpg directly means these secrets are visible to `list`,
+        # `status` and `scan`; hand-rolled blobs beside the vault were not, so
+        # nothing could tell you what this machine was actually serving.
+        entry="$SECRET_STORE/$(printf '%s' "$want" | tr '/' '_' | sed 's/_/__/g')"
+        if [ -d "$SVC_VAULT/.vault" ] && [ -x "$NIMVAULT_BIN" ]; then
+            cd "$SVC_VAULT" || reject
+            exec "$NIMVAULT_BIN" get "$entry"
+        fi
+        # Pre-migration layout, kept so a host that has not been migrated yet
+        # still answers rather than failing closed on a secret it holds.
+        if [ -r "$entry.gpg" ]; then
+            exec gpg -q -d --batch "$entry.gpg"
+        fi
+        printf 'surf-vault-gate: %s is allowed but no store here can produce it\n' "$want" >&2
+        exit 1
         ;;
     'secret-list')
         printf '%s\n' "$SECRET_ALLOW" | sed '/^$/d'
@@ -66,7 +107,7 @@ case "$cmd" in
         ;;
 esac
 
-# only remaining shape accepted: vissue <subcommand> [args...]
+# only remaining shape accepted: the tracker CLI plus <subcommand> [args...]
 case "$cmd" in
     'vissue '*|"${VISSUE_BIN} "*) ;;
     *) reject ;;
