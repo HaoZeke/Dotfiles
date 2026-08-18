@@ -86,8 +86,6 @@ export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PATH="$PATH:{{ $texlive_dir }}/bin/x86_64-linux"
 {{- end }}
 
-export GPG_TTY=$(tty)
-
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # Emacs Stuff (cross platform)
@@ -97,7 +95,18 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
-[[ -r "$HOME/.grok/completions/bash/grok.bash" ]] && source "$HOME/.grok/completions/bash/grok.bash"
+# 6203 lines defining one function, 19 ms to parse, for a completion nothing
+# needs until the first TAB after `grok`. The stub loads the real file then
+# returns 124, which is bash's signal to retry the completion with whatever
+# handlers just appeared.
+if [[ -r "$HOME/.grok/completions/bash/grok.bash" ]]; then
+	_grok_completion_load() {
+		complete -r grok 2>/dev/null
+		source "$HOME/.grok/completions/bash/grok.bash"
+		return 124
+	}
+	complete -F _grok_completion_load grok
+fi
 # <<< grok installer <<<
 
 # Host-local shell setup, kept out of this file on purpose.
