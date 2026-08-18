@@ -71,14 +71,11 @@ fi
 export PATH="$HOME/.pixi/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 
-# Keep API keys in pass; export only when the entry exists.
-if command -v pass >/dev/null 2>&1; then
-	_deepseek_api_key=$(pass show services/deepseek-api-key 2>/dev/null | sed -n '1p') || _deepseek_api_key=
-	if [ -n "$_deepseek_api_key" ]; then
-		export DEEPSEEK_API_KEY="$_deepseek_api_key"
-	fi
-	unset _deepseek_api_key
-fi
+# DEEPSEEK_API_KEY is not exported here on purpose. `pass` on this host is
+# pass-remote, an ssh round trip to the secret broker, and an eager lookup makes
+# every interactive shell wait out a connect timeout before the prompt appears.
+# Export it in the shell that needs it:
+#   export DEEPSEEK_API_KEY=$(pass show services/deepseek-api-key)
 
 # OMP Puppeteer
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
