@@ -288,7 +288,18 @@ setup_region "$1"
 case "${2:-status}" in
     up)      need_root "$@"; up ;;
     down)    need_root "$@"; down ;;
-    refresh) need_root "$@"; refresh_set ;;
+    # A region that is not up has no set to re-resolve, so the periodic
+    # refresh reports success and does nothing. Treating it as a failure
+    # instead marks the unit failed once a minute for as long as the region
+    # stays down, which is most of the time.
+    refresh)
+        need_root "$@"
+        if nft list table inet "$NFT_TABLE" >/dev/null 2>&1; then
+            refresh_set
+        else
+            printf 'rg-geo-split: %s not up; nothing to refresh\n' "$REGION"
+        fi
+        ;;
     status)  status ;;
     *)       die "usage: $0 $REGION {up|down|status|refresh}" ;;
 esac
