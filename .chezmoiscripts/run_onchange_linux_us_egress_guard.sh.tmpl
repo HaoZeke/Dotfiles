@@ -23,6 +23,7 @@ fi
 
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
+TEACHX_SRC="$HOME/.local/bin/rg-tunnel-teachx-carveout"
 if [ ! -x "$GUARD_SRC" ]; then
     echo "chezmoi: us-egress guard script missing; skipping install." >&2
     exit 0
@@ -50,6 +51,7 @@ install_bin() {
 # Root-owned copies of the managed scripts (systemd runs them as root).
 install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
 [ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
+[ -x "$TEACHX_SRC" ] && install_bin "$TEACHX_SRC" /usr/local/sbin/rg-tunnel-teachx-carveout
 
 # (0) Audio: force the SOF driver for the Raptor Lake cAVS device. The
 # auto-selector's DMIC probe silently demotes it to legacy HDA (no internal
@@ -165,6 +167,37 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
+# (7) teachx carve-out: hold the app-connector hosts on the tailnet. The
+# addresses come from a CDN and rotate, and table 52 fills only once tailscaled
+# settles after the tunnel's network change, so a periodic re-assert covers both
+# the rotation and the bring-up ordering. `up` resolves, filters to what
+# tailscaled says it carries, and replaces host routes, so re-running it is a
+# no-op when nothing moved.
+install_root /etc/systemd/system/rg-teachx-carveout.service 0644 <<'EOF'
+[Unit]
+Description=Hold the teachx.ai app-connector hosts on the tailnet, off the US-egress tunnel
+After=network-online.target rg-us-egress.service tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-tunnel-teachx-carveout up
+EOF
+
+install_root /etc/systemd/system/rg-teachx-carveout.timer 0644 <<'EOF'
+[Unit]
+Description=Periodically re-assert the teachx.ai tailnet carve-out
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 # Keyboard: kanata is the single Colemak source (runs via user-linger, so it is
 # active even at the greeter). Keep the console/greeter keymap on plain "us" so
 # it does not re-map kanata's already-Colemak output -- that double pass was the
@@ -178,19 +211,23 @@ if [ "${RG_US_EGRESS_AUTOSTART:-0}" = "1" ]; then
     sudo systemctl enable --now rg-us-egress-guard.timer
     sudo systemctl enable --now rg-us-egress.service
     [ -x /usr/local/sbin/rg-tunnel-akamai-carveout ] && sudo systemctl enable --now rg-akamai-carveout-refresh.timer
+    [ -x /usr/local/sbin/rg-tunnel-teachx-carveout ] && sudo systemctl enable --now rg-teachx-carveout.timer
 else
     # Not opting into autostart means "do not come up at boot", not "tear down
     # the session I am sitting in". A configuration apply that stops a live
     # tunnel drops every connection pinned to it, and the tunnel is routinely
     # brought up by hand without being enabled. Remove boot activation only,
     # and leave anything already running to an explicit stop.
-    sudo systemctl disable rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer >/dev/null 2>&1 || true
+    sudo systemctl disable rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer rg-teachx-carveout.timer >/dev/null 2>&1 || true
     if systemctl is-active --quiet wg-quick@rg-us-egress-wg.service; then
         echo "chezmoi: US egress autostart disabled; wg-quick@rg-us-egress-wg is up and was left alone"
         echo "chezmoi:   stop it deliberately with: sudo systemctl stop wg-quick@rg-us-egress-wg.service"
     else
         if [ -x /usr/local/sbin/rg-tunnel-akamai-carveout ]; then
             sudo /usr/local/sbin/rg-tunnel-akamai-carveout down >/dev/null 2>&1 || true
+        fi
+        if [ -x /usr/local/sbin/rg-tunnel-teachx-carveout ]; then
+            sudo /usr/local/sbin/rg-tunnel-teachx-carveout down >/dev/null 2>&1 || true
         fi
         echo "chezmoi: US egress services installed; autostart disabled (set RG_US_EGRESS_AUTOSTART=1 to opt in)"
     fi

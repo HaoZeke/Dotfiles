@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# Hostname gate: laptop-only network mutator; must not run on Terra buildbot.
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+# Route the teachx.ai app-connector hosts around the US-egress WireGuard full
+# tunnel and onto the tailnet, so they arrive from the connector rather than
+# from the Houston datacenter address.
+#
+# Why: with 0.0.0.0/0 up, every flow leaves from a US hosting IP, and the
+# security service in front of teachx.ai answers a datacenter address with a
+# block page instead of the site. The connector holds an address those hosts
+# accept. This is host based: a /32 or /128 in the MAIN table wins over
+# wg-quick's 0/0 (table 51820) through its `suppress_prefixlength 0` rule, so
+# packets to exactly these addresses leave over tailscale0 and everything else,
+# the x.ai quality probe included, stays on the tunnel.
+#
+# Source of addresses: the names resolved through whatever resolver the system
+# is using, which is the connector's split-DNS route when Tailscale DNS is on.
+# An address is installed only when table 52 already carries it, meaning
+# tailscaled itself claims it can route it. That check is what keeps a stale or
+# public DNS answer from pointing a host route at an interface that cannot
+# carry it, and it is why a resolver outage degrades to "leave it alone"
+# instead of to a blackhole.
+#
+# Addresses the egress guard probes are refused outright: moving those off the
+# tunnel makes the guard read a healthy tunnel as dead and restart it.
+set -uo pipefail
+
+IFACE="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+TS_IFACE="${RG_TEACHX_TS_IFACE:-tailscale0}"
+STATE="${RG_TEACHX_CARVEOUT_STATE:-/run/rg-tunnel-teachx-carveout.routes}"
+TS_TABLE="${RG_TEACHX_TS_TABLE:-52}"
+
+# The connector-served names. Kept in step with the launcher's bypass route
+# check, which refuses a Livingston browser when one of these leaves the
+# tailnet.
+TEACHX_HOSTS="${RG_TEACHX_HOSTS:-starfleet.teachx.ai starfleet-backend.teachx.ai bifrost.teachx.ai nova.teachx.ai artifacts-evals.teachx.ai}"
+
+# Names whose addresses must never be carved off the tunnel. The guard reads
+# the tunnel's health through these, so a host route pointing them at the
+# tailnet reports a working tunnel as broken.
+GUARD_PROBE_HOSTS="${RG_TEACHX_GUARD_PROBE_HOSTS:-api.x.ai www.cloudflare.com}"
+GUARD_PROBE_ADDRS="${RG_TEACHX_GUARD_PROBE_ADDRS:-1.1.1.1}"
+
+die(){ printf 'rg-teachx-carveout: %s\n' "$*" >&2; exit 1; }
+need_root(){ [ "$(id -u)" -eq 0 ] || die "run as root"; }
+
+resolve4(){ getent ahostsv4 "$1" 2>/dev/null | awk '{print $1}' | sort -u; }
+resolve6(){ getent ahostsv6 "$1" 2>/dev/null | awk '{print $1}' | grep -v '^::ffff:' | sort -u; }
+
+# Public, routable IPv4 host address only: reject 0/8 10/8 127/8 169.254
+# 172.16-31 192.168 100.64/10 and multicast upward.
+is_public4(){
+    case "$1" in
+        0.*|10.*|127.*|169.254.*|192.168.*) return 1 ;;
+        172.1[6-9].*|172.2[0-9].*|172.3[01].*) return 1 ;;
+        100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*) return 1 ;;
+        22[4-9].*|23[0-9].*|24[0-9].*|25[0-5].*) return 1 ;;
+        *.*.*.*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+is_public6(){
+    case "$1" in
+        ::1|fe8*|fe9*|fea*|feb*|f[cd]*|ff*|::ffff:*) return 1 ;;
+        *:*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Every address the guard reaches the tunnel through, resolved fresh so a
+# rotated CDN address cannot slip past a hardcoded list.
+guard_addrs(){
+    local host
+    printf '%s\n' $GUARD_PROBE_ADDRS
+    for host in $GUARD_PROBE_HOSTS; do
+        resolve4 "$host"
+        resolve6 "$host"
+    done
+}
+
+# tailscaled's own view of what it can carry. An address absent here is one the
+# connector does not advertise, and routing it at tailscale0 would drop it.
+ts_carries(){
+    local addr="$1" fam="$2"
+    if [ "$fam" = 4 ]; then
+        ip -4 route show table "$TS_TABLE" 2>/dev/null | awk '{print $1}' | grep -qxF "$addr"
+    else
+        ip -6 route show table "$TS_TABLE" 2>/dev/null | awk '{print $1}' | grep -qxF "$addr"
+    fi
+}
+
+# The desired set as "4 ADDR" / "6 ADDR" lines: connector-served, public,
+# carried by the tailnet, and not a guard probe.
+build_desired(){
+    local host addr excluded
+    excluded="$(guard_addrs | sort -u)"
+    for host in $TEACHX_HOSTS; do
+        for addr in $(resolve4 "$host"); do
+            is_public4 "$addr" || continue
+            printf '%s\n' "$excluded" | grep -qxF "$addr" && continue
+            ts_carries "$addr" 4 || continue
+            printf '4 %s\n' "$addr"
+        done
+        for addr in $(resolve6 "$host"); do
+            is_public6 "$addr" || continue
+            printf '%s\n' "$excluded" | grep -qxF "$addr" && continue
+            ts_carries "$addr" 6 || continue
+            printf '6 %s\n' "$addr"
+        done
+    done | sort -u
+}
+
+# Host routes only. A carve-out that installs anything shorter than a full
+# prefix could outrank the default route and take the whole machine off the
+# network, so a malformed entry is dropped rather than installed.
+route_add_cmd(){
+    local fam="$1" addr="$2"
+    case "$addr" in
+        */*) return 1 ;;
+    esac
+    if [ "$fam" = 4 ]; then
+        printf 'route replace %s/32 dev %s\n' "$addr" "$TS_IFACE"
+    else
+        printf 'route replace %s/128 dev %s\n' "$addr" "$TS_IFACE"
+    fi
+}
+route_del_cmd(){
+    local fam="$1" addr="$2"
+    case "$addr" in
+        */*) return 1 ;;
+    esac
+    if [ "$fam" = 4 ]; then
+        printf 'route del %s/32 dev %s\n' "$addr" "$TS_IFACE"
+    else
+        printf 'route del %s/128 dev %s\n' "$addr" "$TS_IFACE"
+    fi
+}
+
+apply(){
+    local dry="$1" desired want have del4 del6 add4 add6 fam addr
+
+    if ! ip link show "$TS_IFACE" >/dev/null 2>&1; then
+        printf 'rg-teachx-carveout: %s absent; removing carve-out so these hosts fall back to the tunnel\n' "$TS_IFACE"
+        [ "$dry" = 1 ] || down
+        return 0
+    fi
+    if ! ip link show "$IFACE" >/dev/null 2>&1; then
+        printf 'rg-teachx-carveout: tunnel %s down; removing carve-out\n' "$IFACE"
+        [ "$dry" = 1 ] || down
+        return 0
+    fi
+
+    desired="$(build_desired)"
+    if [ -z "$desired" ]; then
+        printf 'rg-teachx-carveout: no connector-carried address resolved; leaving state untouched\n' >&2
+        return 0
+    fi
+
+    want="$(mktemp)"; have="$(mktemp)"
+    printf '%s\n' "$desired" >"$want"
+    { [ -f "$STATE" ] && cat "$STATE"; } | grep -E '.' | sort -u >"$have" || true
+
+    del4="$(mktemp)"; del6="$(mktemp)"; add4="$(mktemp)"; add6="$(mktemp)"
+    while read -r fam addr; do
+        [ -n "${addr:-}" ] || continue
+        if [ "$fam" = 4 ]; then route_del_cmd 4 "$addr" >>"$del4" || true
+        else route_del_cmd 6 "$addr" >>"$del6" || true
+        fi
+    done < <(comm -23 "$have" "$want")
+    while read -r fam addr; do
+        [ -n "${addr:-}" ] || continue
+        if [ "$fam" = 4 ]; then route_add_cmd 4 "$addr" >>"$add4" || true
+        else route_add_cmd 6 "$addr" >>"$add6" || true
+        fi
+    done <"$want"
+
+    if [ "$dry" = 1 ]; then
+        echo "== would remove =="; [ -s "$del4" ] && sed 's/^/  ip -4 /' "$del4"; [ -s "$del6" ] && sed 's/^/  ip -6 /' "$del6"
+        [ -s "$del4" ] || [ -s "$del6" ] || echo "  (nothing)"
+        echo "== would install =="; [ -s "$add4" ] && sed 's/^/  ip -4 /' "$add4"; [ -s "$add6" ] && sed 's/^/  ip -6 /' "$add6"
+        [ -s "$add4" ] || [ -s "$add6" ] || echo "  (nothing)"
+        rm -f "$want" "$have" "$del4" "$del6" "$add4" "$add6"
+        return 0
+    fi
+
+    need_root
+    [ -s "$del4" ] && ip -4 -force -batch "$del4" || true
+    [ -s "$del6" ] && ip -6 -force -batch "$del6" || true
+    [ -s "$add4" ] && ip -4 -force -batch "$add4" || true
+    [ -s "$add6" ] && ip -6 -force -batch "$add6" || true
+
+    install -m 0644 "$want" "$STATE"
+    rm -f "$want" "$have" "$del4" "$del6" "$add4" "$add6"
+    printf 'rg-teachx-carveout up: %s host route(s) via %s\n' \
+        "$(grep -c . "$STATE" 2>/dev/null || echo 0)" "$TS_IFACE"
+}
+
+up(){ need_root; apply 0; }
+plan(){ apply 1; }
+
+down(){
+    need_root
+    [ -f "$STATE" ] || { printf 'rg-teachx-carveout: no state; nothing to remove\n'; return 0; }
+    local del4 del6 fam addr
+    del4="$(mktemp)"; del6="$(mktemp)"
+    while read -r fam addr; do
+        [ -n "${addr:-}" ] || continue
+        if [ "$fam" = 4 ]; then route_del_cmd 4 "$addr" >>"$del4" || true
+        else route_del_cmd 6 "$addr" >>"$del6" || true
+        fi
+    done <"$STATE"
+    [ -s "$del4" ] && ip -4 -force -batch "$del4" || true
+    [ -s "$del6" ] && ip -6 -force -batch "$del6" || true
+    rm -f "$del4" "$del6" "$STATE"
+    printf 'rg-teachx-carveout down\n'
+}
+
+status(){
+    local host addr dev
+    echo "== interfaces =="
+    ip link show "$IFACE" >/dev/null 2>&1 && echo "  $IFACE up" || echo "  $IFACE down"
+    ip link show "$TS_IFACE" >/dev/null 2>&1 && echo "  $TS_IFACE up" || echo "  $TS_IFACE down"
+    echo "== installed (state) =="
+    printf '  %s route(s)\n' "$( [ -f "$STATE" ] && grep -c . "$STATE" || echo 0)"
+    echo "== guard probes (must stay on $IFACE) =="
+    for addr in $(guard_addrs | sort -u); do
+        case "$addr" in
+            *:*) dev="$(ip -6 route get "$addr" 2>/dev/null | head -1 | grep -o 'dev [^ ]*')" ;;
+            *) dev="$(ip -4 route get "$addr" 2>/dev/null | head -1 | grep -o 'dev [^ ]*')" ;;
+        esac
+        printf '  %-40s %s\n' "$addr" "${dev:-unrouted}"
+    done
+    echo "== teachx hosts =="
+    for host in $TEACHX_HOSTS; do
+        for addr in $(resolve4 "$host") $(resolve6 "$host"); do
+            case "$addr" in
+                *:*) dev="$(ip -6 route get "$addr" 2>/dev/null | head -1 | grep -o 'dev [^ ]*')" ;;
+                *) dev="$(ip -4 route get "$addr" 2>/dev/null | head -1 | grep -o 'dev [^ ]*')" ;;
+            esac
+            printf '  %-28s %-40s %s\n' "$host" "$addr" "${dev:-unrouted}"
+        done
+    done
+}
+
+case "${1:-}" in
+    up) up ;;
+    plan) plan ;;
+    down) down ;;
+    status) status ;;
+    *) echo "usage: $0 {up|plan|down|status}" >&2; exit 2 ;;
+esac
