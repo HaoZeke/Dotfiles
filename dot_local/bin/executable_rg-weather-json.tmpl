@@ -5,7 +5,11 @@ profile="${1:-reykjavik}"
 airplane="${HOME}/.local/bin/rg-airplane"
 api_key="${OPENWEATHER_API_KEY:-}"
 if [ -z "$api_key" ] && command -v pass >/dev/null 2>&1; then
-    api_key=$(pass show services/openweather-api-key 2>/dev/null | sed -n '1p') || api_key=
+    # The bar calls this on a tick, and gpg asks for a passphrase over its own
+    # socket, so an unbounded lookup parks the block indefinitely and takes the
+    # status line with it. Read from /dev/null so nothing can consume the
+    # caller's stdin, and cap the wait: no weather beats a frozen bar.
+    api_key=$(timeout 5 pass show services/openweather-api-key 2>/dev/null </dev/null | sed -n '1p') || api_key=
 fi
 
 json() {
