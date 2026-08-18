@@ -1,8 +1,10 @@
 # Aliases
 ###########
 
-if [ ! -f ~/blank/ ]; then
-	mkdir -p ~/blank/
+# -d, not -f: the target is a directory, and -f is false for one, so the guard
+# never held and mkdir forked on every interactive shell.
+if [ ! -d ~/blank ]; then
+	mkdir -p ~/blank
 fi
 
 alias foldel='time rsync -avv --delete /home/$USER/blank/ '
