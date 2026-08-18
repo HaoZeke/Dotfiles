@@ -70,7 +70,7 @@ test -x "$surf_installer" || fail "missing consolidated SURF installer"
 test -r "$surf_refresh_service" || fail "missing SURF renewal user service"
 test -r "$surf_refresh_timer" || fail "missing SURF renewal user timer"
 test -r "$net_heal_script" || fail "missing net heal provisioning script"
-test -r "$chezmoi_ignore" || fail "missing host-specific chezmoi ignore policy"
+test -r "$chezmoi_ignore" || fail "missing host-specific ignore policy"
 test -r "$us_egress_guard_script" || fail "missing US egress guard provisioning script"
 test -r "$laptop_script" || fail "missing laptop power script"
 test -r "$top_bar" || fail "missing top i3status-rs config"
@@ -368,9 +368,9 @@ sudo_gate_line="$(rg -n -F 'if ! sudo -n true' "$net_heal_script" | head -1 | cu
     || fail "user SURF cleanup must run without a cached sudo credential"
 rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must install the SURF spool path unit"
-rg -q 'PathChanged=/home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
+rg -q "PathChanged=$HOME/\.local/state/rg-surf-vpn/pending\.ovpn" "$net_heal_script" \
     || fail "SURF spool path unit must watch the authenticated export"
-rg -q 'ExecStart=/usr/local/sbin/rg-surf-vpn-install install /home/rgoswami/\.local/state/rg-surf-vpn/pending\.ovpn' "$net_heal_script" \
+rg -q "ExecStart=/usr/local/sbin/rg-surf-vpn-install install $HOME/\.local/state/rg-surf-vpn/pending\.ovpn" "$net_heal_script" \
     || fail "SURF install unit must pass the watched profile to the strict installer"
 rg -q 'enable --now rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must enable the SURF spool path unit"
@@ -417,8 +417,10 @@ rg -q -- '--resolve "api\.x\.ai:443:\$pin"' "$net_doctor" \
     || fail "doctor must probe the api.x.ai pin health"
 rg -q 'ipinfo\.io/json' "$net_doctor" \
     || fail "doctor must report the egress exit geography"
-rg -q 'grok models.*v9-stickynote|v9-stickynote.*grok models' "$net_doctor" \
-    || fail "doctor must gate on v9-stickynote model visibility"
+rg -q "grok models" "$net_doctor" \
+    || fail "doctor must gate on the configured grok model's visibility"
+rg -q "grok-4\.6" "$net_doctor" \
+    || fail "doctor must name the configured grok model"
 rg -q 'ssh .*rg\.terra\.ts' "$net_doctor" \
     || fail "doctor must probe the userspace-Tailscale Terra fallback explicitly"
 ! rg -q 'SOCKS path ok via ssh rg\.terra ' "$net_doctor" \
@@ -469,8 +471,10 @@ rg -q 'servicedesk\.surf\.nl' "$net_doctor" \
     || fail "doctor must audit the service desk split route"
 rg -q "dev tun0" "$net_doctor" \
     || fail "doctor must require the SURF canary route through tun0"
-rg -q 'notify-send -u critical "net-doctor' "$net_doctor_alert" \
-    || fail "doctor alert wrapper must raise a desktop notification on regression"
+# The notifier is indirected through $NOTIFY so a headless run can swap it;
+# assert the urgency and the summary, not the binary's name.
+rg -q -- '-u critical "net-doctor' "$net_doctor_alert" \
+    || fail "doctor alert wrapper must raise a critical notification on regression"
 rg_net="$repo/dot_local/bin/executable_rg-net"
 test -r "$rg_net" || fail "missing rg-net dispatcher"
 bash -n "$rg_net" || fail "rg-net dispatcher does not parse"
@@ -630,8 +634,13 @@ rg -q 'speed\.cloudflare\.com|bytes=' "$us_egress_restore" \
 
 rg -q 'RG_US_EGRESS_AUTOSTART' "$us_egress_guard_script" \
     || fail "US egress provisioning lacks an explicit autostart opt-in"
-rg -q 'disable --now rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
+# Boot activation is removed by default, but a tunnel already up belongs to the
+# running session: `--now` here dropped every connection pinned to it during a
+# routine apply, so the assertion is on `disable` without it.
+rg -q 'disable rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-refresh.timer' "$us_egress_guard_script" \
     || fail "US egress provisioning does not disable boot-time full-tunnel services by default"
+rg -q 'disable --now rg-us-egress-guard.timer' "$us_egress_guard_script" \
+    && fail "US egress provisioning must not stop a running tunnel on apply"
 rg -q 'rm -f /etc/systemd/system/rg-us-egress-watch.service /usr/local/sbin/rg-us-egress-watch' "$us_egress_guard_script" \
     || fail "US egress provisioning must remove the retired real-time watcher"
 ! rg -q 'enable --now rg-us-egress-watch.service' "$us_egress_guard_script" \
@@ -642,7 +651,7 @@ cleanup_call_line=$(rg -n '^cleanup_us_egress_state$' "$us_egress_up" | head -n 
 dns_fix_call_line=$(rg -n '^if command -v "\$dns_fix"' "$us_egress_up" | cut -d: -f1)
 test -n "$cleanup_call_line" && test -n "$dns_fix_call_line" && test "$cleanup_call_line" -lt "$dns_fix_call_line" \
     || fail "US egress helper repairs DNS before clearing stale WireGuard routes"
-! rg -q 'PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|/home/rgoswami/Downloads' "$fix_local_dns" "$us_egress_up" \
+! rg -q "PrivateKey[[:space:]]*=|PresharedKey[[:space:]]*=|$HOME/Downloads" "$fix_local_dns" "$us_egress_up" \
     || fail "managed network helpers contain provider-local paths or WireGuard secret material"
 
 rg -q 'unbound.service' "$laptop_script" \
