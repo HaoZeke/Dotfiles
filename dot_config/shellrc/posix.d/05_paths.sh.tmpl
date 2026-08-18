@@ -6,8 +6,13 @@
 # Linuxbrew
 export PATH=$HOME/.linuxbrew/bin:$PATH
 
+{{- if .tex_date }}
 # TeX (overloaded variables with chezmoi)
+# Guarded on tex_date: with it empty the path resolves to `texlive-` with no
+# version, a directory that cannot exist, and the three forks behind $(uname)
+# are spent per shell to prepend it anyway.
 export PATH="$HOME/.local/share/texlive-{{ .tex_date }}/bin/$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]')/:$PATH"
+{{- end }}
 
 # Poetry
 export PATH="$HOME/.poetry/bin:$PATH"
@@ -64,6 +69,43 @@ export XDG_DATA_DIRS="$XDG_DATA_DIRS:/var/lib/snapd/desktop:/var/lib/flatpak/exp
 # Should be part of the default..
 export XDG_DATA_DIRS="$XDG_DATA_DIRS:$HOME/.local/share"
 
+
+# Deduplicate
+###############
+#
+# Every entry above is added unconditionally, so a shell started inside a shell
+# appends the whole set again: PATH runs 30 -> 58 -> 86 entries across three
+# nested interactive shells while the unique count stays at 25. A command that
+# is not in the hash table is then stat()ed against every duplicate.
+#
+# zsh has a flag for this and it keeps holding for entries added later in the
+# session. bash needs a pass, and needs it again after anything that appends
+# further down, so .bashrc calls dedup_path once more at the end.
+if [ -n "${ZSH_VERSION:-}" ]; then
+    typeset -gU path PATH
+else
+    dedup_path() {
+        _dp_new=
+        _dp_rest=$PATH
+        while [ -n "$_dp_rest" ]; do
+            _dp_head=${_dp_rest%%:*}
+            case "$_dp_rest" in
+                *:*) _dp_rest=${_dp_rest#*:} ;;
+                *) _dp_rest= ;;
+            esac
+            if [ -n "$_dp_head" ]; then
+                case ":$_dp_new:" in
+                    *":$_dp_head:"*) ;;
+                    *) _dp_new="${_dp_new:+$_dp_new:}$_dp_head" ;;
+                esac
+            fi
+        done
+        PATH=$_dp_new
+        export PATH
+        unset _dp_new _dp_rest _dp_head
+    }
+    dedup_path
+fi
 
 # Conditional paths
 ####################
