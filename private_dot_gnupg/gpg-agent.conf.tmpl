@@ -27,4 +27,7 @@ max-cache-ttl 604800
 {{ else -}}
 default-cache-ttl 28800
 max-cache-ttl 28800
-{{ end -}}
+{{ end }}
+# Expand secure memory under parallel sign+encrypt (nimvault seal storms;
+# gpg-agent otherwise fails with "Cannot allocate memory")
+auto-expand-secmem 0x40000
