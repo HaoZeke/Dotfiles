@@ -113,7 +113,12 @@ zinit wait lucid light-mode blockf for \
 # Evaluated
 
 # ** atuinsh/atuin ** 🐢 Magical shell history
-zinit ice from"gh-r" as"program" pick"atuin" extract mv"*/atuin* -> atuin" atload'eval "$(atuin init zsh)"'
+# The release carries two tarballs whose names both start with `atuin-`, the
+# client and `atuin-server-`. Without bpick the server one can win, and the mv
+# glob then renames its binary to `atuin`; what lands on PATH answers `--help`
+# but has no `init` subcommand, so every shell start prints a clap usage error.
+# `[^s]` after the dash is what separates the client from the server build.
+zinit ice from"gh-r" as"program" bpick"atuin-[^s]*{{ .chezmoi.os }}*" pick"atuin" extract mv"*/atuin -> atuin" atload'eval "$(atuin init zsh)"'
 zinit light 'atuinsh/atuin'
 
 # Emacs Stuff (cross platform)
