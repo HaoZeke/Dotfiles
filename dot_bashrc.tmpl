@@ -90,8 +90,6 @@ export GPG_TTY=$(tty)
 
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
-export PATH="$HOME/.opencode/bin:$PATH"
-
 # Emacs Stuff (cross platform)
 # Local Variables:
 # mode: shell-script
@@ -114,3 +112,9 @@ export PATH="$HOME/.grok/bin:$PATH"
 # Anything host-specific goes in ~/.bashrc.local, which is not managed here and
 # is never overwritten. Sourced last so it can override anything above it.
 [[ -r "$HOME/.bashrc.local" ]] && . "$HOME/.bashrc.local"
+
+# Last word on PATH. Everything between posix.d/05_paths.sh and here prepends
+# without checking, and .bashrc.local is free to do the same, so the dedup only
+# holds if it runs after all of them. zsh sets typeset -U instead and needs no
+# second pass.
+command -v dedup_path >/dev/null 2>&1 && dedup_path
