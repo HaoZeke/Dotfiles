@@ -33,6 +33,13 @@ TS_IFACE="${RG_TEACHX_TS_IFACE:-tailscale0}"
 STATE="${RG_TEACHX_CARVEOUT_STATE:-/run/rg-tunnel-teachx-carveout.routes}"
 TS_TABLE="${RG_TEACHX_TS_TABLE:-52}"
 
+# The tailnet range, which has to reach tailscale0 for any of this to work: the
+# connector is reached through the tailnet resolver, and tailscaled's own routes
+# live in a table consulted only after the tunnel rule has already claimed the
+# packet. A prefix this size cannot outrank the default route, and the tailnet
+# addresses it covers belong to tailscale0 by definition.
+TAILNET_CIDR="${RG_TEACHX_TAILNET_CIDR:-100.64.0.0/10}"
+
 # The connector-served names. Kept in step with the launcher's bypass route
 # check, which refuses a Livingston browser when one of these leaves the
 # tailnet.
@@ -139,6 +146,22 @@ route_del_cmd(){
     fi
 }
 
+# Without this the tailnet resolver answers from inside the tunnel, which is to
+# say not at all: the names then resolve to public addresses the connector does
+# not advertise, every one of them is filtered out below, and the carve-out
+# quietly installs nothing. Asserting it here keeps the helper from depending on
+# a route nothing else owns.
+ensure_tailnet_route(){
+    local dry="$1"
+    ip route show table main 2>/dev/null | awk '{print $1}' | grep -qxF "$TAILNET_CIDR" && return 0
+    if [ "$dry" = 1 ]; then
+        printf '== would restore tailnet reachability ==\n  ip route replace %s dev %s\n' "$TAILNET_CIDR" "$TS_IFACE"
+        return 0
+    fi
+    ip route replace "$TAILNET_CIDR" dev "$TS_IFACE" \
+        && printf 'rg-teachx-carveout: restored %s via %s\n' "$TAILNET_CIDR" "$TS_IFACE"
+}
+
 apply(){
     local dry="$1" desired want have del4 del6 add4 add6 fam addr
 
@@ -152,6 +175,8 @@ apply(){
         [ "$dry" = 1 ] || down
         return 0
     fi
+
+    ensure_tailnet_route "$dry"
 
     desired="$(build_desired)"
     if [ -z "$desired" ]; then
@@ -225,6 +250,12 @@ status(){
     ip link show "$TS_IFACE" >/dev/null 2>&1 && echo "  $TS_IFACE up" || echo "  $TS_IFACE down"
     echo "== installed (state) =="
     printf '  %s route(s)\n' "$( [ -f "$STATE" ] && grep -c . "$STATE" || echo 0)"
+    echo "== tailnet range =="
+    if ip route show table main 2>/dev/null | awk '{print $1}' | grep -qxF "$TAILNET_CIDR"; then
+        printf '  %s present\n' "$TAILNET_CIDR"
+    else
+        printf '  %s MISSING (connector DNS answers from inside the tunnel)\n' "$TAILNET_CIDR"
+    fi
     echo "== guard probes (must stay on $IFACE) =="
     for addr in $(guard_addrs | sort -u); do
         case "$addr" in
