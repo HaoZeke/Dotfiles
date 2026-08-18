@@ -1,8 +1,21 @@
 # For ssh-add
-if ! pgrep -x "ssh-agent" >/dev/null; then
-  # Start ssh-agent only if it's not already running
-  eval "$(ssh-agent -s)"
-  echo "Started ssh-agent with PID: $SSH_AGENT_PID"
+#
+# Test the socket before scanning the process table. `pgrep` walks /proc and
+# costs ~43 ms per shell here, which every terminal pane pays; `[ -S ]` is a
+# builtin and costs nothing. It is also the more accurate question: an agent
+# this shell cannot reach through SSH_AUTH_SOCK is of no use to it.
+#
+# Scoped to this user, because another user's agent satisfies `pgrep -x` while
+# leaving this session without one. The UID comes from EUID rather than USER:
+# both bash and zsh set it without a fork, and an empty USER makes pgrep reject
+# the whole option and report no agent, which spawns one every single time.
+# Two shells starting at the same instant can still both miss and both spawn,
+# but the window is now the fallback path rather than every shell.
+if [ ! -S "${SSH_AUTH_SOCK:-}" ]; then
+  if ! pgrep -u "${EUID:-$(id -u)}" -x ssh-agent >/dev/null 2>&1; then
+    eval "$(ssh-agent -s)"
+    echo "Started ssh-agent with PID: $SSH_AGENT_PID"
+  fi
 fi
 
 # Rclone Config
