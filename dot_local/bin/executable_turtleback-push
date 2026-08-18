@@ -55,7 +55,9 @@ if ! command -v rclone >/dev/null 2>&1; then
     exit 127
 fi
 
-PCLOUD_ENTRY=$(pass show services/pcloud)
+# Runs unattended from a timer, where a pinentry prompt has nowhere to draw and
+# waits indefinitely. Bound the lookup and keep it off the caller's stdin.
+PCLOUD_ENTRY=$(timeout 15 pass show services/pcloud </dev/null)
 PCLOUD_PASS=$(printf '%s\n' "$PCLOUD_ENTRY" | sed -n '1p')
 PCLOUD_USER=$(printf '%s\n' "$PCLOUD_ENTRY" | awk '/^email:/{print $2; exit}')
 PCLOUD_URL=$(printf '%s\n'  "$PCLOUD_ENTRY" | awk '/^webdav_eu:/{print $2; exit}')
@@ -76,7 +78,7 @@ export RCLONE_CONFIG_PCLOUD_PASS
 # restic pulls its repo password from a command, not from an env var,
 # so nothing ever sits in RESTIC_PASSWORD.
 export RESTIC_REPOSITORY="rclone:pcloud:backup-rgx1gen11-restic"
-export RESTIC_PASSWORD_COMMAND='pass show local/borg-pcloud | head -n1'
+export RESTIC_PASSWORD_COMMAND='timeout 15 pass show local/borg-pcloud </dev/null | head -n1'
 # Force restic to write its own config to $HOME/.cache/restic, not to
 # some unpredictable default on the snapshot mount.
 export RESTIC_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/restic"
