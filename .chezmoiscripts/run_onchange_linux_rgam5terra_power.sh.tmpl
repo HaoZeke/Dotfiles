@@ -24,11 +24,10 @@ as_root() {
     fi
 }
 
-# Exit non-zero without credentials so chezmoi retries (never soft-skip exit 0).
+# Leave privileged provisioning for the next apply when sudo is not cached.
 if [[ ${EUID:-$(id -u)} -ne 0 ]] && ! sudo -n true 2>/dev/null; then
-    echo "chezmoi: no cached sudo; deferring rgam5terra power provisioning" >&2
-    echo "chezmoi: re-run as root or: sudo -v && chezmoi apply" >&2
-    exit 1
+    echo "chezmoi: rgam5terra power provisioning skipped (run sudo -v && chezmoi apply to enable)"
+    exit 0
 fi
 
 write_if_diff() {
@@ -74,8 +73,8 @@ set -euo pipefail
 CONF=""
 for c in \
     /etc/rg-terra/power-00-base.conf \
-    /home/rgoswami/.local/share/rgam5terra/power-00-base.conf \
-    /home/rgoswami/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf; do
+    "${USER_HOME}/.local/share/rgam5terra/power-00-base.conf" \
+    "${USER_HOME}/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf"; do
     if [[ -r $c ]]; then CONF=$c; break; fi
 done
 if [[ -z $CONF ]]; then
@@ -143,6 +142,40 @@ write_if_diff /etc/udev/rules.d/60-ioschedulers.rules "$IOSCHED_CONTENT" 0644 &&
 write_if_diff /usr/local/sbin/rg-terra-power-apply "$APPLY_ROOT_CONTENT" 0755 || true
 write_if_diff /etc/systemd/system/rg-terra-power.service "$SERVICE_CONTENT" 0644 || true
 
+WIFI_WATCHDOG_CONTENT=$(cat <<'WATCHDOG'
+{{ include "dot_local/bin/executable_rg-terra-wifi-watchdog" }}
+WATCHDOG
+)
+WIFI_SERVICE_CONTENT='[Unit]
+Description=Recover rgam5terra Wi-Fi association
+After=NetworkManager.service
+Wants=NetworkManager.service
+ConditionPathExists=/usr/bin/nmcli
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rg-terra-wifi-watchdog
+'
+WIFI_TIMER_CONTENT='[Unit]
+Description=Watch rgam5terra Wi-Fi association
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=15s
+Unit=rg-terra-wifi-watchdog.service
+
+[Install]
+WantedBy=multi-user.target
+'
+write_if_diff /usr/local/sbin/rg-terra-wifi-watchdog "$WIFI_WATCHDOG_CONTENT" 0755 || true
+write_if_diff /etc/systemd/system/rg-terra-wifi-watchdog.service "$WIFI_SERVICE_CONTENT" 0644 || true
+write_if_diff /etc/systemd/system/rg-terra-wifi-watchdog.timer "$WIFI_TIMER_CONTENT" 0644 || true
+
+if as_root command -v nmcli >/dev/null 2>&1; then
+    as_root nmcli connection modify Orciny 802-11-wireless.powersave 2 >/dev/null 2>&1 || true
+fi
+
 if [ "${UDEV_CHANGED:-0}" = "1" ]; then
     as_root udevadm control --reload
     as_root udevadm trigger --subsystem-match=block --action=change
@@ -156,6 +189,7 @@ fi
 
 as_root systemctl daemon-reload
 as_root systemctl enable rg-terra-power.service >/dev/null 2>&1 || true
+as_root systemctl enable --now rg-terra-wifi-watchdog.timer >/dev/null 2>&1 || true
 as_root /usr/local/sbin/rg-terra-power-apply
 
 echo "chezmoi: rgam5terra power summary:"
