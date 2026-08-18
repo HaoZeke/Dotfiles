@@ -4,12 +4,14 @@ repo=${1:-"$HOME/.local/share/chezmoi"}
 script="$repo/dot_local/bin/executable_rg-terra-power"
 conf="$repo/dot_local/share/rgam5terra/power-00-base.conf"
 onchange="$repo/.chezmoiscripts/run_onchange_linux_rgam5terra_power.sh.tmpl"
+watchdog="$repo/dot_local/bin/executable_rg-terra-wifi-watchdog"
 
 fail() { printf "FAIL: %s\n" "$*" >&2; exit 1; }
 
 test -r "$script" || fail "missing rg-terra-power"
 test -r "$conf" || fail "missing power-00-base.conf"
 test -r "$onchange" || fail "missing rgam5terra power onchange"
+test -r "$watchdog" || fail "missing Terra Wi-Fi watchdog"
 
 path=$(RG_TERRA_POWER_CONF="$conf" bash "$script" --path)
 [[ $path == "$conf" ]] || fail "path mode"
@@ -29,5 +31,18 @@ rg -q "exit 1" "$onchange" || fail "must exit non-zero without sudo"
 ! rg -q "systemctl enable tlp" "$onchange" || fail "must not enable tlp.service"
 rg -q "Not a laptop stack" "$onchange" || fail "onchange should document non-laptop policy"
 rg -q "balance_performance" "$conf" || fail "conf balance_performance"
+
+rg -q "802-11-wireless\.powersave 2" "$onchange" \
+    || fail "Terra profile must disable Wi-Fi power saving"
+rg -q "rg-terra-wifi-watchdog\.service" "$onchange" \
+    || fail "power onchange must install Wi-Fi watchdog service"
+rg -q "rg-terra-wifi-watchdog\.timer" "$onchange" \
+    || fail "power onchange must install Wi-Fi watchdog timer"
+rg -q 'PROFILE=.*Orciny' "$watchdog" \
+    || fail "watchdog must recover the Orciny profile"
+rg -q "wlp8s0" "$watchdog" || fail "watchdog must target Terra Wi-Fi"
+rg -q "wifi rescan" "$watchdog" || fail "watchdog must rescan after association loss"
+! rg -q "tailscale (up|down|set|login|logout)" "$watchdog" \
+    || fail "watchdog must not modify Tailscale"
 
 printf "ok\n"

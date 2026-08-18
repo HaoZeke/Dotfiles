@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Recover the Terra Wi-Fi profile when the headless NetworkManager stack loses
+# its access point association or gets stuck in a failed activation state.
+set -euo pipefail
+
+IFACE=${RG_TERRA_WIFI_IFACE:-wlp8s0}
+PROFILE=${RG_TERRA_WIFI_PROFILE:-Orciny}
+STATE_DIR=${RG_TERRA_WIFI_STATE_DIR:-/run/rg-terra-wifi-watchdog}
+LOCK=${STATE_DIR}/lock
+FAILURES=${STATE_DIR}/failures
+
+mkdir -p "$STATE_DIR"
+exec 9>"$LOCK"
+flock -n 9 || exit 0
+
+state=$(nmcli -t -f GENERAL.STATE device show "$IFACE" 2>/dev/null || true)
+if [[ "$state" == 'GENERAL.STATE:100 (connected)' ]]; then
+    rm -f "$FAILURES"
+    command -v iw >/dev/null 2>&1 && iw dev "$IFACE" set power_save off 2>/dev/null || true
+    exit 0
+fi
+
+failures=0
+if [[ -r $FAILURES ]]; then
+    read -r failures <"$FAILURES" || failures=0
+fi
+failures=$((failures + 1))
+printf '%s\n' "$failures" >"$FAILURES"
+
+command -v iw >/dev/null 2>&1 && iw dev "$IFACE" set power_save off 2>/dev/null || true
+nmcli device wifi rescan ifname "$IFACE" >/dev/null 2>&1 || true
+nmcli --wait 10 connection up id "$PROFILE" ifname "$IFACE" >/dev/null 2>&1 || true
+
+if (( failures >= 3 )); then
+    nmcli device disconnect "$IFACE" >/dev/null 2>&1 || true
+    nmcli --wait 10 connection up id "$PROFILE" ifname "$IFACE" >/dev/null 2>&1 || true
+fi
+
+state=$(nmcli -t -f GENERAL.STATE device show "$IFACE" 2>/dev/null || true)
+if [[ "$state" == 'GENERAL.STATE:100 (connected)' ]]; then
+    rm -f "$FAILURES"
+else
+    printf 'rg-terra-wifi-watchdog: %s remains disconnected (attempt %s)\n' "$IFACE" "$failures" >&2
+    exit 1
+fi
