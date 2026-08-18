@@ -44,7 +44,7 @@ assert_not_contains() {
 
 tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
-surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\<local\>'
+surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\*.teachx.ai\;teachx.ai\;\<local\>'
 
 fake_curl="$tmp_home/curl"
 cat >"$fake_curl" <<'SH'
@@ -53,6 +53,17 @@ cat >"$fake_curl" <<'SH'
 printf '%s\n' '{"ip":"198.51.100.9","city":"Livingston","region":"Texas","country":"US","loc":"30.7110,-94.9327","org":"AS64500 Example","timezone":"America/Chicago"}'
 SH
 chmod +x "$fake_curl"
+
+# load_proxy builds a proxy only when the host is not already leaving the US,
+# so a proxy case that reads the real egress passes or fails with the tunnel
+# rather than with the code. Report a foreign address to reach that branch.
+fake_curl_abroad="$tmp_home/curl-abroad"
+cat >"$fake_curl_abroad" <<'SH'
+#!/usr/bin/env sh
+[ -z "${RG_FAKE_CURL_ARGS:-}" ] || printf '%s\n' "$*" >"$RG_FAKE_CURL_ARGS"
+printf '%s\n' '{"ip":"203.0.113.7","city":"Reykjavik","region":"Capital Region","country":"IS","loc":"64.1466,-21.9426","org":"AS64501 Example","timezone":"Atlantic/Reykjavik"}'
+SH
+chmod +x "$fake_curl_abroad"
 
 fake_timedatectl="$tmp_home/timedatectl"
 cat >"$fake_timedatectl" <<'SH'
@@ -65,6 +76,25 @@ fi
 SH
 chmod +x "$fake_timedatectl"
 
+# The bypass-route guard asks two questions of the system: does the host
+# resolve, and which interface carries it. Both fakes answer from the
+# environment so each verdict is reachable without touching the real tailnet.
+fake_getent="$tmp_home/getent"
+cat >"$fake_getent" <<'SH'
+#!/usr/bin/env sh
+[ -n "${RG_FAKE_HOST_ADDR:-}" ] || exit 2
+printf '%s STREAM %s\n' "$RG_FAKE_HOST_ADDR" "$2"
+SH
+chmod +x "$fake_getent"
+
+fake_ip="$tmp_home/ip"
+cat >"$fake_ip" <<'SH'
+#!/usr/bin/env sh
+[ -n "${RG_FAKE_ROUTE_DEV:-}" ] || exit 2
+printf '%s dev %s src 10.0.0.2 uid 1000 \n' "$3" "$RG_FAKE_ROUTE_DEV"
+SH
+chmod +x "$fake_ip"
+
 fake_pass="$tmp_home/pass"
 cat >"$fake_pass" <<'SH'
 #!/usr/bin/env sh
@@ -73,9 +103,11 @@ case "$*" in
         printf '%s\n' 'us.windscribe.example:1080'
         ;;
     "show websites/windscribe/socks5/username")
+        [ -z "${RG_FAKE_PASS_NO_CREDS:-}" ] || exit 1
         printf '%s\n' 'wind-user'
         ;;
     "show websites/windscribe/socks5/password")
+        [ -z "${RG_FAKE_PASS_NO_CREDS:-}" ] || exit 1
         printf '%s\n' 'wind-pass'
         ;;
     *)
@@ -127,15 +159,44 @@ out=$(
 assert_contains "$out" "--proxy-server=socks5://127.0.0.1:9050" "proxy flag"
 assert_contains "$out" "$surf_proxy_bypass" "SURF proxy bypass"
 
+# An authenticated upstream goes behind the local relay, so the credentials
+# must never reach the browser command line: Chromium cannot authenticate to a
+# SOCKS5 proxy, and a password carrying "=" or ";" reparses --proxy-server as a
+# rule list that matches nothing and sends every request out DIRECT.
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
     XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl_abroad" \
     RG_LIVINGSTON_PASS="$fake_pass" \
     "$SCRIPT" --dry-run chromium
 )
-assert_contains "$out" "--proxy-server=socks5://wind-user:wind-pass@us.windscribe.example:1080" "pass-provided proxy flag"
+assert_not_contains "$out" "wind-pass" "upstream password on the command line"
+assert_not_contains "$out" "wind-user" "upstream user on the command line"
+
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl_abroad" \
+    RG_LIVINGSTON_PASS="$fake_pass" \
+    RG_FAKE_PASS_NO_CREDS=1 \
+    "$SCRIPT" --dry-run chromium
+)
+assert_contains "$out" "--proxy-server=socks5://us.windscribe.example:1080" "pass-provided proxy flag"
 assert_contains "$out" "$surf_proxy_bypass" "pass-provided proxy SURF bypass"
+
+# A host already leaving the US needs nothing added, and demanding a proxy
+# there refuses a launch that was already correct.
+out=$(
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_PASS="$fake_pass" \
+    "$SCRIPT" --dry-run chromium
+)
+assert_not_contains "$out" "--proxy-server" "proxy added on a host already in the US"
 
 out=$(
     HOME="$tmp_home" \
@@ -216,19 +277,23 @@ assert_contains "$out" "system_timezone=America/Chicago" "doctor timezone"
 assert_contains "$out" "egress_region=Texas" "doctor egress region"
 assert_contains "$out" "egress_timezone=America/Chicago" "doctor egress timezone"
 
+# The egress check has to travel the path the browser will take, so a
+# configured proxy must appear on the probe. socks5h, not socks5: resolving the
+# name locally would leak it and measure a route the browser never uses.
 curl_args="$tmp_home/curl.args"
 out=$(
     HOME="$tmp_home" \
     XDG_DATA_HOME="$tmp_home/.local/share" \
     XDG_STATE_HOME="$tmp_home/.local/state" \
-    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_CURL="$fake_curl_abroad" \
     RG_LIVINGSTON_PASS="$fake_pass" \
     RG_LIVINGSTON_TIMEDATECTL="$fake_timedatectl" \
     RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
+    RG_FAKE_PASS_NO_CREDS=1 \
     RG_FAKE_CURL_ARGS="$curl_args" \
     "$SCRIPT" doctor
 )
-assert_contains "$(cat "$curl_args")" "--proxy socks5h://wind-user:wind-pass@us.windscribe.example:1080" "proxied egress check"
+assert_contains "$(cat "$curl_args")" "--proxy socks5h://us.windscribe.example:1080" "proxied egress check"
 
 prefs_file="$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi/Default/Preferences"
 mkdir -p "$(dirname -- "$prefs_file")"
@@ -274,6 +339,36 @@ if [ "$layout" != "$(printf '1920\t1200\ttrue\t1920\t1920\t-0.5778829311823857')
     echo "FAIL: vivaldi layout was not repaired: $layout" >&2
     exit 1
 fi
+
+bypass_doctor() {
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_TIMEDATECTL="$fake_timedatectl" \
+    RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
+    RG_LIVINGSTON_GETENT="$fake_getent" \
+    RG_LIVINGSTON_IP="$fake_ip" \
+    RG_LIVINGSTON_BYPASS_ROUTE_CHECK=bypass.example \
+    RG_FAKE_HOST_ADDR="${1:-}" \
+    RG_FAKE_ROUTE_DEV="${2:-}" \
+    "$SCRIPT" doctor
+}
+
+# A name that resolves nowhere reaches nothing, so it must not block a launch.
+out=$(bypass_doctor "" "")
+assert_contains "$out" "bypass_route_bypass.example=unresolved" "unresolved bypass host"
+
+out=$(bypass_doctor 100.64.0.9 tailscale0)
+assert_contains "$out" "bypass_route_bypass.example=tailscale0 tailnet" "tailnet bypass route"
+
+# The WireGuard egress tunnel carries traffic off this machine, but it exits on
+# a datacenter address these hosts refuse, so it does not satisfy the bypass.
+out=$(bypass_doctor 104.18.31.50 rg-us-egress-wg)
+assert_contains "$out" "bypass_route_bypass.example=rg-us-egress-wg off-tailnet" "us egress bypass route"
+
+out=$(bypass_doctor 104.18.31.50 wlan0)
+assert_contains "$out" "bypass_route_bypass.example=wlan0 off-tailnet" "local uplink bypass route"
 
 out=$(
     HOME="$tmp_home" \
