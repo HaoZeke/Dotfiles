@@ -34,7 +34,17 @@ link() {
 }
 
 # Assistant prompt and style guides.
-link "$HOME_DIR/.claude/CLAUDE.md"          "profiles/surf/CLAUDE.md"
+#
+# CLAUDE.md is deliberately not in this list. That path has its own managed
+# entry, dot_claude/private_CLAUDE.md.tmpl, which renders the shared globals
+# plus the machine-contract override that hands precedence to ~/CLAUDE.md on
+# hosts that carry one. Linking it here gave the path two owners that undo each
+# other on alternating applies: the template writes a real file, the next run
+# of this script moves it to CLAUDE.md.pre-profile and symlinks the profile
+# copy, and the template takes it back after that. The leftover .pre-profile
+# file is the visible half of that loop.
+#
+# The three below have no competing entry, so this script is their only owner.
 link "$HOME_DIR/.claude/writing-style.md"   "profiles/surf/writing-style.md"
 link "$HOME_DIR/.claude/doc-guidelines.md"  "profiles/surf/doc-guidelines.md"
 link "$HOME_DIR/.claude/graphviz-style.md"  "profiles/surf/graphviz-style.md"
