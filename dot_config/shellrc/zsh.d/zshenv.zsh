@@ -9,7 +9,15 @@ WORDCHARS=''
 autoload -Uz run-help
 autoload -Uz add-zsh-hook
 autoload -Uz colors && colors
-autoload -Uz compinit && compinit -u
+# compinit -u rebuilds and re-verifies the dump: 36-48 ms. -C trusts what is
+# already there and takes 26-28 ms. Run the full one once a day, when the dump
+# is more than 24 hours old, and trust it for every shell in between.
+autoload -Uz compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+    compinit -u
+else
+    compinit -C
+fi
 autoload -Uz is-at-least
 zstyle ':completion:*' menu select
 
