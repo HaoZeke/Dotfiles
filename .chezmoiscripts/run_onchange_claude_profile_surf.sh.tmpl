@@ -141,10 +141,29 @@ if [ -f "$SNIPPET" ] && command -v jq >/dev/null 2>&1; then
     EXPANDED=$(sed "s|__HOME__|$HOME_DIR|g" "$SNIPPET")
     if [ ! -f "$TARGET" ]; then
         echo "{\"mcpServers\": $EXPANDED}" | jq . > "$TARGET"
+    elif jq -e --argjson servers "$EXPANDED" \
+            '(.mcpServers // {}) as $cur | (($cur * $servers) == $cur)' \
+            "$TARGET" >/dev/null; then
+        # Already merged. Worth checking, because the write below is not free:
+        # the client rewrites this file continuously while a session is open,
+        # and read-transform-rename drops whatever it wrote in the gap. That
+        # file carries the account, the machine id and the project history, so
+        # rewriting it to produce byte-identical mcpServers is pure risk.
+        :
     else
+        # The merge does change something, so it has to run. Narrow the window
+        # instead: if the file moved underneath while jq was reading it, the
+        # result is built on a stale copy and gets thrown away rather than
+        # renamed over the newer one.
+        STAMP=$(stat -c '%Y:%s' "$TARGET")
         jq --argjson servers "$EXPANDED" \
-            '.mcpServers = (.mcpServers // {}) * $servers' "$TARGET" > "${TARGET}.tmp" \
-            && mv "${TARGET}.tmp" "$TARGET"
+            '.mcpServers = (.mcpServers // {}) * $servers' "$TARGET" > "${TARGET}.tmp"
+        if [ "$STAMP" = "$(stat -c '%Y:%s' "$TARGET")" ]; then
+            mv "${TARGET}.tmp" "$TARGET"
+        else
+            rm -f "${TARGET}.tmp"
+            echo "claude-profile: $TARGET changed while merging, left alone" >&2
+        fi
     fi
 elif [ -f "$SNIPPET" ]; then
     echo "claude-profile: jq not found, skipping MCP merge" >&2
