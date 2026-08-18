@@ -95,11 +95,19 @@ test_bin="${RG_LIVINGSTON_TEST:-test}"
 curl_bin="${RG_LIVINGSTON_CURL:-curl}"
 jq_bin="${RG_LIVINGSTON_JQ:-jq}"
 pgrep_bin="${RG_LIVINGSTON_PGREP:-pgrep}"
+getent_bin="${RG_LIVINGSTON_GETENT:-getent}"
+ip_bin="${RG_LIVINGSTON_IP:-ip}"
 pass_bin="${RG_LIVINGSTON_PASS:-pass}"
 proxy_pass_entry="${RG_LIVINGSTON_PROXY_PASS_ENTRY:-}"
 windscribe_socks_pass_prefix="${RG_LIVINGSTON_WINDSCRIBE_SOCKS_PASS_PREFIX:-websites/windscribe/socks5}"
 netns_proxy_addr="${RG_LIVINGSTON_NETNS_PROXY:-10.201.0.2:1080}"
-bypass_route_check="${RG_LIVINGSTON_BYPASS_ROUTE_CHECK:-starfleet.teachx.ai}"
+bypass_route_check="${RG_LIVINGSTON_BYPASS_ROUTE_CHECK:-starfleet.teachx.ai starfleet-backend.teachx.ai bifrost.teachx.ai nova.teachx.ai artifacts-evals.teachx.ai}"
+# Bypassed hosts have to arrive over the tailnet specifically, not merely over
+# some tunnel. The app connector holds the address these sites accept; the
+# WireGuard egress tunnel exits on a datacenter address the security service in
+# front of them answers with a block page, so a bypassed host riding it is
+# broken as surely as one on the local uplink.
+bypass_route_ifaces="${RG_LIVINGSTON_BYPASS_ROUTE_IFACES:-tailscale*}"
 relay_bin="${RG_LIVINGSTON_RELAY_BIN:-$HOME/.local/bin/rg-socks-auth-relay}"
 relay_port="${RG_LIVINGSTON_RELAY_PORT:-11080}"
 relay_log="${RG_LIVINGSTON_RELAY_LOG:-$HOME/.local/state/rg-socks-auth-relay.log}"
@@ -449,21 +457,44 @@ require_us_egress() {
 # tailnet app connector; if that route is gone the requests do not fail, they
 # quietly leave on the local address, which is the same silent fall-through the
 # proxy flag used to produce.
-require_bypass_routes() {
-    local host ip route
-    for host in $bypass_route_check; do
-        ip="$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n 1)"
-        [ -n "$ip" ] || continue
-        route="$(ip route get "$ip" 2>/dev/null | head -n 1)"
-        case "$route" in
-            *tailscale*) continue ;;
+# The interface a host's traffic leaves on, empty when the name does not
+# resolve or carries no route. getent exits 2 on an unknown name and ip exits
+# non-zero on an unreachable address; both are answers this returns as empty
+# rather than statuses, because under errexit an unguarded assignment turns
+# either one into a silent exit that looks exactly like a blocked launch
+# without printing a reason.
+bypass_route_dev() {
+    local host="$1" addr route
+    addr="$("$getent_bin" ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n 1 || true)"
+    [ -n "$addr" ] || return 0
+    route="$("$ip_bin" route get "$addr" 2>/dev/null | head -n 1 || true)"
+    printf '%s\n' "$route" | sed -n 's/.*[[:space:]]dev[[:space:]]\([^[:space:]]*\).*/\1/p'
+}
+
+bypass_route_is_tunnel() {
+    local dev="$1" iface
+    [ -n "$dev" ] || return 1
+    for iface in $bypass_route_ifaces; do
+        case "$dev" in
+            $iface) return 0 ;;
         esac
+    done
+    return 1
+}
+
+require_bypass_routes() {
+    local host dev
+    for host in $bypass_route_check; do
+        dev="$(bypass_route_dev "$host")"
+        # A name that does not resolve reaches nothing, so it leaks nothing.
+        [ -n "$dev" ] || continue
+        bypass_route_is_tunnel "$dev" && continue
         if [ "${RG_LIVINGSTON_ALLOW_LOCAL_EGRESS:-0}" = "1" ]; then
-            echo "rg-livingston-profile: $host does not route over the tailnet, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
+            echo "rg-livingston-profile: $host routes out $dev, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
             continue
         fi
         stop_relay
-        die "$host is on the proxy bypass list but no longer routes over the tailnet, so it would leave on the local address; check tailscale status"
+        die "$host is on the proxy bypass list and routes out $dev instead of the tailnet, so it would leave on an address that host does not accept; the app connector is reached by DNS, so check that Tailscale DNS is on (tailscale set --accept-dns=true) and routes are accepted (tailscale set --accept-routes=true)"
     done
 }
 
@@ -862,6 +893,7 @@ print_system_location_dry_run() {
 
 print_doctor() {
     local system_tz geolocation_values geoclue_override processes
+    local bypass_host bypass_dev
     load_proxy
     printf 'proxy=%s\n' "${proxy:-none}"
     # Measure through the relay, not around it. Reporting a direct-path egress
@@ -902,6 +934,17 @@ print_doctor() {
     fi
 
     print_egress_info || true
+
+    for bypass_host in $bypass_route_check; do
+        bypass_dev="$(bypass_route_dev "$bypass_host")"
+        if [ -z "$bypass_dev" ]; then
+            printf 'bypass_route_%s=unresolved\n' "$bypass_host"
+        elif bypass_route_is_tunnel "$bypass_dev"; then
+            printf 'bypass_route_%s=%s tailnet\n' "$bypass_host" "$bypass_dev"
+        else
+            printf 'bypass_route_%s=%s off-tailnet\n' "$bypass_host" "$bypass_dev"
+        fi
+    done
 
     if command -v "$pgrep_bin" >/dev/null 2>&1; then
         processes="$("$pgrep_bin" -af "$profile_root" 2>/dev/null || true)"
