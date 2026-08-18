@@ -5,7 +5,7 @@
 # Hash: specialize-v15-willma-devtools-hermes
 # Re-run whenever a target carrying an injected secret changes, so a freshly
 # applied models.yml / config.yml / mcp.json never keeps its PLACEHOLDER value:
-#   models.yml {{ include "dot_omp/private_agent/encrypted_models.yml.tmpl.age" | sha256sum }}
+#   models.yml {{ include "dot_omp/private_agent/encrypted_private_models.yml.tmpl.age" | sha256sum }}
 #   config.yml {{ include "dot_omp/private_agent/encrypted_config.yml.tmpl.age" | sha256sum }}
 #   mcp.json   {{ include "dot_omp/private_agent/encrypted_private_mcp.json.tmpl.age" | sha256sum }}
 set -euo pipefail
