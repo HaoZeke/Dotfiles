@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Move regenerable caches out of the snapshot stream.
+#
+# btrbk snapshots whole subvolumes, so every gigabyte that churns inside @home
+# is frozen into each retained snapshot. Caches churn hardest and are worth
+# nothing after a crash, yet they dominate the pinned space. A nested subvolume
+# is not captured by its parent's snapshot, so converting each cache directory
+# into its own subvolume takes it out of the stream permanently.
+#
+# Run from a quiet session: nothing may be writing to a cache while it moves.
+# Dry run by default; pass --apply.
+set -euo pipefail
+
+APPLY=0
+[[ ${1:-} == --apply ]] && APPLY=1
+
+# Regenerable, high-churn, and safe to lose entirely.
+CACHES=(
+  "${HOME}/.cache"
+  "${HOME}/.cargo/registry"
+  "${HOME}/.rustup/toolchains"
+  "${HOME}/.local/share/uv"
+  "${HOME}/.bun/install/cache"
+)
+
+log() { printf 'rg-cache-subvol: %s\n' "$*"; }
+die() { printf 'rg-cache-subvol: %s\n' "$*" >&2; exit 1; }
+
+command -v btrfs >/dev/null || die "btrfs-progs not installed"
+[[ $(findmnt -no FSTYPE --target "$HOME") == btrfs ]] || die "$HOME is not btrfs"
+
+is_subvol() {
+  [[ -d $1 ]] && [[ $(stat -c %i "$1") -eq 256 ]]
+}
+
+busy() {
+  ls -l /proc/[0-9]*/cwd /proc/[0-9]*/fd/* 2>/dev/null | grep -qF -- "$1"
+}
+
+for cache in "${CACHES[@]}"; do
+  [[ -e $cache ]] || { log "skip $cache (absent)"; continue; }
+  if is_subvol "$cache"; then
+    log "already a subvolume: $cache"
+    continue
+  fi
+  size=$(du -sh "$cache" 2>/dev/null | cut -f1)
+  if busy "$cache"; then
+    log "BUSY, skipping: $cache ($size) -- close what is using it and re-run"
+    continue
+  fi
+  if ((!APPLY)); then
+    log "would convert $cache ($size) into a subvolume"
+    continue
+  fi
+
+  staging="${cache}.subvol-new"
+  retired="${cache}.subvol-old"
+  log "converting $cache ($size)"
+  btrfs subvolume create "$staging" >/dev/null
+  # Reflink where possible so the copy is near-instant and space-neutral.
+  cp -a --reflink=auto "$cache/." "$staging/"
+  mv "$cache" "$retired"
+  mv "$staging" "$cache"
+  rm -rf "$retired"
+  log "done: $cache is now a subvolume"
+done
+
+if ((!APPLY)); then
+  log "dry run; pass --apply once the listed paths are idle"
+else
+  log "converted. New snapshots will no longer capture these paths."
+  log "Existing snapshots still pin the old copies until btrbk prunes them."
+fi
