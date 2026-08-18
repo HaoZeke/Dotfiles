@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
 # Laptop power management, ThinkPad X1 Gen 11 (rgx1gen11) ONLY. Other
-# Linux hosts (servers, desktops, cosmolab) must not pick up charge
+# Linux hosts (servers and desktops) must not pick up charge
 # thresholds, TLP, or lid-handler changes.
 #
 #   * BFQ on NVMe/SATA for interactive latency under I/O pressure
@@ -11,7 +11,7 @@
 #     while avoiding the harshest always-at-100% storage state.
 #
 # Separate from the memory-tuning script so a desktop host (no battery,
-# no lid) can disable just this part via chezmoi data.
+# no lid) can disable just this part via template data.
 #
 # Shared TLP baseline (single source of truth — do not paste keys here):
 # tlp-baseline-sha256: {{ include "dot_local/share/rgx1gen11/tlp-00-base.conf" | sha256sum }}
@@ -299,9 +299,12 @@ BTRBK_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_laptop_p
 # pCloud is a separate step (~/.local/bin/turtleback-push) that reads
 # the latest snapshot produced here.
 
+# Retention is a disk budget, not a preference: every daily kept here pins one
+# more day of build and cache churn under @home, and the churn outweighs the
+# working set. Move caches to their own subvolumes before widening this again.
 timestamp_format        long
 snapshot_preserve_min   2d
-snapshot_preserve       24h 14d 8w 12m
+snapshot_preserve       48h 7d 4w 6m
 backend                 btrfs-progs
 incremental             yes
 stream_compress         zstd
@@ -615,8 +618,8 @@ fi
 
 # Re-pin the peer endpoint while the resolver is likely healthy, so a later
 # tunnel restart never has to resolve a hostname it cannot reach.
-[ -x /home/rgoswami/.local/bin/rg-us-egress-endpoint-pin ] &&
-    /home/rgoswami/.local/bin/rg-us-egress-endpoint-pin >/dev/null 2>&1
+[ -x {{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-endpoint-pin ] &&
+    {{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-endpoint-pin >/dev/null 2>&1
 
 # Heal before guarding: the guard judges the tunnel, and that judgement is only
 # meaningful once the carve-outs it depends on are back.
@@ -941,7 +944,7 @@ fi
 # "freezes" that look like memory pressure but are actually dm-crypt
 # workqueue serialization on a single kworker under heavy I/O.
 # cryptsetup refresh (with or without --persistent) prompts for the
-# LUKS passphrase so it cannot run from a non-interactive chezmoi
+# LUKS passphrase so it cannot run from a non-interactive apply
 # script. Print the exact one-liner for the user to run once.
 if [ -e /dev/mapper/luks ] && command -v cryptsetup >/dev/null 2>&1; then
     if cryptsetup status luks 2>/dev/null \
