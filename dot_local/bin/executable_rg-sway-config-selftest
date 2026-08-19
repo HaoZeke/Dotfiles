@@ -12,9 +12,11 @@ fail() {
 
 scratchpads="$repo/dot_config/sway/conf.d/scratchpads"
 dunstrc="$repo/dot_config/dunst/dunstrc.tmpl"
+yazi_test="$repo/dot_local/bin/executable_rg-yazi-systemd-selftest"
 
 test -r "$scratchpads" || fail "missing $scratchpads"
 test -r "$dunstrc" || fail "missing $dunstrc"
+test -x "$yazi_test" || fail "missing executable Yazi/systemd self-test"
 
 rg -q 'set \{.*' "$scratchpads" \
     || fail "scratchpad settings block is missing"
@@ -28,5 +30,7 @@ rg -q 'bindsym F5 .*scratchpad show.*\$sf_pos' "$scratchpads" \
     || fail "F5 does not reapply secondary scratchpad placement"
 rg -q 'mouse_left_click = do_action, close_current' "$dunstrc" \
     || fail "notification left click must invoke the default action"
+
+"$yazi_test" "$repo"
 
 printf 'ok\n'
