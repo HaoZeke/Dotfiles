@@ -62,7 +62,7 @@ case "${mode}" in
         [ -z "${project}" ] && exit 0
         title=$(printf '' | rofi -dmenu -i -p "title >")
         [ -z "${title}" ] && exit 0
-        new_id=$(vissue q "${title}" -P "${project}")
+        new_id=$(vissue q "${title}" -p "${project}")
         notify-send "vissue" "created ${new_id}" 2>/dev/null || true
         printf '%s\n' "${new_id}"
         ;;
