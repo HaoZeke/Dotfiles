@@ -1,0 +1,14 @@
+# -*- systemd -*-
+[Unit]
+Description=Foot client for the Yazi file manager
+After=foot-server.service
+Requires=foot-server.service
+PartOf=sway-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Slice=desktop-app.slice
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 100 ]; do [ -S "/run/user/%U/foot-server.sock" ] && exit 0; i=$((i+1)); sleep 0.2; done; echo "foot server socket did not appear after 20s" >&2; exit 1'
+ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="yazi" -e %h/.local/bin/rg-yazi
+Restart=on-failure
+RestartSec=2

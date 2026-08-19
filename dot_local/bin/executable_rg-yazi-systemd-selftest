@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+for path in \
+    "$repo/dot_config/yazi/yazi.toml" \
+    "$repo/dot_config/shellrc/posix.d/04_yazi.sh" \
+    "$repo/dot_config/systemd/user/desktop-app.slice" \
+    "$repo/dot_config/systemd/user/foot-yazi.service" \
+    "$repo/dot_local/bin/executable_rg-app-run" \
+    "$repo/dot_local/bin/executable_rg-yazi"; do
+    test -r "$path" || fail "missing $path"
+done
+
+rg -q '^show_hidden = true$' "$repo/dot_config/yazi/yazi.toml" \
+    || fail "Yazi must show hidden files"
+rg -q -- '--cwd-file' "$repo/dot_config/shellrc/posix.d/04_yazi.sh" \
+    || fail "Yazi shell wrapper must preserve the working directory"
+rg -q 'MemoryHigh=' "$repo/dot_config/systemd/user/desktop-app.slice" \
+    || fail "desktop application slice must define a memory policy"
+rg -q -- '--slice=desktop-app.slice' "$repo/dot_local/bin/executable_rg-app-run" \
+    || fail "application launcher must assign desktop-app.slice"
+rg -q -- '--app-id="yazi"' "$repo/dot_config/systemd/user/foot-yazi.service" \
+    || fail "Yazi service must expose a stable app id"
+rg -q 'foot-yazi.service' "$repo/dot_config/sway/conf.d/scratchpads" \
+    || fail "Sway must expose the Yazi scratchpad service"
+
+bash -n \
+    "$repo/dot_config/shellrc/posix.d/04_yazi.sh" \
+    "$repo/dot_local/bin/executable_rg-app-run" \
+    "$repo/dot_local/bin/executable_rg-yazi"
+
+printf 'ok\n'
