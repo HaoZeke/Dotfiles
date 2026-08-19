@@ -79,31 +79,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "low swap protection",
-      "post_action_delay": "20",
-      "detectors": [
-        [
-          "swap is running low",
-          {
-            "name": "swap_free",
-            "args": {
-              "threshold_pct": "15"
-            }
-          }
-        ]
-      ],
-      "actions": [
-        {
-          "name": "kill_by_swap_usage",
-          "args": {
-            "cgroup": "user.slice/*/user@*.service/*",
-            "recursive": "true",
-            "post_action_delay": "20"
-          }
-        }
-      ]
     }
   ]
 }
