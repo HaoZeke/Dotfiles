@@ -9,8 +9,6 @@
 [Unit]
 Description=Watchdog that restarts kanata when its remap loop wedges
 Documentation=https://github.com/jtroo/kanata
-After=kanata.service
-Wants=kanata.service
 PartOf=sway-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
 
