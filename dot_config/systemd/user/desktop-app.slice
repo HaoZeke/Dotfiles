@@ -1,0 +1,9 @@
+# Managed by chezmoi (dot_config/systemd/user/desktop-app.slice).
+#
+# Default resource class for interactive GUI applications launched through
+# rg-app-run. It keeps ordinary applications below the compositor and input
+# services without imposing a hard memory ceiling on the whole desktop.
+[Slice]
+MemoryHigh=10G
+CPUWeight=100
+IOWeight=100

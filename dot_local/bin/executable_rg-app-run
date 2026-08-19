@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [ "$#" -eq 0 ]; then
+    printf 'usage: rg-app-run COMMAND [ARG ...]\n' >&2
+    exit 2
+fi
+
+if ! systemctl --user is-system-running >/dev/null 2>&1 \
+   && ! systemctl --user is-active default.target >/dev/null 2>&1; then
+    exec "$@"
+fi
+
+name=$(basename "$1")
+name=${name//[^[:alnum:]_.-]/-}
+unit="rg-app-${name}-$$"
+
+exec systemd-run --user --scope --quiet --collect \
+    --slice=desktop-app.slice \
+    --unit="$unit" \
+    -- "$@"

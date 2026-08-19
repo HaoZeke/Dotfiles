@@ -1,0 +1,11 @@
+# Managed by chezmoi (dot_config/yazi/yazi.toml).
+
+[mgr]
+show_hidden = true
+sort_by = "natural"
+sort_dir_first = true
+linemode = "size"
+
+[preview]
+wrap = "yes"
+tab_size = 4
