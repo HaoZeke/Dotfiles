@@ -360,3 +360,5 @@ stub/
 .chezmoitemplates/lib/
 ~/.claude/profiles/surf/claude-mcp-servers.json
 ~/.config/rg-tmp-reaper.env
+dot_config/shellrc/posix.d/private_07_local_env.sh
+~/.config/shellrc/posix.d/07_local_env.sh

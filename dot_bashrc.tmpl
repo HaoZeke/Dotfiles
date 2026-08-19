@@ -1,4 +1,4 @@
-{{ if eq .machine_role "buildbot" -}}
+{{ if or (eq .chezmoi.hostname "rgam5terra") (and (hasKey . "machine_role") (eq .machine_role "buildbot")) -}}
 # Disk-backed TMPDIR, aged by tmpfiles.d. /tmp here is a 24G tmpfs, which is
 # RAM: a build that fills it does not merely run out of scratch space, it
 # exhausts memory and swap, and then every write to /tmp on the machine starts
@@ -51,6 +51,9 @@ if [ -d $shellHome/posix.d ]; then
 	# XXX(rg): Is slow.
 	source "$shellHome/posix.d/05_paths.sh"
 	source "$shellHome/posix.d/06_prog_conf.sh"
+	# Sealed local environment. Absent on hosts that do not carry it, so the
+	# read test keeps a fresh clone from erroring before the vault is opened.
+	[ -r "$shellHome/posix.d/07_local_env.sh" ] && . "$shellHome/posix.d/07_local_env.sh"
 fi
 
 {{- if eq .chezmoi.hostname "rgx1gen11" }}
@@ -85,8 +88,6 @@ export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 {{- if $texlive_dir }}
 export PATH="$PATH:{{ $texlive_dir }}/bin/x86_64-linux"
 {{- end }}
-
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # Emacs Stuff (cross platform)
 # Local Variables:
