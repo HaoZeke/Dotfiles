@@ -20,10 +20,14 @@ test -r "$kanata_config" || fail "missing $kanata_config"
 test -r "$kanata_unit" || fail "missing $kanata_unit"
 test -r "$kanshi_unit" || fail "missing $kanshi_unit"
 
-rg -q 'linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd' "$kanata_config" \
-    || fail "kanata does not exclusively grab the raw built-in keyboard"
-rg -q 'eq \.chezmoi\.hostname "rgSURFLat"' "$kanata_config" \
-    || fail "rgSURFLat keyboard differences must be gated by chezmoi hostname"
+rg -q 'linux-dev-names-include \(' "$kanata_config" \
+    || fail "kanata does not select keyboards by device name"
+rg -q '"AT Translated Set 2 keyboard"' "$kanata_config" \
+    || fail "kanata does not include the built-in keyboard"
+rg -q '"Dell KB216 Wired Keyboard"' "$kanata_config" \
+    || fail "kanata does not include the supported external keyboard"
+rg -q 'hostname "rgSURFLat"' "$kanata_config" \
+    || fail "rgSURFLat keyboard differences must be hostname-gated"
 rg -q 'ConditionEnvironment=WAYLAND_DISPLAY' "$kanata_unit" \
     || fail "kanata.service must not start before Wayland (greeter double-Colemak)"
 rg -q 'ConditionEnvironment=WAYLAND_DISPLAY' "$kanshi_unit" \
