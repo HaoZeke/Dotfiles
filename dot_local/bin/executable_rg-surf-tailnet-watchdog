@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Bring the tailnet back after the daemon logs itself out.
+#
+# The control plane resolves to an IPv4 address this link cannot reach, so a
+# dial that picks it fails with "no route to host". One such failure is enough
+# to leave the daemon logged out, and a logged-out daemon does not retry: the
+# node stays dark long after the network is fine again, which reads as a dead
+# machine to every peer.
+#
+# Recovery is only attempted when the control plane actually answers, so a
+# genuinely offline laptop waits quietly instead of retrying every tick. The
+# flags are stated because `tailscale up` refuses to run without naming every
+# non-default setting, and stating them is what keeps this from quietly
+# rewriting the daemon's configuration.
+set -uo pipefail
+
+STATE_FLAGS="${RG_SURF_TS_FLAGS:---accept-routes --accept-dns=false}"
+PROBE_URL="${RG_SURF_TS_PROBE:-https://controlplane.tailscale.com/key?v=138}"
+TS="${RG_SURF_TS_BIN:-tailscale}"
+
+log() { printf 'rg-surf-tailnet-watchdog: %s\n' "$*"; }
+
+command -v "$TS" >/dev/null 2>&1 || { log "no tailscale binary"; exit 0; }
+
+state="$("$TS" status --json 2>/dev/null | jq -r '.BackendState // "unknown"' 2>/dev/null || echo unknown)"
+case "$state" in
+    Running)
+        exit 0
+        ;;
+    NeedsLogin | Stopped | NoState)
+        ;;
+    *)
+        # Starting, or a state this does not understand. Acting during a
+        # transition is how a watchdog turns a slow start into a restart loop.
+        log "state $state; leaving it alone"
+        exit 0
+        ;;
+esac
+
+# Curl follows its own resolution order and succeeds over IPv6 where the
+# daemon's IPv4 dial fails, so this answers "is the control plane reachable at
+# all", which is the question that decides whether a retry can work.
+if ! curl -sS -o /dev/null --max-time 8 "$PROBE_URL" 2>/dev/null; then
+    log "state $state but the control plane is unreachable; not retrying yet"
+    exit 0
+fi
+
+log "state $state and the control plane answers; bringing the tailnet up"
+# shellcheck disable=SC2086
+if "$TS" up $STATE_FLAGS --timeout=30s 2>&1 | sed 's/^/  /'; then
+    log "up: $("$TS" status --json 2>/dev/null | jq -r '.BackendState // "unknown"' 2>/dev/null)"
+else
+    log "up failed; leaving the daemon as it is"
+fi

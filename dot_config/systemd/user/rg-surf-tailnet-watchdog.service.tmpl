@@ -1,0 +1,10 @@
+{{- if eq .chezmoi.hostname "rgSURFLat" -}}
+[Unit]
+Description=Bring the tailnet back after the daemon logs itself out
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-surf-tailnet-watchdog
+{{ end -}}
