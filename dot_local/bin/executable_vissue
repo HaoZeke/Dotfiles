@@ -1,85 +1,26 @@
 #!/bin/sh
-# vissue: agent-friendly front-end for vault-tools issue (same APIs as MCP vault_issue_*).
-# Vault: VISSUE_ROOT or ~/Git/Gitlab/obsidian-notes
-# Extra: claim, hygiene, waiting-on, body-excerpt, identity, --json on list/ready via MCP-shaped helpers.
+# HaoZeke/vissue launcher. The cargo binary is vissue-cli next to this
+# script. Default root comes from VISSUE_ROOT, then
+# $XDG_CONFIG_HOME/vissue/root, then the cargo cwd walk.
 set -eu
-VAULT="${VISSUE_ROOT:-${HOME}/Git/Gitlab/obsidian-notes}"
-VT="${VAULT_TOOLS_BIN:-vault-tools}"
-if [ ! -d "${VAULT}" ]; then
-  printf '[vissue] vault root missing: %s (set VISSUE_ROOT)\n' "${VAULT}" >&2
-  exit 1
+
+if [ -z "${VISSUE_ROOT:-}" ]; then
+    cfg="${XDG_CONFIG_HOME:-${HOME}/.config}/vissue/root"
+    if [ -r "$cfg" ]; then
+        VISSUE_ROOT=$(sed -n '1p' "$cfg")
+        export VISSUE_ROOT
+    fi
 fi
 
-# Map agent subcommands to vault-tools / inline
-case "${1:-}" in
-  claim)
-    shift
-    ID="${1:?id required}"
-    exec "$VT" --root "$VAULT" issue update "$ID" --state STARTED
-    ;;
-  hygiene)
-    # use MCP-equivalent via issue check + ready
-    printf '=== vissue hygiene ===\n'
-    "$VT" --root "$VAULT" issue check || true
-    printf '\n--- STARTED ---\n'
-    "$VT" --root "$VAULT" issue list --state STARTED | head -40
-    printf '\n--- ready (actionable) ---\n'
-    "$VT" --root "$VAULT" issue ready | head -40
-    printf '\nhint: nimvault_* = GPG blobs; vissue/vault_issue_* = Software/*/issues.org\n'
-    exit 0
-    ;;
-  waiting-on|waiting_on)
-    shift
-    ID="${1:?id required}"
-    exec "$VT" --root "$VAULT" issue backlinks "$ID"
-    ;;
-  body-excerpt|excerpt)
-    shift
-    ID="${1:?id required}"
-    # show file range then sed
-    SHOW=$("$VT" --root "$VAULT" issue show "$ID")
-    FILELINE=$(printf '%s\n' "$SHOW" | sed -n 's/^File:     //p' | head -1)
-    printf '%s\n' "$SHOW"
-    printf '%s\n' "$FILELINE"
-    exit 0
-    ;;
-  identity)
-    VTBIN=$(command -v "$VT" || true)
-    printf 'vissue -> %s root=%s\n' "${VTBIN:-$VT}" "$VAULT"
-    ls -la "$VTBIN" 2>/dev/null || true
-    exit 0
-    ;;
-  gen)
-    exec "$VT" --root "$VAULT" issue gen
-    ;;
-  events)
-    shift
-    exec "$VT" --root "$VAULT" issue events "$@"
-    ;;
-  ping)
-    shift
-    exec "$VT" --root "$VAULT" issue ping "$@"
-    ;;
-  wait)
-    shift
-    exec "$VT" --root "$VAULT" issue wait "$@"
-    ;;
-  --help|-h|help)
-    cat <<'H'
-vissue — thin CLI over vault-tools issue (parity with MCP vault_issue_*).
-
-  vissue ready | list | show ID | update ID --state STARTED
-  vissue claim ID          # STARTED
-  vissue hygiene           # check + started + ready snapshot
-  vissue waiting-on ID     # backlinks / dependents
-  vissue body-excerpt ID   # show + file range (open with Read)
-  vissue identity          # binary + vault root
-  vissue export -P Proj | jq   # JSONL from vault-tools
-
-Env: VISSUE_ROOT, VAULT_TOOLS_BIN
-H
-    exit 0
-    ;;
-esac
-
-exec "$VT" issue --root "${VAULT}" "$@"
+if [ -x "${VISSUE_BIN:-}" ]; then
+    exec "${VISSUE_BIN}" "$@"
+fi
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -x "$here/vissue-cli" ]; then
+    exec "$here/vissue-cli" "$@"
+fi
+if command -v vissue-cli >/dev/null 2>&1; then
+    exec vissue-cli "$@"
+fi
+printf '[vissue] cargo CLI missing (install HaoZeke/vissue as vissue-cli)\n' >&2
+exit 127

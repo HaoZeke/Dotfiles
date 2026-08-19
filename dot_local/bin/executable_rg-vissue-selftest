@@ -6,7 +6,11 @@ set -euo pipefail
 SCRIPT="${1:-}"
 if [ -z "$SCRIPT" ]; then
     here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-    SCRIPT="$here/executable_vissue"
+    if [ -r "$here/executable_vissue" ]; then
+        SCRIPT="$here/executable_vissue"
+    else
+        SCRIPT="$here/vissue"
+    fi
 fi
 
 fail() {
@@ -20,31 +24,26 @@ tmp_home=$(mktemp -d)
 trap 'rm -rf "$tmp_home"' EXIT
 
 fake_bin="$tmp_home/bin"
-fake_vault="$tmp_home/Git/Gitlab/obsidian-notes"
-mkdir -p "$fake_bin" "$fake_vault"
+fake_vault="$tmp_home/notes-vault"
+mkdir -p "$fake_bin" "$fake_vault" "$tmp_home/.config/vissue"
 
-cat > "$fake_bin/vault-tools" <<'EOF'
+cat > "$fake_bin/vissue-cli" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-
-printf '%s\n' "$*" > "$RG_VISSUE_ARG_LOG"
-
-if [ "$1" = "issue" ] && [ "$2" = "--root" ] && [ -d "$3" ] && [ "$4" = "list" ]; then
-    exit 0
-fi
-
-printf 'unexpected vault-tools arguments: %s\n' "$*" >&2
-exit 64
+printf 'ROOT=%s ARG=%s\n' "${VISSUE_ROOT:-}" "$*" > "$RG_VISSUE_ARG_LOG"
 EOF
-chmod +x "$fake_bin/vault-tools"
+chmod +x "$fake_bin/vissue-cli"
+printf '%s\n' "$fake_vault" > "$tmp_home/.config/vissue/root"
 
 arg_log="$tmp_home/args"
 HOME="$tmp_home" \
+    XDG_CONFIG_HOME="$tmp_home/.config" \
     PATH="$fake_bin:$PATH" \
+    VISSUE_BIN="$fake_bin/vissue-cli" \
     RG_VISSUE_ARG_LOG="$arg_log" \
     "$SCRIPT" list
 
-expected="issue --root $fake_vault list"
+expected="ROOT=$fake_vault ARG=list"
 actual=$(cat "$arg_log")
 [ "$actual" = "$expected" ] || fail "expected '$expected', got '$actual'"
 
