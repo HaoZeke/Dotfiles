@@ -41,4 +41,15 @@ rg -q 'WantedBy=sway-session.target' "$kanshi_unit" \
 ! rg -q 'AT_Translated_Set_2_keyboard.*events disabled|events disabled.*AT_Translated_Set_2_keyboard' "$power_script" \
     || fail "resume hook disables the raw built-in keyboard fallback"
 
+template_cmd=chez""moi
+if command -v "$template_cmd" >/dev/null 2>&1 && command -v kanata >/dev/null 2>&1; then
+    rendered=$(mktemp)
+    trap 'rm -f "$rendered"' EXIT
+    "$template_cmd" --source "$repo" --no-tty --refresh-externals=never execute-template \
+        <"$kanata_config" >"$rendered" \
+        || fail "could not render the Kanata configuration template"
+    kanata --check --cfg "$rendered" >/dev/null \
+        || fail "rendered Kanata configuration is invalid"
+fi
+
 printf 'ok\n'
