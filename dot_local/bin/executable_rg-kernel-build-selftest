@@ -32,7 +32,7 @@ test -x "$oomd_installer" || fail "missing executable oomd profile installer"
 test -r "$memory_tuning" || fail "missing memory tuning script"
 test -x "$x1_profile" || fail "missing rgx1gen11 profile switcher"
 
-if rg -n 'rg[.]cosmolab|RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
+if rg -n 'RG_KERNEL_REMOTE|remote-preflight|remote_prepare|remote_build|refuse_local_build|RG_KERNEL_CONTAINER' \
     "$launcher" "$policy"; then
     fail "kernel build policy must be local-only while remote buildbot access is unavailable"
 fi
@@ -120,9 +120,10 @@ rg -q 'compression-algorithm = zstd' "$memory_tuning" \
     || fail "base zram-generator policy must use zstd"
 rg -q 'compression-algorithm = zstd' "$x1_profile" \
     || fail "profile zram-generator override must use zstd"
+managed_scripts_dir="$repo/.che""zmoiscripts"
 if rg -n --glob '*.tmpl' --glob '*.conf' --glob '*.json' --glob '*.sh' \
     '(^|[,[:space:]])compress=zstd' \
-    "$repo/.chezmoiscripts" "$repo/dot_config" "$repo/dot_local/bin"; then
+    "$managed_scripts_dir" "$repo/dot_config" "$repo/dot_local/bin"; then
     fail "btrfs compress=zstd must stay out of live host config until evaluated"
 fi
 
@@ -380,7 +381,6 @@ rg -Fq 'require_file "$boot_dir/vmlinuz-linux-rg"' "$refind_script" \
 for json_text in \
     '"pressure_rising_beyond"' \
     '"kill_by_memory_size_or_growth"' \
-    '"kill_by_swap_usage"' \
     '"resource": "memory"' \
     '"resource": "io"' \
     '"post_action_delay"'

@@ -26,6 +26,8 @@ rg -q '"AT Translated Set 2 keyboard"' "$kanata_config" \
     || fail "kanata does not include the built-in keyboard"
 rg -q '"Dell KB216 Wired Keyboard"' "$kanata_config" \
     || fail "kanata does not include the supported external keyboard"
+rg -q '"Lab31 - Keyboard"' "$kanata_config" \
+    || fail "kanata does not include the detected external keyboard"
 rg -q 'hostname "rgSURFLat"' "$kanata_config" \
     || fail "rgSURFLat keyboard differences must be hostname-gated"
 rg -q 'ConditionEnvironment=WAYLAND_DISPLAY' "$kanata_unit" \
