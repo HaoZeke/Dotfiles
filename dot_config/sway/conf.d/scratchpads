@@ -34,7 +34,7 @@ for_window [app_id="yazi"] {
     sticky disable
     $yazi_pos
 }
-bindsym $mod+e exec swaymsg [app_id="yazi"] scratchpad show || $start_yazi, $yazi_pos
+bindsym $mod+F7 exec swaymsg [app_id="yazi"] scratchpad show || $start_yazi, $yazi_pos
 
 # Fractal floats as the interactive Matrix client without scratchpad hiding.
 for_window [app_id="org.gnome.Fractal"] {
