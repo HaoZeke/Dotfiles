@@ -5,8 +5,10 @@ After=foot-server.service tmux-session-ms.service
 Requires=foot-server.service tmux-session-ms.service
 
 [Service]
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 100 ]; do [ -S "/run/user/%U/foot-server.sock" ] && exit 0; i=$((i+1)); sleep 0.2; done; echo "foot server socket did not appear after 20s" >&2; exit 1'
 ExecStart=/usr/bin/footclient --server-socket=/run/user/%U/foot-server.sock --app-id="mS" -e %h/.local/bin/rg-tmux-role client main
 Restart=on-failure
+RestartSec=2
 
 [Install]
 WantedBy=default.target

@@ -4,6 +4,7 @@ Description=Gammastep for bluelight adjustment
 After=graphical.target
 
 [Service]
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 100 ]; do for s in "$XDG_RUNTIME_DIR"/wayland-*; do [ -S "$s" ] && exit 0; done; i=$((i+1)); sleep 0.2; done; echo "no Wayland socket after 20s" >&2; exit 1'
 ExecStart=/usr/bin/gammastep -c %h/.config/gammastep/config.ini
 Restart=on-failure
 RestartSec=5
