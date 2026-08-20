@@ -1,0 +1,25 @@
+[Unit]
+Description=rg-space-sweep auto-clean when $HOME free space drops below threshold
+Documentation=https://github.com/HaoZeke/dotfiles
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+{{- if or (eq .chezmoi.hostname "rgam5terra") (and (hasKey . "machine_role") (eq .machine_role "buildbot")) }}
+# Build host thresholds.
+#
+# --min-free-gb 250: the filesystem here is 1.9T, so a 10G floor is reached
+# only once allocation is already failing. Btrfs also needs unallocated space
+# to balance, and a single toolchain build can claim tens of gigabytes, so the
+# sweep has to fire while there is still room for it to matter.
+#
+# --min-age-days 14: builds on this host run for days at a time, and a target
+# directory belonging to one of them is indistinguishable from an abandoned
+# one by name alone. Two weeks clears the longest jobs seen here.
+ExecStart=%h/.local/bin/rg-space-sweep auto-clean --min-free-gb 250 --min-age-days 14 all
+{{- else }}
+# Clean only if free space is below 10 GB. Category set: all.
+ExecStart=%h/.local/bin/rg-space-sweep auto-clean --min-free-gb 10 all
+{{- end }}

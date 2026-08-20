@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 {{- if eq .chezmoi.os "linux" }}
-# Rebuild rg-space-sweep whenever its chezmoi-managed Rust source changes.
+# Rebuild rg-space-sweep whenever its managed Rust source changes.
 # hash: {{ output "bash" "-lc" (printf "cat %q %q %q %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/rg-space-sweep-src/Cargo.toml" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/Cargo.lock" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/main.rs" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/remote_template.rs" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/remote-sweep.sh" .chezmoi.sourceDir) (printf "%s/dot_local/share/rg-space-sweep-src/btrfs-cleanup.sh" .chezmoi.sourceDir)) | trim }}
 
 set -euo pipefail
@@ -21,4 +21,25 @@ export CARGO_BUILD_JOBS=4
 
 echo "chezmoi: installing rg-space-sweep via cargo install ..."
 cargo install --path "$SRC" --root "$HOME/.local" --force --locked
+
+# Enable the sweep timer wherever the binary is installed.
+#
+# Installing the cleaner without starting it is the state that let one host
+# reach 97% full while the timer sat disabled: the unit files were deployed
+# and the binary was built, and nothing ever ran them. Enablement belongs
+# next to the install rather than in a manual step.
+#
+# A host without a running user manager (a container build, a chroot) has no
+# systemd to talk to, so a failure here is reported and skipped instead of
+# breaking the apply.
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    if systemctl --user enable --now rg-space-sweep.timer >/dev/null 2>&1; then
+        echo "chezmoi: rg-space-sweep.timer enabled."
+    else
+        echo "chezmoi: could not enable rg-space-sweep.timer; enable it by hand." >&2
+    fi
+else
+    echo "chezmoi: no user systemd manager; skipping rg-space-sweep.timer enable."
+fi
 {{- end }}
