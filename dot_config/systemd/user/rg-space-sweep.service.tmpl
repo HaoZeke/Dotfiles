@@ -20,6 +20,11 @@ IOSchedulingPriority=7
 # one by name alone. Two weeks clears the longest jobs seen here.
 ExecStart=%h/.local/bin/rg-space-sweep auto-clean --min-free-gb 250 --min-age-days 14 all
 {{- else }}
-# Clean only if free space is below 10 GB. Category set: all.
-ExecStart=%h/.local/bin/rg-space-sweep auto-clean --min-free-gb 10 all
+# --min-free-gb 40: a 10 GB floor on a 469 GB disk fires only once btrfs has
+# nearly nothing left to allocate, so the timer runs hourly and exits without
+# acting while the filesystem sits at 97%. Leave enough headroom that a sweep
+# still has room to work, and that allocation does not start failing first.
+#
+# The age gate is left at the auto-clean default rather than named here.
+ExecStart=%h/.local/bin/rg-space-sweep auto-clean --min-free-gb 40 all
 {{- end }}

@@ -237,6 +237,19 @@ struct Options {
 struct Candidate {
     category: Category,
     path: PathBuf,
+    /// Whether the age filter applies to this candidate.
+    ///
+    /// True for project directories found by the walk. A `target` or `.venv`
+    /// belonging to a build in progress must survive an unattended pass, and
+    /// recent writes are the only signal that it is in use.
+    ///
+    /// False for the fixed shared caches. Those are content-addressed
+    /// download and compile caches: removing one costs a re-fetch or a
+    /// recompile and cannot produce a wrong result. Gating them on recency
+    /// makes them uncollectable, because a cache in daily use always holds a
+    /// file written minutes ago while nearly all of its contents are cold.
+    /// One warm entry would otherwise pin tens of gigabytes forever.
+    age_gated: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -360,8 +373,10 @@ auto-clean
     --min-age-days 7 so a running build keeps its target directory.
 
 --min-age-days N
-    Skip any directory holding a file modified within the last N days. Zero
-    disables the check and is the default for report and clean.
+    Skip any project directory holding a file modified within the last N days.
+    Zero disables the check and is the default for report and clean. Applies to
+    walked project directories only; the fixed shared caches are always
+    eligible, since re-fetching one costs time and never correctness.
 
 snapshots
     Report dated btrfs snapshots under /.snapshots and write a root-only
@@ -1499,7 +1514,7 @@ fn filter_by_age(candidates: Vec<Candidate>, days: u64) -> Vec<Candidate> {
     };
     candidates
         .into_iter()
-        .filter(|candidate| is_stale(&candidate.path, days, now))
+        .filter(|candidate| !candidate.age_gated || is_stale(&candidate.path, days, now))
         .collect()
 }
 
@@ -1513,7 +1528,11 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
             if !path.exists() || !seen.insert(path.clone()) {
                 continue;
             }
-            entries.push(Candidate { category, path });
+            entries.push(Candidate {
+                category,
+                path,
+                age_gated: false,
+            });
         }
     }
 
@@ -1527,7 +1546,11 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
             if !path.exists() || !seen.insert(path.clone()) {
                 continue;
             }
-            entries.push(Candidate { category, path });
+            entries.push(Candidate {
+                category,
+                path,
+                age_gated: true,
+            });
         }
         // Shallow ~/.local/share probe for cargo targets (depth-capped, not full share walk).
         if names.iter().any(|n| *n == "target" || *n == "target-nomount") {
@@ -1579,7 +1602,11 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
                     if !path.exists() || !seen.insert(path.clone()) {
                         continue;
                     }
-                    entries.push(Candidate { category, path });
+                    entries.push(Candidate {
+                category,
+                path,
+                age_gated: true,
+            });
                 }
             }
         }
@@ -1594,6 +1621,7 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
             entries.push(Candidate {
                 category: Category::Js,
                 path,
+                age_gated: true,
             });
         }
     }
@@ -2934,8 +2962,18 @@ mod tests {
         let candidates = vec![Candidate {
             category: Category::Rust,
             path: dir.clone(),
+            age_gated: true,
         }];
         assert!(filter_by_age(candidates, 7).is_empty());
+
+        // The same fresh directory reached through a fixed cache entry is not
+        // gated, so it stays eligible.
+        let fixed = vec![Candidate {
+            category: Category::Pixi,
+            path: dir.clone(),
+            age_gated: false,
+        }];
+        assert_eq!(filter_by_age(fixed, 7).len(), 1);
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -2945,6 +2983,7 @@ mod tests {
         let candidates = vec![Candidate {
             category: Category::Rust,
             path: PathBuf::from("/home/test/proj/target"),
+            age_gated: true,
         }];
         assert_eq!(filter_by_age(candidates, 0).len(), 1);
     }
