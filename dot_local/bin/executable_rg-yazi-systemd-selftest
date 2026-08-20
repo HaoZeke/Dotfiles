@@ -15,7 +15,8 @@ for path in \
     "$repo/dot_config/systemd/user/desktop-app.slice" \
     "$repo/dot_config/systemd/user/foot-yazi.service" \
     "$repo/dot_local/bin/executable_rg-app-run" \
-    "$repo/dot_local/bin/executable_rg-yazi"; do
+    "$repo/dot_local/bin/executable_rg-yazi" \
+    "$repo/dot_local/bin/executable_rg-yazi-select"; do
     test -r "$path" || fail "missing $path"
 done
 
@@ -23,6 +24,8 @@ rg -q '^show_hidden = true$' "$repo/dot_config/yazi/yazi.toml" \
     || fail "Yazi must show hidden files"
 rg -q -- '--cwd-file' "$repo/dot_config/shellrc/posix.d/04_yazi.sh" \
     || fail "Yazi shell wrapper must preserve the working directory"
+rg -q -- '--chooser-file' "$repo/dot_local/bin/executable_rg-yazi-select" \
+    || fail "Yazi chooser must use the native chooser file"
 rg -q 'MemoryHigh=' "$repo/dot_config/systemd/user/desktop-app.slice" \
     || fail "desktop application slice must define a memory policy"
 rg -q -- '--slice=desktop-app.slice' "$repo/dot_local/bin/executable_rg-app-run" \
@@ -35,6 +38,7 @@ rg -q 'foot-yazi.service' "$repo/dot_config/sway/conf.d/scratchpads" \
 bash -n \
     "$repo/dot_config/shellrc/posix.d/04_yazi.sh" \
     "$repo/dot_local/bin/executable_rg-app-run" \
-    "$repo/dot_local/bin/executable_rg-yazi"
+    "$repo/dot_local/bin/executable_rg-yazi" \
+    "$repo/dot_local/bin/executable_rg-yazi-select"
 
 printf 'ok\n'

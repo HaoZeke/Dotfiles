@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+chooser=$(mktemp -t yazi-chooser.XXXXXX)
+trap 'rm -f "$chooser"' EXIT
+
+yazi "$@" --chooser-file="$chooser"
+
+if [ -s "$chooser" ]; then
+    cat "$chooser"
+fi
