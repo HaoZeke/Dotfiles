@@ -82,6 +82,9 @@ echo "btrfs fi usage /home:"
 btrfs fi usage /home | head -20 || true
 "#;
 
+/// Age below which unattended cleaning leaves a directory alone.
+const DEFAULT_AUTO_CLEAN_MIN_AGE_DAYS: u64 = 7;
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum Category {
@@ -212,6 +215,10 @@ struct Options {
     limit: usize,
     /// For AutoClean: only clean when free space on $HOME drops below N GB.
     min_free_gb: u64,
+    /// Skip candidates containing a file modified within the last N days. Zero
+    /// disables the check. Guards against deleting the target directory of a
+    /// build that is running right now.
+    min_age_days: u64,
     /// For Snapshots: where to write the cleanup script.
     script_path: PathBuf,
     /// For Snapshots: also include TODAY's snapshots (aggressive).
@@ -336,7 +343,7 @@ fn ensure_script_parent(path: &Path) -> Result<(), String> {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js|go|java]
+usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--min-age-days N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js|go|java]
        rg-space-sweep target list|show NAME|check NAME [--json] [--target-config PATH]
 
 report
@@ -349,7 +356,12 @@ clean
 
 auto-clean
     Check free space on $HOME; clean only if below --min-free-gb (default 10).
-    Always implies --yes when firing. Intended for a systemd timer.
+    Always implies --yes when firing. Intended for a systemd timer. Defaults to
+    --min-age-days 7 so a running build keeps its target directory.
+
+--min-age-days N
+    Skip any directory holding a file modified within the last N days. Zero
+    disables the check and is the default for report and clean.
 
 snapshots
     Report dated btrfs snapshots under /.snapshots and write a root-only
@@ -380,6 +392,8 @@ where
     let mut yes = false;
     let mut limit = 20usize;
     let mut min_free_gb: u64 = 10;
+    let mut min_age_days: u64 = 0;
+    let mut min_age_explicit = false;
     let mut script_path = default_snapshot_script_path();
     let mut aggressive = false;
     let mut target = Target::Local;
@@ -473,6 +487,15 @@ where
                     .parse::<u64>()
                     .map_err(|_| format!("invalid --min-free-gb value: {value}"))?;
             }
+            "--min-age-days" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "--min-age-days requires a value".to_string())?;
+                min_age_days = value
+                    .parse::<u64>()
+                    .map_err(|_| format!("invalid --min-age-days value: {value}"))?;
+                min_age_explicit = true;
+            }
             "--script-path" => {
                 let value = args
                     .next()
@@ -512,6 +535,15 @@ where
         return Err("refusing to clean without --yes; use --dry-run to preview first".to_string());
     }
 
+    // auto-clean fires from a timer with --yes implied, so nobody is watching
+    // when it picks its candidates. A cargo target directory belonging to a
+    // build that is running right now looks exactly like a stale one, and
+    // deleting it fails the build. Interactive `clean` keeps the unfiltered
+    // default because the operator reviews the dry run first.
+    if mode == Mode::AutoClean && !min_age_explicit {
+        min_age_days = DEFAULT_AUTO_CLEAN_MIN_AGE_DAYS;
+    }
+
     let options = Options {
         mode,
         categories,
@@ -519,6 +551,7 @@ where
         yes,
         limit,
         min_free_gb,
+        min_age_days,
         script_path,
         aggressive,
         target,
@@ -1422,6 +1455,54 @@ fn classify_walked_path(path: &Path, categories: &[Category]) -> Option<Category
     }
 }
 
+/// Seconds since the epoch, or None when the clock is unreadable.
+fn now_unix() -> Option<u64> {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_secs())
+}
+
+/// Whether `path` holds no file modified within the last `days` days.
+///
+/// `-newermt` plus `-quit` stops the walk at the first recent file, so an
+/// active tree costs one directory read rather than a full traversal. Only
+/// genuinely stale trees are walked to completion, and those are about to be
+/// deleted anyway.
+fn is_stale(path: &Path, days: u64, now: u64) -> bool {
+    if days == 0 {
+        return true;
+    }
+    let cutoff = now.saturating_sub(days.saturating_mul(86_400));
+    let args = vec![
+        path.as_os_str().to_os_string(),
+        OsString::from("-xdev"),
+        OsString::from("-newermt"),
+        OsString::from(format!("@{cutoff}")),
+        OsString::from("-print"),
+        OsString::from("-quit"),
+    ];
+    match run_find_output(&args) {
+        Ok(out) => out.trim().is_empty(),
+        // An unreadable tree is not a tree we should be deleting unattended.
+        Err(_) => false,
+    }
+}
+
+/// Drop candidates touched within `days` days. Zero is a no-op.
+fn filter_by_age(candidates: Vec<Candidate>, days: u64) -> Vec<Candidate> {
+    if days == 0 {
+        return candidates;
+    }
+    let Some(now) = now_unix() else {
+        return candidates;
+    };
+    candidates
+        .into_iter()
+        .filter(|candidate| is_stale(&candidate.path, days, now))
+        .collect()
+}
+
 fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candidate>, String> {
     let mut seen = BTreeSet::new();
     let mut entries = Vec::new();
@@ -1452,7 +1533,7 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
         if names.iter().any(|n| *n == "target" || *n == "target-nomount") {
             let share = home.join(".local/share");
             if share.is_dir() {
-                let mut args = vec![
+                let args = vec![
                     share.as_os_str().to_os_string(),
                     OsString::from("-xdev"),
                     OsString::from("-maxdepth"),
@@ -2197,7 +2278,9 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
 
     home_dir()
         .and_then(|home| {
-            collect_candidates(&home, &options.categories).map(|entries| (home, entries))
+            collect_candidates(&home, &options.categories)
+                .map(|entries| filter_by_age(entries, options.min_age_days))
+                .map(|entries| (home, entries))
         })
         .and_then(|(home, entries)| {
             match options.mode {
@@ -2506,6 +2589,7 @@ mod tests {
             yes: false,
             limit: 20,
             min_free_gb: 10,
+            min_age_days: 0,
             script_path: PathBuf::from("/tmp/script.sh"),
             aggressive: false,
             target: Target::Remote("cosmolab".to_string()),
@@ -2798,5 +2882,70 @@ mod tests {
         assert!(json.contains("\"grand_total_bytes\":42"));
         assert!(json.contains("\"dry_run\":true"));
         assert!(json.contains("\"path\":\"~/.cache/pip\""));
+    }
+
+    #[test]
+    fn min_age_days_parses_and_defaults_to_zero() {
+        let explicit = parse_args_from(["report", "--min-age-days", "21", "rust"])
+            .expect("explicit age parses");
+        assert_eq!(explicit.min_age_days, 21);
+
+        let plain = parse_args_from(["report", "rust"]).expect("report parses");
+        assert_eq!(plain.min_age_days, 0);
+
+        let clean = parse_args_from(["clean", "--dry-run", "rust"]).expect("clean parses");
+        assert_eq!(clean.min_age_days, 0);
+    }
+
+    #[test]
+    fn auto_clean_defaults_to_a_protective_age_but_honours_an_explicit_one() {
+        let defaulted = parse_args_from(["auto-clean", "all"]).expect("auto-clean parses");
+        assert_eq!(defaulted.min_age_days, DEFAULT_AUTO_CLEAN_MIN_AGE_DAYS);
+
+        let overridden = parse_args_from(["auto-clean", "--min-age-days", "0", "all"])
+            .expect("auto-clean override parses");
+        assert_eq!(overridden.min_age_days, 0);
+    }
+
+    #[test]
+    fn min_age_days_rejects_a_non_numeric_value() {
+        let err = parse_args_from(["auto-clean", "--min-age-days", "soon"])
+            .expect_err("non-numeric age is rejected");
+        assert!(err.contains("invalid --min-age-days value"));
+    }
+
+    #[test]
+    fn is_stale_spares_a_directory_touched_inside_the_window() {
+        let dir = std::env::temp_dir().join(format!(
+            "rg-space-sweep-age-{}-{}",
+            std::process::id(),
+            "fresh"
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("debug")).expect("create tree");
+        fs::write(dir.join("debug/artifact"), b"x").expect("write artifact");
+
+        let now = now_unix().expect("clock");
+        // The file was just written, so a 7 day window must protect it, and a
+        // zero window must ignore the check entirely.
+        assert!(!is_stale(&dir, 7, now));
+        assert!(is_stale(&dir, 0, now));
+
+        let candidates = vec![Candidate {
+            category: Category::Rust,
+            path: dir.clone(),
+        }];
+        assert!(filter_by_age(candidates, 7).is_empty());
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn filter_by_age_is_a_no_op_when_disabled() {
+        let candidates = vec![Candidate {
+            category: Category::Rust,
+            path: PathBuf::from("/home/test/proj/target"),
+        }];
+        assert_eq!(filter_by_age(candidates, 0).len(), 1);
     }
 }
