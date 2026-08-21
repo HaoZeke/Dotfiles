@@ -1,0 +1,22 @@
+extends: existence
+message: "'%s' is non-ASCII punctuation. Paste surfaces (Jira, GitHub, mail) take ASCII only."
+ignorecase: false
+level: error
+nonword: true
+tokens:
+  - '—'
+  - '–'
+  - '‘'
+  - '’'
+  - '“'
+  - '”'
+  - '…'
+  - '→'
+  - '←'
+  - '↔'
+  - '⇒'
+  - '•'
+  - '×'
+  - '≤'
+  - '≥'
+  - '≠'
