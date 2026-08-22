@@ -25,6 +25,7 @@ GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
 TEACHX_SRC="$HOME/.local/bin/rg-tunnel-teachx-carveout"
 POLICY_SRC="$HOME/.local/bin/rg-us-egress-policy"
+RECOVERY_SRC="$HOME/.config/rg-us-egress-policy/recovery-hosts"
 if [ ! -x "$GUARD_SRC" ]; then
     echo "chezmoi: us-egress guard script missing; skipping install." >&2
     exit 0
@@ -54,6 +55,11 @@ install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
 install_bin "$POLICY_SRC" /usr/local/sbin/rg-us-egress-policy
 [ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
 [ -x "$TEACHX_SRC" ] && install_bin "$TEACHX_SRC" /usr/local/sbin/rg-tunnel-teachx-carveout
+if [ ! -s "$RECOVERY_SRC" ]; then
+    echo "chezmoi: private recovery destination set is missing; refusing an incomplete egress policy" >&2
+    exit 1
+fi
+sudo install -D -m 0600 -o root -g root "$HOME/.config/rg-us-egress-policy/recovery-hosts" /etc/rg-us-egress-policy/recovery-hosts
 
 # (0) Audio: force the SOF driver for the Raptor Lake cAVS device. The
 # auto-selector's DMIC probe silently demotes it to legacy HDA (no internal
