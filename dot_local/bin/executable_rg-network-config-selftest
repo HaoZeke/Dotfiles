@@ -419,6 +419,8 @@ rg -q 'ip route get 8.8.8.8 mark 0x5252' "$net_doctor" \
     || fail "doctor must verify protected-process traffic cannot bypass Houston"
 rg -q 'table 51821' "$net_doctor" \
     || fail "doctor must verify the dedicated protected routing table"
+rg -F -q 'target == address || target == address "/" bits' "$net_doctor" \
+    || fail "doctor must accept canonical host rules with or without an explicit prefix length"
 rg -q 'collision_file=.*collisions-\$family_state' "$net_doctor" \
     || fail "doctor must report protected/recovery address collisions"
 ! rg -q 'route show table main type unreachable' "$net_doctor" \
