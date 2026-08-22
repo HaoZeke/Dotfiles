@@ -343,6 +343,28 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     wrn "no api.x.ai pin in /etc/hosts (rg-net-heal asserts it)"
   fi
 
+  printf '== grok egress fail-closed pin ==\n'
+  # Reports the state rg-net-heal section 1c maintains. Pins present while the
+  # tunnel is up means a lift was missed and grok is being refused for nothing;
+  # pins absent while it is down means grok is free to leave on the residential
+  # address, which is the condition the pin exists to prevent.
+  grok_pins=$(ip -4 route show table main type unreachable 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
+  grok_pins=${grok_pins% }
+  if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
+     && ip -4 route show table 51820 2>/dev/null | grep -q '^default'; then
+    if [ -n "$grok_pins" ]; then
+      bad "US egress up but grok still pinned closed: $grok_pins (rg-net-heal should lift within ~30s)"
+    else
+      ok "US egress up, no stale grok pins; grok rides the tunnel"
+    fi
+  else
+    if [ -n "$grok_pins" ]; then
+      ok "US egress down and grok pinned closed: $grok_pins (no residential leak)"
+    else
+      bad "US egress down and grok NOT pinned; grok would exit on the residential uplink"
+    fi
+  fi
+
   printf '== egress exit geography ==\n'
   geo=$(curl -4 -sS --connect-timeout 5 --max-time 10 https://ipinfo.io/json 2>/dev/null \
     | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("country","?"), d.get("city","?"), d.get("ip","?"))' 2>/dev/null || true)

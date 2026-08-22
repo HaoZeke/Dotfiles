@@ -13,6 +13,13 @@
 #      or peer-transport endpoints onto the LAN, and it deletes any stale /32
 #      of that kind left over from the earlier underlay carve-out. Only the
 #      haozeke tailnet (section 3) stays on the LAN uplink.
+#   2b. grok/x.ai fail-closed pin: grok's API flows already ride the Houston
+#      tunnel through rule 5209. When rg-us-egress-wg drops they would fall
+#      through to main and leave on the residential uplink, a silent change of
+#      exit rather than an outage. Hold those destinations unreachable in main
+#      while the tunnel is down and lift the pin when it returns. The
+#      teachx/starfleet connector hosts are excluded: they ride tailscale0 and
+#      must survive a tunnel flap.
 #   3. landsbankinn.is carve-out: the bank times out through the Windscribe US
 #      (Houston) egress, so keep its /24 routed DIRECT via the current LAN
 #      default. rule 5208 ("lookup main suppress_prefixlength 0") consults main
@@ -333,6 +340,76 @@ if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
                 || notify "api.x.ai unreachable on the pinned edge and every resolved candidate; upstream or egress problem"
         fi
     fi
+fi
+
+# --- 1c. grok/x.ai egress fail-closed pin ----------------------------------
+# grok's API flows already ride the Houston tunnel: nothing marks them, so rule
+# 5209 hands them to table 51820. The gap is the down case. When
+# rg-us-egress-wg goes away the kernel drops that table's default and the same
+# flows fall through to main and leave on the residential uplink instead. That
+# is a silent change of exit rather than an outage, so nothing reports it and
+# the session keeps working from the wrong address.
+#
+# Hold those destinations unreachable for as long as the tunnel is down. A
+# specific /32 in main beats wg-quick's 0/0 through rule 5208, so the flow
+# fails instead of leaving on the residential address, and the pin lifts by
+# itself on the next run once the tunnel is back.
+#
+# The teachx/starfleet connector hosts are deliberately absent from this set.
+# They reach the tailnet over tailscale0 via rg-tunnel-teachx-carveout and have
+# to stay reachable whatever the US tunnel is doing; pinning them here would
+# take Starfleet down every time the tunnel flapped.
+#
+# Cost of the mechanism: these resolve to Cloudflare edges shared with
+# unrelated sites, so while the tunnel is down those sites are unreachable too.
+# The alternative is that they leave on the residential address, which is the
+# state this exists to prevent, and it is bounded to the seconds the guard
+# needs to bring the tunnel back.
+GROK_PIN_HOSTS="${RG_GROK_PIN_HOSTS:-api.x.ai grok.com cli-chat-proxy.grok.com auth.x.ai}"
+GROK_PIN_STATE="${RG_GROK_PIN_STATE:-/run/rg-net-heal.grok-pin}"
+
+grok_egress_up() {
+    ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
+        && ip -4 route show table 51820 2>/dev/null | grep -q '^default'
+}
+grok_pinned_addrs() {
+    ip -4 route show table main type unreachable 2>/dev/null \
+        | awk '{print $2}' | sed 's#/32$##'
+}
+
+if grok_egress_up; then
+    if [ -s "$GROK_PIN_STATE" ]; then
+        while read -r p_ip; do
+            [ -n "${p_ip:-}" ] || continue
+            ip route del unreachable "$p_ip/32" table main 2>/dev/null \
+                && log "grok pin lifted: $p_ip back on the US egress"
+        done <"$GROK_PIN_STATE"
+        rm -f "$GROK_PIN_STATE"
+    fi
+else
+    grok_new="$(mktemp)"
+    for grok_host in $GROK_PIN_HOSTS; do
+        getent ahostsv4 "$grok_host" 2>/dev/null | awk '{print $1}'
+    done | sort -u | while read -r g_ip; do
+        public_underlay_v4 "$g_ip" || continue
+        printf '%s\n' "$g_ip" >>"$grok_new"
+    done
+    # A total resolver failure must not silently drop an existing pin, so only
+    # act when this run actually resolved something.
+    if [ -s "$grok_new" ]; then
+        grok_have="$(mktemp)"
+        grok_pinned_addrs >"$grok_have"
+        while read -r g_ip; do
+            grep -qxF "$g_ip" "$grok_have" && continue
+            ip route replace unreachable "$g_ip/32" table main 2>/dev/null \
+                && log "grok pinned closed: $g_ip (US egress down, refusing residential exit)"
+        done <"$grok_new"
+        { cat "$GROK_PIN_STATE" 2>/dev/null; cat "$grok_new"; } \
+            | sort -u >"$grok_have"
+        install -m 0644 "$grok_have" "$GROK_PIN_STATE"
+        rm -f "$grok_have"
+    fi
+    rm -f "$grok_new"
 fi
 
 # --- 2. landsbankinn.is direct carve-out (roam-proof) ---------------------
