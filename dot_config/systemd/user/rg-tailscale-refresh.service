@@ -1,0 +1,9 @@
+[Unit]
+Description=Serialized health and version repair for independent tailnet planes
+Wants=network-online.target tailscale-haozeke.service
+After=network-online.target tailscale-haozeke.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-tailscale-refresh --if-needed
+TimeoutStartSec=180

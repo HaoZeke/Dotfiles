@@ -1,0 +1,12 @@
+[Unit]
+Description=Audit independent tailnet planes for recoverable drift
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=15min
+RandomizedDelaySec=30s
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
