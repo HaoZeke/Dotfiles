@@ -191,7 +191,7 @@ fi
 : >"$rules4"
 
 nft_render=$(run_policy --render-nft 'user.slice/user-1001.slice/user@1001.service/rg-houston-protected.slice/test.scope')
-printf '%s\n' "$nft_render" | rg -F -q 'socket cgroupv2 level 6 "user.slice/user-1001.slice/user@1001.service/rg-houston-protected.slice/test.scope" meta mark set 0x5252' \
+printf '%s\n' "$nft_render" | rg -F -q 'socket cgroupv2 level 5 "user.slice/user-1001.slice/user@1001.service/rg-houston-protected.slice/test.scope" meta mark set 0x5252' \
     || fail "nft policy does not mark the exact protected cgroup"
 
 : >"$log"
