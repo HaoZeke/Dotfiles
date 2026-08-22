@@ -3,8 +3,10 @@ Description=Userspace tailscaled on haozeke.github (SOCKS sandbox for cross-tail
 Documentation=https://tailscale.com/kb/1112/userspace-networking/
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=120
-StartLimitBurst=8
+# No start limit: this daemon carries the only relay-independent route to
+# terra, so a unit that gives up permanently removes the fallback exactly
+# when the relay path is also down. Backoff below bounds the retry cost.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -19,6 +21,8 @@ ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=127.0.0
 Environment=ALL_PROXY= HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= HTTPS_PROXY= all_proxy=
 Restart=always
 RestartSec=5
+RestartSteps=5
+RestartMaxDelaySec=120
 # Cap runaway memory without killing normal magicsock buffers.
 MemoryMax=384M
 
