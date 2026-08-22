@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+die() {
+    printf 'rg-houston-protected: %s\n' "$*" >&2
+    exit 1
+}
+
+[ "$#" -gt 0 ] || die "usage: rg-houston-protected COMMAND [ARG...]"
+
+if [ "${1:-}" = --inside-scope ]; then
+    shift
+    [ "$#" -gt 0 ] || die "protected scope has no command"
+    sudo -n /usr/local/sbin/rg-us-egress-policy register-pid "$$" \
+        || die "cannot register protected routing; command refused"
+    exec "$@"
+fi
+
+command -v systemd-run >/dev/null 2>&1 || die "systemd-run is unavailable"
+exec systemd-run --user --scope --quiet --collect \
+    --slice=rg-houston-protected.slice \
+    --unit="rg-houston-protected-$$" \
+    "$0" --inside-scope "$@"
