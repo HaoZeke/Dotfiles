@@ -3,6 +3,5 @@ Description=Fail-closed Houston egress processes
 Before=shutdown.target
 
 [Slice]
-CPUAccounting=yes
 MemoryAccounting=yes
 TasksAccounting=yes
