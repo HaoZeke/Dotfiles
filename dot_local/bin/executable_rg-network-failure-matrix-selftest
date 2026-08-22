@@ -39,8 +39,11 @@ case "$family:$args" in
         [ "$RG_FAKE_MODE" != up ] || printf 'default dev rg-us-egress-wg\n'
         ;;
     '-6:route show table 51820') ;;
-    '-4:route show table 52'|'-6:route show table 52')
+    '-4:route show table 52')
         printf '100.64.0.0/10 dev tailscale0\n'
+        ;;
+    '-6:route show table 52')
+        printf 'fd7a:115c:a1e0::/48 dev tailscale0\n'
         ;;
     '-4:route show table main')
         printf '10.20.0.0/16 dev tun0\n'
@@ -50,10 +53,17 @@ case "$family:$args" in
         printf '2001:db8:20::/64 dev tun0\n'
         printf 'default via 2001:db8::1 dev wlan0\n'
         ;;
-    '-4:rule show'|'-6:rule show')
+    '-4:rule show')
         printf '5188:\tfrom all to 203.0.113.10 lookup 51821\n'
         printf '5194:\tfrom all lookup 52\n'
         printf '5195:\tfrom all to 10.20.0.0/16 lookup main\n'
+        printf '5196:\tfrom all fwmark 0x5252/0xffff lookup 51821\n'
+        printf '5197:\tfrom all fwmark 0x80000/0xff0000 lookup 51821\n'
+        ;;
+    '-6:rule show')
+        printf '5188:\tfrom all to 2001:db8:10::1 lookup 51821\n'
+        printf '5194:\tfrom all lookup 52\n'
+        printf '5195:\tfrom all to 2001:db8:20::/64 lookup main\n'
         printf '5196:\tfrom all fwmark 0x5252/0xffff lookup 51821\n'
         printf '5197:\tfrom all fwmark 0x80000/0xff0000 lookup 51821\n'
         ;;
@@ -88,6 +98,8 @@ case "$family:$args" in
         dest=$3
         case "$dest" in
             2001:db8:20::) printf '%s dev tun0\n' "$dest" ;;
+            fd7a:115c:a1e0::) printf '%s dev tailscale0\n' "$dest" ;;
+            2001:db8:10::1) printf 'unreachable %s\n' "$dest" ;;
             *)
                 if [[ "$args" == *' mark 0x5252'* || "$args" == *' mark 0x80000'* ]]; then
                     printf 'unreachable %s\n' "$dest"
