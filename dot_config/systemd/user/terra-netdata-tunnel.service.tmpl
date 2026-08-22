@@ -7,8 +7,10 @@ After=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
-Type=simple
-ExecStart=/usr/bin/bash -c 'set -e; if nc -z -w2 192.168.68.65 22 2>/dev/null; then H=rgoswami@192.168.68.65; elif /usr/bin/ssh -o ConnectTimeout=6 -o BatchMode=yes -o ControlMaster=no -S none rg.terra.ts true 2>/dev/null; then H=rg.terra.ts; else H=rg.terra; fi; exec /usr/bin/ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -L 127.0.0.1:19999:127.0.0.1:19999 "$H"'
+Type=notify
+NotifyAccess=all
+ExecStart=%h/.local/bin/rg-terra-tunnel netdata
+TimeoutStartSec=30
 # always: remote host flaps and BatchMode SSH exits 0/255 both need a retry.
 Restart=always
 # Ramp 15s -> 300s. rg.terra.ts and the relay fail on independent causes,

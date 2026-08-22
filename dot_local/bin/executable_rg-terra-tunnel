@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SSH="${RG_TERRA_SSH:-/usr/bin/ssh}"
+SS="${RG_TERRA_SS:-/usr/bin/ss}"
+NOTIFY="${RG_TERRA_SYSTEMD_NOTIFY:-/usr/bin/systemd-notify}"
+SLEEP="${RG_TERRA_SLEEP:-/usr/bin/sleep}"
+LAN_TARGET="${RG_TERRA_LAN_TARGET:-rgoswami@192.168.68.65}"
+TAILNET_TARGET="${RG_TERRA_TAILNET_TARGET:-rg.terra.ts}"
+RELAY_TARGET="${RG_TERRA_RELAY_TARGET:-rg.terra}"
+READY_ATTEMPTS="${RG_TERRA_READY_ATTEMPTS:-40}"
+
+die() {
+    printf 'rg-terra-tunnel: %s\n' "$*" >&2
+    exit 1
+}
+
+probe_target() {
+    "$SSH" \
+        -o BatchMode=yes \
+        -o ConnectTimeout=6 \
+        -o ConnectionAttempts=1 \
+        -o ControlMaster=no \
+        -S none \
+        "$1" true </dev/null >/dev/null 2>&1
+}
+
+select_target() {
+    local candidate
+    for candidate in "$LAN_TARGET" "$TAILNET_TARGET" "$RELAY_TARGET"; do
+        if probe_target "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+listener_ready() {
+    local kind="$1" listeners
+    listeners="$($SS -H -ltn 2>/dev/null || true)"
+    case "$kind" in
+        caldav)
+            printf '%s\n' "$listeners" | grep -q '127\.0\.0\.1:42731'
+            ;;
+        mail)
+            printf '%s\n' "$listeners" | grep -q '127\.0\.0\.1:1143' \
+                && printf '%s\n' "$listeners" | grep -q '\[::1\]:1143'
+            ;;
+        netdata)
+            printf '%s\n' "$listeners" | grep -q '127\.0\.0\.1:19999'
+            ;;
+        *) return 2 ;;
+    esac
+}
+
+append_forwards() {
+    local kind="$1"
+    case "$kind" in
+        caldav)
+            forward_args=(-L 127.0.0.1:42731:127.0.0.1:4000)
+            ;;
+        mail)
+            forward_args=(
+                -L 127.0.0.1:1143:127.0.0.1:143
+                -L '[::1]:1143:127.0.0.1:143'
+            )
+            ;;
+        netdata)
+            forward_args=(-L 127.0.0.1:19999:127.0.0.1:19999)
+            ;;
+        *) die "usage: rg-terra-tunnel {caldav|mail|netdata}" ;;
+    esac
+}
+
+print_command() {
+    local arg
+    printf 'command='
+    for arg in "$@"; do
+        printf '%q ' "$arg"
+    done
+    printf '\n'
+}
+
+run_tunnel() {
+    local kind="$1" target ssh_pid attempt rc
+    local -a forward_args ssh_args
+    append_forwards "$kind"
+    target="$(select_target)" || die "no candidate completed authenticated SSH"
+    ssh_args=(
+        -N
+        -S none
+        -o GatewayPorts=no
+        -o ControlMaster=no
+        -o ExitOnForwardFailure=yes
+        -o ServerAliveInterval=30
+        -o ServerAliveCountMax=3
+        -o BatchMode=yes
+        -o ConnectTimeout=6
+        -o ConnectionAttempts=1
+        "${forward_args[@]}"
+        "$target"
+    )
+
+    if [ "${RG_TERRA_TUNNEL_DRY_RUN:-0}" = 1 ]; then
+        printf 'target=%s\n' "$target"
+        print_command "$SSH" "${ssh_args[@]}"
+        return 0
+    fi
+
+    "$SSH" "${ssh_args[@]}" &
+    ssh_pid=$!
+    trap 'kill "$ssh_pid" 2>/dev/null || true; wait "$ssh_pid" 2>/dev/null || true; exit 143' TERM HUP INT
+
+    for ((attempt = 1; attempt <= READY_ATTEMPTS; attempt++)); do
+        if ! kill -0 "$ssh_pid" 2>/dev/null; then
+            set +e
+            wait "$ssh_pid"
+            rc=$?
+            set -e
+            die "SSH exited before $kind listeners became ready (exit $rc)"
+        fi
+        if listener_ready "$kind"; then
+            "$NOTIFY" --ready --status="Terra $kind tunnel via $target"
+            set +e
+            wait "$ssh_pid"
+            rc=$?
+            set -e
+            return "$rc"
+        fi
+        "$SLEEP" 0.25
+    done
+
+    kill "$ssh_pid" 2>/dev/null || true
+    wait "$ssh_pid" 2>/dev/null || true
+    die "$kind listeners did not become ready"
+}
+
+run_tunnel "${1:-}"
