@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+policy_source="$repo/dot_local/bin/executable_rg-us-egress-policy.tmpl"
+launcher="$repo/dot_local/bin/executable_rg-houston-protected"
+slice="$repo/dot_config/systemd/user/rg-houston-protected.slice"
+
+test -r "$policy_source" || fail "missing protected-egress policy helper"
+test -r "$launcher" || fail "missing protected-process launcher"
+test -r "$slice" || fail "missing protected process slice"
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/state"
+
+policy="$tmp/rg-us-egress-policy"
+chezmoi --source "$repo" --no-tty --refresh-externals=never execute-template \
+    <"$policy_source" >"$policy"
+chmod +x "$policy"
+bash -n "$policy" "$launcher"
+
+log="$tmp/ip.log"
+rules4="$tmp/rules4"
+rules6="$tmp/rules6"
+: >"$rules4"
+: >"$rules6"
+
+cat >"$tmp/bin/ip" <<'SH'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >>"$RG_FAKE_IP_LOG"
+case "$*" in
+    '-4 rule show') cat "$RG_FAKE_RULES4" ;;
+    '-6 rule show') cat "$RG_FAKE_RULES6" ;;
+    'link show rg-us-egress-wg')
+        test "${RG_FAKE_HOUSTON_UP:-0}" = 1
+        ;;
+    '-4 route show table 51820')
+        test "${RG_FAKE_HOUSTON_UP:-0}" = 1 \
+            && printf 'default dev rg-us-egress-wg scope link\n'
+        ;;
+    '-6 route show table 51820')
+        test "${RG_FAKE_HOUSTON_V6_UP:-0}" = 1 \
+            && printf 'default dev rg-us-egress-wg metric 1024\n'
+        ;;
+    '-4 route show table 52')
+        printf '203.0.113.12 dev tailscale0\n'
+        ;;
+    '-6 route show table 52')
+        printf '2001:db8:52::12 dev tailscale0\n'
+        ;;
+    '-4 route show table main')
+        printf '203.0.113.13 dev tun0\n'
+        printf 'default via 192.0.2.1 dev wlan0\n'
+        ;;
+    '-6 route show table main')
+        printf '2001:db8:13::/64 dev tun0\n'
+        printf 'default via 2001:db8::1 dev wlan0\n'
+        ;;
+    '-4 route show table 51821')
+        printf 'unreachable default metric 42760\n'
+        ;;
+    '-6 route show table 51821')
+        printf 'unreachable default metric 42760\n'
+        ;;
+esac
+SH
+chmod +x "$tmp/bin/ip"
+
+cat >"$tmp/bin/nft" <<'SH'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >>"$RG_FAKE_NFT_LOG"
+if test "${1:-}" = -f; then
+    cat >>"$RG_FAKE_NFT_LOG"
+fi
+case "$*" in
+    'list table inet rg_houston_protected')
+        test -s "$RG_FAKE_NFT_STATE" && cat "$RG_FAKE_NFT_STATE"
+        ;;
+esac
+SH
+chmod +x "$tmp/bin/nft"
+
+cat >"$tmp/bin/getent" <<'SH'
+#!/usr/bin/env bash
+set -eu
+family=$1
+host=$2
+case "$family:$host" in
+    ahostsv4:api.x.ai) printf '203.0.113.10 STREAM api.x.ai\n' ;;
+    ahostsv4:grok.com) printf '203.0.113.11 STREAM grok.com\n203.0.113.99 STREAM grok.com\n' ;;
+    ahostsv4:auth.x.ai) printf '203.0.113.12 STREAM auth.x.ai\n' ;;
+    ahostsv4:cli-chat-proxy.grok.com) printf '203.0.113.13 STREAM cli-chat-proxy.grok.com\n' ;;
+    ahostsv4:repair-a.invalid) printf '198.51.100.10 STREAM repair-a.invalid\n203.0.113.99 STREAM repair-a.invalid\n' ;;
+    ahostsv4:repair-b.invalid) printf '198.51.100.11 STREAM repair-b.invalid\n' ;;
+    ahostsv6:api.x.ai) printf '2001:db8:10::1 STREAM api.x.ai\n' ;;
+    ahostsv6:grok.com) printf '2001:db8:99::1 STREAM grok.com\n' ;;
+    ahostsv6:repair-a.invalid) printf '2001:db8:99::1 STREAM repair-a.invalid\n' ;;
+esac
+SH
+chmod +x "$tmp/bin/getent"
+
+cat >"$tmp/bin/id" <<'SH'
+#!/usr/bin/env bash
+test "${1:-}" = -u && printf '0\n'
+SH
+chmod +x "$tmp/bin/id"
+
+nft_log="$tmp/nft.log"
+nft_state="$tmp/nft.state"
+: >"$nft_log"
+: >"$nft_state"
+
+run_policy() {
+    PATH="$tmp/bin:$PATH" \
+    RG_POLICY_IP="$tmp/bin/ip" \
+    RG_POLICY_NFT="$tmp/bin/nft" \
+    RG_POLICY_GETENT="$tmp/bin/getent" \
+    RG_POLICY_STATE_DIR="$tmp/state" \
+    RG_POLICY_TESTING=1 \
+    RG_FAKE_IP_LOG="$log" \
+    RG_FAKE_NFT_LOG="$nft_log" \
+    RG_FAKE_NFT_STATE="$nft_state" \
+    RG_FAKE_RULES4="$rules4" \
+    RG_FAKE_RULES6="$rules6" \
+    RG_XAI_PROTECTED_HOSTS='api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com' \
+    RG_RECOVERY_HOSTS='repair-a.invalid repair-b.invalid' \
+        "$policy" "$@"
+}
+
+run_policy sync-hosts
+rg -qx '203\.0\.113\.10' "$tmp/state/xai-v4" \
+    || fail "api.x.ai address is not protected"
+rg -qx '203\.0\.113\.11' "$tmp/state/xai-v4" \
+    || fail "grok.com address is not protected"
+! rg -q '203\.0\.113\.(12|13|99)' "$tmp/state/xai-v4" \
+    || fail "protected set captures Teachx, SURF, or recovery overlap"
+rg -qx '203\.0\.113\.99' "$tmp/state/collisions-v4" \
+    || fail "recovery/xAI overlap is not recorded"
+rg -qx '2001:db8:99::1' "$tmp/state/collisions-v6" \
+    || fail "IPv6 recovery/xAI overlap is not recorded"
+
+: >"$log"
+run_policy assert
+for expected in \
+    '-4 route replace unreachable default metric 42760 table 51821' \
+    '-6 route replace unreachable default metric 42760 table 51821' \
+    '-4 rule add pref 5194 lookup 52' \
+    '-6 rule add pref 5194 lookup 52' \
+    '-4 rule add pref 5196 fwmark 0x5252/0xffff lookup 51821' \
+    '-6 rule add pref 5196 fwmark 0x5252/0xffff lookup 51821' \
+    '-4 rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821' \
+    '-6 rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821' \
+    '-4 rule add pref 5188 to 203.0.113.10/32 lookup 51821' \
+    '-4 rule add pref 5195 to 203.0.113.13/32 lookup main'; do
+    rg -F -qx -- "$expected" "$log" || fail "missing policy operation: $expected"
+done
+! rg -q '203\.0\.113\.(12|99).*lookup 51821' "$log" \
+    || fail "excluded address was routed into the protected table"
+
+: >"$log"
+RG_FAKE_HOUSTON_UP=1 RG_FAKE_HOUSTON_V6_UP=1 run_policy houston-up
+rg -F -qx -- '-4 route replace default dev rg-us-egress-wg metric 10 table 51821' "$log" \
+    || fail "Houston-up does not install the protected IPv4 live default"
+rg -F -qx -- '-6 route replace default dev rg-us-egress-wg metric 10 table 51821' "$log" \
+    || fail "Houston-up does not install the protected IPv6 live default"
+
+: >"$log"
+run_policy houston-down
+rg -F -qx -- '-4 route del default dev rg-us-egress-wg table 51821' "$log" \
+    || fail "Houston-down does not remove only the IPv4 live default"
+rg -F -qx -- '-6 route del default dev rg-us-egress-wg table 51821' "$log" \
+    || fail "Houston-down does not remove only the IPv6 live default"
+! rg -q 'flush table 51821|del unreachable' "$log" \
+    || fail "Houston-down removes the permanent fail-closed route"
+
+: >"$log"
+printf '5196:\tfrom all lookup 9999\n' >"$rules4"
+if run_policy assert >/dev/null 2>&1; then
+    fail "policy accepted a foreign rule at an owned preference"
+fi
+! rg -q 'route replace|rule add|rule del' "$log" \
+    || fail "policy mutated routes before rejecting a preference collision"
+: >"$rules4"
+
+nft_render=$(run_policy --render-nft 'user.slice/user-1001.slice/user@1001.service/rg-houston-protected.slice/test.scope')
+printf '%s\n' "$nft_render" | rg -F -q 'socket cgroupv2 level 6 "user.slice/user-1001.slice/user@1001.service/rg-houston-protected.slice/test.scope" meta mark set 0x5252' \
+    || fail "nft policy does not mark the exact protected cgroup"
+
+: >"$log"
+: >"$nft_log"
+run_policy status >/dev/null
+! rg -q '(^| )(add|replace|del|delete|flush)( |$)' "$log" "$nft_log" \
+    || fail "status operation mutates policy state"
+
+rg -q 'systemd-run --user --scope' "$launcher" \
+    || fail "protected launcher does not create a user scope"
+rg -q -- '--slice=rg-houston-protected.slice' "$launcher" \
+    || fail "protected launcher does not enter the protected slice"
+rg -q 'register-pid' "$launcher" \
+    || fail "protected launcher does not register its exact cgroup before exec"
+rg -q '^Before=shutdown.target$' "$slice" \
+    || fail "protected slice lacks a stable user-manager lifecycle"
+
+printf 'ok\n'
