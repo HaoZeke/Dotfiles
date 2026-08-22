@@ -195,14 +195,20 @@ last_line_of() {
     rg -n "$pattern" "$log" | tail -n 1 | cut -d: -f1
 }
 
+line_after() {
+    local pattern=$1 boundary=$2
+    rg -n "$pattern" "$log" \
+        | awk -F: -v boundary="$boundary" '$1 > boundary { print $1; exit }'
+}
+
 : >"$log"
 run_refresh --if-needed >/dev/null
 system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
-system_ready=$(last_line_of '^tailscale system status --json$')
+system_ready=$(line_after '^tailscale system status --json$' "$system_restart")
 personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
-personal_ready=$(last_line_of '^tailscale personal status --json$')
-heal=$(last_line_of '^systemctl system start rg-net-heal\.service$')
-terra=$(last_line_of '^ssh .*rg\.terra\.ts true$')
+personal_ready=$(line_after '^tailscale personal status --json$' "$personal_restart")
+heal=$(line_after '^systemctl system start rg-net-heal\.service$' "$personal_ready")
+terra=$(line_after '^ssh .*rg\.terra\.ts true$' "$heal")
 tunnels=$(line_of '^systemctl user try-restart terra-caldav-tunnel\.service terra-mail-tunnel\.service terra-netdata-tunnel\.service$')
 test "$system_restart" -lt "$system_ready" \
     || fail "system daemon was not checked after its restart"
