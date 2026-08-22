@@ -291,10 +291,10 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
   fi
 
   printf '== x.ai visibility (tailnet must exit via Houston) ==\n'
-  if ip rule show 2>/dev/null | grep -q '5205:.*fwmark 0x80000'; then
-    ok "pref-5205 tailscale-mark rule present"
+  if ip rule show 2>/dev/null | grep -q '5197:.*fwmark 0x80000.*lookup 51821'; then
+    ok "pref-5197 tailscale mark enters protected table 51821"
   else
-    bad "pref-5205 tailscale-mark rule missing — x.ai sees the LAN exit; restart rg-us-egress.service"
+    bad "pref-5197 tailscale protected rule missing"
   fi
   marked=$(ip route get 8.8.8.8 mark 0x80000 2>/dev/null | head -1 || true)
   if echo "$marked" | grep -q 'rg-us-egress-wg'; then
@@ -343,28 +343,6 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     wrn "no api.x.ai pin in /etc/hosts (rg-net-heal asserts it)"
   fi
 
-  printf '== grok egress fail-closed pin ==\n'
-  # Reports the state rg-net-heal section 1c maintains. Pins present while the
-  # tunnel is up means a lift was missed and grok is being refused for nothing;
-  # pins absent while it is down means grok is free to leave on the residential
-  # address, which is the condition the pin exists to prevent.
-  grok_pins=$(ip -4 route show table main type unreachable 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
-  grok_pins=${grok_pins% }
-  if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
-     && ip -4 route show table 51820 2>/dev/null | grep -q '^default'; then
-    if [ -n "$grok_pins" ]; then
-      bad "US egress up but grok still pinned closed: $grok_pins (rg-net-heal should lift within ~30s)"
-    else
-      ok "US egress up, no stale grok pins; grok rides the tunnel"
-    fi
-  else
-    if [ -n "$grok_pins" ]; then
-      ok "US egress down and grok pinned closed: $grok_pins (no residential leak)"
-    else
-      bad "US egress down and grok NOT pinned; grok would exit on the residential uplink"
-    fi
-  fi
-
   printf '== egress exit geography ==\n'
   geo=$(curl -4 -sS --connect-timeout 5 --max-time 10 https://ipinfo.io/json 2>/dev/null \
     | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("country","?"), d.get("city","?"), d.get("ip","?"))' 2>/dev/null || true)
@@ -374,7 +352,97 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     *) bad "default egress exits in $geo (expected US with the tunnel up)" ;;
   esac
 else
-  wrn "US egress WG not active (terra path simpler when down; x.ai sees the LAN exit)"
+  wrn "US egress WG not active; protected traffic must remain closed"
+fi
+
+printf '== protected Houston policy ==\n'
+policy_state="${RG_POLICY_STATE_DIR:-/var/lib/rg-us-egress-policy}"
+houston_live=0
+if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1 \
+   && ip -4 route show table 51820 2>/dev/null | grep -q '^default'; then
+  houston_live=1
+fi
+if systemctl is-active --quiet rg-us-egress-policy.service 2>/dev/null; then
+  ok "rg-us-egress-policy.service active"
+else
+  bad "rg-us-egress-policy.service inactive"
+fi
+
+for family in -4 -6; do
+  protected_routes=$(ip "$family" route show table 51821 2>/dev/null || true)
+  if printf '%s\n' "$protected_routes" | grep -q '^unreachable default'; then
+    ok "$family table 51821 has permanent unreachable default"
+  else
+    bad "$family table 51821 lacks permanent unreachable default"
+  fi
+  live_expected=0
+  if [ "$houston_live" -eq 1 ] \
+     && ip "$family" route show table 51820 2>/dev/null | grep -q '^default'; then
+    live_expected=1
+  fi
+  if [ "$live_expected" -eq 1 ]; then
+    if printf '%s\n' "$protected_routes" | grep -q '^default dev rg-us-egress-wg'; then
+      ok "$family protected default uses Houston"
+    else
+      bad "$family protected table lacks its live Houston default"
+    fi
+  elif printf '%s\n' "$protected_routes" | grep -q '^default dev rg-us-egress-wg'; then
+    bad "$family protected table retains a live route without Houston"
+  else
+    ok "$family protected table is closed without a live Houston route"
+  fi
+
+  for owned in \
+    '5194:.*lookup 52' \
+    '5196:.*fwmark 0x5252.*lookup 51821' \
+    '5197:.*fwmark 0x80000.*lookup 51821'; do
+    if ip "$family" rule show 2>/dev/null | grep -q "$owned"; then
+      ok "$family owned rule ${owned%%:*} present"
+    else
+      bad "$family owned rule ${owned%%:*} missing"
+    fi
+  done
+done
+
+for family_state in v4 v6; do
+  bits=32
+  flag=-4
+  [ "$family_state" = v4 ] || { bits=128; flag=-6; }
+  addresses="$policy_state/xai-$family_state"
+  if [ -r "$addresses" ]; then
+    while IFS= read -r address; do
+      [ -n "$address" ] || continue
+      if ip "$flag" rule show 2>/dev/null \
+          | grep -q "5188:.*to $address/$bits.*lookup 51821"; then
+        ok "$family_state protected destination $address owned by table 51821"
+      else
+        bad "$family_state protected destination $address lacks its owned rule"
+      fi
+    done <"$addresses"
+  else
+    bad "protected destination state $addresses is unreadable"
+  fi
+  collision_file="$policy_state/collisions-$family_state"
+  if [ -s "$collision_file" ]; then
+    collision_list=$(tr '\n' ' ' <"$collision_file")
+    bad "$family_state protected/recovery address collision: ${collision_list% }"
+  else
+    ok "$family_state protected/recovery address set is disjoint"
+  fi
+done
+
+marked_policy=$(ip route get 8.8.8.8 mark 0x80000 2>&1 | head -1 || true)
+if [ "$houston_live" -eq 1 ]; then
+  if printf '%s\n' "$marked_policy" | grep -q 'rg-us-egress-wg'; then
+    ok "tailscale-marked policy result uses Houston"
+  else
+    bad "tailscale-marked policy result bypasses Houston: ${marked_policy:-no route}"
+  fi
+elif [ -z "$marked_policy" ] \
+  || printf '%s\n' "$marked_policy" | grep -qiE 'unreachable|network is unreachable'; then
+  ok "tailscale-marked policy is closed without Houston"
+else
+  bad "tailscale-marked policy leaks without Houston: $marked_policy"
 fi
 
 printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
