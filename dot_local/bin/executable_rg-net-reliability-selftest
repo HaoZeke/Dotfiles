@@ -9,6 +9,7 @@ if [[ $# -gt 0 ]]; then
     doctor="$bindir/executable_rg-net-doctor"
     alert="$bindir/executable_rg-net-doctor-alert"
     heal="$bindir/executable_rg-net-heal"
+    policy="$bindir/executable_rg-us-egress-policy.tmpl"
     carveout="$bindir/executable_rg-haozeke-tunnel-carveout.tmpl"
     tailnet="$bindir/executable_rg-us-tailnet"
     tailscaled="$repo/dot_config/systemd/user/tailscale-haozeke.service.tmpl"
@@ -22,6 +23,7 @@ else
     doctor="$bindir/rg-net-doctor"
     alert="$bindir/rg-net-doctor-alert"
     heal="$bindir/rg-net-heal"
+    policy="$bindir/rg-us-egress-policy"
     carveout="$bindir/rg-haozeke-tunnel-carveout"
     tailnet="$bindir/rg-us-tailnet"
     tailscaled="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/tailscale-haozeke.service"
@@ -32,7 +34,7 @@ else
     alert_test="$bindir/rg-net-doctor-alert-selftest"
 fi
 
-bash -n "$doctor" "$alert" "$heal" "$tailnet" \
+bash -n "$doctor" "$alert" "$heal" "$policy" "$tailnet" \
     "$alert_test" "$guard_test"
 
 rg -q '^RuntimeDirectory=tailscale-haozeke$' "$tailscaled" \
