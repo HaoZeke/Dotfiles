@@ -671,8 +671,10 @@ rg -q 'disable rg-us-egress-guard.timer rg-us-egress.service rg-akamai-carveout-
     || fail "US egress provisioning does not disable boot-time full-tunnel services by default"
 rg -q 'disable --now rg-us-egress-guard.timer' "$us_egress_guard_script" \
     && fail "US egress provisioning must not stop a running tunnel on apply"
-rg -q 'rm -f /etc/systemd/system/rg-us-egress-watch.service /usr/local/sbin/rg-us-egress-watch' "$us_egress_guard_script" \
-    || fail "US egress provisioning must remove the retired real-time watcher"
+rg -q 'rtrash.*rg-us-egress-watch' "$us_egress_guard_script" \
+    || fail "US egress provisioning must retire the real-time watcher recoverably"
+! rg -q 'sudo rm .*rg-us-egress-watch' "$us_egress_guard_script" \
+    || fail "US egress provisioning permanently deletes the retired real-time watcher"
 ! rg -q 'enable --now rg-us-egress-watch.service' "$us_egress_guard_script" \
     || fail "US egress watcher must never be enabled"
 ! rg -q '^sudo systemctl enable rg-us-egress.service$' "$us_egress_guard_script" \
