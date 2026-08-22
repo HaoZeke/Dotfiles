@@ -200,6 +200,21 @@ add_surf_rules() {
         | LC_ALL=C sort -u)
 }
 
+retire_legacy_tailnet_rules() {
+    local flag line
+    for flag in -4 -6; do
+        while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            case "$line" in
+                *"fwmark 0x80000/0xff0000"*"lookup $HOUSTON_TABLE"*)
+                    "$IP" "$flag" rule del pref 5205 \
+                        fwmark "$TAILSCALE_MARK" lookup "$HOUSTON_TABLE"
+                    ;;
+            esac
+        done < <(rules_at_pref "$flag" 5205)
+    done
+}
+
 render_nft_base() {
     cat <<EOF
 table inet $NFT_TABLE {
@@ -244,6 +259,7 @@ install_rules() {
     done
     add_state_rules -4 v4 32
     add_state_rules -6 v6 128
+    retire_legacy_tailnet_rules
 }
 
 policy_assert() {
