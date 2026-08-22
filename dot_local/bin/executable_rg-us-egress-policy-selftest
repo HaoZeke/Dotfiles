@@ -272,6 +272,11 @@ run_policy register-cgroup "$protected_slice"
 rg -F -q "socket cgroupv2 level 6 \"$protected_slice\" meta mark set 0x5252" "$nft_log" \
     || fail "protected slice registration loses nft cgroup-path quoting"
 
+: >"$nft_log"
+run_policy assert
+rg -F -q "socket cgroupv2 level 6 \"$protected_slice\" meta mark set 0x5252" "$nft_log" \
+    || fail "policy reconciliation does not restore a registered slice after firewall reload"
+
 : >"$log"
 : >"$nft_log"
 run_policy status >/dev/null
