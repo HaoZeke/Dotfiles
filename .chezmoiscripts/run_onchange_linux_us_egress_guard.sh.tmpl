@@ -24,6 +24,7 @@ fi
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
 TEACHX_SRC="$HOME/.local/bin/rg-tunnel-teachx-carveout"
+POLICY_SRC="$HOME/.local/bin/rg-us-egress-policy"
 if [ ! -x "$GUARD_SRC" ]; then
     echo "chezmoi: us-egress guard script missing; skipping install." >&2
     exit 0
@@ -50,6 +51,7 @@ install_bin() {
 
 # Root-owned copies of the managed scripts (systemd runs them as root).
 install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
+install_bin "$POLICY_SRC" /usr/local/sbin/rg-us-egress-policy
 [ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
 [ -x "$TEACHX_SRC" ] && install_bin "$TEACHX_SRC" /usr/local/sbin/rg-tunnel-teachx-carveout
 
@@ -118,20 +120,49 @@ AccuracySec=5s
 WantedBy=timers.target
 EOF
 
-# (5) Manual activation unit: run the full rg-us-egress-up (tunnel + DNS
+# (5) Permanent protected-egress policy. This service is enabled independently
+# of the optional Houston tunnel, so protected traffic has an unreachable
+# result before an uplink becomes available.
+install_root /etc/systemd/system/rg-us-egress-policy.service 0644 <<'EOF'
+[Unit]
+Description=Permanent fail-closed policy for Houston-protected traffic
+DefaultDependencies=no
+After=local-fs.target
+Before=network-pre.target rg-us-egress.service shutdown.target
+Wants=network-pre.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/rg-us-egress-policy assert
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+install_root /etc/sudoers.d/rg-houston-protected 0440 <<'EOF'
+# The helper accepts only processes already contained by the protected slice.
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-us-egress-policy register-pid [0-9]*
+EOF
+sudo visudo -cf /etc/sudoers.d/rg-houston-protected >/dev/null
+
+# (6) Manual activation unit: run the full rg-us-egress-up (tunnel + DNS
 # resettle + carve-outs) when the unit is explicitly started. The unit has an
 # [Install] section so RG_US_EGRESS_AUTOSTART=1 can opt into boot activation.
 install_root /etc/systemd/system/rg-us-egress.service 0644 <<'EOF'
 [Unit]
 Description=rg US (Houston) full-tunnel egress
+Requires=rg-us-egress-policy.service
 Wants=network-online.target rg-us-egress-guard.timer
-After=network-online.target tailscaled.service
+After=network-online.target tailscaled.service rg-us-egress-policy.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 Environment=RG_US_EGRESS_CONF={{ .chezmoi.homeDir }}/.config/rg-us-egress/wireguard.conf
 ExecStart={{ .chezmoi.homeDir }}/.local/bin/rg-us-egress-up
+ExecStop=/usr/local/sbin/rg-us-egress-policy houston-down
 ExecStop=/bin/sh -c '/usr/bin/wg-quick down rg-us-egress-wg 2>/dev/null || true'
 TimeoutStartSec=150
 
@@ -207,6 +238,8 @@ if [ "$(localectl status 2>/dev/null | awk '/VC Keymap/{print $NF}')" != "us" ];
 fi
 
 sudo systemctl daemon-reload
+sudo /usr/local/sbin/rg-us-egress-policy sync-hosts || true
+sudo systemctl enable --now rg-us-egress-policy.service
 if [ "${RG_US_EGRESS_AUTOSTART:-0}" = "1" ]; then
     sudo systemctl enable --now rg-us-egress-guard.timer
     sudo systemctl enable --now rg-us-egress.service

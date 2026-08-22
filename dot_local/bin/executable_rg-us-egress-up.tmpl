@@ -13,6 +13,7 @@ script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 dns_fix="${RG_DNS_FIX_SCRIPT:-$script_dir/rg-fix-local-dns}"
 hz_carveout="${RG_HZ_CARVEOUT_SCRIPT:-$script_dir/rg-haozeke-tunnel-carveout}"
 akamai_carveout="${RG_AKAMAI_CARVEOUT_SCRIPT:-$script_dir/rg-tunnel-akamai-carveout}"
+policy="${RG_US_EGRESS_POLICY_SCRIPT:-/usr/local/sbin/rg-us-egress-policy}"
 ctrld_upstreams="${RG_US_EGRESS_CTRLD_UPSTREAMS:-76.76.2.22 76.76.10.22}"
 endpoint_state_dir="${RG_US_EGRESS_STATE_DIR:-/var/lib/rg-us-egress}"
 endpoint_cache="${RG_US_EGRESS_ENDPOINT_CACHE:-$endpoint_state_dir/endpoint.ip}"
@@ -40,19 +41,10 @@ render_runtime_conf() {
     BEGIN { injected = 0; peer_seen = 0; keepalive_seen = 0 }
     function inject_hooks() {
         if (injected == 0) {
-            # Route the system tailscaled(x.ai) own transport (fwmark 0x80000)
-            # into the tunnel BEFORE tailscale rule 5210 sends it to main/LAN:
-            # the x.ai tailnet must see this node from the Houston exit or
-            # model access is refused. Empty table 51820 (tunnel down) falls
-            # through to the next rule, so this is inert without the tunnel.
-            print "PostUp = ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PostUp = ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PostUp = ip -4 rule add pref 5206 lookup 52 2>/dev/null || true"
-            print "PostUp = ip -6 rule add pref 5206 lookup 52 2>/dev/null || true"
-            print "PreDown = ip -4 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PreDown = ip -6 rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820 2>/dev/null || true"
-            print "PreDown = ip -4 rule del pref 5206 lookup 52 2>/dev/null || true"
-            print "PreDown = ip -6 rule del pref 5206 lookup 52 2>/dev/null || true"
+            # The permanent policy exists independently of WireGuard. Open its
+            # live route after table 51820 exists and close it before teardown.
+            print "PostUp = /usr/local/sbin/rg-us-egress-policy houston-up"
+            print "PreDown = /usr/local/sbin/rg-us-egress-policy houston-down"
             injected = 1
         }
     }
@@ -192,6 +184,7 @@ command -v resolvectl >/dev/null
 command -v dig >/dev/null
 command -v curl >/dev/null
 command -v tailscale >/dev/null
+[ -x "$policy" ] || { printf 'protected egress policy missing: %s\n' "$policy" >&2; exit 2; }
 
 cleanup_tmp() {
     [ -z "${tmp_conf:-}" ] || rm -f "$tmp_conf"
@@ -210,6 +203,7 @@ cleanup_us_egress_state() {
     # Drop the haozeke carve-out first so its policy rule/table never outlive
     # the tunnel it bypasses.
     "$hz_carveout" down >/dev/null 2>&1 || true
+    "$policy" houston-down >/dev/null 2>&1 || true
     systemctl stop "wg-quick@${iface}.service" >/dev/null 2>&1 || true
     wg-quick down "$iface" >/dev/null 2>&1 || true
     delete_rules_for_table -4 51820
@@ -470,6 +464,10 @@ install -m 0600 "$tmp_conf" "$runtime_conf"
 printf '\n== remove stale WireGuard state before activation ==\n'
 cleanup_us_egress_state
 
+printf '\n== assert permanent protected-egress policy ==\n'
+"$policy" sync-hosts
+"$policy" assert
+
 printf '\n== start WireGuard full-tunnel interface ==\n'
 activation_started=1
 systemctl daemon-reload
@@ -546,8 +544,8 @@ fi
 
 printf '\n== route checks ==\n'
 verify_route_uses_interface "IPv4 default egress" 1.1.1.1 "$iface"
-# The x.ai tailnet transport carries tailscaled's fwmark; the pref-5205 rule
-# must land it in the tunnel so x.ai sees the Houston exit, not the LAN.
+# The x.ai tailnet transport carries tailscaled's fwmark. The dedicated table
+# lands it in Houston and retains an unreachable down-state default.
 marked_route="$(ip route get 8.8.8.8 mark 0x80000 2>/dev/null || true)"
 printf 'tailscale-marked route: %s\n' "${marked_route:-none}"
 case "$marked_route" in
@@ -557,6 +555,12 @@ case "$marked_route" in
         exit 6
         ;;
 esac
+protected_table="$(ip -4 route show table 51821 2>/dev/null || true)"
+printf 'protected table 51821: %s\n' "${protected_table:-empty}"
+printf '%s\n' "$protected_table" | grep -q '^default dev rg-us-egress-wg' \
+    || { printf 'protected table has no live Houston default\n' >&2; exit 7; }
+printf '%s\n' "$protected_table" | grep -q '^unreachable default' \
+    || { printf 'protected table has no permanent unreachable default\n' >&2; exit 7; }
 verify_ctrld_carveout
 # Bringing up the 0/0 tunnel triggers a network-change in the system tailscaled,
 # which briefly rebuilds its route table 52; retry so the check waits for that
