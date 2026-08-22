@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+helper="$repo/dot_local/bin/executable_rg-tailscale-refresh"
+service="$repo/dot_config/systemd/user/rg-tailscale-refresh.service"
+timer="$repo/dot_config/systemd/user/rg-tailscale-refresh.timer"
+provision="$repo/.chezmoiscripts/run_onchange_linux_tailscale_refresh.sh.tmpl"
+
+test -x "$helper" || fail "missing serialized Tailscale refresh helper"
+bash -n "$helper"
+rg -q 'flock' "$helper" || fail "refresh helper has no serialization lock"
+rg -F -q -- '--socket="$SYSTEM_SOCKET"' "$helper" \
+    || fail "system daemon checks do not name the system socket"
+rg -F -q -- '--socket="$PERSONAL_SOCKET"' "$helper" \
+    || fail "personal daemon checks do not name the personal socket"
+
+test -r "$service" || fail "missing refresh service"
+test -r "$timer" || fail "missing refresh timer"
+test -r "$provision" || fail "missing refresh provisioner"
+rg -q '^Type=oneshot$' "$service" || fail "refresh service is not oneshot"
+rg -q 'ExecStart=%h/.local/bin/rg-tailscale-refresh --if-needed' "$service" \
+    || fail "refresh service does not repair drift"
+rg -q '^Persistent=true$' "$timer" || fail "refresh timer is not persistent"
+rg -q 'enable --now rg-tailscale-refresh.timer' "$provision" \
+    || fail "refresh timer is not enabled"
+rg -q '/usr/bin/systemctl restart tailscaled\.service' "$provision" \
+    || fail "system-daemon restart lacks an exact sudoers grant"
+rg -q '/usr/bin/systemctl start rg-net-heal\.service' "$provision" \
+    || fail "route repair lacks an exact sudoers grant"
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/run"
+log="$tmp/commands.log"
+client_version=1.102.2
+
+printf '1.98.4\n' >"$tmp/system.version"
+printf '1.98.4\n' >"$tmp/personal.version"
+printf 'healthy\n' >"$tmp/system.health"
+printf 'healthy\n' >"$tmp/personal.health"
+
+cat >"$tmp/bin/sudo" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'sudo %s\n' "$*" >>"$RG_FAKE_LOG"
+[ "${1:-}" != -n ] || shift
+exec "$@"
+SH
+
+cat >"$tmp/bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+scope=system
+if [ "${1:-}" = --user ]; then
+    scope=user
+    shift
+fi
+printf 'systemctl %s %s\n' "$scope" "$*" >>"$RG_FAKE_LOG"
+case "${1:-}" in
+    is-active)
+        unit=${*: -1}
+        case "$unit" in
+            tailscaled.service) test "$(cat "$RG_FAKE_SYSTEM_HEALTH")" = healthy ;;
+            tailscale-haozeke.service) test "$(cat "$RG_FAKE_PERSONAL_HEALTH")" = healthy ;;
+            *) exit 0 ;;
+        esac
+        ;;
+    restart)
+        unit=${2:-}
+        case "$unit" in
+            tailscaled.service)
+                printf '%s\n' "$RG_FAKE_CLIENT_VERSION" >"$RG_FAKE_SYSTEM_VERSION"
+                printf '%s\n' "${RG_FAKE_SYSTEM_AFTER:-healthy}" >"$RG_FAKE_SYSTEM_HEALTH"
+                ;;
+            tailscale-haozeke.service)
+                printf '%s\n' "$RG_FAKE_CLIENT_VERSION" >"$RG_FAKE_PERSONAL_VERSION"
+                printf '%s\n' "${RG_FAKE_PERSONAL_AFTER:-healthy}" >"$RG_FAKE_PERSONAL_HEALTH"
+                ;;
+        esac
+        ;;
+    start|try-restart) ;;
+    *) exit 2 ;;
+esac
+SH
+
+cat >"$tmp/bin/tailscale" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+scope=system
+case "${1:-}" in
+    --socket=*)
+        case "$1" in *personal*) scope=personal ;; esac
+        shift
+        ;;
+esac
+printf 'tailscale %s %s\n' "$scope" "$*" >>"$RG_FAKE_LOG"
+version_file="$RG_FAKE_SYSTEM_VERSION"
+health_file="$RG_FAKE_SYSTEM_HEALTH"
+if [ "$scope" = personal ]; then
+    version_file="$RG_FAKE_PERSONAL_VERSION"
+    health_file="$RG_FAKE_PERSONAL_HEALTH"
+fi
+case "${1:-}" in
+    version)
+        daemon=$(cat "$version_file")
+        printf '{"majorMinorPatch":"%s","daemonLong":"%s"}\n' \
+            "$RG_FAKE_CLIENT_VERSION" "$daemon"
+        ;;
+    status)
+        if [ "$(cat "$health_file")" = healthy ]; then
+            if [ "$scope" = personal ]; then
+                printf '%s\n' '{"BackendState":"Running","Self":{"Online":true},"Peer":{"terra":{"HostName":"rgam5terra","TailscaleIPs":["100.119.130.84"],"Online":true}}}'
+            else
+                printf '%s\n' '{"BackendState":"Running","Self":{"Online":true},"Health":[]}'
+            fi
+        else
+            printf '%s\n' '{"BackendState":"Starting","Self":{"Online":false}}'
+        fi
+        ;;
+    serve|funnel) printf '{}\n' ;;
+    *) exit 2 ;;
+esac
+SH
+
+cat >"$tmp/bin/ip" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'ip %s\n' "$*" >>"$RG_FAKE_LOG"
+case "$*" in
+    *'route get 100.100.100.100'*)
+        test "$(cat "$RG_FAKE_SYSTEM_HEALTH")" = healthy
+        printf '100.100.100.100 dev tailscale0 src 100.64.0.1\n'
+        ;;
+    *) exit 2 ;;
+esac
+SH
+
+cat >"$tmp/bin/ss" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'ss %s\n' "$*" >>"$RG_FAKE_LOG"
+if [ "$(cat "$RG_FAKE_PERSONAL_HEALTH")" = healthy ]; then
+    printf 'LISTEN 0 4096 127.0.0.1:1055 0.0.0.0:*\n'
+fi
+SH
+
+cat >"$tmp/bin/ssh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'ssh %s\n' "$*" >>"$RG_FAKE_LOG"
+test "$(cat "$RG_FAKE_PERSONAL_HEALTH")" = healthy
+SH
+
+cat >"$tmp/bin/sleep" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$tmp/bin/"*
+
+run_refresh() {
+    RG_TS_TAILSCALE="$tmp/bin/tailscale" \
+    RG_TS_SYSTEMCTL="$tmp/bin/systemctl" \
+    RG_TS_SUDO="$tmp/bin/sudo" \
+    RG_TS_IP="$tmp/bin/ip" \
+    RG_TS_SS="$tmp/bin/ss" \
+    RG_TS_SSH="$tmp/bin/ssh" \
+    RG_TS_SLEEP="$tmp/bin/sleep" \
+    RG_TS_FLOCK=/usr/bin/flock \
+    RG_TS_SYSTEM_SOCKET=/run/system.sock \
+    RG_TS_PERSONAL_SOCKET=/run/personal.sock \
+    RG_TS_LOCK="$tmp/run/refresh.lock" \
+    RG_TS_MAX_ATTEMPTS=2 \
+    RG_FAKE_LOG="$log" \
+    RG_FAKE_CLIENT_VERSION="$client_version" \
+    RG_FAKE_SYSTEM_VERSION="$tmp/system.version" \
+    RG_FAKE_PERSONAL_VERSION="$tmp/personal.version" \
+    RG_FAKE_SYSTEM_HEALTH="$tmp/system.health" \
+    RG_FAKE_PERSONAL_HEALTH="$tmp/personal.health" \
+        "$helper" "$@"
+}
+
+line_of() {
+    local pattern=$1
+    rg -n "$pattern" "$log" | head -n 1 | cut -d: -f1
+}
+
+: >"$log"
+run_refresh --if-needed >/dev/null
+system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
+system_ready=$(line_of '^tailscale system status --json$')
+personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
+personal_ready=$(line_of '^tailscale personal status --json$')
+heal=$(line_of '^systemctl system start rg-net-heal\.service$')
+terra=$(line_of '^ssh .*rg\.terra\.ts true$')
+tunnels=$(line_of '^systemctl user try-restart terra-caldav-tunnel\.service terra-mail-tunnel\.service terra-netdata-tunnel\.service$')
+test "$system_restart" -lt "$system_ready" \
+    || fail "system daemon was not checked after its restart"
+test "$system_ready" -lt "$personal_restart" \
+    || fail "personal daemon restarted before system health recovered"
+test "$personal_restart" -lt "$personal_ready" \
+    || fail "personal daemon was not checked after its restart"
+test "$personal_ready" -lt "$heal" \
+    || fail "route repair ran before the personal control plane recovered"
+test "$heal" -lt "$terra" \
+    || fail "Terra was probed before route repair"
+test "$terra" -lt "$tunnels" \
+    || fail "dependent tunnels restarted before authenticated Terra reachability"
+
+: >"$log"
+run_refresh --if-needed >/dev/null
+! rg -q ' restart | try-restart |start rg-net-heal' "$log" \
+    || fail "healthy version-aligned daemons were disrupted"
+
+printf '1.98.4\n' >"$tmp/system.version"
+printf '1.98.4\n' >"$tmp/personal.version"
+printf 'healthy\n' >"$tmp/system.health"
+printf 'healthy\n' >"$tmp/personal.health"
+: >"$log"
+if RG_FAKE_SYSTEM_AFTER=broken run_refresh --if-needed >/dev/null 2>&1; then
+    fail "refresh accepted a system daemon that did not recover"
+fi
+! rg -q '^systemctl user restart tailscale-haozeke\.service$' "$log" \
+    || fail "personal fallback was restarted while system recovery was red"
+! rg -q '^systemctl user try-restart terra-' "$log" \
+    || fail "dependent tunnels restarted while system recovery was red"
+
+printf '1.98.4\n' >"$tmp/system.version"
+printf '1.98.4\n' >"$tmp/personal.version"
+printf 'healthy\n' >"$tmp/system.health"
+printf 'broken\n' >"$tmp/personal.health"
+: >"$log"
+run_refresh --if-needed >/dev/null
+personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
+system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
+test "$personal_restart" -lt "$system_restart" \
+    || fail "broken fallback was not recovered before disrupting the healthy system plane"
+test "$(rg -c '^systemctl user restart tailscale-haozeke\.service$' "$log")" -eq 1 \
+    || fail "personal daemon was restarted more than once"
+
+printf 'ok\n'
