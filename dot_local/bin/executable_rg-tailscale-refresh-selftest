@@ -190,12 +190,17 @@ line_of() {
     rg -n "$pattern" "$log" | head -n 1 | cut -d: -f1
 }
 
+last_line_of() {
+    local pattern=$1
+    rg -n "$pattern" "$log" | tail -n 1 | cut -d: -f1
+}
+
 : >"$log"
 run_refresh --if-needed >/dev/null
 system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
-system_ready=$(line_of '^tailscale system status --json$')
+system_ready=$(last_line_of '^tailscale system status --json$')
 personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
-personal_ready=$(line_of '^tailscale personal status --json$')
+personal_ready=$(last_line_of '^tailscale personal status --json$')
 heal=$(line_of '^systemctl system start rg-net-heal\.service$')
 terra=$(line_of '^ssh .*rg\.terra\.ts true$')
 tunnels=$(line_of '^systemctl user try-restart terra-caldav-tunnel\.service terra-mail-tunnel\.service terra-netdata-tunnel\.service$')
