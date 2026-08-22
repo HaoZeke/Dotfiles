@@ -49,8 +49,15 @@ assert_not_contains() {
 
 tmp_home=$(mktemp -d)
 trap 'rtrash -rf "$tmp_home"' EXIT
-source_root="$(cd -- "$(dirname -- "$SCRIPT")/../.." && pwd)"
-vivaldi_desktop="$source_root/dot_local/share/applications/vivaldi-wayland.desktop"
+case "$SCRIPT" in
+    */dot_local/bin/executable_*)
+        source_root="$(cd -- "$(dirname -- "$SCRIPT")/../.." && pwd)"
+        vivaldi_desktop="$source_root/dot_local/share/applications/vivaldi-wayland.desktop"
+        ;;
+    *)
+        vivaldi_desktop="${XDG_DATA_HOME:-$HOME/.local/share}/applications/vivaldi-wayland.desktop"
+        ;;
+esac
 surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\*.teachx.ai\;teachx.ai\;\<local\>'
 
 fake_curl="$tmp_home/curl"
