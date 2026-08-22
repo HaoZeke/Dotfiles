@@ -201,8 +201,8 @@ system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
 system_ready=$(last_line_of '^tailscale system status --json$')
 personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
 personal_ready=$(last_line_of '^tailscale personal status --json$')
-heal=$(line_of '^systemctl system start rg-net-heal\.service$')
-terra=$(line_of '^ssh .*rg\.terra\.ts true$')
+heal=$(last_line_of '^systemctl system start rg-net-heal\.service$')
+terra=$(last_line_of '^ssh .*rg\.terra\.ts true$')
 tunnels=$(line_of '^systemctl user try-restart terra-caldav-tunnel\.service terra-mail-tunnel\.service terra-netdata-tunnel\.service$')
 test "$system_restart" -lt "$system_ready" \
     || fail "system daemon was not checked after its restart"
