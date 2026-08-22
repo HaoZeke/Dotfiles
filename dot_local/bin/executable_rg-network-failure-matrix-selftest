@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+matrix="$repo/dot_local/bin/executable_rg-network-failure-matrix"
+test -x "$matrix" || fail "missing network failure-matrix verifier"
+bash -n "$matrix"
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/state"
+printf '203.0.113.10\n' >"$tmp/state/xai-v4"
+printf '2001:db8:10::1\n' >"$tmp/state/xai-v6"
+printf '198.51.100.10\n' >"$tmp/state/recovery-v4"
+: >"$tmp/state/recovery-v6"
+: >"$tmp/state/collisions-v4"
+: >"$tmp/state/collisions-v6"
+
+cat >"$tmp/bin/ip" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+family=$1
+shift
+args="$*"
+case "$family:$args" in
+    '-4:route show table 51821')
+        [ "$RG_FAKE_MODE" != up ] || printf 'default dev rg-us-egress-wg metric 10\n'
+        printf 'unreachable default metric 42760\n'
+        ;;
+    '-6:route show table 51821')
+        printf 'unreachable default metric 42760\n'
+        ;;
+    '-4:route show table 51820')
+        [ "$RG_FAKE_MODE" != up ] || printf 'default dev rg-us-egress-wg\n'
+        ;;
+    '-6:route show table 51820') ;;
+    '-4:route show table 52'|'-6:route show table 52')
+        printf '100.64.0.0/10 dev tailscale0\n'
+        ;;
+    '-4:route show table main')
+        printf '10.20.0.0/16 dev tun0\n'
+        printf 'default via 192.0.2.1 dev wlan0\n'
+        ;;
+    '-6:route show table main')
+        printf '2001:db8:20::/64 dev tun0\n'
+        printf 'default via 2001:db8::1 dev wlan0\n'
+        ;;
+    '-4:rule show'|'-6:rule show')
+        printf '5188:\tfrom all to 203.0.113.10 lookup 51821\n'
+        printf '5194:\tfrom all lookup 52\n'
+        printf '5195:\tfrom all to 10.20.0.0/16 lookup main\n'
+        printf '5196:\tfrom all fwmark 0x5252/0xffff lookup 51821\n'
+        printf '5197:\tfrom all fwmark 0x80000/0xff0000 lookup 51821\n'
+        ;;
+    '-4:route get '*)
+        dest=$3
+        case "$dest" in
+            10.20.*) printf '%s dev tun0\n' "$dest" ;;
+            100.64.*) printf '%s dev tailscale0\n' "$dest" ;;
+            203.0.113.10)
+                [ "$RG_FAKE_MODE" = up ] \
+                    && printf '%s dev rg-us-egress-wg\n' "$dest" \
+                    || printf 'unreachable %s\n' "$dest"
+                ;;
+            *)
+                if [[ "$args" == *' mark 0x5252'* || "$args" == *' mark 0x80000'* ]]; then
+                    if [ "$RG_FAKE_MODE" = up ]; then
+                        printf '%s dev rg-us-egress-wg\n' "$dest"
+                    elif [ "${RG_FAKE_DOWN_LEAK:-0}" = 1 ]; then
+                        printf '%s via 192.0.2.1 dev wlan0\n' "$dest"
+                    else
+                        printf 'unreachable %s\n' "$dest"
+                    fi
+                elif [ "$RG_FAKE_MODE" = up ]; then
+                    printf '%s dev rg-us-egress-wg\n' "$dest"
+                else
+                    printf '%s via 192.0.2.1 dev wlan0\n' "$dest"
+                fi
+                ;;
+        esac
+        ;;
+    '-6:route get '*)
+        dest=$3
+        case "$dest" in
+            2001:db8:20::) printf '%s dev tun0\n' "$dest" ;;
+            *)
+                if [[ "$args" == *' mark 0x5252'* || "$args" == *' mark 0x80000'* ]]; then
+                    printf 'unreachable %s\n' "$dest"
+                else
+                    printf '%s via 2001:db8::1 dev wlan0\n' "$dest"
+                fi
+                ;;
+        esac
+        ;;
+    *) exit 2 ;;
+esac
+SH
+chmod +x "$tmp/bin/ip"
+
+run_matrix() {
+    RG_MATRIX_IP="$tmp/bin/ip" \
+    RG_MATRIX_STATE_DIR="$tmp/state" \
+    RG_FAKE_MODE="$1" \
+    RG_FAKE_DOWN_LEAK="${2:-0}" \
+        "$matrix" --expect-"$1"
+}
+
+run_matrix up >/dev/null || fail "up-state matrix rejected the protected Houston path"
+run_matrix down >/dev/null || fail "down-state matrix rejected fail-closed protected traffic and ordinary fallback"
+if run_matrix down 1 >/dev/null 2>&1; then
+    fail "down-state matrix accepted protected traffic on the residential uplink"
+fi
+
+printf 'ok\n'

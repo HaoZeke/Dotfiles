@@ -20,6 +20,7 @@ if [[ $# -gt 0 ]]; then
     terra_test="$bindir/executable_rg-terra-tunnel-selftest"
     tailscale_refresh_test="$bindir/executable_rg-tailscale-refresh-selftest"
     ingress_test="$bindir/executable_rg-network-ingress-selftest"
+    matrix_test="$bindir/executable_rg-network-failure-matrix-selftest"
     alert_test="$bindir/executable_rg-net-doctor-alert-selftest"
 else
     bindir=$(cd "$(dirname "$0")" && pwd)
@@ -37,6 +38,7 @@ else
     terra_test="$bindir/rg-terra-tunnel-selftest"
     tailscale_refresh_test="$bindir/rg-tailscale-refresh-selftest"
     ingress_test="$bindir/rg-network-ingress-selftest"
+    matrix_test="$bindir/rg-network-failure-matrix-selftest"
     alert_test="$bindir/rg-net-doctor-alert-selftest"
 fi
 
@@ -75,6 +77,7 @@ bash "$policy_test" "${repo:-$HOME/.local/share/chezmoi}"
 bash "$terra_test" "${repo:-$HOME/.local/share/chezmoi}"
 bash "$tailscale_refresh_test" "${repo:-$HOME/.local/share/chezmoi}"
 bash "$ingress_test" "${repo:-$HOME/.local/share/chezmoi}"
+bash "$matrix_test" "${repo:-$HOME/.local/share/chezmoi}"
 bash "$alert_test"
 
 printf 'ok\n'
