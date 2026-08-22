@@ -5,6 +5,7 @@
 set -uo pipefail
 
 HZ_SOCK="${RG_HZ_TS_SOCK:-/run/user/1001/tailscale-haozeke/tailscaled.sock}"
+SYSTEM_SOCKET="${RG_SYSTEM_TS_SOCK:-/var/run/tailscale/tailscaled.sock}"
 HZ_MARK="${RG_HZ_MARK:-0x5151}"
 HZ_TABLE="${RG_HZ_TABLE:-5151}"
 HZ_DERP_TARGETS="${RG_HZ_DERP_TARGETS:-$HOME/.local/bin/rg-haozeke-derp-targets}"
@@ -28,7 +29,7 @@ printf '  1.1.1.1 via:   %s\n' "$(ip route get 1.1.1.1 2>/dev/null | head -1)"
 
 printf '== system tailscale (x.ai) ==\n'
 if systemctl is-active --quiet tailscaled.service; then
-  ok "tailscaled.service active ($(tailscale status --self 2>/dev/null | awk '{print $1,$2}' | head -1))"
+  ok "tailscaled.service active ($(tailscale --socket="$SYSTEM_SOCKET" status --self 2>/dev/null | awk '{print $1,$2}' | head -1))"
 else
   bad "tailscaled.service not active"
 fi
@@ -63,6 +64,91 @@ if [ -S "$HZ_SOCK" ]; then
   fi
 else
   bad "missing $HZ_SOCK"
+fi
+
+printf '== tailnet versions and daemon health ==\n'
+client_ts_version=$(tailscale version --json 2>/dev/null \
+  | jq -r '.majorMinorPatch // empty' 2>/dev/null || true)
+system_ts_version=$(tailscale --socket="$SYSTEM_SOCKET" version --daemon --json 2>/dev/null \
+  | jq -r '.daemonLong // empty' 2>/dev/null \
+  | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
+personal_ts_version=$(tailscale --socket="$HZ_SOCK" version --daemon --json 2>/dev/null \
+  | jq -r '.daemonLong // empty' 2>/dev/null \
+  | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' || true)
+if [ -n "$client_ts_version" ] && [ "$system_ts_version" = "$client_ts_version" ]; then
+  ok "system daemon matches client $client_ts_version"
+else
+  bad "system daemon/client version drift: daemon=${system_ts_version:-unknown} client=${client_ts_version:-unknown}"
+fi
+if [ -n "$client_ts_version" ] && [ "$personal_ts_version" = "$client_ts_version" ]; then
+  ok "personal daemon matches client $client_ts_version"
+else
+  bad "personal daemon/client version drift: daemon=${personal_ts_version:-unknown} client=${client_ts_version:-unknown}"
+fi
+
+system_health_count=$(tailscale --socket="$SYSTEM_SOCKET" status --json 2>/dev/null \
+  | jq -r '(.Health // []) | length' 2>/dev/null || true)
+personal_health_count=$(tailscale --socket="$HZ_SOCK" status --json 2>/dev/null \
+  | jq -r '(.Health // []) | length' 2>/dev/null || true)
+case "$system_health_count" in
+  0) ok "system daemon Health is empty" ;;
+  ''|*[!0-9]*) bad "system daemon Health is unreadable" ;;
+  *) bad "system daemon reports $system_health_count Health finding(s)" ;;
+esac
+case "$personal_health_count" in
+  0) ok "personal daemon Health is empty" ;;
+  ''|*[!0-9]*) bad "personal daemon Health is unreadable" ;;
+  *) bad "personal daemon reports $personal_health_count Health finding(s)" ;;
+esac
+
+printf '== tailnet ingress ownership ==\n'
+ingress_status=$(sudo -n /usr/local/sbin/rg-network-ingress-status 2>/dev/null)
+ingress_rc=$?
+if [ "$ingress_rc" -ne 0 ]; then
+  bad "privileged ingress verdict failed"
+fi
+for ingress_check in \
+  'firewall_service=ok' \
+  'input_policy=drop' \
+  'forward_policy=drop' \
+  'tailnet_input=accept' \
+  'tailnet_interface=present' \
+  'ssh_listener=present'; do
+  if printf '%s\n' "$ingress_status" | grep -qx "$ingress_check"; then
+    ok "$ingress_check"
+  else
+    bad "missing ingress invariant $ingress_check"
+  fi
+done
+
+system_serve_json=$(tailscale --socket="$SYSTEM_SOCKET" serve status --json 2>/dev/null || true)
+personal_serve_json=$(tailscale --socket="$HZ_SOCK" serve status --json 2>/dev/null || true)
+system_funnel_json=$(tailscale --socket="$SYSTEM_SOCKET" funnel status --json 2>/dev/null || true)
+personal_funnel_json=$(tailscale --socket="$HZ_SOCK" funnel status --json 2>/dev/null || true)
+system_prefs_json=$(tailscale --socket="$SYSTEM_SOCKET" debug prefs 2>/dev/null || true)
+personal_prefs_json=$(tailscale --socket="$HZ_SOCK" debug prefs 2>/dev/null || true)
+
+if printf '%s\n' "$system_serve_json" | jq -e 'type == "object" and length == 0' >/dev/null 2>&1 \
+   && printf '%s\n' "$system_funnel_json" | jq -e 'type == "object" and length == 0' >/dev/null 2>&1; then
+  ok "system tailnet has no Serve or Funnel exposure"
+else
+  bad "system tailnet has an undocumented Serve or Funnel exposure"
+fi
+if printf '%s\n' "$personal_serve_json" | jq -e 'type == "object" and length == 0' >/dev/null 2>&1 \
+   && printf '%s\n' "$personal_funnel_json" | jq -e 'type == "object" and length == 0' >/dev/null 2>&1; then
+  ok "personal userspace tailnet is egress-only"
+else
+  bad "personal userspace tailnet has an undocumented Serve or Funnel exposure"
+fi
+if printf '%s\n' "$system_prefs_json" | jq -e '.RunSSH == false and .ShieldsUp == false' >/dev/null 2>&1; then
+  ok "system tailnet ingress is owned by kernel SSH and the host firewall"
+else
+  bad "system tailnet SSH or shields-up ownership differs from the documented contract"
+fi
+if printf '%s\n' "$personal_prefs_json" | jq -e '.RunSSH == false' >/dev/null 2>&1; then
+  ok "personal userspace tailnet does not own SSH ingress"
+else
+  bad "personal userspace tailnet unexpectedly owns SSH ingress"
 fi
 
 printf '== haozeke carve-out (bypass US full-tunnel for daemon UDP) ==\n'
@@ -448,7 +534,7 @@ fi
 printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
 if [ "$fail" -gt 0 ]; then
   printf 'Fix order:\n'
-  printf '  1) systemctl --user restart tailscale-haozeke\n'
+  printf '  1) systemctl --user start rg-tailscale-refresh.service\n'
   printf '  2) sudo rg-haozeke-tunnel-carveout up\n'
   printf '  3) sudo systemctl restart rg-us-egress-guard.timer  # if unit exists\n'
   exit 1
