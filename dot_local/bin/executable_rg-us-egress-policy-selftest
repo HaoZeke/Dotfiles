@@ -20,6 +20,10 @@ rg -F -q '$HOME/.config/rg-us-egress-policy/recovery-hosts' "$provision" \
     || fail "provisioner does not consume the sealed recovery host set"
 rg -q 'install.*recovery-hosts.*/etc/rg-us-egress-policy/recovery-hosts' "$provision" \
     || fail "sealed recovery host set is not installed for the root policy"
+rg -q '^After=local-fs.target nftables.service$' "$provision" \
+    || fail "protected policy can race the firewall ruleset loader"
+rg -q '^Wants=network-pre.target nftables.service$' "$provision" \
+    || fail "protected policy does not pull in its firewall owner"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
