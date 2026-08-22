@@ -77,7 +77,7 @@ print_command() {
     local arg
     printf 'command='
     for arg in "$@"; do
-        printf '%q ' "$arg"
+        printf '%s ' "$arg"
     done
     printf '\n'
 }
