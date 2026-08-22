@@ -34,6 +34,12 @@ test "$(rg -c 'funnel status --json' "$doctor")" -ge 2 \
 test "$(rg -c 'debug prefs' "$doctor")" -ge 2 \
     || fail "doctor does not audit Tailscale SSH ownership on both tailnets"
 rg -q 'Health' "$doctor" || fail "doctor ignores daemon health findings"
+! rg -q 'is-active --quiet nftables\.service' "$helper" \
+    || fail "ingress checker treats a completed nftables oneshot as inactive"
+rg -q 'is-enabled --quiet nftables\.service' "$helper" \
+    || fail "ingress checker does not verify the boot firewall owner"
+rg -q 'show --property=Result --value nftables\.service' "$helper" \
+    || fail "ingress checker does not verify the firewall loader result"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
@@ -74,7 +80,7 @@ SH
 cat >"$tmp/bin/ip" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "$*" = 'link show tailscale0' ]
+[ "$*" = 'link show tailscale0' ] && printf 'raw interface metadata\n'
 SH
 cat >"$tmp/bin/ss" <<'SH'
 #!/usr/bin/env bash
@@ -107,6 +113,8 @@ for verdict in \
 done
 ! printf '%s\n' "$out" | rg -q 'table inet|chain input|iifname' \
     || fail "privileged helper exposed raw firewall rules"
+! printf '%s\n' "$out" | rg -q 'raw interface metadata' \
+    || fail "privileged helper exposed raw interface metadata"
 
 sed -i '/tailscale0/d' "$tmp/input.rules"
 if run_helper >/dev/null 2>&1; then
