@@ -142,9 +142,9 @@ install_root /etc/systemd/system/rg-us-egress-policy.service 0644 <<'EOF'
 [Unit]
 Description=Permanent fail-closed policy for Houston-protected traffic
 DefaultDependencies=no
-After=local-fs.target
+After=local-fs.target nftables.service
 Before=network-pre.target rg-us-egress.service shutdown.target
-Wants=network-pre.target
+Wants=network-pre.target nftables.service
 Conflicts=shutdown.target
 
 [Service]
