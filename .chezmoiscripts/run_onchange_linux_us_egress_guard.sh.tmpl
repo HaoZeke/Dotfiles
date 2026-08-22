@@ -41,7 +41,7 @@ install_root() {
         echo "chezmoi: updating $dest"
         sudo install -D -m "$mode" -o root -g root "$tmp" "$dest"
     fi
-    rm -f "$tmp"
+    "$rtrash" -f "$tmp"
 }
 
 install_bin() {
@@ -53,6 +53,7 @@ install_bin() {
 }
 
 # Root-owned copies of the managed scripts (systemd runs them as root).
+install_bin "$rtrash" /usr/local/sbin/rtrash
 install_bin "$GUARD_SRC" /usr/local/sbin/rg-us-egress-guard
 install_bin "$POLICY_SRC" /usr/local/sbin/rg-us-egress-policy
 [ -x "$AKAMAI_SRC" ] && install_bin "$AKAMAI_SRC" /usr/local/sbin/rg-tunnel-akamai-carveout
@@ -103,11 +104,11 @@ EOF
 sudo systemctl disable --now rg-us-egress-watch.service >/dev/null 2>&1 || true
 if sudo test -e /etc/systemd/system/rg-us-egress-watch.service \
    || sudo test -L /etc/systemd/system/rg-us-egress-watch.service; then
-    sudo "$rtrash" -f /etc/systemd/system/rg-us-egress-watch.service
+    sudo /usr/local/sbin/rtrash -f /etc/systemd/system/rg-us-egress-watch.service
 fi
 if sudo test -e /usr/local/sbin/rg-us-egress-watch \
    || sudo test -L /usr/local/sbin/rg-us-egress-watch; then
-    sudo "$rtrash" -f /usr/local/sbin/rg-us-egress-watch
+    sudo /usr/local/sbin/rtrash -f /usr/local/sbin/rg-us-egress-watch
 fi
 
 # (4) Periodic backstop.
