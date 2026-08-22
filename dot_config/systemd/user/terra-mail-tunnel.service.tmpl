@@ -2,15 +2,20 @@
 [Unit]
 Description=SSH tunnel Terra Dovecot IMAP -> localhost:1143
 After=network-online.target
-StartLimitIntervalSec=300
-StartLimitBurst=10
+# No start limit: a tunnel that gives up permanently outlives the outage
+# that tripped it. Backoff below carries the cost of retrying forever.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/bash -c 'set -e; if nc -z -w2 192.168.68.65 22 2>/dev/null; then H=rgoswami@192.168.68.65; else H=rg.terra; fi; exec /usr/bin/ssh -N -S none -o ControlMaster=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -L 127.0.0.1:1143:127.0.0.1:143 -L [::1]:1143:127.0.0.1:143 "$H"'
+ExecStart=/usr/bin/bash -c 'set -e; if nc -z -w2 192.168.68.65 22 2>/dev/null; then H=rgoswami@192.168.68.65; elif /usr/bin/ssh -o ConnectTimeout=6 -o BatchMode=yes -o ControlMaster=no -S none rg.terra.ts true 2>/dev/null; then H=rg.terra.ts; else H=rg.terra; fi; exec /usr/bin/ssh -N -S none -o ControlMaster=no -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o BatchMode=yes -L 127.0.0.1:1143:127.0.0.1:143 -L [::1]:1143:127.0.0.1:143 "$H"'
 # always: remote host flaps and BatchMode SSH exits 0/255 both need a retry.
 Restart=always
+# Ramp 15s -> 300s. rg.terra.ts and the relay fail on independent causes,
+# so a slow retry keeps the unit alive across either without log flooding.
 RestartSec=15
+RestartSteps=5
+RestartMaxDelaySec=300
 
 [Install]
 WantedBy=default.target
