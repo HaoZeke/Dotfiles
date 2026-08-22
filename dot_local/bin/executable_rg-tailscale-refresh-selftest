@@ -33,6 +33,10 @@ rg -q '/usr/bin/systemctl restart tailscaled\.service' "$provision" \
     || fail "system-daemon restart lacks an exact sudoers grant"
 rg -q '/usr/bin/systemctl start rg-net-heal\.service' "$provision" \
     || fail "route repair lacks an exact sudoers grant"
+rg -q '/etc/systemd/system/tailscaled\.service\.d/20-rg-firewall-mode\.conf' "$provision" \
+    || fail "system tailnet has no managed firewall-backend override"
+rg -q '^Environment=TS_DEBUG_FIREWALL_MODE=nftables$' "$provision" \
+    || fail "system tailnet does not use the native nftables backend"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
@@ -44,6 +48,7 @@ printf '1.98.4\n' >"$tmp/system.version"
 printf '1.98.4\n' >"$tmp/personal.version"
 printf 'healthy\n' >"$tmp/system.health"
 printf 'healthy\n' >"$tmp/personal.health"
+printf '0\n' >"$tmp/ssh.failures"
 
 cat >"$tmp/bin/sudo" <<'SH'
 #!/usr/bin/env bash
@@ -113,11 +118,16 @@ case "${1:-}" in
             "$RG_FAKE_CLIENT_VERSION" "$daemon"
         ;;
     status)
-        if [ "$(cat "$health_file")" = healthy ]; then
+        health=$(cat "$health_file")
+        if [ "$health" = healthy ] || [ "$health" = warning ]; then
             if [ "$scope" = personal ]; then
-                printf '%s\n' '{"BackendState":"Running","Self":{"Online":true},"Peer":{"terra":{"HostName":"rgam5terra","TailscaleIPs":["100.119.130.84"],"Online":true}}}'
+                printf '{"BackendState":"Running","Self":{"Online":true},"Health":'
+                [ "$health" = warning ] && printf '["firewall programming failed"]' || printf '[]'
+                printf '%s\n' ',"Peer":{"terra":{"HostName":"rgam5terra","TailscaleIPs":["100.119.130.84"],"Online":true}}}'
             else
-                printf '%s\n' '{"BackendState":"Running","Self":{"Online":true},"Health":[]}'
+                printf '{"BackendState":"Running","Self":{"Online":true},"Health":'
+                [ "$health" = warning ] && printf '["firewall programming failed"]' || printf '[]'
+                printf '%s\n' '}'
             fi
         else
             printf '%s\n' '{"BackendState":"Starting","Self":{"Online":false}}'
@@ -154,6 +164,11 @@ cat >"$tmp/bin/ssh" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'ssh %s\n' "$*" >>"$RG_FAKE_LOG"
+failures=$(cat "$RG_FAKE_SSH_FAILURES")
+if [ "$failures" -gt 0 ]; then
+    printf '%s\n' "$((failures - 1))" >"$RG_FAKE_SSH_FAILURES"
+    exit 1
+fi
 test "$(cat "$RG_FAKE_PERSONAL_HEALTH")" = healthy
 SH
 
@@ -176,12 +191,14 @@ run_refresh() {
     RG_TS_PERSONAL_SOCKET=/run/personal.sock \
     RG_TS_LOCK="$tmp/run/refresh.lock" \
     RG_TS_MAX_ATTEMPTS=2 \
+    RG_TS_TERRA_ATTEMPTS=3 \
     RG_FAKE_LOG="$log" \
     RG_FAKE_CLIENT_VERSION="$client_version" \
     RG_FAKE_SYSTEM_VERSION="$tmp/system.version" \
     RG_FAKE_PERSONAL_VERSION="$tmp/personal.version" \
     RG_FAKE_SYSTEM_HEALTH="$tmp/system.health" \
     RG_FAKE_PERSONAL_HEALTH="$tmp/personal.health" \
+    RG_FAKE_SSH_FAILURES="$tmp/ssh.failures" \
         "$helper" "$@"
 }
 
@@ -227,6 +244,21 @@ test "$terra" -lt "$tunnels" \
 run_refresh --if-needed >/dev/null
 ! rg -q ' restart | try-restart |start rg-net-heal' "$log" \
     || fail "healthy version-aligned daemons were disrupted"
+
+printf '1\n' >"$tmp/ssh.failures"
+: >"$log"
+run_refresh --check >/dev/null
+test "$(rg -c '^ssh ' "$log")" -eq 2 \
+    || fail "a transient authenticated Terra failure was not retried exactly once"
+! rg -q ' restart | try-restart |start rg-net-heal' "$log" \
+    || fail "a transient authenticated Terra failure disrupted a daemon"
+
+printf 'warning\n' >"$tmp/system.health"
+: >"$log"
+if run_refresh --check >/dev/null 2>&1; then
+    fail "system tailnet firewall health failures are accepted as healthy"
+fi
+printf 'healthy\n' >"$tmp/system.health"
 
 printf '1.98.4\n' >"$tmp/system.version"
 printf '1.98.4\n' >"$tmp/personal.version"
