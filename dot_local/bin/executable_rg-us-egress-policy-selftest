@@ -175,6 +175,21 @@ done
 ! rg -q '203\.0\.113\.(12|99).*lookup 51821' "$log" \
     || fail "excluded address was routed into the protected table"
 
+printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules4"
+printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules6"
+: >"$log"
+run_policy assert
+for family in -4 -6; do
+    add_line=$(rg -n -F -- "$family rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821" "$log" \
+        | cut -d: -f1)
+    del_line=$(rg -n -F -- "$family rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820" "$log" \
+        | cut -d: -f1)
+    test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
+        || fail "$family legacy tailnet rule is not retired after fail-closed ownership"
+done
+: >"$rules4"
+: >"$rules6"
+
 : >"$log"
 RG_FAKE_HOUSTON_UP=1 RG_FAKE_HOUSTON_V6_UP=1 run_policy houston-up
 rg -F -qx -- '-4 route replace default dev rg-us-egress-wg metric 10 table 51821' "$log" \
