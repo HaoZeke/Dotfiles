@@ -531,6 +531,20 @@ else
   bad "tailscale-marked policy leaks without Houston: $marked_policy"
 fi
 
+process_policy=$(ip route get 8.8.8.8 mark 0x5252 2>&1 | head -1 || true)
+if [ "$houston_live" -eq 1 ]; then
+  if printf '%s\n' "$process_policy" | grep -q 'rg-us-egress-wg'; then
+    ok "protected-process policy result uses Houston"
+  else
+    bad "protected-process policy result bypasses Houston: ${process_policy:-no route}"
+  fi
+elif [ -z "$process_policy" ] \
+  || printf '%s\n' "$process_policy" | grep -qiE 'unreachable|network is unreachable'; then
+  ok "protected-process policy is closed without Houston"
+else
+  bad "protected-process policy leaks without Houston: $process_policy"
+fi
+
 printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
 if [ "$fail" -gt 0 ]; then
   printf 'Fix order:\n'
