@@ -46,8 +46,12 @@ bash -n "$policy" "$launcher"
 log="$tmp/ip.log"
 rules4="$tmp/rules4"
 rules6="$tmp/rules6"
+routes4="$tmp/routes4"
+routes6="$tmp/routes6"
 : >"$rules4"
 : >"$rules6"
+: >"$routes4"
+: >"$routes6"
 
 cat >"$tmp/bin/ip" <<'SH'
 #!/usr/bin/env bash
@@ -82,10 +86,10 @@ case "$*" in
         printf 'default via 2001:db8::1 dev wlan0\n'
         ;;
     '-4 route show table 51821')
-        printf 'unreachable default metric 42760\n'
+        cat "$RG_FAKE_ROUTES4"
         ;;
     '-6 route show table 51821')
-        printf 'unreachable default metric 42760\n'
+        cat "$RG_FAKE_ROUTES6"
         ;;
 esac
 SH
@@ -148,6 +152,9 @@ run_policy() {
     RG_FAKE_NFT_STATE="$nft_state" \
     RG_FAKE_RULES4="$rules4" \
     RG_FAKE_RULES6="$rules6" \
+    RG_FAKE_ROUTES4="$routes4" \
+    RG_FAKE_ROUTES6="$routes6" \
+    RG_POLICY_LOCK_FILE="$tmp/policy.lock" \
     RG_XAI_PROTECTED_HOSTS='api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com' \
     RG_RECOVERY_HOSTS='repair-a.invalid repair-b.invalid' \
         "$policy" "$@"
@@ -198,6 +205,8 @@ cat >"$rules6" <<'EOF'
 5196:	from all fwmark 0x5252/0xffff lookup 51821
 5197:	from all fwmark 0x80000/0xff0000 lookup 51821
 EOF
+printf 'unreachable default metric 42760\n' >"$routes4"
+printf 'unreachable default metric 42760\n' >"$routes6"
 : >"$log"
 run_policy assert
 ! rg -q -- '(route replace|rule (add|del))' "$log" \
