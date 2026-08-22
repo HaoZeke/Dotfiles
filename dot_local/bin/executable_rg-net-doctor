@@ -19,6 +19,24 @@ ok(){ printf '  OK  %s\n' "$*"; pass=$((pass+1)); }
 bad(){ printf '  BAD %s\n' "$*"; fail=$((fail+1)); }
 wrn(){ printf '  WRN %s\n' "$*"; warn=$((warn+1)); }
 
+owned_destination_rule_present() {
+  local flag=$1 address=$2 bits=$3
+  ip "$flag" rule show 2>/dev/null | awk -v address="$address" -v bits="$bits" '
+    $1 == "5188:" {
+      source = target = table = ""
+      for (i = 2; i < NF; i++) {
+        if ($i == "from") source = $(i + 1)
+        if ($i == "to") target = $(i + 1)
+        if ($i == "lookup") table = $(i + 1)
+      }
+      if (source == "all" && (target == address || target == address "/" bits) && table == "51821") {
+        found = 1
+      }
+    }
+    END { exit !found }
+  '
+}
+
 printf '== host ==\n'
 printf '  %s  %s\n' "$(hostname)" "$(date -Is)"
 
@@ -498,8 +516,7 @@ for family_state in v4 v6; do
   if [ -r "$addresses" ]; then
     while IFS= read -r address; do
       [ -n "$address" ] || continue
-      if ip "$flag" rule show 2>/dev/null \
-          | grep -q "5188:.*to $address/$bits.*lookup 51821"; then
+      if owned_destination_rule_present "$flag" "$address" "$bits"; then
         ok "$family_state protected destination $address owned by table 51821"
       else
         bad "$family_state protected destination $address lacks its owned rule"
