@@ -15,6 +15,7 @@ if [[ $# -gt 0 ]]; then
     provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
     guard="$bindir/executable_rg-us-egress-guard.tmpl"
     guard_test="$bindir/executable_rg-us-egress-guard-selftest"
+    policy_test="$bindir/executable_rg-us-egress-policy-selftest"
     alert_test="$bindir/executable_rg-net-doctor-alert-selftest"
 else
     bindir=$(cd "$(dirname "$0")" && pwd)
@@ -27,6 +28,7 @@ else
     provision=
     guard="$bindir/rg-us-egress-guard"
     guard_test="$bindir/rg-us-egress-guard-selftest"
+    policy_test="$bindir/rg-us-egress-policy-selftest"
     alert_test="$bindir/rg-net-doctor-alert-selftest"
 fi
 
@@ -61,6 +63,7 @@ rg -q 'LC_ALL=C sort -u' "$alert" || fail "alert does not normalize the complete
 rg -q 'stack recovered' "$alert" || fail "alert has no recovery notification"
 
 bash "$guard_test"
+bash "$policy_test" "${repo:-$HOME/.local/share/chezmoi}"
 bash "$alert_test"
 
 printf 'ok\n'
