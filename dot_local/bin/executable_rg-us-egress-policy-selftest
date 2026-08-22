@@ -30,6 +30,8 @@ rg -F -q 'install_bin "$rtrash" /usr/local/sbin/rtrash' "$provision" \
     || fail "provisioner executes a user-owned rtrash binary as root"
 rg -F -q '/usr/local/sbin/rtrash' "$policy_source" \
     || fail "root policy does not resolve its installed cleanup binary"
+rg -F -q '"$FLOCK" -x 9' "$policy_source" \
+    || fail "protected policy mutations are not serialized"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
@@ -198,8 +200,8 @@ cat >"$rules6" <<'EOF'
 EOF
 : >"$log"
 run_policy assert
-! rg -q -- 'rule (add|del)' "$log" \
-    || fail "an already matching policy churns routing rules"
+! rg -q -- '(route replace|rule (add|del))' "$log" \
+    || fail "an already matching policy churns routes or routing rules"
 
 sed -i 's/203\.0\.113\.10/203.0.113.77/' "$rules4"
 : >"$log"
