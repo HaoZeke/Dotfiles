@@ -7,7 +7,8 @@
 set -euo pipefail
 
 sudoers_tmp=$(mktemp)
-trap 'rtrash -f "$sudoers_tmp"' EXIT
+firewall_mode_tmp=$(mktemp)
+trap 'rtrash -f "$sudoers_tmp" "$firewall_mode_tmp"' EXIT
 cat >"$sudoers_tmp" <<'EOF'
 # Exact service operations used by the serialized tailnet recovery helper.
 rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl restart tailscaled.service
@@ -15,6 +16,25 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start rg-net-heal.service
 EOF
 sudo visudo -cf "$sudoers_tmp" >/dev/null
 sudo install -D -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/rg-tailscale-refresh
+
+# The host firewall is native nftables. Tailscale's iptables backend traverses
+# the xtables-nft compatibility layer, which cannot install its IPv6 MARK rule
+# on this kernel. Netfilter remains fully enabled; only its programming backend
+# uses Tailscale's native nftables Netlink implementation.
+cat >"$firewall_mode_tmp" <<'EOF'
+[Service]
+Environment=TS_DEBUG_FIREWALL_MODE=nftables
+EOF
+firewall_mode_changed=0
+if ! sudo cmp -s "$firewall_mode_tmp" /etc/systemd/system/tailscaled.service.d/20-rg-firewall-mode.conf 2>/dev/null; then
+    sudo install -D -m 0644 -o root -g root \
+        "$firewall_mode_tmp" /etc/systemd/system/tailscaled.service.d/20-rg-firewall-mode.conf
+    firewall_mode_changed=1
+fi
+sudo systemctl daemon-reload
+if [ "$firewall_mode_changed" -eq 1 ] && systemctl is-active --quiet tailscaled.service; then
+    sudo systemctl restart tailscaled.service
+fi
 
 systemctl --user daemon-reload
 systemctl --user enable --now tailscale-haozeke.service

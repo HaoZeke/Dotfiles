@@ -17,6 +17,7 @@ LOCK="${RG_TS_LOCK:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/rg-tailscale-refresh.
 TERRA_IP="${RG_TS_TERRA_IP:-100.119.130.84}"
 TERRA_TARGET="${RG_TS_TERRA_TARGET:-rg.terra.ts}"
 MAX_ATTEMPTS="${RG_TS_MAX_ATTEMPTS:-30}"
+TERRA_ATTEMPTS="${RG_TS_TERRA_ATTEMPTS:-3}"
 
 log() {
     printf 'rg-tailscale-refresh: %s\n' "$*"
@@ -58,7 +59,11 @@ import json
 import sys
 
 data = json.load(sys.stdin)
-ok = data.get("BackendState") == "Running" and data.get("Self", {}).get("Online") is True
+ok = (
+    data.get("BackendState") == "Running"
+    and data.get("Self", {}).get("Online") is True
+    and not (data.get("Health") or [])
+)
 raise SystemExit(0 if ok else 1)
 '
 }
@@ -70,7 +75,11 @@ import sys
 
 target = sys.argv[1]
 data = json.load(sys.stdin)
-if data.get("BackendState") != "Running" or data.get("Self", {}).get("Online") is not True:
+if (
+    data.get("BackendState") != "Running"
+    or data.get("Self", {}).get("Online") is not True
+    or (data.get("Health") or [])
+):
     raise SystemExit(1)
 peers = (data.get("Peer") or {}).values()
 ok = any(target in (peer.get("TailscaleIPs") or ()) and peer.get("Online") is True for peer in peers)
@@ -96,7 +105,7 @@ personal_control_healthy() {
     printf '%s\n' "$listeners" | grep -q '127\.0\.0\.1:1055'
 }
 
-terra_ssh_healthy() {
+terra_ssh_once() {
     "$TIMEOUT" 20 "$SSH" \
         -o BatchMode=yes \
         -o ConnectTimeout=12 \
@@ -104,6 +113,15 @@ terra_ssh_healthy() {
         -o ControlMaster=no \
         -S none \
         "$TERRA_TARGET" true </dev/null >/dev/null 2>&1
+}
+
+terra_ssh_healthy() {
+    local attempt
+    for ((attempt = 1; attempt <= TERRA_ATTEMPTS; attempt++)); do
+        terra_ssh_once && return 0
+        [ "$attempt" -eq "$TERRA_ATTEMPTS" ] || "$SLEEP" 1
+    done
+    return 1
 }
 
 personal_healthy() {
