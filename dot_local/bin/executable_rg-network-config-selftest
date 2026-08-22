@@ -417,7 +417,7 @@ rg -q 'ip route get 8.8.8.8 mark 0x80000' "$net_doctor" \
     || fail "doctor must verify tailscale-marked traffic exits via the tunnel"
 rg -q 'table 51821' "$net_doctor" \
     || fail "doctor must verify the dedicated protected routing table"
-rg -q 'collisions-v[46]' "$net_doctor" \
+rg -q 'collision_file=.*collisions-\$family_state' "$net_doctor" \
     || fail "doctor must report protected/recovery address collisions"
 ! rg -q 'route show table main type unreachable' "$net_doctor" \
     || fail "doctor must not claim every main-table unreachable route as protected policy state"
