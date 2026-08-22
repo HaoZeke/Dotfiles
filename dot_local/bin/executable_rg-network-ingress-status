@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+NFT="${RG_INGRESS_NFT:-/usr/bin/nft}"
+SYSTEMCTL="${RG_INGRESS_SYSTEMCTL:-/usr/bin/systemctl}"
+IP="${RG_INGRESS_IP:-/usr/bin/ip}"
+SS="${RG_INGRESS_SS:-/usr/bin/ss}"
+fail=0
+
+if [ "$(id -u)" -ne 0 ] && [ "${RG_INGRESS_ALLOW_UNPRIVILEGED:-0}" != 1 ]; then
+    printf 'rg-network-ingress-status: root is required\n' >&2
+    exit 2
+fi
+
+verdict() {
+    local key=$1 good=$2 bad=$3
+    shift 3
+    if "$@"; then
+        printf '%s=%s\n' "$key" "$good"
+    else
+        printf '%s=%s\n' "$key" "$bad"
+        fail=$((fail + 1))
+    fi
+}
+
+input_rules="$($NFT list chain inet filter input 2>/dev/null || true)"
+forward_rules="$($NFT list chain inet filter forward 2>/dev/null || true)"
+listeners="$($SS -H -ltn 'sport = :22' 2>/dev/null || true)"
+
+verdict firewall_service ok bad \
+    "$SYSTEMCTL" is-active --quiet nftables.service
+verdict input_policy drop unsafe \
+    grep -Eq 'hook input .*policy drop' <<<"$input_rules"
+verdict forward_policy drop unsafe \
+    grep -Eq 'hook forward .*policy drop' <<<"$forward_rules"
+verdict tailnet_input accept missing \
+    grep -Eq 'iifname "tailscale0"[[:space:]]+accept' <<<"$input_rules"
+verdict tailnet_interface present missing \
+    "$IP" link show tailscale0
+verdict ssh_listener present missing \
+    grep -Eq '(^|[[:space:]])(\[::\]|\*|0\.0\.0\.0|127\.0\.0\.1|[0-9a-fA-F:.]+):22([[:space:]]|$)' <<<"$listeners"
+
+exit "$fail"

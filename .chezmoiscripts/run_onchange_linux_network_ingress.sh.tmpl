@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# ingress-helper-sha256: {{ include "dot_local/bin/executable_rg-network-ingress-status" | sha256sum }}
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+set -euo pipefail
+
+sudo install -D -m 0755 "$HOME/.local/bin/rg-network-ingress-status" /usr/local/sbin/rg-network-ingress-status
+
+sudoers_tmp=$(mktemp)
+trap 'rtrash -f "$sudoers_tmp"' EXIT
+cat >"$sudoers_tmp" <<'EOF'
+# Read-only fixed-schema firewall and listener verdicts for the network doctor.
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-network-ingress-status
+EOF
+sudo visudo -cf "$sudoers_tmp" >/dev/null
+sudo install -D -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/rg-network-ingress-status
+{{- end }}
