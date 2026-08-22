@@ -20,6 +20,8 @@ if ! sudo -n true 2>/dev/null; then
     echo "chezmoi: no cached sudo credentials; skipping egress provisioning (run: rg-net provision)" >&2
     exit 0
 fi
+rtrash="$(command -v rtrash 2>/dev/null || true)"
+[ -x "$rtrash" ] || { echo "chezmoi: rtrash is required for recoverable watcher retirement" >&2; exit 1; }
 
 GUARD_SRC="$HOME/.local/bin/rg-us-egress-guard"
 AKAMAI_SRC="$HOME/.local/bin/rg-tunnel-akamai-carveout"
@@ -99,7 +101,14 @@ EOF
 # half-applied wg-quick state; the serialized 30s timer is the single restart
 # authority now, and rg-net-recover treats an active watcher as unsafe.
 sudo systemctl disable --now rg-us-egress-watch.service >/dev/null 2>&1 || true
-sudo rm -f /etc/systemd/system/rg-us-egress-watch.service /usr/local/sbin/rg-us-egress-watch
+if sudo test -e /etc/systemd/system/rg-us-egress-watch.service \
+   || sudo test -L /etc/systemd/system/rg-us-egress-watch.service; then
+    sudo "$rtrash" -f /etc/systemd/system/rg-us-egress-watch.service
+fi
+if sudo test -e /usr/local/sbin/rg-us-egress-watch \
+   || sudo test -L /usr/local/sbin/rg-us-egress-watch; then
+    sudo "$rtrash" -f /usr/local/sbin/rg-us-egress-watch
+fi
 
 # (4) Periodic backstop.
 install_root /etc/systemd/system/rg-us-egress-guard.service 0644 <<'EOF'
