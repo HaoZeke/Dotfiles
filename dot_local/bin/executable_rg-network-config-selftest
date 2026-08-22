@@ -38,6 +38,7 @@ us_egress_guard="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-g
 us_egress_endpoint_pin="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-endpoint-pin")"
 net_recover="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-recover")"
 net_heal="$(resolve_helper "$repo/dot_local/bin/executable_rg-net-heal")"
+us_egress_policy="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-policy")"
 derp_targets="$repo/dot_local/bin/executable_rg-haozeke-derp-targets"
 net_cli="$repo/dot_local/bin/executable_rg-net"
 surf_controller="$repo/dot_local/bin/executable_rg-surf-vpn"
@@ -63,6 +64,7 @@ test -r "$us_egress_guard" || fail "missing US egress guard"
 test -r "$us_egress_endpoint_pin" || fail "missing US egress endpoint pin helper"
 test -r "$net_recover" || fail "missing one-shot network recovery helper"
 test -r "$net_heal" || fail "missing periodic network heal helper"
+test -r "$us_egress_policy" || fail "missing protected egress policy helper"
 test -x "$derp_targets" || fail "missing haozeke DERP target selector"
 test -r "$net_cli" || fail "missing rg-net entry point"
 test -x "$surf_controller" || fail "missing consolidated SURF controller"
@@ -409,10 +411,16 @@ test -r "$net_doctor_alert" || fail "missing doctor alert wrapper"
 test -r "$repo/dot_config/systemd/user/rg-net-doctor.service" || fail "missing doctor service unit"
 test -r "$repo/dot_config/systemd/user/rg-net-doctor.timer" || fail "missing doctor timer unit"
 bash -n "$net_doctor" && bash -n "$net_doctor_alert" || fail "doctor helpers do not parse"
-rg -q '5205:.*fwmark 0x80000' "$net_doctor" \
-    || fail "doctor must verify the x.ai Houston-visibility rule"
+rg -q '5197:.*fwmark 0x80000.*lookup 51821' "$net_doctor" \
+    || fail "doctor must verify the fail-closed x.ai Houston-visibility rule"
 rg -q 'ip route get 8.8.8.8 mark 0x80000' "$net_doctor" \
     || fail "doctor must verify tailscale-marked traffic exits via the tunnel"
+rg -q 'table 51821' "$net_doctor" \
+    || fail "doctor must verify the dedicated protected routing table"
+rg -q 'collisions-v[46]' "$net_doctor" \
+    || fail "doctor must report protected/recovery address collisions"
+! rg -q 'route show table main type unreachable' "$net_doctor" \
+    || fail "doctor must not claim every main-table unreachable route as protected policy state"
 rg -q -- '--resolve "api\.x\.ai:443:\$pin"' "$net_doctor" \
     || fail "doctor must probe the api.x.ai pin health"
 rg -q 'ipinfo\.io/json' "$net_doctor" \
@@ -511,16 +519,18 @@ rg -q 'script_dir=' "$us_egress_up" \
     || fail "US egress helper does not locate the DNS helper relative to itself"
 rg -q 'settle resolver after route change' "$us_egress_up" \
     || fail "US egress helper does not settle DNS after WireGuard route changes"
-rg -q 'ip -4 rule add pref 5206 lookup 52' "$us_egress_up" \
-    || fail "US egress helper does not prioritize Tailscale IPv4 routes before WireGuard"
-rg -q 'ip -6 rule add pref 5206 lookup 52' "$us_egress_up" \
-    || fail "US egress helper does not prioritize Tailscale IPv6 routes before WireGuard"
-rg -q 'ip -4 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820' "$us_egress_up" \
-    || fail "US egress helper must tunnel x.ai tailscale-marked IPv4 transport for Houston visibility"
-rg -q 'ip -6 rule add pref 5205 fwmark 0x80000/0xff0000 lookup 51820' "$us_egress_up" \
-    || fail "US egress helper must tunnel x.ai tailscale-marked IPv6 transport for Houston visibility"
+rg -q 'rg-us-egress-policy' "$us_egress_up" \
+    || fail "US egress helper does not delegate protected-route ownership"
+rg -q 'PostUp = .*rg-us-egress-policy houston-up' "$us_egress_up" \
+    || fail "WireGuard activation does not open the protected table through Houston"
+rg -q 'PreDown = .*rg-us-egress-policy houston-down' "$us_egress_up" \
+    || fail "WireGuard teardown does not close the protected table before interface removal"
+! rg -q 'pref 5205|pref 5206' "$us_egress_up" \
+    || fail "US egress helper still installs obsolete fall-through policy rules"
 rg -q 'ip route get 8.8.8.8 mark 0x80000' "$us_egress_up" \
     || fail "US egress helper must verify tailscale-marked traffic exits via the tunnel"
+rg -q 'table 51821' "$us_egress_up" \
+    || fail "US egress helper does not verify the protected table"
 rg -q 'verify_route_uses_tailscale "Tailscale DNS" 100\.100\.100\.100' "$us_egress_up" \
     || fail "US egress helper does not verify Tailscale DNS routing after WireGuard activation"
 rg -q 'verify_route_uses_interface "IPv4 default egress" 1\.1\.1\.1 "\$iface"' "$us_egress_up" \
@@ -547,6 +557,26 @@ rg -F -q 'systemctl is-active --quiet "wg-quick@${iface}.service"' "$us_egress_u
     || fail "US egress helper does not verify the WireGuard unit remains active"
 rg -q 'PersistentKeepalive = 25' "$us_egress_up" \
     || fail "US egress helper must keep the Houston WireGuard NAT binding warm"
+
+rg -q 'rg-us-egress-policy sync-hosts' "$net_heal" \
+    || fail "periodic healer does not refresh protected destinations"
+rg -q 'rg-us-egress-policy assert' "$net_heal" \
+    || fail "periodic healer does not reconcile the permanent fail-closed policy"
+! rg -q 'route replace unreachable .* table main' "$net_heal" \
+    || fail "periodic healer still owns delayed main-table unreachable pins"
+
+rg -q 'POLICY_SRC=' "$us_egress_guard_script" \
+    || fail "egress provisioning does not locate the policy helper"
+rg -q 'install_bin "\$POLICY_SRC" /usr/local/sbin/rg-us-egress-policy' "$us_egress_guard_script" \
+    || fail "egress provisioning does not install the root policy helper"
+rg -q '/etc/systemd/system/rg-us-egress-policy.service' "$us_egress_guard_script" \
+    || fail "egress provisioning does not install the permanent policy service"
+rg -q '^ExecStart=/usr/local/sbin/rg-us-egress-policy assert$' "$us_egress_guard_script" \
+    || fail "policy service does not assert the fail-closed routes"
+rg -q '^Requires=rg-us-egress-policy.service$' "$us_egress_guard_script" \
+    || fail "Houston activation can run without the protected policy"
+rg -q 'register-pid' "$us_egress_guard_script" \
+    || fail "protected launcher lacks a constrained policy-registration authorization"
 
 # Functional check of the runtime-conf transform: render a sample provider
 # conf and pin the section structure. A misplaced key is exactly the failure
