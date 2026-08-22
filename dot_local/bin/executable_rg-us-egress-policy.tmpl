@@ -49,14 +49,14 @@ state_file() {
 }
 
 ensure_state_dir() {
-    install -d -m 0700 "$STATE_DIR"
+    install -d -m 0755 "$STATE_DIR"
 }
 
 atomic_state() {
     local source="$1" name="$2" staged
     staged="$(state_file ".${name}.new")"
     LC_ALL=C sort -u "$source" >"$staged"
-    chmod 0600 "$staged"
+    chmod 0644 "$staged"
     mv -f "$staged" "$(state_file "$name")"
 }
 
