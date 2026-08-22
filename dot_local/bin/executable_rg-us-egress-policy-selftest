@@ -181,9 +181,9 @@ printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules6"
 run_policy assert
 for family in -4 -6; do
     add_line=$(rg -n -F -- "$family rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821" "$log" \
-        | cut -d: -f1)
+        | cut -d: -f1 || true)
     del_line=$(rg -n -F -- "$family rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820" "$log" \
-        | cut -d: -f1)
+        | cut -d: -f1 || true)
     test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
         || fail "$family legacy tailnet rule is not retired after fail-closed ownership"
 done
