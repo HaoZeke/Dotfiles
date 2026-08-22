@@ -111,6 +111,7 @@ bypass_route_ifaces="${RG_LIVINGSTON_BYPASS_ROUTE_IFACES:-tailscale*}"
 relay_bin="${RG_LIVINGSTON_RELAY_BIN:-$HOME/.local/bin/rg-socks-auth-relay}"
 relay_port="${RG_LIVINGSTON_RELAY_PORT:-11080}"
 relay_log="${RG_LIVINGSTON_RELAY_LOG:-$HOME/.local/state/rg-socks-auth-relay.log}"
+protected_launcher="${RG_LIVINGSTON_PROTECTED_LAUNCHER:-rg-houston-protected}"
 relay_pid=""
 upstream_host=""
 upstream_user=""
@@ -706,6 +707,9 @@ run_browser() {
 
     if [ "$browser_name" = "vivaldi" ]; then
         browser_args+=("--start-maximized")
+        if [ "$append_default_url" -eq 1 ]; then
+            browser_args+=("--new-window")
+        fi
     fi
 
     browser_args+=("${extra_browser_args[@]}")
@@ -716,6 +720,14 @@ run_browser() {
     if [ "$dry_run" -eq 0 ]; then
         require_us_egress
         require_bypass_routes
+    fi
+
+    if [ -z "$proxy" ]; then
+        if [ "$dry_run" -eq 0 ]; then
+            command -v "$protected_launcher" >/dev/null 2>&1 \
+                || die "protected egress launcher is unavailable: $protected_launcher"
+        fi
+        browser_args=("$protected_launcher" "${browser_args[@]}")
     fi
 
     if relay_running; then
