@@ -10,10 +10,16 @@ repo=${1:-"$HOME/.local/share/chezmoi"}
 policy_source="$repo/dot_local/bin/executable_rg-us-egress-policy.tmpl"
 launcher="$repo/dot_local/bin/executable_rg-houston-protected"
 slice="$repo/dot_config/systemd/user/rg-houston-protected.slice"
+provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
 
 test -r "$policy_source" || fail "missing protected-egress policy helper"
 test -r "$launcher" || fail "missing protected-process launcher"
 test -r "$slice" || fail "missing protected process slice"
+test -r "$provision" || fail "missing protected-egress provisioner"
+rg -F -q '$HOME/.config/rg-us-egress-policy/recovery-hosts' "$provision" \
+    || fail "provisioner does not consume the sealed recovery host set"
+rg -q 'install.*recovery-hosts.*/etc/rg-us-egress-policy/recovery-hosts' "$provision" \
+    || fail "sealed recovery host set is not installed for the root policy"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
