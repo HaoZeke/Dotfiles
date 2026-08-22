@@ -5,6 +5,11 @@
 
 set -eu
 
+fail() {
+    echo "FAIL: $*" >&2
+    exit 1
+}
+
 if [ $# -gt 1 ]; then
     echo "usage: executable_rg-livingston-profile-selftest [/path/to/executable_rg-livingston-profile]" >&2
     exit 2
@@ -43,7 +48,9 @@ assert_not_contains() {
 }
 
 tmp_home=$(mktemp -d)
-trap 'rm -rf "$tmp_home"' EXIT
+trap 'rtrash -rf "$tmp_home"' EXIT
+source_root="$(cd -- "$(dirname -- "$SCRIPT")/../.." && pwd)"
+vivaldi_desktop="$source_root/dot_local/share/applications/vivaldi-wayland.desktop"
 surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\*.teachx.ai\;teachx.ai\;\<local\>'
 
 fake_curl="$tmp_home/curl"
@@ -209,6 +216,10 @@ assert_contains "$out" "vivaldi" "vivaldi executable"
 assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profiles/livingston/vivaldi" "vivaldi profile dir"
 assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
 assert_contains "$out" "--start-maximized" "vivaldi maximized launch"
+assert_contains "$out" "rg-houston-protected" "direct Livingston protection"
+assert_contains "$out" "--new-window" "vivaldi singleton recovery"
+test "$(printf '%s\n' "$out" | rg -o -- '--new-window' | wc -l)" -eq 1 \
+    || fail "plain Livingston Vivaldi must request exactly one new window"
 
 out=$(
     HOME="$tmp_home" \
@@ -219,6 +230,7 @@ out=$(
 assert_contains "$out" "--start-maximized" "slack maximized launch"
 assert_contains "$out" "--app=https://app.slack.com/client/T061A7A7K0U" "slack app mode"
 assert_not_contains "$out" "about:blank" "slack fallback tab"
+assert_contains "$out" "rg-houston-protected" "direct Slack Livingston protection"
 
 out=$(
     HOME="$tmp_home" \
@@ -237,6 +249,18 @@ out=$(
 assert_contains "$out" "--start-maximized" "grok maximized launch"
 assert_contains "$out" "--app=https://grok.com/" "grok app mode"
 assert_not_contains "$out" "about:blank" "grok fallback tab"
+assert_contains "$out" "rg-houston-protected" "direct Grok Livingston protection"
+
+test -r "$vivaldi_desktop" || fail "normal Vivaldi desktop entry is unmanaged"
+desktop_exec=$(awk -F= '$1 == "Exec" {print $2}' "$vivaldi_desktop")
+assert_contains "$desktop_exec" "--new-window" "normal Vivaldi singleton recovery"
+test "$(printf '%s\n' "$desktop_exec" | rg -o -- '--enable-features=' | wc -l)" -eq 1 \
+    || fail "normal Vivaldi desktop entry must use one combined feature list"
+assert_not_contains "$desktop_exec" "rg-houston-protected" "repair-lane browser protection"
+if command -v desktop-file-validate >/dev/null 2>&1; then
+    desktop-file-validate "$vivaldi_desktop" \
+        || fail "normal Vivaldi desktop entry is invalid"
+fi
 
 out=$(
     HOME="$tmp_home" \
