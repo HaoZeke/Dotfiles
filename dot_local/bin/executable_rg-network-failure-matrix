@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+IP="${RG_MATRIX_IP:-/usr/bin/ip}"
+STATE_DIR="${RG_MATRIX_STATE_DIR:-/var/lib/rg-us-egress-policy}"
+IFACE="${RG_MATRIX_HOUSTON_IFACE:-rg-us-egress-wg}"
+PROTECTED_TABLE="${RG_MATRIX_PROTECTED_TABLE:-51821}"
+HOUSTON_TABLE="${RG_MATRIX_HOUSTON_TABLE:-51820}"
+PROCESS_MARK="${RG_MATRIX_PROCESS_MARK:-0x5252}"
+TAILNET_MARK="${RG_MATRIX_TAILNET_MARK:-0x80000}"
+pass=0
+fail=0
+
+ok() {
+    printf '  OK  %s\n' "$*"
+    pass=$((pass + 1))
+}
+
+bad() {
+    printf '  BAD %s\n' "$*" >&2
+    fail=$((fail + 1))
+}
+
+route_get() {
+    local family=$1
+    shift
+    "$IP" "$family" route get "$@" 2>&1 | head -n 1 || true
+}
+
+is_closed() {
+    grep -qiE 'unreachable|prohibit|blackhole|network is unreachable' <<<"$1"
+}
+
+expect_iface() {
+    local label=$1 route=$2 iface=$3
+    if grep -q " dev $iface\([[:space:]]\|$\)" <<<"$route"; then
+        ok "$label uses $iface"
+    else
+        bad "$label does not use $iface: ${route:-no route}"
+    fi
+}
+
+expect_closed() {
+    local label=$1 route=$2
+    if is_closed "$route"; then
+        ok "$label is fail-closed"
+    else
+        bad "$label leaks through a reachable route: ${route:-no route}"
+    fi
+}
+
+expect_ordinary() {
+    local label=$1 route=$2
+    if [ -n "$route" ] && ! is_closed "$route" \
+       && ! grep -q " dev $IFACE\([[:space:]]\|$\)" <<<"$route"; then
+        ok "$label has a non-Houston fallback"
+    else
+        bad "$label lacks an ordinary fallback: ${route:-no route}"
+    fi
+}
+
+rules_for() {
+    "$IP" "$1" rule show 2>/dev/null || true
+}
+
+require_owned_rule() {
+    local family=$1 pref=$2 pattern=$3 rules
+    rules="$(rules_for "$family")"
+    if grep -q "^${pref}:.*${pattern}" <<<"$rules"; then
+        ok "$family preference $pref is present"
+    else
+        bad "$family preference $pref is missing or malformed"
+    fi
+}
+
+first_target() {
+    local family=$1 table=$2 iface=$3 prefix
+    prefix="$($IP "$family" route show table "$table" 2>/dev/null \
+        | awk -v iface="$iface" '$1 !~ /^(default|unreachable|prohibit|blackhole|throw)$/ && $0 ~ " dev " iface "([[:space:]]|$)" {print $1; exit}')"
+    printf '%s\n' "${prefix%/*}"
+}
+
+mode=${1:-}
+case "$mode" in
+    --expect-up) mode=up ;;
+    --expect-down) mode=down ;;
+    *)
+        printf 'usage: rg-network-failure-matrix {--expect-up|--expect-down}\n' >&2
+        exit 2
+        ;;
+esac
+
+printf '== invariant routes and rules ==\n'
+for family in -4 -6; do
+    protected_routes="$($IP "$family" route show table "$PROTECTED_TABLE" 2>/dev/null || true)"
+    if grep -q '^unreachable default' <<<"$protected_routes"; then
+        ok "$family protected table retains its unreachable default"
+    else
+        bad "$family protected table lacks its unreachable default"
+    fi
+    require_owned_rule "$family" 5194 'lookup 52'
+    require_owned_rule "$family" 5196 'fwmark 0x5252.*lookup 51821'
+    require_owned_rule "$family" 5197 'fwmark 0x80000.*lookup 51821'
+done
+
+for suffix in v4 v6; do
+    collision_file="$STATE_DIR/collisions-$suffix"
+    if [ -s "$collision_file" ]; then
+        bad "$suffix protected and recovery address sets overlap"
+    else
+        ok "$suffix protected and recovery address sets are disjoint"
+    fi
+done
+
+printf '== generic protected and ordinary paths ==\n'
+v4_process_route="$(route_get -4 1.1.1.1 mark "$PROCESS_MARK")"
+v4_tailnet_route="$(route_get -4 1.1.1.1 mark "$TAILNET_MARK")"
+v4_ordinary_route="$(route_get -4 1.1.1.1)"
+v6_process_route="$(route_get -6 2606:4700:4700::1111 mark "$PROCESS_MARK")"
+v6_tailnet_route="$(route_get -6 2606:4700:4700::1111 mark "$TAILNET_MARK")"
+v6_live=0
+$IP -6 route show table "$PROTECTED_TABLE" 2>/dev/null \
+    | grep -q "^default dev $IFACE" && v6_live=1
+
+if [ "$mode" = up ]; then
+    expect_iface "IPv4 protected process" "$v4_process_route" "$IFACE"
+    expect_iface "IPv4 protected tailnet" "$v4_tailnet_route" "$IFACE"
+    expect_iface "ordinary IPv4" "$v4_ordinary_route" "$IFACE"
+    if [ "$v6_live" -eq 1 ]; then
+        expect_iface "IPv6 protected process" "$v6_process_route" "$IFACE"
+        expect_iface "IPv6 protected tailnet" "$v6_tailnet_route" "$IFACE"
+    else
+        expect_closed "IPv6 protected process without a Houston IPv6 default" "$v6_process_route"
+        expect_closed "IPv6 protected tailnet without a Houston IPv6 default" "$v6_tailnet_route"
+    fi
+else
+    if $IP -4 route show table "$PROTECTED_TABLE" 2>/dev/null \
+        | grep -q "^default dev $IFACE"; then
+        bad "IPv4 protected table retains a Houston route in down state"
+    else
+        ok "IPv4 protected table has no live Houston route"
+    fi
+    if $IP -6 route show table "$PROTECTED_TABLE" 2>/dev/null \
+        | grep -q "^default dev $IFACE"; then
+        bad "IPv6 protected table retains a Houston route in down state"
+    else
+        ok "IPv6 protected table has no live Houston route"
+    fi
+    expect_closed "IPv4 protected process" "$v4_process_route"
+    expect_closed "IPv4 protected tailnet" "$v4_tailnet_route"
+    expect_closed "IPv6 protected process" "$v6_process_route"
+    expect_closed "IPv6 protected tailnet" "$v6_tailnet_route"
+    expect_ordinary "ordinary IPv4" "$v4_ordinary_route"
+fi
+
+printf '== protected destinations ==\n'
+for family_spec in '-4 v4 32' '-6 v6 128'; do
+    read -r family suffix bits <<<"$family_spec"
+    protected_file="$STATE_DIR/xai-$suffix"
+    if [ ! -r "$protected_file" ]; then
+        bad "$suffix protected destination state is unreadable"
+        continue
+    fi
+    while IFS= read -r address; do
+        [ -n "$address" ] || continue
+        if rules_for "$family" \
+            | grep -q "^5188:.*to $address\(/$bits\)\?.*lookup $PROTECTED_TABLE"; then
+            ok "$suffix protected destination $address owns preference 5188"
+        else
+            bad "$suffix protected destination $address lacks preference 5188"
+        fi
+        route="$(route_get "$family" "$address")"
+        if [ "$mode" = up ] && { [ "$family" = -4 ] || [ "$v6_live" -eq 1 ]; }; then
+            expect_iface "$suffix protected destination $address" "$route" "$IFACE"
+        else
+            expect_closed "$suffix protected destination $address" "$route"
+        fi
+    done <"$protected_file"
+done
+
+printf '== ordinary recovery destinations ==\n'
+for family_spec in '-4 v4 32' '-6 v6 128'; do
+    read -r family suffix bits <<<"$family_spec"
+    recovery_file="$STATE_DIR/recovery-$suffix"
+    if [ ! -r "$recovery_file" ]; then
+        bad "$suffix recovery destination state is unreadable"
+        continue
+    fi
+    while IFS= read -r address; do
+        [ -n "$address" ] || continue
+        if rules_for "$family" \
+            | grep -q "^5188:.*to $address\(/$bits\)\?.*lookup $PROTECTED_TABLE"; then
+            bad "$suffix recovery destination $address was captured by preference 5188"
+        else
+            ok "$suffix recovery destination $address stays outside preference 5188"
+        fi
+        ordinary_route="$(route_get "$family" "$address")"
+        protected_route="$(route_get "$family" "$address" mark "$PROCESS_MARK")"
+        if [ "$family" = -4 ]; then
+            if [ "$mode" = up ]; then
+                expect_iface "$suffix ordinary recovery destination $address" "$ordinary_route" "$IFACE"
+                expect_iface "$suffix protected recovery process $address" "$protected_route" "$IFACE"
+            else
+                expect_ordinary "$suffix ordinary recovery destination $address" "$ordinary_route"
+                expect_closed "$suffix protected recovery process $address" "$protected_route"
+            fi
+        elif [ "$mode" = up ] && [ "$v6_live" -eq 1 ]; then
+            expect_iface "$suffix protected recovery process $address" "$protected_route" "$IFACE"
+        else
+            expect_closed "$suffix protected recovery process $address" "$protected_route"
+        fi
+    done <"$recovery_file"
+done
+
+printf '== higher-priority institutional paths ==\n'
+for family in -4 -6; do
+    surf_target="$(first_target "$family" main tun0)"
+    if [ -n "$surf_target" ]; then
+        require_owned_rule "$family" 5195 'lookup main'
+        expect_iface "$family SURF destination with process mark" \
+            "$(route_get "$family" "$surf_target" mark "$PROCESS_MARK")" tun0
+        expect_iface "$family SURF destination with tailnet mark" \
+            "$(route_get "$family" "$surf_target" mark "$TAILNET_MARK")" tun0
+    else
+        ok "$family has no active SURF route to test"
+    fi
+
+    teachx_target="$(first_target "$family" 52 tailscale0)"
+    if [ -n "$teachx_target" ]; then
+        expect_iface "$family Teachx destination with process mark" \
+            "$(route_get "$family" "$teachx_target" mark "$PROCESS_MARK")" tailscale0
+        expect_iface "$family Teachx destination with tailnet mark" \
+            "$(route_get "$family" "$teachx_target" mark "$TAILNET_MARK")" tailscale0
+    else
+        bad "$family table 52 has no tailscale0 route to test"
+    fi
+done
+
+printf '== summary: %d ok, %d bad ==\n' "$pass" "$fail"
+[ "$fail" -eq 0 ]
