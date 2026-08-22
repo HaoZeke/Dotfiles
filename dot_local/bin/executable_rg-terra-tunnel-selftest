@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+helper="$repo/dot_local/bin/executable_rg-terra-tunnel"
+test -x "$helper" || fail "missing Terra tunnel helper"
+bash -n "$helper"
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin"
+ssh_log="$tmp/ssh.log"
+
+cat >"$tmp/bin/ssh" <<'SH'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >>"$RG_FAKE_SSH_LOG"
+target=
+for arg in "$@"; do
+    case "$arg" in
+        rgoswami@192.168.68.65|rg.terra.ts|rg.terra) target=$arg ;;
+    esac
+done
+case "$target" in
+    rgoswami@192.168.68.65) exit "${RG_FAKE_LAN_RC:-1}" ;;
+    rg.terra.ts) exit "${RG_FAKE_TS_RC:-1}" ;;
+    rg.terra) exit "${RG_FAKE_RELAY_RC:-1}" ;;
+    *) exit 2 ;;
+esac
+SH
+chmod +x "$tmp/bin/ssh"
+
+run_helper() {
+    RG_TERRA_SSH="$tmp/bin/ssh" \
+    RG_FAKE_SSH_LOG="$ssh_log" \
+    RG_TERRA_TUNNEL_DRY_RUN=1 \
+        "$helper" "$@"
+}
+
+: >"$ssh_log"
+out=$(RG_FAKE_LAN_RC=1 RG_FAKE_TS_RC=0 RG_FAKE_RELAY_RC=0 run_helper caldav)
+printf '%s\n' "$out" | rg -q '^target=rg\.terra\.ts$' \
+    || fail "hanging LAN does not advance to personal Tailscale"
+printf '%s\n' "$out" | rg -F -q -- '-L 127.0.0.1:42731:127.0.0.1:4000' \
+    || fail "CalDAV forward is incorrect"
+test "$(wc -l <"$ssh_log")" -eq 2 \
+    || fail "selector did not stop after the first authenticated fallback"
+
+: >"$ssh_log"
+out=$(RG_FAKE_LAN_RC=0 RG_FAKE_TS_RC=0 RG_FAKE_RELAY_RC=0 run_helper netdata)
+printf '%s\n' "$out" | rg -q '^target=rgoswami@192\.168\.68\.65$' \
+    || fail "authenticated LAN is not preferred"
+test "$(wc -l <"$ssh_log")" -eq 1 \
+    || fail "selector probed lower-priority paths after LAN success"
+
+: >"$ssh_log"
+out=$(RG_FAKE_LAN_RC=1 RG_FAKE_TS_RC=1 RG_FAKE_RELAY_RC=0 run_helper mail)
+printf '%s\n' "$out" | rg -q '^target=rg\.terra$' \
+    || fail "relay is not selected after LAN and personal Tailscale fail"
+printf '%s\n' "$out" | rg -F -q -- '-L 127.0.0.1:1143:127.0.0.1:143' \
+    || fail "mail IPv4 forward is incorrect"
+printf '%s\n' "$out" | rg -F -q -- '-L [::1]:1143:127.0.0.1:143' \
+    || fail "mail IPv6 loopback forward is incorrect"
+
+if RG_FAKE_LAN_RC=1 RG_FAKE_TS_RC=1 RG_FAKE_RELAY_RC=1 run_helper caldav >/dev/null 2>&1; then
+    fail "selector accepted a path that failed authenticated SSH"
+fi
+
+rg -q -- '-o BatchMode=yes' "$ssh_log" \
+    || fail "candidate probe is not noninteractive"
+rg -q -- '-o ConnectTimeout=6' "$ssh_log" \
+    || fail "candidate probe has no bounded connect timeout"
+rg -q -- '-o ControlMaster=no' "$ssh_log" \
+    || fail "candidate probe can reuse a stale master"
+rg -q -- '-S none' "$ssh_log" \
+    || fail "candidate probe can reuse a control socket"
+rg -q ' true$' "$ssh_log" \
+    || fail "candidate probe does not complete authenticated remote execution"
+! rg -q 'nc -z|/usr/bin/nc' "$helper" \
+    || fail "Terra selector still trusts a TCP accept"
+
+for unit in caldav mail netdata; do
+    service="$repo/dot_config/systemd/user/terra-${unit}-tunnel.service.tmpl"
+    test -r "$service" || fail "missing $unit tunnel unit"
+    rg -q '^Type=notify$' "$service" \
+        || fail "$unit unit reports active before listener readiness"
+    rg -q "ExecStart=%h/.local/bin/rg-terra-tunnel $unit" "$service" \
+        || fail "$unit unit does not use the shared selector"
+    ! rg -q 'nc -z|/usr/bin/bash -c' "$service" \
+        || fail "$unit unit retains inline TCP-only selection"
+    rg -q '^Restart=always$' "$service" \
+        || fail "$unit unit does not retry clean and failed SSH exits"
+done
+
+printf 'ok\n'
