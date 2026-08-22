@@ -9,6 +9,8 @@ IP="${RG_POLICY_IP:-ip}"
 NFT="${RG_POLICY_NFT:-nft}"
 GETENT="${RG_POLICY_GETENT:-getent}"
 PYTHON="${RG_POLICY_PYTHON:-python3}"
+FLOCK="${RG_POLICY_FLOCK:-/usr/bin/flock}"
+POLICY_LOCK_FILE="${RG_POLICY_LOCK_FILE:-/run/rg-us-egress-policy.lock}"
 RTRASH="${RG_POLICY_RTRASH:-}"
 if [ -z "$RTRASH" ]; then
     for candidate in /usr/local/sbin/rtrash /usr/local/bin/rtrash /usr/bin/rtrash; do
@@ -45,6 +47,12 @@ die() {
 need_root() {
     [ "${RG_POLICY_TESTING:-0}" = 1 ] && return 0
     [ "$(id -u)" -eq 0 ] || die "run as root"
+}
+
+acquire_policy_lock() {
+    need_root
+    exec 9>"$POLICY_LOCK_FILE"
+    "$FLOCK" -x 9
 }
 
 recovery_hosts() {
@@ -361,13 +369,62 @@ install_rules() {
     retire_legacy_tailnet_rules
 }
 
+has_unreachable_default() {
+    local flag="$1"
+    "$IP" "$flag" route show table "$PROTECTED_TABLE" 2>/dev/null \
+        | awk -v metric="$FAIL_METRIC" '
+            $1 == "unreachable" && $2 == "default" {
+                for (i = 3; i < NF; i++) {
+                    if ($i == "metric" && $(i + 1) == metric) {
+                        found = 1
+                    }
+                }
+            }
+            END { exit !found }
+        '
+}
+
+ensure_unreachable_default() {
+    local flag="$1"
+    has_unreachable_default "$flag" \
+        || "$IP" "$flag" route replace unreachable default metric "$FAIL_METRIC" table "$PROTECTED_TABLE"
+}
+
+has_live_default() {
+    local flag="$1"
+    "$IP" "$flag" route show table "$PROTECTED_TABLE" 2>/dev/null \
+        | awk -v iface="$IFACE" '
+            $1 == "default" {
+                for (i = 2; i < NF; i++) {
+                    if ($i == "dev" && $(i + 1) == iface) {
+                        have_dev = 1
+                    }
+                    if ($i == "metric" && $(i + 1) == 10) {
+                        have_metric = 1
+                    }
+                }
+                if (have_dev && have_metric) {
+                    found = 1
+                }
+                have_dev = have_metric = 0
+            }
+            END { exit !found }
+        '
+}
+
+ensure_live_default() {
+    local flag="$1"
+    has_live_default "$flag" \
+        || "$IP" "$flag" route replace default dev "$IFACE" metric 10 table "$PROTECTED_TABLE"
+}
+
 policy_assert() {
     need_root
     validate_preferences
     ensure_state_dir
     ensure_nft_base
-    "$IP" -4 route replace unreachable default metric "$FAIL_METRIC" table "$PROTECTED_TABLE"
-    "$IP" -6 route replace unreachable default metric "$FAIL_METRIC" table "$PROTECTED_TABLE"
+    ensure_unreachable_default -4
+    ensure_unreachable_default -6
     install_rules
 }
 
@@ -378,9 +435,9 @@ houston_up() {
         || die "$IFACE is absent"
     "$IP" -4 route show table "$HOUSTON_TABLE" 2>/dev/null | grep -q '^default' \
         || die "table $HOUSTON_TABLE has no IPv4 default"
-    "$IP" -4 route replace default dev "$IFACE" metric 10 table "$PROTECTED_TABLE"
+    ensure_live_default -4
     if "$IP" -6 route show table "$HOUSTON_TABLE" 2>/dev/null | grep -q '^default'; then
-        "$IP" -6 route replace default dev "$IFACE" metric 10 table "$PROTECTED_TABLE"
+        ensure_live_default -6
     else
         "$IP" -6 route del default dev "$IFACE" table "$PROTECTED_TABLE" 2>/dev/null || true
     fi
@@ -432,12 +489,12 @@ status() {
 }
 
 case "${1:-}" in
-    assert) policy_assert ;;
-    sync-hosts) sync_hosts ;;
-    houston-up) houston_up ;;
-    houston-down) houston_down ;;
-    register-pid) register_pid "${2:-}" ;;
-    register-cgroup) register_cgroup "${2:-}" ;;
+    assert) acquire_policy_lock; policy_assert ;;
+    sync-hosts) acquire_policy_lock; sync_hosts ;;
+    houston-up) acquire_policy_lock; houston_up ;;
+    houston-down) acquire_policy_lock; houston_down ;;
+    register-pid) acquire_policy_lock; register_pid "${2:-}" ;;
+    register-cgroup) acquire_policy_lock; register_cgroup "${2:-}" ;;
     status) status ;;
     --render-nft) render_nft_cgroup "${2:?usage: $0 --render-nft <cgroup>}" ;;
     *) die "usage: $0 {assert|sync-hosts|houston-up|houston-down|register-pid PID|register-cgroup PATH|status}" ;;
