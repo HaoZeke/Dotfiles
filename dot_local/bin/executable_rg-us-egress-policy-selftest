@@ -24,6 +24,12 @@ rg -q '^After=local-fs.target nftables.service$' "$provision" \
     || fail "protected policy can race the firewall ruleset loader"
 rg -q '^Wants=network-pre.target nftables.service$' "$provision" \
     || fail "protected policy does not pull in its firewall owner"
+rg -F -q 'install_bin "$rtrash" /usr/local/sbin/rtrash' "$provision" \
+    || fail "root policy cleanup does not use a root-owned rtrash binary"
+! rg -F -q 'sudo "$rtrash"' "$provision" \
+    || fail "provisioner executes a user-owned rtrash binary as root"
+rg -F -q '/usr/local/sbin/rtrash' "$policy_source" \
+    || fail "root policy does not resolve its installed cleanup binary"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
@@ -174,6 +180,35 @@ for expected in \
 done
 ! rg -q '203\.0\.113\.(12|99).*lookup 51821' "$log" \
     || fail "excluded address was routed into the protected table"
+
+cat >"$rules4" <<'EOF'
+5188:	from all to 203.0.113.10 lookup 51821
+5194:	from all lookup 52
+5195:	from all to 203.0.113.13 lookup main
+5196:	from all fwmark 0x5252/0xffff lookup 51821
+5197:	from all fwmark 0x80000/0xff0000 lookup 51821
+EOF
+cat >"$rules6" <<'EOF'
+5188:	from all to 2001:db8:10::1 lookup 51821
+5194:	from all lookup 52
+5195:	from all to 2001:db8:13::/64 lookup main
+5196:	from all fwmark 0x5252/0xffff lookup 51821
+5197:	from all fwmark 0x80000/0xff0000 lookup 51821
+EOF
+: >"$log"
+run_policy assert
+! rg -q -- 'rule (add|del)' "$log" \
+    || fail "an already matching policy churns routing rules"
+
+sed -i 's/203\.0\.113\.10/203.0.113.77/' "$rules4"
+: >"$log"
+run_policy assert
+add_line=$(rg -n -F -- '-4 rule add pref 5188 to 203.0.113.10/32 lookup 51821' "$log" \
+    | cut -d: -f1 || true)
+del_line=$(rg -n -F -- '-4 rule del pref 5188 to 203.0.113.77 lookup 51821' "$log" \
+    | cut -d: -f1 || true)
+test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
+    || fail "destination reconciliation is not add-before-delete and selector-exact"
 
 printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules4"
 printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules6"
