@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+TAILSCALE="${RG_TS_TAILSCALE:-/usr/bin/tailscale}"
+SYSTEMCTL="${RG_TS_SYSTEMCTL:-/usr/bin/systemctl}"
+SUDO="${RG_TS_SUDO:-/usr/bin/sudo}"
+IP="${RG_TS_IP:-/usr/bin/ip}"
+SS="${RG_TS_SS:-/usr/bin/ss}"
+SSH="${RG_TS_SSH:-/usr/bin/ssh}"
+SLEEP="${RG_TS_SLEEP:-/usr/bin/sleep}"
+FLOCK="${RG_TS_FLOCK:-/usr/bin/flock}"
+PYTHON="${RG_TS_PYTHON:-/usr/bin/python3}"
+TIMEOUT="${RG_TS_TIMEOUT:-/usr/bin/timeout}"
+SYSTEM_SOCKET="${RG_TS_SYSTEM_SOCKET:-/var/run/tailscale/tailscaled.sock}"
+PERSONAL_SOCKET="${RG_TS_PERSONAL_SOCKET:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/tailscale-haozeke/tailscaled.sock}"
+LOCK="${RG_TS_LOCK:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/rg-tailscale-refresh.lock}"
+TERRA_IP="${RG_TS_TERRA_IP:-100.119.130.84}"
+TERRA_TARGET="${RG_TS_TERRA_TARGET:-rg.terra.ts}"
+MAX_ATTEMPTS="${RG_TS_MAX_ATTEMPTS:-30}"
+
+log() {
+    printf 'rg-tailscale-refresh: %s\n' "$*"
+}
+
+die() {
+    printf 'rg-tailscale-refresh: %s\n' "$*" >&2
+    exit 1
+}
+
+json_version() {
+    "$PYTHON" -c '
+import json
+import re
+import sys
+
+data = json.load(sys.stdin)
+raw = str(data.get(sys.argv[1]) or "")
+match = re.search(r"[0-9]+\.[0-9]+\.[0-9]+", raw)
+if not match:
+    raise SystemExit(1)
+print(match.group(0))
+' "$1"
+}
+
+client_version() {
+    "$TAILSCALE" version --json 2>/dev/null | json_version majorMinorPatch
+}
+
+daemon_version() {
+    local socket=$1
+    "$TAILSCALE" --socket="$socket" version --daemon --json 2>/dev/null \
+        | json_version daemonLong
+}
+
+status_online() {
+    "$PYTHON" -c '
+import json
+import sys
+
+data = json.load(sys.stdin)
+ok = data.get("BackendState") == "Running" and data.get("Self", {}).get("Online") is True
+raise SystemExit(0 if ok else 1)
+'
+}
+
+personal_status_online() {
+    "$PYTHON" -c '
+import json
+import sys
+
+target = sys.argv[1]
+data = json.load(sys.stdin)
+if data.get("BackendState") != "Running" or data.get("Self", {}).get("Online") is not True:
+    raise SystemExit(1)
+peers = (data.get("Peer") or {}).values()
+ok = any(target in (peer.get("TailscaleIPs") or ()) and peer.get("Online") is True for peer in peers)
+raise SystemExit(0 if ok else 1)
+' "$TERRA_IP"
+}
+
+system_healthy() {
+    local status route
+    "$SYSTEMCTL" is-active --quiet tailscaled.service || return 1
+    status="$($TAILSCALE --socket="$SYSTEM_SOCKET" status --json 2>/dev/null)" || return 1
+    printf '%s\n' "$status" | status_online || return 1
+    route="$($IP route get 100.100.100.100 2>/dev/null | head -n 1)" || return 1
+    printf '%s\n' "$route" | grep -q ' dev tailscale0\([[:space:]]\|$\)'
+}
+
+personal_control_healthy() {
+    local status listeners
+    "$SYSTEMCTL" --user is-active --quiet tailscale-haozeke.service || return 1
+    status="$($TAILSCALE --socket="$PERSONAL_SOCKET" status --json 2>/dev/null)" || return 1
+    printf '%s\n' "$status" | personal_status_online || return 1
+    listeners="$($SS -H -ltn 'sport = :1055' 2>/dev/null)" || return 1
+    printf '%s\n' "$listeners" | grep -q '127\.0\.0\.1:1055'
+}
+
+terra_ssh_healthy() {
+    "$TIMEOUT" 20 "$SSH" \
+        -o BatchMode=yes \
+        -o ConnectTimeout=12 \
+        -o ConnectionAttempts=1 \
+        -o ControlMaster=no \
+        -S none \
+        "$TERRA_TARGET" true </dev/null >/dev/null 2>&1
+}
+
+personal_healthy() {
+    personal_control_healthy && terra_ssh_healthy
+}
+
+version_aligned() {
+    local socket=$1 client daemon
+    client="$(client_version 2>/dev/null)" || return 1
+    daemon="$(daemon_version "$socket" 2>/dev/null)" || return 1
+    [ "$client" = "$daemon" ]
+}
+
+wait_for() {
+    local label=$1 predicate=$2 attempt
+    for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
+        if "$predicate"; then
+            return 0
+        fi
+        "$SLEEP" 1
+    done
+    die "$label did not become healthy"
+}
+
+wait_for_version() {
+    local label=$1 socket=$2 attempt
+    for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
+        if version_aligned "$socket"; then
+            return 0
+        fi
+        "$SLEEP" 1
+    done
+    die "$label daemon version does not match the client binary"
+}
+
+repair_routes() {
+    "$SUDO" -n "$SYSTEMCTL" start rg-net-heal.service \
+        || die "route repair failed"
+}
+
+refresh_system() {
+    log "restarting the system tailnet plane"
+    "$SUDO" -n "$SYSTEMCTL" restart tailscaled.service \
+        || die "system daemon restart failed"
+    wait_for "system tailnet" system_healthy
+    wait_for_version "system tailnet" "$SYSTEM_SOCKET"
+    repair_routes
+}
+
+refresh_personal() {
+    system_healthy || die "system plane is not healthy enough to protect the personal-plane restart"
+    log "restarting the personal userspace tailnet plane"
+    "$SYSTEMCTL" --user restart tailscale-haozeke.service \
+        || die "personal daemon restart failed"
+    wait_for "personal tailnet control plane" personal_control_healthy
+    wait_for_version "personal tailnet" "$PERSONAL_SOCKET"
+    repair_routes
+    wait_for "authenticated Terra fallback" personal_healthy
+}
+
+report() {
+    local client system_daemon personal_daemon system_state=bad personal_state=bad
+    client="$(client_version 2>/dev/null || printf unknown)"
+    system_daemon="$(daemon_version "$SYSTEM_SOCKET" 2>/dev/null || printf unknown)"
+    personal_daemon="$(daemon_version "$PERSONAL_SOCKET" 2>/dev/null || printf unknown)"
+    system_healthy && system_state=healthy
+    personal_healthy && personal_state=healthy
+    printf 'client=%s system=%s:%s personal=%s:%s\n' \
+        "$client" "$system_daemon" "$system_state" "$personal_daemon" "$personal_state"
+    [ "$client" = "$system_daemon" ] \
+        && [ "$client" = "$personal_daemon" ] \
+        && [ "$system_state" = healthy ] \
+        && [ "$personal_state" = healthy ]
+}
+
+mode=${1:---if-needed}
+case "$mode" in
+    --if-needed|--force|--check) ;;
+    *) die "usage: rg-tailscale-refresh [--if-needed|--force|--check]" ;;
+esac
+
+mkdir -p "$(dirname "$LOCK")"
+exec 9>"$LOCK"
+if ! "$FLOCK" -n 9; then
+    log "another refresh owns the recovery lock"
+    exit 0
+fi
+
+if [ "$mode" = --check ]; then
+    report
+    exit
+fi
+
+system_ok=0
+personal_ok=0
+system_healthy && system_ok=1
+personal_healthy && personal_ok=1
+
+need_system=0
+need_personal=0
+[ "$mode" = --force ] && need_system=1 && need_personal=1
+[ "$system_ok" -eq 1 ] && version_aligned "$SYSTEM_SOCKET" || need_system=1
+[ "$personal_ok" -eq 1 ] && version_aligned "$PERSONAL_SOCKET" || need_personal=1
+
+restarted=0
+if [ "$need_system" -eq 1 ] && [ "$system_ok" -eq 1 ] && [ "$personal_ok" -eq 0 ]; then
+    refresh_personal
+    personal_ok=1
+    need_personal=0
+    restarted=1
+fi
+
+if [ "$need_system" -eq 1 ]; then
+    refresh_system
+    system_ok=1
+    restarted=1
+fi
+
+if [ "$need_personal" -eq 1 ]; then
+    [ "$system_ok" -eq 1 ] || die "personal restart has no healthy system plane"
+    refresh_personal
+    personal_ok=1
+    restarted=1
+fi
+
+system_healthy || die "system plane failed the final health gate"
+personal_healthy || die "personal plane failed the final health gate"
+version_aligned "$SYSTEM_SOCKET" || die "system daemon has unresolved version drift"
+version_aligned "$PERSONAL_SOCKET" || die "personal daemon has unresolved version drift"
+
+if [ "$restarted" -eq 1 ]; then
+    "$SYSTEMCTL" --user try-restart \
+        terra-caldav-tunnel.service \
+        terra-mail-tunnel.service \
+        terra-netdata-tunnel.service \
+        || die "a Terra-dependent tunnel failed to restart"
+fi
+
+log "both tailnet planes are healthy and version-aligned"

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# refresh-helper-sha256: {{ include "dot_local/bin/executable_rg-tailscale-refresh" | sha256sum }}
+# refresh-service-sha256: {{ include "dot_config/systemd/user/rg-tailscale-refresh.service" | sha256sum }}
+# refresh-timer-sha256: {{ include "dot_config/systemd/user/rg-tailscale-refresh.timer" | sha256sum }}
+# personal-service-sha256: {{ include "dot_config/systemd/user/tailscale-haozeke.service.tmpl" | sha256sum }}
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+set -euo pipefail
+
+sudoers_tmp=$(mktemp)
+trap 'rtrash -f "$sudoers_tmp"' EXIT
+cat >"$sudoers_tmp" <<'EOF'
+# Exact service operations used by the serialized tailnet recovery helper.
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl restart tailscaled.service
+rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start rg-net-heal.service
+EOF
+sudo visudo -cf "$sudoers_tmp" >/dev/null
+sudo install -D -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/rg-tailscale-refresh
+
+systemctl --user daemon-reload
+systemctl --user enable --now tailscale-haozeke.service
+systemctl --user enable --now rg-tailscale-refresh.timer
+systemctl --user start rg-tailscale-refresh.service
+{{- end }}
