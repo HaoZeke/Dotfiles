@@ -363,6 +363,18 @@ ensure_nft_base() {
     fi
 }
 
+remember_protected_cgroup() {
+    local cgroup="$1" file staged current=""
+    ensure_state_dir
+    file="$(state_file protected-cgroup)"
+    [ -r "$file" ] && IFS= read -r current <"$file"
+    [ "$current" = "$cgroup" ] && return 0
+    staged="$(state_file .protected-cgroup.new)"
+    printf '%s\n' "$cgroup" >"$staged"
+    chmod 0644 "$staged"
+    mv -f "$staged" "$file"
+}
+
 install_rules() {
     reconcile_family_rules -4 32 v4
     reconcile_family_rules -6 128 v6
@@ -423,6 +435,7 @@ policy_assert() {
     validate_preferences
     ensure_state_dir
     ensure_nft_base
+    restore_protected_cgroup
     ensure_unreachable_default -4
     ensure_unreachable_default -6
     install_rules
@@ -454,16 +467,30 @@ register_cgroup() {
     local cgroup="$1" level
     need_root
     case "$cgroup" in
-        user.slice/*/rg-houston-protected.slice/*.scope) ;;
+        *[!A-Za-z0-9_./@-]*) die "invalid character in protected cgroup: $cgroup" ;;
+    esac
+    case "$cgroup" in
+        user.slice/user-[0-9]*.slice/user@*.service/*/rg-houston-protected.slice) ;;
         *) die "refusing cgroup outside rg-houston-protected.slice: $cgroup" ;;
     esac
     ensure_nft_base
     if "$NFT" list table inet "$NFT_TABLE" 2>/dev/null | grep -F -q -- "\"$cgroup\""; then
+        remember_protected_cgroup "$cgroup"
         return 0
     fi
     level="$(awk -F/ '{print NF}' <<<"$cgroup")"
-    "$NFT" add rule inet "$NFT_TABLE" mark_protected \
-        socket cgroupv2 level "$level" "$cgroup" meta mark set "$PROTECTED_MARK"
+    printf 'add rule inet %s mark_protected socket cgroupv2 level %s "%s" meta mark set %s\n' \
+        "$NFT_TABLE" "$level" "$cgroup" "$PROTECTED_MARK" | "$NFT" -f -
+    remember_protected_cgroup "$cgroup"
+}
+
+restore_protected_cgroup() {
+    local file cgroup=""
+    file="$(state_file protected-cgroup)"
+    [ -r "$file" ] || return 0
+    IFS= read -r cgroup <"$file"
+    [ -n "$cgroup" ] || return 0
+    register_cgroup "$cgroup"
 }
 
 register_pid() {
@@ -472,6 +499,11 @@ register_pid() {
     [ -r "/proc/$pid/cgroup" ] || die "pid $pid is not readable"
     cgroup="$(awk -F'::' '/^0::/ {sub(/^\//, "", $2); print $2; exit}' "/proc/$pid/cgroup")"
     [ -n "$cgroup" ] || die "pid $pid has no unified cgroup"
+    case "$cgroup" in
+        user.slice/*/rg-houston-protected.slice/*.scope) ;;
+        *) die "pid $pid is outside rg-houston-protected.slice: $cgroup" ;;
+    esac
+    cgroup="${cgroup%/*}"
     register_cgroup "$cgroup"
 }
 
