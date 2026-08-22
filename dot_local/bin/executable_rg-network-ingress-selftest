@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+bindir="$repo/dot_local/bin"
+helper="$bindir/executable_rg-network-ingress-status"
+doctor="$bindir/executable_rg-net-doctor"
+provision="$repo/.chezmoiscripts/run_onchange_linux_network_ingress.sh.tmpl"
+
+test -x "$helper" || fail "missing privileged ingress status helper"
+bash -n "$helper"
+test -r "$provision" || fail "missing ingress status provisioner"
+
+rg -q 'install.*rg-network-ingress-status.*/usr/local/sbin/rg-network-ingress-status' "$provision" \
+    || fail "ingress helper is not installed as a root-owned command"
+rg -q '/usr/local/sbin/rg-network-ingress-status' "$provision" \
+    || fail "doctor lacks an exact sudoers entry for ingress status"
+
+rg -q 'sudo -n /usr/local/sbin/rg-network-ingress-status' "$doctor" \
+    || fail "doctor does not consume sanitized privileged ingress state"
+rg -F -q -- '--socket="$SYSTEM_SOCKET" version --daemon --json' "$doctor" \
+    || fail "doctor does not audit the system daemon version explicitly"
+rg -F -q -- '--socket="$HZ_SOCK" version --daemon --json' "$doctor" \
+    || fail "doctor does not audit the personal daemon version explicitly"
+test "$(rg -c 'serve status --json' "$doctor")" -ge 2 \
+    || fail "doctor does not audit Serve on both tailnets"
+test "$(rg -c 'funnel status --json' "$doctor")" -ge 2 \
+    || fail "doctor does not audit Funnel on both tailnets"
+test "$(rg -c 'debug prefs' "$doctor")" -ge 2 \
+    || fail "doctor does not audit Tailscale SSH ownership on both tailnets"
+rg -q 'Health' "$doctor" || fail "doctor ignores daemon health findings"
+
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin"
+
+cat >"$tmp/input.rules" <<'EOF'
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+    ct state established,related accept
+    iif lo accept
+    iifname "tailscale0" accept
+  }
+}
+EOF
+cat >"$tmp/forward.rules" <<'EOF'
+table inet filter {
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+}
+EOF
+
+cat >"$tmp/bin/nft" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+    'list chain inet filter input') cat "$RG_FAKE_INPUT_RULES" ;;
+    'list chain inet filter forward') cat "$RG_FAKE_FORWARD_RULES" ;;
+    *) exit 2 ;;
+esac
+SH
+cat >"$tmp/bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+[ "$*" = 'is-active --quiet nftables.service' ]
+SH
+cat >"$tmp/bin/ip" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+[ "$*" = 'link show tailscale0' ]
+SH
+cat >"$tmp/bin/ss" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'LISTEN 0 128 0.0.0.0:22 0.0.0.0:*\n'
+SH
+chmod +x "$tmp/bin/"*
+
+run_helper() {
+    RG_INGRESS_ALLOW_UNPRIVILEGED=1 \
+    RG_INGRESS_NFT="$tmp/bin/nft" \
+    RG_INGRESS_SYSTEMCTL="$tmp/bin/systemctl" \
+    RG_INGRESS_IP="$tmp/bin/ip" \
+    RG_INGRESS_SS="$tmp/bin/ss" \
+    RG_FAKE_INPUT_RULES="$tmp/input.rules" \
+    RG_FAKE_FORWARD_RULES="$tmp/forward.rules" \
+        "$helper"
+}
+
+out=$(run_helper)
+for verdict in \
+    'firewall_service=ok' \
+    'input_policy=drop' \
+    'forward_policy=drop' \
+    'tailnet_input=accept' \
+    'tailnet_interface=present' \
+    'ssh_listener=present'; do
+    printf '%s\n' "$out" | rg -q "^${verdict}$" \
+        || fail "missing sanitized ingress verdict: $verdict"
+done
+! printf '%s\n' "$out" | rg -q 'table inet|chain input|iifname' \
+    || fail "privileged helper exposed raw firewall rules"
+
+sed -i '/tailscale0/d' "$tmp/input.rules"
+if run_helper >/dev/null 2>&1; then
+    fail "ingress helper accepted a firewall without the tailnet rule"
+fi
+
+printf 'ok\n'
