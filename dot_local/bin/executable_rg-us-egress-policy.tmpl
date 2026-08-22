@@ -1,0 +1,329 @@
+#!/usr/bin/env bash
+{{- if ne .chezmoi.hostname "rgx1gen11" }}
+echo "rg-*: refusing to run on hostname=$(hostname 2>/dev/null || echo unknown); only rgx1gen11" >&2
+exit 0
+{{- end }}
+set -Eeuo pipefail
+
+IP="${RG_POLICY_IP:-ip}"
+NFT="${RG_POLICY_NFT:-nft}"
+GETENT="${RG_POLICY_GETENT:-getent}"
+PYTHON="${RG_POLICY_PYTHON:-python3}"
+RTRASH="${RG_POLICY_RTRASH:-$(command -v rtrash 2>/dev/null || true)}"
+IFACE="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
+HOUSTON_TABLE="${RG_HOUSTON_TABLE:-51820}"
+PROTECTED_TABLE="${RG_PROTECTED_TABLE:-51821}"
+PROTECTED_MARK="${RG_PROTECTED_MARK:-0x5252}"
+TAILSCALE_MARK="${RG_XAI_TAILSCALE_MARK:-0x80000/0xff0000}"
+STATE_DIR="${RG_POLICY_STATE_DIR:-/var/lib/rg-us-egress-policy}"
+RECOVERY_HOST_FILE="${RG_RECOVERY_HOST_FILE:-/etc/rg-us-egress-policy/recovery-hosts}"
+XAI_HOSTS="${RG_XAI_PROTECTED_HOSTS:-api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com}"
+NFT_TABLE="rg_houston_protected"
+PREF_DEST=5188
+PREF_TAILNET=5194
+PREF_SURF=5195
+PREF_PROCESS=5196
+PREF_TS_MARK=5197
+FAIL_METRIC=42760
+
+die() {
+    printf 'rg-us-egress-policy: %s\n' "$*" >&2
+    exit 1
+}
+
+need_root() {
+    [ "${RG_POLICY_TESTING:-0}" = 1 ] && return 0
+    [ "$(id -u)" -eq 0 ] || die "run as root"
+}
+
+recovery_hosts() {
+    if [ -n "${RG_RECOVERY_HOSTS:-}" ]; then
+        printf '%s\n' "$RG_RECOVERY_HOSTS"
+    elif [ -r "$RECOVERY_HOST_FILE" ]; then
+        awk '!/^[[:space:]]*(#|$)/ {print $1}' "$RECOVERY_HOST_FILE" | tr '\n' ' '
+    fi
+}
+
+state_file() {
+    printf '%s/%s\n' "$STATE_DIR" "$1"
+}
+
+ensure_state_dir() {
+    install -d -m 0700 "$STATE_DIR"
+}
+
+atomic_state() {
+    local source="$1" name="$2" staged
+    staged="$(state_file ".${name}.new")"
+    LC_ALL=C sort -u "$source" >"$staged"
+    chmod 0600 "$staged"
+    mv -f "$staged" "$(state_file "$name")"
+}
+
+resolve_family() {
+    local family="$1" hosts="$2" host
+    for host in $hosts; do
+        "$GETENT" "$family" "$host" 2>/dev/null | awk '{print $1}'
+    done | case "$family" in
+        ahostsv4) awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/' ;;
+        ahostsv6) awk '/:/' ;;
+    esac | LC_ALL=C sort -u
+}
+
+route_exclusions() {
+    local flag="$1" bits="$2"
+    {
+        "$IP" "$flag" route show table 52 2>/dev/null \
+            | awk -v bits="$bits" '$1 !~ /^(default|unreachable|blackhole|prohibit|throw)$/ {print ($1 ~ /\// ? $1 : $1 "/" bits)}'
+        "$IP" "$flag" route show table main 2>/dev/null \
+            | awk -v bits="$bits" '$0 ~ / dev tun0([[:space:]]|$)/ {print ($1 ~ /\// ? $1 : $1 "/" bits)}'
+    } | LC_ALL=C sort -u
+}
+
+filter_family() {
+    local candidates="$1" recovery="$2" excluded="$3" protected="$4" collisions="$5"
+    "$PYTHON" - "$candidates" "$recovery" "$excluded" "$protected" "$collisions" <<'PY'
+import ipaddress
+import pathlib
+import sys
+
+candidates_path, recovery_path, excluded_path, protected_path, collisions_path = map(pathlib.Path, sys.argv[1:])
+
+def lines(path):
+    if not path.exists():
+        return []
+    return [line.strip() for line in path.read_text().splitlines() if line.strip()]
+
+candidates = {ipaddress.ip_address(value) for value in lines(candidates_path)}
+recovery = {ipaddress.ip_address(value) for value in lines(recovery_path)}
+excluded = [ipaddress.ip_network(value, strict=False) for value in lines(excluded_path)]
+collisions = sorted(candidates & recovery, key=lambda value: (value.version, int(value)))
+protected = sorted(
+    (value for value in candidates - recovery if not any(value in network for network in excluded)),
+    key=lambda value: (value.version, int(value)),
+)
+protected_path.write_text("".join(f"{value}\n" for value in protected))
+collisions_path.write_text("".join(f"{value}\n" for value in collisions))
+PY
+}
+
+sync_family() {
+    local family="$1" flag="$2" bits="$3" suffix="$4" work="$5"
+    local candidates="$work/candidates-$suffix" recovery="$work/recovery-$suffix"
+    local excluded="$work/excluded-$suffix" protected="$work/protected-$suffix"
+    local collisions="$work/collisions-$suffix" configured_recovery
+    configured_recovery="$(recovery_hosts)"
+    resolve_family "$family" "$XAI_HOSTS" >"$candidates"
+    resolve_family "$family" "$configured_recovery" >"$recovery"
+    route_exclusions "$flag" "$bits" >"$excluded"
+
+    if [ -s "$recovery" ]; then
+        atomic_state "$recovery" "recovery-$suffix"
+    fi
+    if [ ! -s "$candidates" ]; then
+        return 0
+    fi
+
+    filter_family "$candidates" "$recovery" "$excluded" "$protected" "$collisions"
+    atomic_state "$protected" "xai-$suffix"
+    atomic_state "$collisions" "collisions-$suffix"
+}
+
+sync_hosts() {
+    local work
+    need_root
+    ensure_state_dir
+    work="$(mktemp -d)"
+    [ -n "$RTRASH" ] || die "rtrash is required for temporary-state cleanup"
+    trap '"$RTRASH" -rf "$work"' RETURN
+    sync_family ahostsv4 -4 32 v4 "$work"
+    sync_family ahostsv6 -6 128 v6 "$work"
+    "$RTRASH" -rf "$work"
+    trap - RETURN
+}
+
+rules_at_pref() {
+    local flag="$1" pref="$2"
+    "$IP" "$flag" rule show 2>/dev/null | awk -v prefix="${pref}:" '$1 == prefix'
+}
+
+owned_rule() {
+    local pref="$1" line="$2"
+    case "$pref" in
+        "$PREF_DEST") [[ "$line" == *" to "* && "$line" == *" lookup $PROTECTED_TABLE"* ]] ;;
+        "$PREF_TAILNET") [[ "$line" == *" lookup 52"* ]] ;;
+        "$PREF_SURF") [[ "$line" == *" to "* && "$line" == *" lookup main"* ]] ;;
+        "$PREF_PROCESS") [[ "$line" == *"fwmark 0x5252"* && "$line" == *"lookup $PROTECTED_TABLE"* ]] ;;
+        "$PREF_TS_MARK") [[ "$line" == *"fwmark 0x80000"* && "$line" == *"lookup $PROTECTED_TABLE"* ]] ;;
+        *) return 1 ;;
+    esac
+}
+
+validate_preferences() {
+    local flag pref line
+    for flag in -4 -6; do
+        for pref in "$PREF_DEST" "$PREF_TAILNET" "$PREF_SURF" "$PREF_PROCESS" "$PREF_TS_MARK"; do
+            while IFS= read -r line; do
+                [ -n "$line" ] || continue
+                owned_rule "$pref" "$line" \
+                    || die "$flag preference $pref is owned by another rule: $line"
+            done < <(rules_at_pref "$flag" "$pref")
+        done
+    done
+}
+
+clear_pref() {
+    local flag="$1" pref="$2" line
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        "$IP" "$flag" rule del pref "$pref"
+    done < <(rules_at_pref "$flag" "$pref")
+}
+
+add_state_rules() {
+    local flag="$1" suffix="$2" bits="$3" file addr
+    file="$(state_file "xai-$suffix")"
+    [ -r "$file" ] || return 0
+    while IFS= read -r addr; do
+        [ -n "$addr" ] || continue
+        "$IP" "$flag" rule add pref "$PREF_DEST" to "$addr/$bits" lookup "$PROTECTED_TABLE"
+    done <"$file"
+}
+
+add_surf_rules() {
+    local flag="$1" bits="$2" prefix
+    while IFS= read -r prefix; do
+        [ -n "$prefix" ] || continue
+        "$IP" "$flag" rule add pref "$PREF_SURF" to "$prefix" lookup main
+    done < <("$IP" "$flag" route show table main 2>/dev/null \
+        | awk -v bits="$bits" '$0 ~ / dev tun0([[:space:]]|$)/ {print ($1 ~ /\// ? $1 : $1 "/" bits)}' \
+        | LC_ALL=C sort -u)
+}
+
+render_nft_base() {
+    cat <<EOF
+table inet $NFT_TABLE {
+    chain mark_protected {
+        type route hook output priority mangle; policy accept;
+    }
+}
+EOF
+}
+
+render_nft_cgroup() {
+    local cgroup="$1" level
+    level="$(awk -F/ '{print NF}' <<<"$cgroup")"
+    cat <<EOF
+table inet $NFT_TABLE {
+    chain mark_protected {
+        type route hook output priority mangle; policy accept;
+        socket cgroupv2 level $level "$cgroup" meta mark set $PROTECTED_MARK
+    }
+}
+EOF
+}
+
+ensure_nft_base() {
+    if ! "$NFT" list table inet "$NFT_TABLE" >/dev/null 2>&1; then
+        render_nft_base | "$NFT" -f -
+    fi
+}
+
+install_rules() {
+    local flag
+    for flag in -4 -6; do
+        clear_pref "$flag" "$PREF_DEST"
+        clear_pref "$flag" "$PREF_TAILNET"
+        clear_pref "$flag" "$PREF_SURF"
+        clear_pref "$flag" "$PREF_PROCESS"
+        clear_pref "$flag" "$PREF_TS_MARK"
+        "$IP" "$flag" rule add pref "$PREF_TAILNET" lookup 52
+        add_surf_rules "$flag" "$([ "$flag" = -4 ] && printf 32 || printf 128)"
+        "$IP" "$flag" rule add pref "$PREF_PROCESS" fwmark "$PROTECTED_MARK/0xffff" lookup "$PROTECTED_TABLE"
+        "$IP" "$flag" rule add pref "$PREF_TS_MARK" fwmark "$TAILSCALE_MARK" lookup "$PROTECTED_TABLE"
+    done
+    add_state_rules -4 v4 32
+    add_state_rules -6 v6 128
+}
+
+policy_assert() {
+    need_root
+    validate_preferences
+    ensure_state_dir
+    ensure_nft_base
+    "$IP" -4 route replace unreachable default metric "$FAIL_METRIC" table "$PROTECTED_TABLE"
+    "$IP" -6 route replace unreachable default metric "$FAIL_METRIC" table "$PROTECTED_TABLE"
+    install_rules
+}
+
+houston_up() {
+    need_root
+    policy_assert
+    "$IP" link show "$IFACE" >/dev/null 2>&1 \
+        || die "$IFACE is absent"
+    "$IP" -4 route show table "$HOUSTON_TABLE" 2>/dev/null | grep -q '^default' \
+        || die "table $HOUSTON_TABLE has no IPv4 default"
+    "$IP" -4 route replace default dev "$IFACE" metric 10 table "$PROTECTED_TABLE"
+    if "$IP" -6 route show table "$HOUSTON_TABLE" 2>/dev/null | grep -q '^default'; then
+        "$IP" -6 route replace default dev "$IFACE" metric 10 table "$PROTECTED_TABLE"
+    else
+        "$IP" -6 route del default dev "$IFACE" table "$PROTECTED_TABLE" 2>/dev/null || true
+    fi
+}
+
+houston_down() {
+    need_root
+    policy_assert
+    "$IP" -4 route del default dev "$IFACE" table "$PROTECTED_TABLE" 2>/dev/null || true
+    "$IP" -6 route del default dev "$IFACE" table "$PROTECTED_TABLE" 2>/dev/null || true
+}
+
+register_cgroup() {
+    local cgroup="$1" level
+    need_root
+    case "$cgroup" in
+        user.slice/*/rg-houston-protected.slice/*.scope) ;;
+        *) die "refusing cgroup outside rg-houston-protected.slice: $cgroup" ;;
+    esac
+    ensure_nft_base
+    if "$NFT" list table inet "$NFT_TABLE" 2>/dev/null | grep -F -q -- "\"$cgroup\""; then
+        return 0
+    fi
+    level="$(awk -F/ '{print NF}' <<<"$cgroup")"
+    "$NFT" add rule inet "$NFT_TABLE" mark_protected \
+        socket cgroupv2 level "$level" "$cgroup" meta mark set "$PROTECTED_MARK"
+}
+
+register_pid() {
+    local pid="$1" cgroup
+    case "$pid" in ''|*[!0-9]*) die "invalid pid: $pid" ;; esac
+    [ -r "/proc/$pid/cgroup" ] || die "pid $pid is not readable"
+    cgroup="$(awk -F'::' '/^0::/ {sub(/^\//, "", $2); print $2; exit}' "/proc/$pid/cgroup")"
+    [ -n "$cgroup" ] || die "pid $pid has no unified cgroup"
+    register_cgroup "$cgroup"
+}
+
+status() {
+    printf '== protected routes ==\n'
+    "$IP" -4 route show table "$PROTECTED_TABLE" 2>/dev/null || true
+    "$IP" -6 route show table "$PROTECTED_TABLE" 2>/dev/null || true
+    printf '== protected rules ==\n'
+    "$IP" -4 rule show 2>/dev/null | awk '$1 ~ /^(5188|5194|5195|5196|5197):/'
+    "$IP" -6 rule show 2>/dev/null | awk '$1 ~ /^(5188|5194|5195|5196|5197):/'
+    printf '== protected cgroups ==\n'
+    "$NFT" list table inet "$NFT_TABLE" 2>/dev/null || true
+    printf '== address collisions ==\n'
+    cat "$(state_file collisions-v4)" "$(state_file collisions-v6)" 2>/dev/null || true
+}
+
+case "${1:-}" in
+    assert) policy_assert ;;
+    sync-hosts) sync_hosts ;;
+    houston-up) houston_up ;;
+    houston-down) houston_down ;;
+    register-pid) register_pid "${2:-}" ;;
+    register-cgroup) register_cgroup "${2:-}" ;;
+    status) status ;;
+    --render-nft) render_nft_cgroup "${2:?usage: $0 --render-nft <cgroup>}" ;;
+    *) die "usage: $0 {assert|sync-hosts|houston-up|houston-down|register-pid PID|register-cgroup PATH|status}" ;;
+esac
