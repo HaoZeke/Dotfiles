@@ -252,7 +252,7 @@ assert_not_contains "$out" "about:blank" "grok fallback tab"
 assert_contains "$out" "rg-houston-protected" "direct Grok Livingston protection"
 
 test -r "$vivaldi_desktop" || fail "normal Vivaldi desktop entry is unmanaged"
-desktop_exec=$(awk -F= '$1 == "Exec" {print $2}' "$vivaldi_desktop")
+desktop_exec=$(sed -n 's/^Exec=//p' "$vivaldi_desktop")
 assert_contains "$desktop_exec" "--new-window" "normal Vivaldi singleton recovery"
 test "$(printf '%s\n' "$desktop_exec" | rg -o -- '--enable-features=' | wc -l)" -eq 1 \
     || fail "normal Vivaldi desktop entry must use one combined feature list"
