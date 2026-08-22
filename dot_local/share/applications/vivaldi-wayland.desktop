@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Vivaldi Wayland
+Comment=Vivaldi on Wayland with a recoverable window launch
+Categories=Network;WebBrowser;
+Terminal=false
+Exec=vivaldi-stable --new-window --enable-features=UseOzonePlatform,WaylandWindowDecorations --ozone-platform=wayland --ozone-platform-hint=auto %U
+Icon=vivaldi
+StartupWMClass=Vivaldi-stable
