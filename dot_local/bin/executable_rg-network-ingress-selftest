@@ -75,7 +75,11 @@ SH
 cat >"$tmp/bin/systemctl" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "$*" = 'is-active --quiet nftables.service' ]
+case "$*" in
+    'is-enabled --quiet nftables.service') ;;
+    'show --property=Result --value nftables.service') printf 'success\n' ;;
+    *) exit 2 ;;
+esac
 SH
 cat >"$tmp/bin/ip" <<'SH'
 #!/usr/bin/env bash

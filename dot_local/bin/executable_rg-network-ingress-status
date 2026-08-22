@@ -15,7 +15,7 @@ fi
 verdict() {
     local key=$1 good=$2 bad=$3
     shift 3
-    if "$@"; then
+    if "$@" >/dev/null 2>&1; then
         printf '%s=%s\n' "$key" "$good"
     else
         printf '%s=%s\n' "$key" "$bad"
@@ -23,12 +23,17 @@ verdict() {
     fi
 }
 
+firewall_owner_ok() {
+    "$SYSTEMCTL" is-enabled --quiet nftables.service \
+        && [ "$("$SYSTEMCTL" show --property=Result --value nftables.service 2>/dev/null)" = success ]
+}
+
 input_rules="$($NFT list chain inet filter input 2>/dev/null || true)"
 forward_rules="$($NFT list chain inet filter forward 2>/dev/null || true)"
 listeners="$($SS -H -ltn 'sport = :22' 2>/dev/null || true)"
 
 verdict firewall_service ok bad \
-    "$SYSTEMCTL" is-active --quiet nftables.service
+    firewall_owner_ok
 verdict input_policy drop unsafe \
     grep -Eq 'hook input .*policy drop' <<<"$input_rules"
 verdict forward_policy drop unsafe \
