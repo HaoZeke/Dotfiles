@@ -209,8 +209,7 @@ apply_snapshot_service_states() {
     fi
     systemctl daemon-reload || true
     if [ "$networkd_active" = active ]; then
-        networkctl reload || true
-        networkctl reconfigure wlan0 || true
+        "$(dirname "$0")/rg-networkd-apply" wlan0 || true
     fi
     apply_enabled_state ctrld.service "$ctrld_enabled"
     apply_enabled_state unbound.service "$unbound_enabled"
@@ -472,8 +471,7 @@ RouteMetric=600
 UseDNS=no
 Token=prefixstable
 EOF
-networkctl reload
-networkctl reconfigure wlan0
+"$(dirname "$0")/rg-networkd-apply" wlan0
 sleep 2
 
 step "cut systemd-resolved to localhost"

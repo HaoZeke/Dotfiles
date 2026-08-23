@@ -33,6 +33,7 @@ weather_json="$repo/dot_local/bin/executable_rg-weather-json.tmpl"
 fix_local_dns="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-local-dns")"
 fix_nm_ctrld="$(resolve_helper "$repo/dot_local/bin/executable_rg-fix-networkmanager-ctrld")"
 profile_selftest="$repo/dot_local/bin/executable_rg-network-profile-selftest"
+networkd_apply="$repo/dot_local/bin/executable_rg-networkd-apply"
 networkd_apply_selftest="$repo/dot_local/bin/executable_rg-networkd-apply-selftest"
 us_egress_up="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-up")"
 us_egress_guard="$(resolve_helper "$repo/dot_local/bin/executable_rg-us-egress-guard")"
@@ -60,6 +61,7 @@ test -r "$weather_json" || fail "missing rg-weather-json helper"
 test -r "$fix_local_dns" || fail "missing local DNS repair helper"
 test -r "$fix_nm_ctrld" || fail "missing NetworkManager Control D repair helper"
 test -r "$profile_selftest" || fail "missing live network profile selftest"
+test -x "$networkd_apply" || fail "missing networkd apply helper"
 test -x "$networkd_apply_selftest" || fail "missing networkd apply selftest"
 test -r "$us_egress_up" || fail "missing US egress activation helper"
 test -r "$us_egress_guard" || fail "missing US egress guard"
@@ -844,8 +846,16 @@ rg -q 'MulticastDNS=no' "$profile_selftest" \
     || fail "live profile selftest does not check resolved mDNS policy"
 rg -q 'UseDNS=no' "$profile_selftest" \
     || fail "live profile selftest does not check DHCP DNS policy"
-rg -q 'networkctl reconfigure wlan0' "$laptop_script" \
-    || fail "networkd wlan profile changes must be applied without restarting Wi-Fi managers"
+networkd_apply_count=$( (rg -o 'rg-networkd-apply[^[:space:]]*[[:space:]]+wlan0' "$laptop_script" || true) | wc -l )
+test "$networkd_apply_count" -ge 2 \
+    || fail "laptop networkd changes do not use the restart-free compatibility helper"
+! rg -q 'sudo networkctl (reload|reconfigure)' "$laptop_script" \
+    || fail "laptop script bypasses the networkd compatibility helper"
+dns_networkd_apply_count=$( (rg -o 'rg-networkd-apply[^[:space:]]*[[:space:]]+wlan0' "$fix_local_dns" || true) | wc -l )
+test "$dns_networkd_apply_count" -ge 2 \
+    || fail "DNS apply and rollback do not use the networkd compatibility helper"
+! rg -q '^[[:space:]]*networkctl (reload|reconfigure)' "$fix_local_dns" \
+    || fail "DNS repair bypasses the networkd compatibility helper"
 rg -q 'tailscaled@.service' "$laptop_script" \
     || fail "multi-tailnet systemd template is not installed"
 rg -q '/usr/local/sbin/rg-tailnet-power' "$laptop_script" \

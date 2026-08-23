@@ -1040,8 +1040,7 @@ disable_networkmanager_for_iwd
 sudo systemctl enable --now systemd-networkd.service systemd-resolved.service >/dev/null 2>&1 || true
 
 if [ "$NETWORKD_CHANGED" = "1" ] && sudo systemctl is-active systemd-networkd.service >/dev/null 2>&1; then
-    sudo networkctl reload || true
-    sudo networkctl reconfigure wlan0 || true
+    sudo "{{ .chezmoi.homeDir }}/.local/bin/rg-networkd-apply" wlan0 || true
 fi
 
 if sudo systemctl is-active ctrld.service >/dev/null 2>&1 \
@@ -1100,7 +1099,7 @@ if [ "$IWD_CHANGED" = "1" ]; then
     echo "chezmoi: iwd main.conf changed; restarting iwd (Wi-Fi auth-only)"
     sudo systemctl restart iwd.service
     sleep 2
-    sudo networkctl reconfigure wlan0 || true
+    sudo "{{ .chezmoi.homeDir }}/.local/bin/rg-networkd-apply" wlan0 || true
 fi
 
 disable_networkmanager_for_iwd
