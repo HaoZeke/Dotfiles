@@ -80,13 +80,33 @@ atomic_state() {
 }
 
 resolve_family() {
-    local family="$1" hosts="$2" host
+    local family="$1" hosts="$2" host answer incomplete=0
     for host in $hosts; do
-        "$GETENT" "$family" "$host" 2>/dev/null | awk '{print $1}'
-    done | case "$family" in
-        ahostsv4) awk '/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/' ;;
-        ahostsv6) awk '/:/' ;;
-    esac | LC_ALL=C sort -u
+        answer=""
+        case "$family" in
+            ahostsv4)
+                if ! answer="$("$GETENT" "$family" "$host" 2>/dev/null \
+                    | awk '$1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {print $1}' \
+                    | LC_ALL=C sort -u)"; then
+                    incomplete=1
+                fi
+                ;;
+            ahostsv6)
+                if ! answer="$("$GETENT" "$family" "$host" 2>/dev/null \
+                    | awk '$1 ~ /:/ {print $1}' \
+                    | LC_ALL=C sort -u)"; then
+                    incomplete=1
+                fi
+                ;;
+            *) die "unsupported address family resolver: $family" ;;
+        esac
+        if [ -n "$answer" ]; then
+            printf '%s\n' "$answer"
+        else
+            incomplete=1
+        fi
+    done
+    return "$incomplete"
 }
 
 route_exclusions() {
@@ -131,13 +151,25 @@ sync_family() {
     local candidates="$work/candidates-$suffix" recovery="$work/recovery-$suffix"
     local excluded="$work/excluded-$suffix" protected="$work/protected-$suffix"
     local collisions="$work/collisions-$suffix" configured_recovery
+    local candidates_complete=1 recovery_complete=1 retained
     configured_recovery="$(recovery_hosts)"
-    resolve_family "$family" "$XAI_HOSTS" >"$candidates"
-    resolve_family "$family" "$configured_recovery" >"$recovery"
+    resolve_family "$family" "$XAI_HOSTS" >"$candidates" \
+        || candidates_complete=0
+    resolve_family "$family" "$configured_recovery" >"$recovery" \
+        || recovery_complete=0
     route_exclusions "$flag" "$bits" >"$excluded"
 
+    retained="$(state_file "recovery-$suffix")"
+    if [ "$recovery_complete" -eq 0 ] && [ -r "$retained" ]; then
+        cat "$retained" >>"$recovery"
+    fi
     if [ -s "$recovery" ]; then
         atomic_state "$recovery" "recovery-$suffix"
+    fi
+
+    retained="$(state_file "xai-$suffix")"
+    if [ "$candidates_complete" -eq 0 ] && [ -r "$retained" ]; then
+        cat "$retained" >>"$candidates"
     fi
     if [ ! -s "$candidates" ]; then
         return 0
