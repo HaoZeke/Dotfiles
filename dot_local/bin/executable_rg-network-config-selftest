@@ -428,8 +428,8 @@ test -r "$net_doctor_alert" || fail "missing doctor alert wrapper"
 test -r "$repo/dot_config/systemd/user/rg-net-doctor.service" || fail "missing doctor service unit"
 test -r "$repo/dot_config/systemd/user/rg-net-doctor.timer" || fail "missing doctor timer unit"
 bash -n "$net_doctor" && bash -n "$net_doctor_alert" || fail "doctor helpers do not parse"
-rg -q '5197:.*fwmark 0x80000.*lookup 51821' "$net_doctor" \
-    || fail "doctor must verify the fail-closed x.ai Houston-visibility rule"
+rg -q 'retired pref-5197' "$net_doctor" \
+    || fail "doctor must flag a reappearing tailscale-mark steering rule"
 rg -q 'ip route get 8.8.8.8 mark 0x80000' "$net_doctor" \
     || fail "doctor must verify tailscale-marked traffic exits via the tunnel"
 rg -q 'ip route get 8.8.8.8 mark 0x5252' "$net_doctor" \
