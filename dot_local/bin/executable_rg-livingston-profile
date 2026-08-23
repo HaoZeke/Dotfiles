@@ -756,7 +756,11 @@ run_browser() {
         if [ "$dry_run" -eq 0 ]; then
             [ -r "$xai_pac_path" ] || die "missing x.ai split proxy policy: $xai_pac_path"
         fi
-        browser_args+=("--proxy-pac-url=file://$xai_pac_path")
+        # Chromium's network service silently ignores a file:// PAC URL (no
+        # proxy is applied at all and every request goes DIRECT), so the
+        # policy must be inlined as a data: URL.
+        pac_b64="$(base64 -w0 "$xai_pac_path" 2>/dev/null || true)"
+        browser_args+=("--proxy-pac-url=data:application/x-ns-proxy-autoconfig;base64,$pac_b64")
         use_xai_pac=1
     fi
     # No proxy is not automatically wrong: when the host itself is on a full

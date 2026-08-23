@@ -227,7 +227,8 @@ assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profi
 assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
 assert_contains "$out" "--start-maximized" "vivaldi maximized launch"
 assert_contains "$out" "rg-houston-protected" "direct Livingston protection"
-assert_contains "$out" "--proxy-pac-url=file://$tmp_home/.local/share/rg-location-profiles/livingston/xai-tailnet.pac" "Teachx split proxy"
+assert_contains "$out" "--proxy-pac-url=data:application/x-ns-proxy-autoconfig;base64," "Teachx split proxy inlined as a data URL"
+assert_not_contains "$out" "--proxy-pac-url=file://" "file:// PAC URLs are silently ignored by Chromium"
 assert_contains "$out" "--new-window" "vivaldi singleton recovery"
 test "$(printf '%s\n' "$out" | rg -o -- '--new-window' | wc -l)" -eq 1 \
     || fail "plain Livingston Vivaldi must request exactly one new window"
