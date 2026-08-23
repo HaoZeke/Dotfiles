@@ -3,9 +3,9 @@
 # Runs as root from rg-net-heal.timer + on network-online. Idempotent, quiet.
 #
 #   1. x.ai system tailscale (Starfleet / experimental grok models): keep the
-#      daemon running + connected. Auto-recover a Stopped state; on a real logout
-#      (auth expiry) notify the desktop -- re-login needs a human, so never block
-#      on an interactive `tailscale up`.
+#      daemon is observed but never mutated. A stopped or logged-out state emits
+#      a desktop notification while Houston, SURF, and the personal tailnet keep
+#      their independent ownership and lifecycle.
 #   2. x.ai tailnet visibility: the x.ai tailnet must see this node from the
 #      Houston exit or model access is refused. The system tailscaled's own
 #      transport mark enters the protected table before Tailscale's main-table
@@ -276,14 +276,21 @@ olt_residential_reachable() {
 }
 
 # --- 1. x.ai tailscale ----------------------------------------------------
-systemctl is-active --quiet tailscaled.service || { systemctl start tailscaled.service >/dev/null 2>&1 || true; sleep 2; }
-ts_state="$(tailscale status --json 2>/dev/null \
-    | python3 -c 'import sys,json;print(json.load(sys.stdin).get("BackendState",""))' 2>/dev/null || true)"
-case "$ts_state" in
-    Running) : ;;
-    Stopped) tailscale up --accept-dns=true >/dev/null 2>&1 || notify "x.ai tailscale stuck Stopped; run: sudo tailscale up" ;;
-    NeedsLogin|NoState|"") notify "x.ai tailscale logged out -> Starfleet + grok models down. Re-login: sudo tailscale up --accept-dns=true" ;;
-esac
+# This timer owns route reconciliation only. The system tailnet is an
+# independent plane: attempting to repair it here can rewrite DNS and policy
+# routes while Houston and SURF are carrying live traffic. Report degradation
+# and leave every other plane untouched.
+if systemctl is-active --quiet tailscaled.service; then
+    ts_state="$(tailscale status --json 2>/dev/null \
+        | python3 -c 'import sys,json;print(json.load(sys.stdin).get("BackendState",""))' 2>/dev/null || true)"
+    case "$ts_state" in
+        Running) : ;;
+        Stopped) notify "x.ai system tailnet is stopped; leaving Houston, SURF, and personal tailnet active" ;;
+        NeedsLogin|NoState|"") notify "x.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active" ;;
+    esac
+else
+    notify "x.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active"
+fi
 
 # --- 1b. x.ai API hosts pin: keep it, but never let a retired edge rot in it -
 # api.x.ai is pinned in /etc/hosts to a Cloudflare edge that answers reliably

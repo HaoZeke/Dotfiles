@@ -68,6 +68,13 @@ rg -q 'grok models.*grok-4\.6|grok-4\.6.*grok models' "$doctor" \
 ! rg -q '^[[:space:]]*(sudo[[:space:]]+)?(systemctl (start|restart)|ip .*route (add|replace|del)|nft (add|delete))' "$doctor" \
     || fail "doctor contains a network mutation"
 
+! rg -q 'systemctl (start|restart) tailscaled\.service' "$heal" \
+    || fail "periodic route healer starts the system tailnet"
+! rg -q 'tailscale up' "$heal" \
+    || fail "periodic route healer changes system tailnet login state"
+rg -q 'x\.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active' "$heal" \
+    || fail "route healer does not notify about isolated x.ai degradation"
+
 rg -q 'sha256sum' "$alert" || fail "alert does not hash the normalized BAD set"
 rg -q 'LC_ALL=C sort -u' "$alert" || fail "alert does not normalize the complete BAD set"
 rg -q 'stack recovered' "$alert" || fail "alert has no recovery notification"
