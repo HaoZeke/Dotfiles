@@ -22,10 +22,15 @@ ROUTE-ONLY MUTATORS (self-healing, cannot take the uplink down)
   rg-livingston-egress    split tunnel for the Livingston browser profile only
 
 HEAVY MUTATORS (root; these CAN kill connectivity -- use rg-net wrappers)
-  rg-net up|down          Houston 0/0 egress (rg-us-egress.service ->
+  rg-net up|down          Houston scoped egress (rg-us-egress.service ->
                           rg-us-egress-up: rebuilds DNS, disables NetworkManager,
-                          opens table 51821 through the verified 0/0 tunnel)
+                          opens protected table 51821 through the scoped tunnel;
+                          the default route stays on the LAN)
   rg-net recover          one-shot rebuild after a broken state (rg-net-recover)
+  rg-net bare             BREAK-GLASS: flatten to iwd + DHCP + static 8.8.8.8
+                          resolv.conf; stops every tunnel, tailnet, resolver
+                          daemon, policy rule, and timer. Survives any breakage
+                          in the stack above; recover with rg-net provision.
   rg-net surf-renew       open SURF eduVPN browser authorization and export
   rg-us-egress-guard      tunnel keep-alive (30s root timer; serialized)
   rg-fix-local-dns        resolver chain rebuild (called by egress up)
@@ -59,6 +64,7 @@ drift() {
         "$BIN/rg-surf-vpn-install:/usr/local/sbin/rg-surf-vpn-install" \
         "$BIN/rg-net-recover:/usr/local/sbin/rg-net-recover" \
         "$BIN/rg-us-egress-guard:/usr/local/sbin/rg-us-egress-guard" \
+        "$BIN/rg-livingston-egress:/usr/local/sbin/rg-livingston-egress" \
         "$BIN/rg-tunnel-akamai-carveout:/usr/local/sbin/rg-tunnel-akamai-carveout"; do
         src="${pair%%:*}"; dst="${pair##*:}"
         if [ ! -e "$dst" ]; then
@@ -87,14 +93,60 @@ provision() {
     drift
 }
 
+# Break-glass: reduce the machine to link-manager DHCP plus public DNS with
+# no tunnels, tailnets, resolvers, policy rules, or timers. Every step
+# tolerates absent units and files, so this works from any half-broken
+# state. Undo with: rg-net provision.
+bare_root() {
+    [ "$(id -u)" -eq 0 ] || { echo "run via: rg-net bare" >&2; exit 2; }
+    # Under sudo $HOME is /root; the helpers live in the invoking user's home.
+    local owner_home
+    owner_home="$(getent passwd "${SUDO_USER:-rgoswami}" | cut -d: -f6)"
+    echo "== stop mutating timers =="
+    systemctl stop rg-us-egress-guard.timer rg-net-heal.timer 2>/dev/null || true
+    echo "== stop tunnels and tailnets =="
+    systemctl stop rg-us-egress.service wg-quick@rg-us-egress-wg.service 2>/dev/null || true
+    systemctl stop tailscaled.service 2>/dev/null || true
+    systemctl stop 'openvpn-client@*.service' 2>/dev/null || true
+    "$owner_home/.local/bin/rg-livingston-egress" down 2>/dev/null || true
+    "$owner_home/.local/bin/rg-livingston-netns" down 2>/dev/null || true
+    echo "== stop resolver daemons =="
+    systemctl stop ctrld.service unbound.service 2>/dev/null || true
+    echo "== flush policy rules and tables =="
+    local fam pref
+    for fam in -4 -6; do
+        for pref in 5188 5190 5194 5195 5196 5197 5205 5206 5208 5210 5230 5250 5270; do
+            while ip "$fam" rule del pref "$pref" 2>/dev/null; do :; done
+        done
+        while ip "$fam" rule del table main suppress_prefixlength 0 2>/dev/null; do :; done
+        for t in 51820 51821 5151 52; do
+            ip "$fam" route flush table "$t" 2>/dev/null || true
+        done
+    done
+    nft delete table inet rg_houston_protected 2>/dev/null || true
+    nft delete table inet rg_hz_carveout 2>/dev/null || true
+    echo "== static public DNS =="
+    rm -f /etc/resolv.conf
+    printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' >/etc/resolv.conf
+    systemctl stop systemd-resolved.service 2>/dev/null || true
+    echo "== verify =="
+    ip -4 route show default | head -1
+    ping -c 2 -W 3 8.8.8.8 >/dev/null 2>&1 && echo "ping 8.8.8.8: OK" || echo "ping 8.8.8.8: FAIL (check wlan0/iwd)"
+    curl -4 -sS --connect-timeout 6 --max-time 12 -o /dev/null -w 'https example.com: %{http_code}\n' https://example.com \
+        || echo "https example.com: FAIL"
+    echo "bare networking active; restore the stack with: rg-net provision"
+}
+
 case "${1:-map}" in
     map) map ;;
     doctor) exec "$BIN/rg-net-doctor" ;;
     drift) drift ;;
-    heal) exec sudo /usr/local/sbin/rg-net-heal ;;
+    heal) exec sudo /usr/local/sbin/rg-net-heal --repair ;;
     up) exec sudo systemctl restart rg-us-egress.service ;;
     down) exec sudo systemctl stop rg-us-egress.service wg-quick@rg-us-egress-wg.service ;;
     recover) exec sudo /usr/local/sbin/rg-net-recover ;;
+    bare) exec sudo bash "$0" bare-root ;;
+    bare-root) bare_root ;;
     surf-renew) exec "$BIN/rg-surf-vpn" renew --interactive ;;
     provision) provision ;;
     *) map; exit 2 ;;
