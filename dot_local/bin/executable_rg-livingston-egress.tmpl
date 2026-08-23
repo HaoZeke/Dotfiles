@@ -27,6 +27,7 @@ OWNER="${SUDO_USER:-$(id -un)}"
 OWNER_HOME="$(getent passwd "$OWNER" | cut -d: -f6)"
 BASE_CONF="${RG_LIV_BASE_CONF:-${OWNER_HOME:-$HOME}/.config/rg-us-egress/wireguard.conf}"
 IFACE="${RG_LIV_IFACE:-rg-liv-wg}"   # must be <=15 chars (IFNAMSIZ)
+MAIN_IFACE="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 RUNTIME="/etc/wireguard/${IFACE}.conf"
 SOCKS_HOST="${RG_LIV_SOCKS_HOST:-socks-us.windscribe.com}"
 MTU="${RG_LIV_MTU:-1280}"
@@ -42,6 +43,22 @@ up(){
     local ips allowed
     ips="$(resolve_socks)"
     [ -n "$ips" ] || die "cannot resolve $SOCKS_HOST (DNS down?)"
+
+    # The provider keeps ONE WireGuard session per peer key, and the scoped
+    # Houston tunnel uses the same key. A second wg interface would displace
+    # its session and both tunnels then flap. When Houston is up, ride its
+    # interface for the SOCKS endpoints instead of creating our own.
+    if ip link show "$MAIN_IFACE" >/dev/null 2>&1; then
+        local sip
+        for sip in $ips; do
+            ip route replace "$sip/32" dev "$MAIN_IFACE" || die "cannot route $sip via $MAIN_IFACE"
+        done
+        printf '%s\n' "$ips" > "$STATE"
+        printf 'rg-livingston-egress up: %s via existing %s (single provider session; default route untouched)\n' \
+            "$SOCKS_HOST" "$MAIN_IFACE"
+        return 0
+    fi
+
     allowed="$(printf '%s\n' "$ips" | sed 's#$#/32#' | paste -sd, -)"
 
     install -d -m 0700 /etc/wireguard
@@ -67,6 +84,12 @@ up(){
 
 down(){
     need_root
+    if [ -f "$STATE" ]; then
+        local sip
+        while read -r sip; do
+            [ -n "$sip" ] && ip route del "$sip/32" dev "$MAIN_IFACE" 2>/dev/null || true
+        done < "$STATE"
+    fi
     wg-quick down "$IFACE" >/dev/null 2>&1 || true
     ip link delete "$IFACE" >/dev/null 2>&1 || true
     rm -f "$STATE" "$RUNTIME" 2>/dev/null || true
