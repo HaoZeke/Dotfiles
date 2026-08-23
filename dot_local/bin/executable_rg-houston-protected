@@ -6,6 +6,38 @@ die() {
     exit 1
 }
 
+supervise_houston() {
+    local child status
+    ip link show rg-us-egress-wg >/dev/null 2>&1 \
+        || die "Houston interface is unavailable; command refused"
+    ip -4 route show table 51820 2>/dev/null | grep -q '^default' \
+        || die "Houston routing table has no default; command refused"
+    notify-send -u normal "Livingston protected fallback" \
+        "Kernel cgroup matching is unavailable; monitoring Houston for this browser" \
+        >/dev/null 2>&1 || true
+    "$@" &
+    child=$!
+    trap 'kill -TERM "$child" 2>/dev/null || true' HUP INT TERM
+    while kill -0 "$child" 2>/dev/null; do
+        if ! ip link show rg-us-egress-wg >/dev/null 2>&1 \
+            || ! ip -4 route show table 51820 2>/dev/null | grep -q '^default'; then
+            kill -TERM "$child" 2>/dev/null || true
+            notify-send -u critical "Livingston browser stopped" \
+                "Houston disappeared; local-egress fallback was refused" \
+                >/dev/null 2>&1 || true
+            wait "$child" 2>/dev/null || true
+            return 1
+        fi
+        sleep 1
+    done
+    if wait "$child"; then
+        status=0
+    else
+        status=$?
+    fi
+    return "$status"
+}
+
 [ "$#" -gt 0 ] || die "usage: rg-houston-protected COMMAND [ARG...]"
 
 if [ "${1:-}" = --inside-scope ]; then
@@ -14,7 +46,8 @@ if [ "${1:-}" = --inside-scope ]; then
     if sudo -n /usr/local/sbin/rg-us-egress-policy register-pid "$$" 2>/dev/null; then
         exec "$@"
     fi
-    exec sudo -n /usr/local/sbin/rg-us-egress-policy run-protected -- "$@"
+    supervise_houston "$@"
+    exit $?
 fi
 
 command -v systemd-run >/dev/null 2>&1 || die "systemd-run is unavailable"

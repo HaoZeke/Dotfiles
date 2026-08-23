@@ -40,8 +40,10 @@ rg -q '^Group=rg-xai-underlay$' "$tailscale_provision" \
     || fail "x.ai userspace tailnet has no dedicated underlay group"
 rg -q 'meta skgid.*meta mark set.*rg-xai-houston.*PROTECTED_MARK' "$policy_source" \
     || fail "x.ai userspace transport has no Houston-protected socket mark"
-rg -q 'run-protected' "$launcher" \
-    || fail "protected launcher has no socket-group fallback"
+rg -q 'supervise_houston' "$launcher" \
+    || fail "protected launcher has no Houston-monitor fallback"
+rg -q 'kill -TERM.*child' "$launcher" \
+    || fail "Houston-monitor fallback does not stop the browser on route loss"
 rg -q 'meta skgid.*meta mark set.*PROTECTED_MARK' "$policy_source" \
     || fail "protected socket-group fallback has no nft mark"
 rg -q 'setpriv.*--reuid' "$policy_source" \
