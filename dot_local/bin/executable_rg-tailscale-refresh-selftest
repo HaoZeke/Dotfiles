@@ -219,7 +219,7 @@ line_after() {
 }
 
 : >"$log"
-run_refresh --if-needed >/dev/null
+run_refresh --force >/dev/null
 system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
 system_ready=$(line_after '^tailscale system status --json$' "$system_restart")
 personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
@@ -258,6 +258,11 @@ printf 'warning\n' >"$tmp/system.health"
 if run_refresh --check >/dev/null 2>&1; then
     fail "system tailnet firewall health failures are accepted as healthy"
 fi
+run_refresh --if-needed >/dev/null
+! rg -q '^systemctl system restart tailscaled\.service$' "$log" \
+    || fail "periodic audit restarted a degraded system tailnet"
+! rg -q '^systemctl user restart tailscale-haozeke\.service$' "$log" \
+    || fail "periodic audit disrupted the personal fallback"
 printf 'healthy\n' >"$tmp/system.health"
 
 printf '1.98.4\n' >"$tmp/system.version"
@@ -265,7 +270,7 @@ printf '1.98.4\n' >"$tmp/personal.version"
 printf 'healthy\n' >"$tmp/system.health"
 printf 'healthy\n' >"$tmp/personal.health"
 : >"$log"
-if RG_FAKE_SYSTEM_AFTER=broken run_refresh --if-needed >/dev/null 2>&1; then
+if RG_FAKE_SYSTEM_AFTER=broken run_refresh --force >/dev/null 2>&1; then
     fail "refresh accepted a system daemon that did not recover"
 fi
 ! rg -q '^systemctl user restart tailscale-haozeke\.service$' "$log" \
@@ -278,7 +283,7 @@ printf '1.98.4\n' >"$tmp/personal.version"
 printf 'healthy\n' >"$tmp/system.health"
 printf 'broken\n' >"$tmp/personal.health"
 : >"$log"
-run_refresh --if-needed >/dev/null
+run_refresh --force >/dev/null
 personal_restart=$(line_of '^systemctl user restart tailscale-haozeke\.service$')
 system_restart=$(line_of '^systemctl system restart tailscaled\.service$')
 test "$personal_restart" -lt "$system_restart" \

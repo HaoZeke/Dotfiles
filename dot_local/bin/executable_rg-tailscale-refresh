@@ -215,6 +215,15 @@ if [ "$mode" = --check ]; then
     exit
 fi
 
+if [ "$mode" = --if-needed ]; then
+    if report; then
+        log "both tailnet planes are healthy and version-aligned"
+    else
+        log "tailnet degradation detected; automatic restart is disabled"
+    fi
+    exit 0
+fi
+
 system_ok=0
 personal_ok=0
 system_healthy && system_ok=1
