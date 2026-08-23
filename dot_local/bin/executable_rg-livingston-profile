@@ -425,6 +425,18 @@ require_us_egress() {
     allow="${RG_LIVINGSTON_ALLOW_LOCAL_EGRESS:-0}"
     json="$(fetch_egress_json || true)"
 
+    if [ -z "$json" ] && [ "$allow" != "1" ]; then
+        # The usual cause: the LAN blocks the upstream SOCKS port, and the
+        # scoped per-endpoint tunnel that works around it is not up. Bring it
+        # up through the constrained sudo grant and measure again, instead of
+        # failing out to a manual step.
+        echo "rg-livingston-profile: egress unverified; bringing up the SOCKS-endpoint tunnel" >&2
+        if sudo -n /usr/local/sbin/rg-livingston-egress up >/dev/null 2>&1 \
+            || sudo -n "$HOME/.local/bin/rg-livingston-egress" up >/dev/null 2>&1; then
+            json="$(fetch_egress_json || true)"
+        fi
+    fi
+
     if [ -z "$json" ]; then
         if [ "$allow" = "1" ]; then
             echo "rg-livingston-profile: egress unverified, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2

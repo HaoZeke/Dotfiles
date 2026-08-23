@@ -261,6 +261,9 @@ rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl start tailscaled.service
 rgoswami ALL=(root) NOPASSWD: /usr/bin/systemctl stop tailscaled.service
 rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-tailnet-power start
 rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-tailnet-power stop
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-livingston-egress up
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-livingston-egress down
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-livingston-egress status
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g performance
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 rgoswami ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
@@ -829,6 +832,12 @@ if ! sudo test -f /etc/rg-tailnets/enabled; then
     write_if_diff /etc/rg-tailnets/enabled               "$TAILNETS_ENABLED_CONTENT" || true
 fi
 write_executable_if_diff /usr/local/sbin/rg-tailnet-power "$RG_TAILNET_POWER_CONTENT" || true
+# Root-owned copy of the Livingston SOCKS-endpoint tunnel helper: the sudoers
+# grant above points at /usr/local/sbin, so the launcher can bring its own
+# egress up without a password and without a user-writable escalation path.
+if [ -x "$HOME/.local/bin/rg-livingston-egress" ]; then
+    write_executable_if_diff /usr/local/sbin/rg-livingston-egress "$(cat -- "$HOME/.local/bin/rg-livingston-egress")" || true
+fi
 
 # Single-source TLP baseline (shared conf file).
 if tlp_src=$(resolve_tlp_baseline); then
