@@ -12,7 +12,7 @@ rg-net map :: who does what (rgx1gen11)
 
 READ-ONLY (always safe)
   rg-net doctor           live audit of every path; 10-min timer alerts on regression
-  rg-net drift            chezmoi source vs applied vs root-installed copies
+  rg-net drift            source vs applied vs root-installed copies
   rg-network-status-json  status bar feed
 
 ROUTE-ONLY MUTATORS (self-healing, cannot take the uplink down)
@@ -24,7 +24,7 @@ ROUTE-ONLY MUTATORS (self-healing, cannot take the uplink down)
 HEAVY MUTATORS (root; these CAN kill connectivity -- use rg-net wrappers)
   rg-net up|down          Houston 0/0 egress (rg-us-egress.service ->
                           rg-us-egress-up: rebuilds DNS, disables NetworkManager,
-                          installs the 0/0 tunnel + pref-5205 x.ai mark rule)
+                          opens table 51821 through the verified 0/0 tunnel)
   rg-net recover          one-shot rebuild after a broken state (rg-net-recover)
   rg-net surf-renew       open SURF eduVPN browser authorization and export
   rg-us-egress-guard      tunnel keep-alive (30s root timer; serialized)
@@ -47,12 +47,14 @@ EOF
 
 drift() {
     local rc=0
-    echo "== chezmoi source vs target =="
+    echo "== source vs target =="
     chezmoi status 2>/dev/null | grep -v '^$' || echo "  (clean)"
-    echo "== root-installed copies vs chezmoi-applied =="
+    echo "== root-installed copies vs user-applied =="
     local pair src dst
     for pair in \
         "$BIN/rg-net-heal:/usr/local/sbin/rg-net-heal" \
+        "$BIN/rg-us-egress-policy:/usr/local/sbin/rg-us-egress-policy" \
+        "$BIN/rg-network-ingress-status:/usr/local/sbin/rg-network-ingress-status" \
         "$BIN/rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets" \
         "$BIN/rg-surf-vpn-install:/usr/local/sbin/rg-surf-vpn-install" \
         "$BIN/rg-net-recover:/usr/local/sbin/rg-net-recover" \
@@ -71,7 +73,7 @@ drift() {
 }
 
 provision() {
-    # The chezmoi run_onchange scripts skip root work without cached sudo
+    # The run_onchange scripts skip root work without cached sudo
     # credentials (so a plain `chezmoi apply` can never hang on a password
     # prompt mid-run). This is the explicit, interactive provisioning path.
     sudo -v || return 1
@@ -79,7 +81,7 @@ provision() {
     # Force the provisioning scripts to re-run even when their hash is
     # unchanged but the installed copies drifted.
     if ! drift >/dev/null 2>&1; then
-        chezmoi state delete-bucket --bucket=scriptState >/dev/null 2>&1 || true
+        chezmoi state delete-bucket --bucket=entryState >/dev/null 2>&1 || true
         RG_US_EGRESS_AUTOSTART="${RG_US_EGRESS_AUTOSTART:-1}" chezmoi apply
     fi
     drift
