@@ -266,6 +266,12 @@ test -r "$vivaldi_desktop" || fail "normal Vivaldi desktop entry is unmanaged"
 test -r "$xai_pac" || fail "Teachx split proxy PAC is unmanaged"
 rg -F -q 'return "SOCKS5 127.0.0.1:1056"' "$xai_pac" \
     || fail "Teachx split proxy does not use the x.ai userspace tailnet"
+! rg -F -q 'dnsDomainIs(host, ".teachx.ai")' "$xai_pac" \
+    || fail "public Teachx hosts are captured by the private app connector"
+for connector_host in starfleet.teachx.ai starfleet-backend.teachx.ai bifrost.teachx.ai nova.teachx.ai artifacts-evals.teachx.ai; do
+    rg -F -q "host === \"$connector_host\"" "$xai_pac" \
+        || fail "missing exact x.ai app-connector host: $connector_host"
+done
 rg -F -q 'return "DIRECT"' "$xai_pac" \
     || fail "non-Teachx Livingston traffic does not retain direct Houston routing"
 desktop_exec=$(sed -n 's/^Exec=//p' "$vivaldi_desktop")
