@@ -38,8 +38,10 @@ rg -q -- '--tun=userspace-networking' "$tailscale_provision" \
     || fail "x.ai tailnet still depends on kernel routing"
 rg -q '^Group=rg-xai-underlay$' "$tailscale_provision" \
     || fail "x.ai userspace tailnet has no dedicated underlay group"
-rg -q 'meta skgid.*meta mark set.*rg-xai-houston.*PROTECTED_MARK' "$policy_source" \
-    || fail "x.ai userspace transport has no Houston-protected socket mark"
+rg -q 'rg-xai-\(underlay\|houston\)' "$policy_source" \
+    || fail "policy no longer retires the x.ai output-hook group remarks"
+! rg -q 'meta skgid.*rg-xai' "$policy_source" \
+    || fail "x.ai underlay must not be group-remarked in the output hook (wrong-source reroute)"
 rg -q 'supervise_houston' "$launcher" \
     || fail "protected launcher has no Houston-monitor fallback"
 rg -q 'kill -TERM.*child' "$launcher" \
@@ -209,8 +211,8 @@ run_policy sync-hosts
 
 : >"$log"
 run_policy assert
-rg -F -q 'meta skgid 920 meta mark set 0x5252 comment "rg-xai-houston"' "$nft_log" \
-    || fail "policy did not install the x.ai userspace Houston mark"
+! rg -F -q 'comment "rg-xai-houston"' "$nft_log" \
+    || fail "policy still installs the x.ai output-hook group remark"
 for expected in \
     '-4 route replace unreachable default metric 42760 table 51821' \
     '-6 route replace unreachable default metric 42760 table 51821' \
@@ -218,8 +220,6 @@ for expected in \
     '-6 rule add pref 5194 lookup 52' \
     '-4 rule add pref 5196 fwmark 0x5252/0xffff lookup 51821' \
     '-6 rule add pref 5196 fwmark 0x5252/0xffff lookup 51821' \
-    '-4 rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821' \
-    '-6 rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821' \
     '-4 rule add pref 5188 to 203.0.113.10/32 lookup 51821' \
     '-4 rule add pref 5195 to 203.0.113.13/32 lookup main'; do
     rg -F -qx -- "$expected" "$log" || fail "missing policy operation: $expected"
@@ -234,7 +234,6 @@ cat >"$rules4" <<'EOF'
 5195:	from all to 192.200.0.0/24 lookup main
 5195:	from all to 203.0.113.13 lookup main
 5196:	from all fwmark 0x5252/0xffff lookup 51821
-5197:	from all fwmark 0x80000/0xff0000 lookup 51821
 EOF
 cat >"$rules6" <<'EOF'
 5188:	from all to 2001:db8:10::1 lookup 51821
@@ -242,7 +241,6 @@ cat >"$rules6" <<'EOF'
 5195:	from all to 2001:db8:13::/64 lookup main
 5195:	from all to 2606:b740::/32 lookup main
 5196:	from all fwmark 0x5252/0xffff lookup 51821
-5197:	from all fwmark 0x80000/0xff0000 lookup 51821
 EOF
 printf 'unreachable default metric 42760\n' >"$routes4"
 printf 'unreachable default metric 42760\n' >"$routes6"
@@ -250,6 +248,13 @@ printf 'unreachable default metric 42760\n' >"$routes6"
 run_policy assert
 ! rg -q -- '(route replace|rule (add|del))' "$log" \
     || fail "an already matching policy churns routes or routing rules"
+
+printf '5197:\tfrom all fwmark 0x80000/0xff0000 lookup 51821\n' >>"$rules4"
+: >"$log"
+run_policy assert
+rg -F -qx -- '-4 rule del pref 5197 fwmark 0x80000/0xff0000 lookup 51821' "$log" \
+    || fail "a live retired tailscale-mark rule was not reconciled away"
+sed -i '/5197/d' "$rules4"
 
 sed -i 's/203\.0\.113\.10/203.0.113.77/' "$rules4"
 : >"$log"
@@ -266,12 +271,10 @@ printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n5206:\tfrom all lo
 : >"$log"
 run_policy assert
 for family in -4 -6; do
-    add_line=$(rg -n -F -- "$family rule add pref 5197 fwmark 0x80000/0xff0000 lookup 51821" "$log" \
-        | cut -d: -f1 || true)
-    del_line=$(rg -n -F -- "$family rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820" "$log" \
-        | cut -d: -f1 || true)
-    test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
-        || fail "$family legacy tailnet rule is not retired after fail-closed ownership"
+    rg -F -qx -- "$family rule del pref 5205 fwmark 0x80000/0xff0000 lookup 51820" "$log" \
+        || fail "$family legacy tailnet rule is not retired"
+    ! rg -F -q -- "$family rule add pref 5197" "$log" \
+        || fail "$family retired tailscale-mark steering was reinstalled"
     add_line=$(rg -n -F -- "$family rule add pref 5194 lookup 52" "$log" \
         | cut -d: -f1 || true)
     del_line=$(rg -n -F -- "$family rule del pref 5206 lookup 52" "$log" \

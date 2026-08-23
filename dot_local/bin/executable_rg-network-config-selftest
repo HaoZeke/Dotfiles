@@ -267,10 +267,10 @@ rg -q 'x\.ai tailnet visibility' "$net_heal" \
     || fail "periodic network heal helper must not carve x.ai tailnet transport onto the LAN"
 rg -q 'route_local_v4 "\$ip" "haozeke underlay"' "$net_heal" \
     || fail "periodic network heal helper must keep the haozeke tailnet transport on the LAN"
-rg -F -q 'ip route del "$ip/32" table main' "$net_heal" \
-    || fail "periodic network heal helper must delete stale LAN carve-outs for x.ai transport"
-rg -F -q 'grep -qxF "$ip" "$hz_underlay_set"' "$net_heal" \
-    || fail "periodic network heal helper must never un-carve IPs the haozeke tailnet needs"
+# The x.ai transport un-carving is retired with the tailscale-mark steering:
+# the underlay rides the LAN, so heal must not delete LAN routes for it.
+! rg -q 'x.ai transport un-carved' "$net_heal" \
+    || fail "periodic network heal helper still un-carves x.ai transport off the LAN"
 rg -F -q 'ip route replace "$ip/32" via "$gw" dev "$dev" table main' "$net_heal" \
     || fail "periodic network heal helper must route carve-out endpoints via the LAN gateway"
 rg -F -q '100.6[4-9].*|100.[78][0-9].*|100.9[0-9].*|100.1[01][0-9].*|100.12[0-7].*' "$net_heal" \

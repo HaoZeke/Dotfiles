@@ -407,17 +407,15 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     wrn "rg-us-egress-guard.timer not enabled — carve-out may rot after networkd restart"
   fi
 
-  printf '== x.ai visibility (tailnet must exit via Houston) ==\n'
-  if ip rule show 2>/dev/null | grep -q '5197:.*fwmark 0x80000.*lookup 51821'; then
-    ok "pref-5197 tailscale mark enters protected table 51821"
+  printf '== x.ai underlay (LAN parity with the personal plane) ==\n'
+  # The tailscale-mark steering is retired: it blackholed the daemon's
+  # control and DERP relays whenever the provider dropped them. The underlay
+  # rides the LAN; grok/x.ai reachability is owned by the protected
+  # destination rules and the process mark checked below.
+  if ip rule show 2>/dev/null | grep -q '^5197:'; then
+    bad "retired pref-5197 tailscale-mark steering is live again (blackholes the tailnet when the egress degrades)"
   else
-    bad "pref-5197 tailscale protected rule missing"
-  fi
-  marked=$(ip route get 8.8.8.8 mark 0x80000 2>/dev/null | head -1 || true)
-  if echo "$marked" | grep -q 'rg-us-egress-wg'; then
-    ok "tailscale-marked traffic exits via the tunnel"
-  else
-    bad "tailscale-marked traffic on LAN: ${marked:-no route}"
+    ok "no tailscale-mark steering; underlay uses the LAN like the personal plane"
   fi
 
   printf '== Grok configuration/catalog ==\n'
@@ -454,7 +452,7 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
       --resolve "api.x.ai:443:$pin" -w '%{http_code}' https://api.x.ai/v1/models 2>/dev/null || echo 000)
     case "$code" in
       [23][0-9][0-9]|401|403) ok "api.x.ai pin $pin answers (http $code)" ;;
-      *) bad "api.x.ai pin $pin dead (http $code) — rg-net-heal rotates it within ~2min" ;;
+      *) bad "api.x.ai pin $pin dead (http $code) — rotate with: sudo rg-net-heal --repair" ;;
     esac
   else
     wrn "no api.x.ai pin in /etc/hosts (rg-net-heal asserts it)"

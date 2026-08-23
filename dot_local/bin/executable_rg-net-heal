@@ -523,22 +523,13 @@ for peer in (data.get("Peer") or {}).values():
     fi
 fi
 
-# --- 3b. x.ai tailnet visibility: keep its transport OFF the LAN uplink -----
-# The x.ai tailnet must see this node from the Houston exit or model access is
-# refused. The protected policy's preference-5197 rule sends the system
-# tailscaled transport mark through table 51821; here we delete stale LAN /32s
-# for x.ai control-plane hosts or system-tailnet transport endpoints, except
-# addresses the haozeke tailnet needs on the residential underlay.
-if command -v tailscale >/dev/null 2>&1; then
-    { tailscale_underlay_ips; xai_control_host_ips; } | sort -u | while read -r ip; do
-        public_underlay_v4 "$ip" || continue
-        grep -qxF "$ip" "$hz_underlay_set" 2>/dev/null && continue
-        if ip route show table main "$ip/32" 2>/dev/null | grep -q .; then
-            ip route del "$ip/32" table main 2>/dev/null \
-                && log "x.ai transport un-carved: $ip rides the US egress"
-        fi
-    done
-fi
+# --- 3b. retired: x.ai transport un-carving --------------------------------
+# The tailscale-mark steering (pref 5197) is retired: forcing the system
+# tailscaled transport through the egress blackholed its control and DERP
+# relays whenever the provider dropped them. The underlay rides the LAN like
+# the personal plane; grok/x.ai reachability is owned by the protected
+# destination rules and the process mark. Deleting LAN /32s for tailnet
+# transport endpoints would fight that, so this section only cleans up.
 rm -f "$hz_underlay_set"
 
 # --- 4. eduVPN (SURF) carve-out: control channel + portal off the US egress -

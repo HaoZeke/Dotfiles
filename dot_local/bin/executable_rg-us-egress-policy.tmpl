@@ -292,7 +292,11 @@ desired_rule_specs() {
     control_plane_rule_specs "$flag"
     surf_rule_specs "$flag" "$bits"
     canonical_rule "$PREF_PROCESS" fwmark "$PROTECTED_MARK/0xffff" "$PROTECTED_TABLE"
-    canonical_rule "$PREF_TS_MARK" fwmark "$TAILSCALE_MARK" "$PROTECTED_TABLE"
+    # The tailscale-mark rule (pref 5197) is retired: steering the daemon's
+    # own marked sockets into the egress blackholes its DERP and control
+    # relays whenever the provider drops them, and the underlay needs LAN
+    # parity with the personal plane. Reconciliation deletes any live rule
+    # at that preference because it is owned but no longer desired.
 }
 
 actual_rule_specs() {
@@ -433,22 +437,20 @@ xai_underlay_gid() {
     cut -d: -f3 <<<"$entry"
 }
 
+# The output-hook group remark is retired for the tailnet underlay: nft
+# re-marks a packet AFTER the kernel selected its source address on the LAN
+# default, so the reroute into the egress leaves with a LAN source and every
+# reply is lost (connector tx>0 rx=0, dead DERP). The underlay rides the LAN
+# like the personal plane; grok/x.ai reachability is owned by the protected
+# destination rules and the process mark, which pick table and source
+# together at first lookup.
 ensure_xai_underlay_mark() {
-    local gid handle
-    gid="$(xai_underlay_gid || true)"
-    [ -n "$gid" ] || return 0
-    case "$gid" in
-        *[!0-9]*) die "invalid gid for $XAI_UNDERLAY_GROUP: $gid" ;;
-    esac
-    if ! "$NFT" list table inet "$NFT_TABLE" 2>/dev/null \
-        | grep -F -q 'comment "rg-xai-houston"'; then
-        printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-xai-houston"\n' "$NFT_TABLE" "$gid" "$PROTECTED_MARK" | "$NFT" -f -
-    fi
+    local handle
     while IFS= read -r handle; do
         [ -n "$handle" ] || continue
         "$NFT" delete rule inet "$NFT_TABLE" mark_protected handle "$handle"
     done < <("$NFT" -a list chain inet "$NFT_TABLE" mark_protected 2>/dev/null \
-        | awk '/comment "rg-xai-underlay"/ {for (i = 1; i < NF; i++) if ($i == "handle") print $(i + 1)}')
+        | awk '/comment "rg-xai-(underlay|houston)"/ {for (i = 1; i < NF; i++) if ($i == "handle") print $(i + 1)}')
 }
 
 protected_group_gid() {
