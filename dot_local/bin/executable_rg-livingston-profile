@@ -108,6 +108,7 @@ bypass_route_check="${RG_LIVINGSTON_BYPASS_ROUTE_CHECK:-starfleet.teachx.ai star
 # front of them answers with a block page, so a bypassed host riding it is
 # broken as surely as one on the local uplink.
 bypass_route_ifaces="${RG_LIVINGSTON_BYPASS_ROUTE_IFACES:-tailscale*}"
+bypass_lookup_timeout="${RG_LIVINGSTON_BYPASS_LOOKUP_TIMEOUT:-3}"
 relay_bin="${RG_LIVINGSTON_RELAY_BIN:-$HOME/.local/bin/rg-socks-auth-relay}"
 relay_port="${RG_LIVINGSTON_RELAY_PORT:-11080}"
 relay_log="${RG_LIVINGSTON_RELAY_LOG:-$HOME/.local/state/rg-socks-auth-relay.log}"
@@ -466,7 +467,8 @@ require_us_egress() {
 # without printing a reason.
 bypass_route_dev() {
     local host="$1" addr route
-    addr="$("$getent_bin" ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n 1 || true)"
+    addr="$(timeout "$bypass_lookup_timeout" "$getent_bin" ahostsv4 "$host" 2>/dev/null \
+        | awk '{print $1}' | head -n 1 || true)"
     [ -n "$addr" ] || return 0
     route="$("$ip_bin" route get "$addr" 2>/dev/null | head -n 1 || true)"
     printf '%s\n' "$route" | sed -n 's/.*[[:space:]]dev[[:space:]]\([^[:space:]]*\).*/\1/p'

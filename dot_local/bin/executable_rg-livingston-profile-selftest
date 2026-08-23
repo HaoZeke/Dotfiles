@@ -390,6 +390,26 @@ bypass_doctor() {
 out=$(bypass_doctor "" "")
 assert_contains "$out" "bypass_route_bypass.example=unresolved" "unresolved bypass host"
 
+fake_getent_hang="$tmp_home/getent-hang"
+cat >"$fake_getent_hang" <<'SH'
+#!/usr/bin/env sh
+sleep 30
+SH
+chmod +x "$fake_getent_hang"
+out=$(timeout 3 env \
+    HOME="$tmp_home" \
+    XDG_DATA_HOME="$tmp_home/.local/share" \
+    XDG_STATE_HOME="$tmp_home/.local/state" \
+    RG_LIVINGSTON_CURL="$fake_curl" \
+    RG_LIVINGSTON_TIMEDATECTL="$fake_timedatectl" \
+    RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
+    RG_LIVINGSTON_GETENT="$fake_getent_hang" \
+    RG_LIVINGSTON_IP="$fake_ip" \
+    RG_LIVINGSTON_BYPASS_ROUTE_CHECK=bypass.example \
+    RG_LIVINGSTON_BYPASS_LOOKUP_TIMEOUT=1 \
+    "$SCRIPT" doctor) || fail "bypass lookup timeout did not bound a stalled resolver"
+assert_contains "$out" "bypass_route_bypass.example=unresolved" "timed-out bypass host"
+
 out=$(bypass_doctor 100.64.0.9 tailscale0)
 assert_contains "$out" "bypass_route_bypass.example=tailscale0 tailnet" "tailnet bypass route"
 
