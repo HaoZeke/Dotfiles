@@ -23,7 +23,12 @@ networkd_package_version() {
 client_version=$(networkctl_package_version || true)
 server_version=$(networkd_package_version || true)
 
-if [ -n "$client_version" ] && [ "$client_version" = "$server_version" ]; then
+if [ -z "$client_version" ] || [ -z "$server_version" ]; then
+    printf 'rg-networkd-apply: cannot determine networkctl/networkd versions\n' >&2
+    exit 1
+fi
+
+if [ "$client_version" = "$server_version" ]; then
     networkctl reload
     networkctl reconfigure "$interface"
     exit 0

@@ -37,6 +37,7 @@ cat >"$fake_bin/varlinkctl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 test "${1:-}" = info
+test "${RG_TEST_VARLINK_FAIL:-0}" != 1 || exit 1
 printf '    Vendor: The systemd Project\n'
 printf '   Product: systemd (systemd-networkd)\n'
 printf '   Version: %s (%s)\n' \
@@ -85,5 +86,13 @@ test "${calls[0]}" = 'networkctl reload' \
     || fail "same-version apply did not use networkctl reload"
 test "${calls[1]}" = 'networkctl reconfigure wlan0' \
     || fail "same-version apply did not use networkctl reconfigure"
+
+: >"$call_log"
+if PATH="$fake_bin:$PATH" RG_TEST_CALL_LOG="$call_log" \
+    RG_TEST_VARLINK_FAIL=1 "$helper" wlan0; then
+    fail "apply accepted an unknown networkd version"
+fi
+test ! -s "$call_log" \
+    || fail "unknown-version apply issued a mutation call"
 
 printf 'ok\n'
