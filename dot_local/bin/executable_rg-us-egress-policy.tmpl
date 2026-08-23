@@ -29,7 +29,6 @@ HOUSTON_TABLE="${RG_HOUSTON_TABLE:-51820}"
 PROTECTED_TABLE="${RG_PROTECTED_TABLE:-51821}"
 PROTECTED_MARK="${RG_PROTECTED_MARK:-0x5252}"
 TAILSCALE_MARK="${RG_XAI_TAILSCALE_MARK:-0x80000/0xff0000}"
-WG_FWMARK="${RG_US_EGRESS_FWMARK:-0xca6c}"
 XAI_UNDERLAY_GROUP="${RG_XAI_UNDERLAY_GROUP:-rg-xai-underlay}"
 XAI_UNDERLAY_GID="${RG_XAI_UNDERLAY_GID:-}"
 PROTECTED_GROUP="${RG_PROTECTED_GROUP:-rg-houston-protected}"
@@ -419,17 +418,21 @@ xai_underlay_gid() {
 }
 
 ensure_xai_underlay_mark() {
-    local gid
+    local gid handle
     gid="$(xai_underlay_gid || true)"
     [ -n "$gid" ] || return 0
     case "$gid" in
         *[!0-9]*) die "invalid gid for $XAI_UNDERLAY_GROUP: $gid" ;;
     esac
-    if "$NFT" list table inet "$NFT_TABLE" 2>/dev/null \
-        | grep -F -q 'comment "rg-xai-underlay"'; then
-        return 0
+    if ! "$NFT" list table inet "$NFT_TABLE" 2>/dev/null \
+        | grep -F -q 'comment "rg-xai-houston"'; then
+        printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-xai-houston"\n' "$NFT_TABLE" "$gid" "$PROTECTED_MARK" | "$NFT" -f -
     fi
-    printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-xai-underlay"\n' "$NFT_TABLE" "$gid" "$WG_FWMARK" | "$NFT" -f -
+    while IFS= read -r handle; do
+        [ -n "$handle" ] || continue
+        "$NFT" delete rule inet "$NFT_TABLE" mark_protected handle "$handle"
+    done < <("$NFT" -a list chain inet "$NFT_TABLE" mark_protected 2>/dev/null \
+        | awk '/comment "rg-xai-underlay"/ {for (i = 1; i < NF; i++) if ($i == "handle") print $(i + 1)}')
 }
 
 protected_group_gid() {

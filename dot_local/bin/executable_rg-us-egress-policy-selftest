@@ -38,8 +38,8 @@ rg -q -- '--tun=userspace-networking' "$tailscale_provision" \
     || fail "x.ai tailnet still depends on kernel routing"
 rg -q '^Group=rg-xai-underlay$' "$tailscale_provision" \
     || fail "x.ai userspace tailnet has no dedicated underlay group"
-rg -q 'meta skgid.*meta mark set.*WG_FWMARK' "$policy_source" \
-    || fail "x.ai userspace transport has no LAN-underlay socket mark"
+rg -q 'meta skgid.*meta mark set.*rg-xai-houston.*PROTECTED_MARK' "$policy_source" \
+    || fail "x.ai userspace transport has no Houston-protected socket mark"
 rg -q 'run-protected' "$launcher" \
     || fail "protected launcher has no socket-group fallback"
 rg -q 'meta skgid.*meta mark set.*PROTECTED_MARK' "$policy_source" \
@@ -207,8 +207,8 @@ run_policy sync-hosts
 
 : >"$log"
 run_policy assert
-rg -F -q 'meta skgid 920 meta mark set 0xca6c' "$nft_log" \
-    || fail "policy did not install the x.ai userspace underlay mark"
+rg -F -q 'meta skgid 920 meta mark set 0x5252 comment "rg-xai-houston"' "$nft_log" \
+    || fail "policy did not install the x.ai userspace Houston mark"
 for expected in \
     '-4 route replace unreachable default metric 42760 table 51821' \
     '-6 route replace unreachable default metric 42760 table 51821' \
