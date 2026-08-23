@@ -59,6 +59,17 @@ if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/rg-theme/env" ]; then
     . "${XDG_CONFIG_HOME:-$HOME/.config}/rg-theme/env"
 fi
 
+# Issue CLI default tracker. cargo install of the -cli crate reads
+# VISSUE_ROOT; there is no PATH wrapper. One-line file, same as before.
+if [ -z "${VISSUE_ROOT:-}" ]; then
+    _issue_root="${XDG_CONFIG_HOME:-$HOME/.config}/vissue/root"
+    if [ -r "$_issue_root" ]; then
+        VISSUE_ROOT=$(sed -n '1p' "$_issue_root")
+        export VISSUE_ROOT
+    fi
+    unset _issue_root
+fi
+
 {{ if eq .machine_name "rgx1gen11" -}}
 # For grabbing CPU-PyTorch
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"

@@ -1,0 +1,8 @@
+{{- /* Tracker root for the issue CLI. cargo install of the -cli crate
+     reads VISSUE_ROOT; there is no PATH wrapper. The dest one-line file
+     is the source of truth so this template never stores a home path. */ -}}
+{{- $root := joinPath .chezmoi.homeDir ".config" "vissue" "root" -}}
+{{- if stat $root -}}
+VISSUE_ROOT={{ trim (output "sed" "-n" "1p" $root) }}
+{{- end }}
+
