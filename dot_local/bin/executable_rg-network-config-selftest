@@ -816,6 +816,18 @@ rg -q '/etc/systemd/network/20-wlan.network' "$laptop_script" \
     || fail "networkd wlan profile is not managed"
 rg -q 'UseDNS=no' "$laptop_script" \
     || fail "networkd DHCP DNS must be disabled so resolved uses the local resolver"
+wlan_block=$(sed -n "/^NETWORKD_WLAN_CONTENT=/,/^'$/p" "$laptop_script")
+printf '%s\n' "$wlan_block" | rg -U -q '\[Network\]\nDHCP=yes\nIgnoreCarrierLoss=10s' \
+    || fail "networkd wlan profile must place IgnoreCarrierLoss in the Network section"
+! printf '%s\n' "$wlan_block" | rg -U -q '\[Link\]\nIgnoreCarrierLoss=' \
+    || fail "networkd ignores IgnoreCarrierLoss in the Link section"
+dns_wlan_block=$(sed -n '/step "disable DHCP DNS on wlan0"/,/step "cut systemd-resolved to localhost"/p' "$fix_local_dns")
+printf '%s\n' "$dns_wlan_block" | rg -q '^IgnoreCarrierLoss=10s$' \
+    || fail "DNS repair must retain the wlan carrier-loss policy"
+printf '%s\n' "$dns_wlan_block" | rg -q '^IPv6PrivacyExtensions=prefer-public$' \
+    || fail "DNS repair must retain the stable IPv6 source preference"
+printf '%s\n' "$dns_wlan_block" | rg -q '^Token=prefixstable$' \
+    || fail "DNS repair must retain the RFC 7217 wlan address token"
 eth_dns_count=$(sed -n "/^NETWORKD_ETHERNET_CONTENT=/,/^'$/p" "$laptop_script" | rg -c '^UseDNS=no$' || true)
 test "$eth_dns_count" -ge 2 || fail "Ethernet profile can still accept DHCP DNS"
 wwan_dns_count=$(sed -n "/^NETWORKD_WWAN_CONTENT=/,/^'$/p" "$laptop_script" | rg -c '^UseDNS=no$' || true)
