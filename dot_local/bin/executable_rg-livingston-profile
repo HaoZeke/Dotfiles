@@ -158,6 +158,9 @@ data_home="$(x_home XDG_DATA_HOME .local/share)"
 state_home="$(x_home XDG_STATE_HOME .local/state)"
 extension_dir="$data_home/rg-location-profiles/$PROFILE_NAME/chromium-geolocation"
 profile_root="$state_home/rg-location-profiles/$PROFILE_NAME"
+xai_pac_path="${RG_LIVINGSTON_XAI_PAC:-$data_home/rg-location-profiles/$PROFILE_NAME/xai-tailnet.pac}"
+xai_proxy="${RG_LIVINGSTON_XAI_PROXY:-socks5h://127.0.0.1:1056}"
+xai_probe_url="${RG_LIVINGSTON_XAI_PROBE_URL:-https://starfleet.teachx.ai/}"
 
 profile_env=(
     "TZ=$TZ_NAME"
@@ -501,6 +504,18 @@ require_bypass_routes() {
     done
 }
 
+probe_xai_tailnet() {
+    "$curl_bin" -fsSI --max-time 6 --proxy "$xai_proxy" "$xai_probe_url" >/dev/null 2>&1
+}
+
+warn_xai_tailnet() {
+    local message="Teachx and Starfleet are unavailable through the x.ai tailnet; Livingston and Houston remain active"
+    printf 'rg-livingston-profile: %s\n' "$message" >&2
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "Livingston work connector degraded" "$message" >/dev/null 2>&1 || true
+    fi
+}
+
 run_cmd() {
     if [ "$dry_run" -eq 1 ]; then
         quote_cmd env "${profile_env[@]}" "$@"
@@ -626,7 +641,7 @@ repair_vivaldi_command() {
 run_browser() {
     local browser_name="$1" browser_bin profile_dir url
     local -a browser_args extra_browser_args
-    local append_default_url
+    local append_default_url use_xai_pac=0
     shift
 
     load_proxy
@@ -699,6 +714,12 @@ run_browser() {
         assert_browser_proxy_safe "$proxy"
         browser_args+=("--proxy-server=$proxy")
         browser_args+=("--proxy-bypass-list=$proxy_bypass")
+    elif [ "${RG_LIVINGSTON_XAI_PAC_ENABLED:-1}" = "1" ]; then
+        if [ "$dry_run" -eq 0 ]; then
+            [ -r "$xai_pac_path" ] || die "missing x.ai split proxy policy: $xai_pac_path"
+        fi
+        browser_args+=("--proxy-pac-url=file://$xai_pac_path")
+        use_xai_pac=1
     fi
     # No proxy is not automatically wrong: when the host itself is on a full
     # tunnel, the browser leaves the country without one, and demanding a proxy
@@ -721,7 +742,11 @@ run_browser() {
     browser_args+=("$@")
     if [ "$dry_run" -eq 0 ]; then
         require_us_egress
-        require_bypass_routes
+        if [ "$use_xai_pac" -eq 1 ]; then
+            probe_xai_tailnet || warn_xai_tailnet
+        else
+            require_bypass_routes
+        fi
     fi
 
     if [ -z "$proxy" ]; then

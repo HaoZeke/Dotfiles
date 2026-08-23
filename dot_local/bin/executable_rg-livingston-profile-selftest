@@ -50,12 +50,14 @@ assert_not_contains() {
 tmp_home=$(mktemp -d)
 trap 'rtrash -rf "$tmp_home"' EXIT
 case "$SCRIPT" in
-    */dot_local/bin/executable_*)
+    *dot_local/bin/executable_*)
         source_root="$(cd -- "$(dirname -- "$SCRIPT")/../.." && pwd)"
         vivaldi_desktop="$source_root/dot_local/share/applications/vivaldi-wayland.desktop"
+        xai_pac="$source_root/dot_local/share/rg-location-profiles/livingston/xai-tailnet.pac"
         ;;
     *)
         vivaldi_desktop="${XDG_DATA_HOME:-$HOME/.local/share}/applications/vivaldi-wayland.desktop"
+        xai_pac="${XDG_DATA_HOME:-$HOME/.local/share}/rg-location-profiles/livingston/xai-tailnet.pac"
         ;;
 esac
 surf_proxy_bypass='--proxy-bypass-list=\*.ia.surf.nl\;\*.surf.nl\;surf.nl\;\*.ia.surfsara.nl\;\*.surfsara.nl\;surfsara.nl\;\*.teachx.ai\;teachx.ai\;\<local\>'
@@ -172,6 +174,7 @@ out=$(
 )
 assert_contains "$out" "--proxy-server=socks5://127.0.0.1:9050" "proxy flag"
 assert_contains "$out" "$surf_proxy_bypass" "SURF proxy bypass"
+assert_not_contains "$out" "--proxy-pac-url" "split proxy combined with a full proxy"
 
 # An authenticated upstream goes behind the local relay, so the credentials
 # must never reach the browser command line: Chromium cannot authenticate to a
@@ -224,6 +227,7 @@ assert_contains "$out" "--user-data-dir=$tmp_home/.local/state/rg-location-profi
 assert_contains "$out" "--load-extension=$tmp_home/.local/share/rg-location-profiles/livingston/chromium-geolocation" "vivaldi extension"
 assert_contains "$out" "--start-maximized" "vivaldi maximized launch"
 assert_contains "$out" "rg-houston-protected" "direct Livingston protection"
+assert_contains "$out" "--proxy-pac-url=file://$tmp_home/.local/share/rg-location-profiles/livingston/xai-tailnet.pac" "Teachx split proxy"
 assert_contains "$out" "--new-window" "vivaldi singleton recovery"
 test "$(printf '%s\n' "$out" | rg -o -- '--new-window' | wc -l)" -eq 1 \
     || fail "plain Livingston Vivaldi must request exactly one new window"
@@ -259,6 +263,11 @@ assert_not_contains "$out" "about:blank" "grok fallback tab"
 assert_contains "$out" "rg-houston-protected" "direct Grok Livingston protection"
 
 test -r "$vivaldi_desktop" || fail "normal Vivaldi desktop entry is unmanaged"
+test -r "$xai_pac" || fail "Teachx split proxy PAC is unmanaged"
+rg -F -q 'return "SOCKS5 127.0.0.1:1056"' "$xai_pac" \
+    || fail "Teachx split proxy does not use the x.ai userspace tailnet"
+rg -F -q 'return "DIRECT"' "$xai_pac" \
+    || fail "non-Teachx Livingston traffic does not retain direct Houston routing"
 desktop_exec=$(sed -n 's/^Exec=//p' "$vivaldi_desktop")
 assert_contains "$desktop_exec" "--new-window" "normal Vivaldi singleton recovery"
 test "$(printf '%s\n' "$desktop_exec" | rg -o -- '--enable-features=' | wc -l)" -eq 1 \
