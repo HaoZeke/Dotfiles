@@ -270,10 +270,26 @@ surf_rule_specs() {
         | LC_ALL=C sort -u)
 }
 
+# Tailscale coordination and logging live in Tailscale Inc. address space
+# (192.200.0.0/24 v4, 2606:b740::/32 v6). The Houston provider drops that
+# space even on a healthy tunnel, so marked daemon traffic steered there
+# loses its control plane and the tailnet dies logged-out. Coordination is
+# not what the x.ai visibility requirement protects (that is data-plane
+# endpoints), so it exits on the LAN uplink ahead of the mark rules.
+control_plane_rule_specs() {
+    local flag="$1"
+    if [ "$flag" = -4 ]; then
+        canonical_rule "$PREF_SURF" to 192.200.0.0/24 main
+    else
+        canonical_rule "$PREF_SURF" to 2606:b740::/32 main
+    fi
+}
+
 desired_rule_specs() {
     local flag="$1" bits="$2" suffix="$3"
     state_rule_specs "$suffix" "$bits"
     canonical_rule "$PREF_TAILNET" lookup - 52
+    control_plane_rule_specs "$flag"
     surf_rule_specs "$flag" "$bits"
     canonical_rule "$PREF_PROCESS" fwmark "$PROTECTED_MARK/0xffff" "$PROTECTED_TABLE"
     canonical_rule "$PREF_TS_MARK" fwmark "$TAILSCALE_MARK" "$PROTECTED_TABLE"
