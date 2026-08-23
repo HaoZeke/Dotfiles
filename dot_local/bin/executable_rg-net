@@ -19,7 +19,9 @@ ROUTE-ONLY MUTATORS (self-healing, cannot take the uplink down)
   rg-net heal             carve-outs + api.x.ai pin + prune (30s root timer)
   rg-haozeke-tunnel-carveout   keep the Terra tailnet off the US tunnel
   rg-tunnel-akamai-carveout    keep Akamai CDN sites on the NL uplink
-  rg-livingston-egress    split tunnel for the Livingston browser profile only
+  rg-net livingston up|down|status   split tunnel for the Livingston browser
+                          profile only (auto-raised by the launcher; shares the
+                          provider session with the scoped Houston tunnel)
 
 HEAVY MUTATORS (root; these CAN kill connectivity -- use rg-net wrappers)
   rg-net up|down          Houston scoped egress (rg-us-egress.service ->
@@ -145,6 +147,12 @@ case "${1:-map}" in
     up) exec sudo systemctl restart rg-us-egress.service ;;
     down) exec sudo systemctl stop rg-us-egress.service wg-quick@rg-us-egress-wg.service ;;
     recover) exec sudo /usr/local/sbin/rg-net-recover ;;
+    livingston)
+        case "${2:-status}" in
+            up|down|status) exec sudo /usr/local/sbin/rg-livingston-egress "$2" ;;
+            *) echo "usage: rg-net livingston {up|down|status}" >&2; exit 2 ;;
+        esac
+        ;;
     bare) exec sudo bash "$0" bare-root ;;
     bare-root) bare_root ;;
     surf-renew) exec "$BIN/rg-surf-vpn" renew --interactive ;;

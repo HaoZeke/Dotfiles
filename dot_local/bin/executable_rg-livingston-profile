@@ -196,6 +196,10 @@ load_proxy_from_netns() {
     [ -z "$proxy" ] || return 0
     host="${netns_proxy_addr%:*}"
     port="${netns_proxy_addr##*:}"
+    # The door only exists while the namespace's host-side veth does; without
+    # it the probe below would burn its full bound on an unroutable address
+    # on every launch and doctor run.
+    "$ip_bin" link show rg-liv-vh >/dev/null 2>&1 || return 1
     # Bounded, because "is the door there" must not become "wait for TCP to give
     # up". When the namespace is down and a full tunnel is up, this address has
     # no route and the packets are swallowed rather than refused, so an
@@ -442,8 +446,23 @@ require_us_egress() {
             echo "rg-livingston-profile: egress unverified, launching anyway because RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1" >&2
             return 0
         fi
+        # The provider keeps one WireGuard session per key and refuses SOCKS
+        # connections arriving from its own egress. While the scoped Houston
+        # tunnel holds the session, the US identity path cannot be verified
+        # at all on a LAN that blocks the SOCKS port, so launch on the local
+        # address: teachx hosts still ride the tailnet via the PAC, only the
+        # general-browsing exit geography differs. Set
+        # RG_LIVINGSTON_REQUIRE_US=1 to refuse instead.
+        if [ "${RG_LIVINGSTON_REQUIRE_US:-0}" != "1" ] \
+            && ip link show rg-us-egress-wg >/dev/null 2>&1; then
+            echo "rg-livingston-profile: Houston holds the provider session; launching on the local address (teachx stays on the tailnet PAC)" >&2
+            stop_relay
+            proxy=""
+            proxy_needs_relay=0
+            return 0
+        fi
         stop_relay
-        die "egress could not be verified${proxy:+ through $proxy}; refusing to launch. Bring the tunnel up (sudo rg-livingston-egress up), or set RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1 to launch on the local address."
+        die "egress could not be verified${proxy:+ through $proxy}; refusing to launch. Bring the tunnel up (rg-net livingston up), or set RG_LIVINGSTON_ALLOW_LOCAL_EGRESS=1 to launch on the local address."
     fi
 
     ip="$(json_field "$json" ip)"
@@ -722,6 +741,13 @@ run_browser() {
         start_relay
     fi
 
+    # Verify egress before the proxy flags are assembled: a degraded
+    # verification clears the proxy so the launch falls through to the PAC
+    # instead of handing the browser a relay with a dead upstream.
+    if [ "$dry_run" -eq 0 ]; then
+        require_us_egress
+    fi
+
     if [ -n "$proxy" ]; then
         assert_browser_proxy_safe "$proxy"
         browser_args+=("--proxy-server=$proxy")
@@ -753,7 +779,6 @@ run_browser() {
     fi
     browser_args+=("$@")
     if [ "$dry_run" -eq 0 ]; then
-        require_us_egress
         if [ "$use_xai_pac" -eq 1 ]; then
             probe_xai_tailnet || warn_xai_tailnet
         else
