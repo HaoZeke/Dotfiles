@@ -11,11 +11,13 @@ policy_source="$repo/dot_local/bin/executable_rg-us-egress-policy.tmpl"
 launcher="$repo/dot_local/bin/executable_rg-houston-protected"
 slice="$repo/dot_config/systemd/user/rg-houston-protected.slice"
 provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
+tailscale_provision="$repo/.chezmoiscripts/run_onchange_linux_tailscale_refresh.sh.tmpl"
 
 test -r "$policy_source" || fail "missing protected-egress policy helper"
 test -r "$launcher" || fail "missing protected-process launcher"
 test -r "$slice" || fail "missing protected process slice"
 test -r "$provision" || fail "missing protected-egress provisioner"
+test -r "$tailscale_provision" || fail "missing x.ai tailnet provisioner"
 rg -F -q '$HOME/.config/rg-us-egress-policy/recovery-hosts' "$provision" \
     || fail "provisioner does not consume the sealed recovery host set"
 rg -q 'install.*recovery-hosts.*/etc/rg-us-egress-policy/recovery-hosts' "$provision" \
@@ -32,6 +34,12 @@ rg -F -q '/usr/local/sbin/rtrash' "$policy_source" \
     || fail "root policy does not resolve its installed cleanup binary"
 rg -F -q '"$FLOCK" -x 9' "$policy_source" \
     || fail "protected policy mutations are not serialized"
+rg -q -- '--tun=userspace-networking' "$tailscale_provision" \
+    || fail "x.ai tailnet still depends on kernel routing"
+rg -q '^Group=rg-xai-underlay$' "$tailscale_provision" \
+    || fail "x.ai userspace tailnet has no dedicated underlay group"
+rg -q 'meta skgid.*meta mark set.*WG_FWMARK' "$policy_source" \
+    || fail "x.ai userspace transport has no LAN-underlay socket mark"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
@@ -157,6 +165,7 @@ run_policy() {
     RG_FAKE_ROUTES4="$routes4" \
     RG_FAKE_ROUTES6="$routes6" \
     RG_POLICY_LOCK_FILE="$tmp/policy.lock" \
+    RG_XAI_UNDERLAY_GID=920 \
     RG_XAI_PROTECTED_HOSTS='api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com' \
     RG_RECOVERY_HOSTS='repair-a.invalid repair-b.invalid' \
         "$policy" "$@"
@@ -190,6 +199,8 @@ run_policy sync-hosts
 
 : >"$log"
 run_policy assert
+rg -F -q 'meta skgid 920 meta mark set 0xca6c' "$nft_log" \
+    || fail "policy did not install the x.ai userspace underlay mark"
 for expected in \
     '-4 route replace unreachable default metric 42760 table 51821' \
     '-6 route replace unreachable default metric 42760 table 51821' \

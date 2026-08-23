@@ -28,6 +28,9 @@ HOUSTON_TABLE="${RG_HOUSTON_TABLE:-51820}"
 PROTECTED_TABLE="${RG_PROTECTED_TABLE:-51821}"
 PROTECTED_MARK="${RG_PROTECTED_MARK:-0x5252}"
 TAILSCALE_MARK="${RG_XAI_TAILSCALE_MARK:-0x80000/0xff0000}"
+WG_FWMARK="${RG_US_EGRESS_FWMARK:-0xca6c}"
+XAI_UNDERLAY_GROUP="${RG_XAI_UNDERLAY_GROUP:-rg-xai-underlay}"
+XAI_UNDERLAY_GID="${RG_XAI_UNDERLAY_GID:-}"
 STATE_DIR="${RG_POLICY_STATE_DIR:-/var/lib/rg-us-egress-policy}"
 RECOVERY_HOST_FILE="${RG_RECOVERY_HOST_FILE:-/etc/rg-us-egress-policy/recovery-hosts}"
 XAI_HOSTS="${RG_XAI_PROTECTED_HOSTS:-api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com}"
@@ -401,6 +404,31 @@ ensure_nft_base() {
     fi
 }
 
+xai_underlay_gid() {
+    local entry
+    if [ -n "$XAI_UNDERLAY_GID" ]; then
+        printf '%s\n' "$XAI_UNDERLAY_GID"
+        return 0
+    fi
+    entry="$($GETENT group "$XAI_UNDERLAY_GROUP" 2>/dev/null || true)"
+    [ -n "$entry" ] || return 1
+    cut -d: -f3 <<<"$entry"
+}
+
+ensure_xai_underlay_mark() {
+    local gid
+    gid="$(xai_underlay_gid || true)"
+    [ -n "$gid" ] || return 0
+    case "$gid" in
+        *[!0-9]*) die "invalid gid for $XAI_UNDERLAY_GROUP: $gid" ;;
+    esac
+    if "$NFT" list table inet "$NFT_TABLE" 2>/dev/null \
+        | grep -F -q 'comment "rg-xai-underlay"'; then
+        return 0
+    fi
+    printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-xai-underlay"\n' "$NFT_TABLE" "$gid" "$WG_FWMARK" | "$NFT" -f -
+}
+
 remember_protected_cgroup() {
     local cgroup="$1" file staged current=""
     ensure_state_dir
@@ -473,6 +501,7 @@ policy_assert() {
     validate_preferences
     ensure_state_dir
     ensure_nft_base
+    ensure_xai_underlay_mark
     restore_protected_cgroup
     ensure_unreachable_default -4
     ensure_unreachable_default -6

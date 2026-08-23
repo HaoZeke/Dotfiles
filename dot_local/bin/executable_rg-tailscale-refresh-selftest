@@ -33,10 +33,16 @@ rg -q '/usr/bin/systemctl restart tailscaled\.service' "$provision" \
     || fail "system-daemon restart lacks an exact sudoers grant"
 rg -q '/usr/bin/systemctl start rg-net-heal\.service' "$provision" \
     || fail "route repair lacks an exact sudoers grant"
-rg -q '/etc/systemd/system/tailscaled\.service\.d/20-rg-firewall-mode\.conf' "$provision" \
-    || fail "system tailnet has no managed firewall-backend override"
-rg -q '^Environment=TS_DEBUG_FIREWALL_MODE=nftables$' "$provision" \
-    || fail "system tailnet does not use the native nftables backend"
+rg -q '/etc/systemd/system/tailscaled\.service\.d/20-rg-userspace\.conf' "$provision" \
+    || fail "system tailnet has no managed userspace-networking override"
+rg -q '^Group=rg-xai-underlay$' "$provision" \
+    || fail "system tailnet transport has no dedicated underlay group"
+rg -q -- '--tun=userspace-networking' "$provision" \
+    || fail "system tailnet still depends on kernel tunnel routing"
+rg -q -- '--socks5-server=127\.0\.0\.1:1056' "$provision" \
+    || fail "system tailnet does not expose the Teachx SOCKS endpoint"
+! rg -q 'sudo systemctl restart tailscaled\.service' "$provision" \
+    || fail "provisioning can restart the system tailnet automatically"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT
