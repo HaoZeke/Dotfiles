@@ -115,16 +115,18 @@ cat >"$tmp/bin/getent" <<'SH'
 set -eu
 family=$1
 host=$2
-case "$family:$host" in
-    ahostsv4:api.x.ai) printf '203.0.113.10 STREAM api.x.ai\n' ;;
-    ahostsv4:grok.com) printf '203.0.113.11 STREAM grok.com\n203.0.113.99 STREAM grok.com\n' ;;
-    ahostsv4:auth.x.ai) printf '203.0.113.12 STREAM auth.x.ai\n' ;;
-    ahostsv4:cli-chat-proxy.grok.com) printf '203.0.113.13 STREAM cli-chat-proxy.grok.com\n' ;;
-    ahostsv4:repair-a.invalid) printf '198.51.100.10 STREAM repair-a.invalid\n203.0.113.99 STREAM repair-a.invalid\n' ;;
-    ahostsv4:repair-b.invalid) printf '198.51.100.11 STREAM repair-b.invalid\n' ;;
-    ahostsv6:api.x.ai) printf '2001:db8:10::1 STREAM api.x.ai\n' ;;
-    ahostsv6:grok.com) printf '2001:db8:99::1 STREAM grok.com\n' ;;
-    ahostsv6:repair-a.invalid) printf '2001:db8:99::1 STREAM repair-a.invalid\n' ;;
+case "${RG_FAKE_GETENT_PARTIAL:-0}:$family:$host" in
+    1:ahostsv4:api.x.ai) printf '203.0.113.20 STREAM api.x.ai\n' ;;
+    1:ahostsv4:grok.com|1:ahostsv4:repair-a.invalid) exit 2 ;;
+    *:ahostsv4:api.x.ai) printf '203.0.113.10 STREAM api.x.ai\n' ;;
+    *:ahostsv4:grok.com) printf '203.0.113.11 STREAM grok.com\n203.0.113.99 STREAM grok.com\n' ;;
+    *:ahostsv4:auth.x.ai) printf '203.0.113.12 STREAM auth.x.ai\n' ;;
+    *:ahostsv4:cli-chat-proxy.grok.com) printf '203.0.113.13 STREAM cli-chat-proxy.grok.com\n' ;;
+    *:ahostsv4:repair-a.invalid) printf '198.51.100.10 STREAM repair-a.invalid\n203.0.113.99 STREAM repair-a.invalid\n' ;;
+    *:ahostsv4:repair-b.invalid) printf '198.51.100.11 STREAM repair-b.invalid\n' ;;
+    *:ahostsv6:api.x.ai) printf '2001:db8:10::1 STREAM api.x.ai\n' ;;
+    *:ahostsv6:grok.com) printf '2001:db8:99::1 STREAM grok.com\n' ;;
+    *:ahostsv6:repair-a.invalid) printf '2001:db8:99::1 STREAM repair-a.invalid\n' ;;
 esac
 SH
 chmod +x "$tmp/bin/getent"
@@ -171,6 +173,20 @@ rg -qx '203\.0\.113\.99' "$tmp/state/collisions-v4" \
     || fail "recovery/xAI overlap is not recorded"
 rg -qx '2001:db8:99::1' "$tmp/state/collisions-v6" \
     || fail "IPv6 recovery/xAI overlap is not recorded"
+
+if ! RG_FAKE_GETENT_PARTIAL=1 run_policy sync-hosts; then
+    fail "partial DNS refresh aborted protected-state reconciliation"
+fi
+for retained in 203.0.113.10 203.0.113.11 203.0.113.20; do
+    rg -F -x -q "$retained" "$tmp/state/xai-v4" \
+        || fail "partial xAI refresh discarded protected address $retained"
+done
+rg -F -x -q '203.0.113.99' "$tmp/state/recovery-v4" \
+    || fail "partial recovery refresh discarded a retained repair address"
+
+run_policy sync-hosts
+! rg -F -x -q '203.0.113.20' "$tmp/state/xai-v4" \
+    || fail "complete xAI refresh did not prune a stale protected address"
 
 : >"$log"
 run_policy assert
