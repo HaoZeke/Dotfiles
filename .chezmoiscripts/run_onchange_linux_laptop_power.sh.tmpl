@@ -408,11 +408,9 @@ NETWORKD_WLAN_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_
 [Match]
 Name=wlan*
 
-[Link]
-IgnoreCarrierLoss=10s
-
 [Network]
 DHCP=yes
+IgnoreCarrierLoss=10s
 IPv6PrivacyExtensions=prefer-public
 
 [DHCPv4]
