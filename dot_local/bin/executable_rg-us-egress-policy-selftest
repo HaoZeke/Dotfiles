@@ -222,8 +222,8 @@ del_line=$(rg -n -F -- '-4 rule del pref 5188 to 203.0.113.77 lookup 51821' "$lo
 test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
     || fail "destination reconciliation is not add-before-delete and selector-exact"
 
-printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules4"
-printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n' >"$rules6"
+printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n5206:\tfrom all lookup 52\n' >"$rules4"
+printf '5205:\tfrom all fwmark 0x80000/0xff0000 lookup 51820\n5206:\tfrom all lookup 52\n' >"$rules6"
 : >"$log"
 run_policy assert
 for family in -4 -6; do
@@ -233,6 +233,12 @@ for family in -4 -6; do
         | cut -d: -f1 || true)
     test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
         || fail "$family legacy tailnet rule is not retired after fail-closed ownership"
+    add_line=$(rg -n -F -- "$family rule add pref 5194 lookup 52" "$log" \
+        | cut -d: -f1 || true)
+    del_line=$(rg -n -F -- "$family rule del pref 5206 lookup 52" "$log" \
+        | cut -d: -f1 || true)
+    test -n "$add_line" && test -n "$del_line" && test "$add_line" -lt "$del_line" \
+        || fail "$family duplicate tailnet lookup is not retired after preference 5194 ownership"
 done
 : >"$rules4"
 : >"$rules6"
