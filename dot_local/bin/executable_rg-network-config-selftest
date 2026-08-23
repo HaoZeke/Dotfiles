@@ -354,6 +354,10 @@ rg -q 'rg-haozeke-derp-targets-sha256:' "$net_heal_script" \
     || fail "net heal provisioning must rerun when the DERP selector changes"
 rg -q 'rg-haozeke-derp-targets:/usr/local/sbin/rg-haozeke-derp-targets' "$net_cli" \
     || fail "rg-net drift must compare the installed DERP selector"
+rg -q 'rg-us-egress-policy:/usr/local/sbin/rg-us-egress-policy' "$net_cli" \
+    || fail "rg-net drift must compare the installed protected-policy helper"
+rg -q 'rg-network-ingress-status:/usr/local/sbin/rg-network-ingress-status' "$net_cli" \
+    || fail "rg-net drift must compare the installed ingress audit helper"
 rg -q 'rg-surf-vpn-install-sha256:' "$net_heal_script" \
     || fail "root provisioning must rerun when the SURF installer changes"
 rg -q 'install_bin "\$SURF_INSTALL_SRC" /usr/local/sbin/rg-surf-vpn-install' "$net_heal_script" \
