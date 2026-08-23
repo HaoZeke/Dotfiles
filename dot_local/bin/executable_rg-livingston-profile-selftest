@@ -172,9 +172,25 @@ out=$(
     XDG_STATE_HOME="$tmp_home/.local/state" \
     "$SCRIPT" --dry-run --proxy socks5://127.0.0.1:9050 chromium
 )
-assert_contains "$out" "--proxy-server=socks5://127.0.0.1:9050" "proxy flag"
-assert_contains "$out" "$surf_proxy_bypass" "SURF proxy bypass"
-assert_not_contains "$out" "--proxy-pac-url" "split proxy combined with a full proxy"
+# An explicit proxy rides inside the unified PAC: a raw --proxy-server plus
+# bypass list would send bypassed teachx hosts DIRECT, which their edge
+# blocks. The PAC keeps connector hosts on the tailnet door, institutional
+# domains DIRECT, and everything else on the given proxy.
+assert_not_contains "$out" "--proxy-server" "raw proxy flag bypasses the teachx split"
+pac_b64=$(printf '%s\n' "$out" | grep -o 'proxy-pac-url=[^ ]*' | head -1)
+pac_b64=${pac_b64#*base64*,}
+[ -n "$pac_b64" ] || fail "explicit proxy did not produce an inlined PAC"
+# The dry-run printer shell-quotes the argument; strip its escapes before
+# decoding.
+pac_text=$(printf '%s' "$pac_b64" | tr -d '\\' | base64 -d 2>/dev/null || true)
+printf '%s' "$pac_text" | rg -q 'SOCKS5 127\.0\.0\.1:9050' \
+    || fail "unified PAC default is not the explicit proxy"
+printf '%s' "$pac_text" | rg -q 'starfleet\.teachx\.ai' \
+    || fail "unified PAC does not route connector hosts"
+printf '%s' "$pac_text" | rg -q 'SOCKS5 127\.0\.0\.1:1056' \
+    || fail "unified PAC does not use the tailnet SOCKS door"
+printf '%s' "$pac_text" | rg -q 'dnsDomainIs\(host, "\.surf\.nl"\)' \
+    || fail "unified PAC does not keep SURF domains DIRECT"
 
 # An authenticated upstream goes behind the local relay, so the credentials
 # must never reach the browser command line: Chromium cannot authenticate to a
@@ -186,6 +202,7 @@ out=$(
     XDG_STATE_HOME="$tmp_home/.local/state" \
     RG_LIVINGSTON_CURL="$fake_curl_abroad" \
     RG_LIVINGSTON_PASS="$fake_pass" \
+    RG_LIVINGSTON_IP="$fake_ip" \
     "$SCRIPT" --dry-run chromium
 )
 assert_not_contains "$out" "wind-pass" "upstream password on the command line"
@@ -198,10 +215,17 @@ out=$(
     RG_LIVINGSTON_CURL="$fake_curl_abroad" \
     RG_LIVINGSTON_PASS="$fake_pass" \
     RG_FAKE_PASS_NO_CREDS=1 \
+    RG_LIVINGSTON_IP="$fake_ip" \
     "$SCRIPT" --dry-run chromium
 )
-assert_contains "$out" "--proxy-server=socks5://us.windscribe.example:1080" "pass-provided proxy flag"
-assert_contains "$out" "$surf_proxy_bypass" "pass-provided proxy SURF bypass"
+pac_b64=$(printf '%s\n' "$out" | grep -o 'proxy-pac-url=[^ ]*' | head -1)
+pac_b64=${pac_b64#*base64*,}
+[ -n "$pac_b64" ] || fail "pass-provided proxy did not produce an inlined PAC"
+pac_text=$(printf '%s' "$pac_b64" | tr -d '\\' | base64 -d 2>/dev/null || true)
+printf '%s' "$pac_text" | rg -q 'SOCKS5 us\.windscribe\.example:1080' \
+    || fail "pass-provided proxy is not the unified PAC default"
+printf '%s' "$pac_text" | rg -q 'dnsDomainIs\(host, "\.surf\.nl"\)' \
+    || fail "pass-provided PAC does not keep SURF domains DIRECT"
 
 # A host already leaving the US needs nothing added, and demanding a proxy
 # there refuses a launch that was already correct.
@@ -338,6 +362,7 @@ out=$(
     RG_LIVINGSTON_PGREP="$tmp_home/missing-pgrep" \
     RG_FAKE_PASS_NO_CREDS=1 \
     RG_FAKE_CURL_ARGS="$curl_args" \
+    RG_LIVINGSTON_IP="$fake_ip" \
     "$SCRIPT" doctor
 )
 assert_contains "$(cat "$curl_args")" "--proxy socks5h://us.windscribe.example:1080" "proxied egress check"

@@ -220,8 +220,27 @@ host_egress_country() {
     json_field "$host_egress_json" country
 }
 
+# Livingston's identity IS the Houston tunnel. When the scoped tunnel is up,
+# a local relay binds its outbound connections to the tunnel's own address:
+# the policy's from-<address> rule (pref 5189) then routes every CONNECT into
+# the protected table at first lookup, with the source correct by
+# construction. No second provider session, no upstream credentials.
+houston_src=""
+load_proxy_from_houston() {
+    local addr
+    [ -z "$proxy" ] || return 0
+    addr="$("$ip_bin" -4 -br addr show rg-us-egress-wg 2>/dev/null \
+        | awk '{print $3}' | head -1)"
+    [ -n "$addr" ] || return 1
+    houston_src="${addr%%/*}"
+    proxy_needs_relay=1
+    proxy=""
+    return 0
+}
+
 load_proxy() {
     load_proxy_from_netns && return 0
+    load_proxy_from_houston && return 0
 
     # A proxy is a means, not the goal. When the host is already on a tunnel out
     # of the country the browser needs nothing added, and insisting on one is
@@ -290,6 +309,41 @@ assert_browser_proxy_safe() {
     esac
 }
 
+# Render the unified split PAC as a data: URL: connector hosts to the
+# tailnet SOCKS door, institutional bypass domains DIRECT, everything else
+# to the default proxy handed in (the Houston-bound relay).
+render_unified_pac_data_url() {
+    local default_proxy="$1" socks target pac host cond entry direct_cond
+    socks="${default_proxy#socks5://}"
+    target="${xai_proxy#socks5h://}"
+    target="${target#socks5://}"
+    cond=""
+    for host in $bypass_route_check; do
+        cond="${cond:+$cond || }host === \"$host\""
+    done
+    direct_cond=""
+    local -a entries=()
+    IFS=';' read -ra entries <<<"$proxy_bypass"
+    for entry in "${entries[@]}"; do
+        case "$entry" in
+            ''|\*.teachx.ai|teachx.ai) continue ;;
+            '<local>') direct_cond="${direct_cond:+$direct_cond || }isPlainHostName(host)" ;;
+            \*.*) direct_cond="${direct_cond:+$direct_cond || }dnsDomainIs(host, \"${entry#\*}\")" ;;
+            *) direct_cond="${direct_cond:+$direct_cond || }host === \"$entry\"" ;;
+        esac
+    done
+    pac="function FindProxyForURL(url, host) {"
+    [ -n "$cond" ] && pac="$pac
+    if ($cond) { return \"SOCKS5 $target\"; }"
+    [ -n "$direct_cond" ] && pac="$pac
+    if ($direct_cond) { return \"DIRECT\"; }"
+    pac="$pac
+    return \"SOCKS5 $socks\";
+}"
+    printf 'data:application/x-ns-proxy-autoconfig;base64,%s' \
+        "$(printf '%s\n' "$pac" | base64 -w0)"
+}
+
 relay_running() {
     [ -n "$relay_pid" ] && kill -0 "$relay_pid" 2>/dev/null
 }
@@ -324,9 +378,14 @@ start_relay() {
 
     port="$relay_port"
     mkdir -p "$(dirname "$relay_log")" 2>/dev/null || true
-    printf '%s\n%s\n' "$upstream_user" "$upstream_pass" \
-        | "$relay_bin" --port "$port" --upstream "$upstream_host" --credentials-stdin \
+    if [ -n "$houston_src" ]; then
+        "$relay_bin" --port "$port" --direct --source-address "$houston_src" \
             >>"$relay_log" 2>&1 &
+    else
+        printf '%s\n%s\n' "$upstream_user" "$upstream_pass" \
+            | "$relay_bin" --port "$port" --upstream "$upstream_host" --credentials-stdin \
+                >>"$relay_log" 2>&1 &
+    fi
     relay_pid=$!
 
     for attempt in 1 2 3 4 5 6 7 8 9 10; do
@@ -748,7 +807,17 @@ run_browser() {
         require_us_egress
     fi
 
-    if [ -n "$proxy" ]; then
+    if [ -n "$proxy" ] && [ "${RG_LIVINGSTON_XAI_PAC_ENABLED:-1}" = "1" ]; then
+        # One PAC carries the whole split: the teachx connector hosts ride
+        # the tailnet SOCKS door, the institutional bypass domains go
+        # DIRECT on the LAN, and everything else takes the default proxy
+        # (the Houston-bound relay). A --proxy-server + bypass-list pair
+        # cannot express this: a bypassed host goes DIRECT, and direct
+        # teachx is exactly what its edge blocks.
+        assert_browser_proxy_safe "$proxy"
+        browser_args+=("--proxy-pac-url=$(render_unified_pac_data_url "$proxy")")
+        use_xai_pac=1
+    elif [ -n "$proxy" ]; then
         assert_browser_proxy_safe "$proxy"
         browser_args+=("--proxy-server=$proxy")
         browser_args+=("--proxy-bypass-list=$proxy_bypass")
