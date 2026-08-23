@@ -158,8 +158,11 @@ WantedBy=multi-user.target
 EOF
 
 install_root /etc/sudoers.d/rg-houston-protected 0440 <<'EOF'
-# The helper accepts only processes already contained by the protected slice.
+# The cgroup path accepts only processes inside the protected slice. The group
+# fallback validates the live fail-closed route and drops to uid 1001 before it
+# executes the requested command.
 rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-us-egress-policy register-pid [0-9]*
+rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-us-egress-policy run-protected -- *
 EOF
 sudo visudo -cf /etc/sudoers.d/rg-houston-protected >/dev/null
 

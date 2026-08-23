@@ -10,6 +10,7 @@ NFT="${RG_POLICY_NFT:-nft}"
 GETENT="${RG_POLICY_GETENT:-getent}"
 PYTHON="${RG_POLICY_PYTHON:-python3}"
 FLOCK="${RG_POLICY_FLOCK:-/usr/bin/flock}"
+SETPRIV="${RG_POLICY_SETPRIV:-/usr/bin/setpriv}"
 POLICY_LOCK_FILE="${RG_POLICY_LOCK_FILE:-/run/rg-us-egress-policy.lock}"
 RTRASH="${RG_POLICY_RTRASH:-}"
 if [ -z "$RTRASH" ]; then
@@ -31,6 +32,8 @@ TAILSCALE_MARK="${RG_XAI_TAILSCALE_MARK:-0x80000/0xff0000}"
 WG_FWMARK="${RG_US_EGRESS_FWMARK:-0xca6c}"
 XAI_UNDERLAY_GROUP="${RG_XAI_UNDERLAY_GROUP:-rg-xai-underlay}"
 XAI_UNDERLAY_GID="${RG_XAI_UNDERLAY_GID:-}"
+PROTECTED_GROUP="${RG_PROTECTED_GROUP:-rg-houston-protected}"
+PROTECTED_GROUP_GID="${RG_PROTECTED_GROUP_GID:-}"
 STATE_DIR="${RG_POLICY_STATE_DIR:-/var/lib/rg-us-egress-policy}"
 RECOVERY_HOST_FILE="${RG_RECOVERY_HOST_FILE:-/etc/rg-us-egress-policy/recovery-hosts}"
 XAI_HOSTS="${RG_XAI_PROTECTED_HOSTS:-api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com}"
@@ -429,6 +432,31 @@ ensure_xai_underlay_mark() {
     printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-xai-underlay"\n' "$NFT_TABLE" "$gid" "$WG_FWMARK" | "$NFT" -f -
 }
 
+protected_group_gid() {
+    local entry
+    if [ -n "$PROTECTED_GROUP_GID" ]; then
+        printf '%s\n' "$PROTECTED_GROUP_GID"
+        return 0
+    fi
+    entry="$($GETENT group "$PROTECTED_GROUP" 2>/dev/null || true)"
+    [ -n "$entry" ] || return 1
+    cut -d: -f3 <<<"$entry"
+}
+
+ensure_protected_group_mark() {
+    local gid
+    gid="$(protected_group_gid)" || die "group is missing: $PROTECTED_GROUP"
+    case "$gid" in
+        ''|*[!0-9]*) die "invalid gid for $PROTECTED_GROUP: $gid" ;;
+    esac
+    ensure_nft_base
+    if "$NFT" list table inet "$NFT_TABLE" 2>/dev/null \
+        | grep -F -q 'comment "rg-houston-protected-group"'; then
+        return 0
+    fi
+    printf 'add rule inet %s mark_protected meta skgid %s meta mark set %s comment "rg-houston-protected-group"\n' "$NFT_TABLE" "$gid" "$PROTECTED_MARK" | "$NFT" -f -
+}
+
 remember_protected_cgroup() {
     local cgroup="$1" file staged current=""
     ensure_state_dir
@@ -574,6 +602,25 @@ register_pid() {
     register_cgroup "$cgroup"
 }
 
+run_protected() {
+    local uid gid
+    [ "${1:-}" = -- ] || die "run-protected requires -- before the command"
+    shift
+    [ "$#" -gt 0 ] || die "run-protected requires a command"
+    uid="${SUDO_UID:-}"
+    case "$uid" in
+        1001) ;;
+        *) die "run-protected is restricted to uid 1001" ;;
+    esac
+    gid="$(protected_group_gid)" || die "group is missing: $PROTECTED_GROUP"
+    policy_assert
+    has_live_default -4 || die "Houston protected route has no live IPv4 default"
+    ensure_protected_group_mark
+    "$FLOCK" -u 9
+    exec 9>&-
+    exec "$SETPRIV" --reuid="$uid" --regid="$gid" --init-groups -- "$@"
+}
+
 status() {
     printf '== protected routes ==\n'
     "$IP" -4 route show table "$PROTECTED_TABLE" 2>/dev/null || true
@@ -594,7 +641,8 @@ case "${1:-}" in
     houston-down) acquire_policy_lock; houston_down ;;
     register-pid) acquire_policy_lock; register_pid "${2:-}" ;;
     register-cgroup) acquire_policy_lock; register_cgroup "${2:-}" ;;
+    run-protected) acquire_policy_lock; shift; run_protected "$@" ;;
     status) status ;;
     --render-nft) render_nft_cgroup "${2:?usage: $0 --render-nft <cgroup>}" ;;
-    *) die "usage: $0 {assert|sync-hosts|houston-up|houston-down|register-pid PID|register-cgroup PATH|status}" ;;
+    *) die "usage: $0 {assert|sync-hosts|houston-up|houston-down|register-pid PID|register-cgroup PATH|run-protected -- COMMAND [ARG...]|status}" ;;
 esac

@@ -40,6 +40,14 @@ rg -q '^Group=rg-xai-underlay$' "$tailscale_provision" \
     || fail "x.ai userspace tailnet has no dedicated underlay group"
 rg -q 'meta skgid.*meta mark set.*WG_FWMARK' "$policy_source" \
     || fail "x.ai userspace transport has no LAN-underlay socket mark"
+rg -q 'run-protected' "$launcher" \
+    || fail "protected launcher has no socket-group fallback"
+rg -q 'meta skgid.*meta mark set.*PROTECTED_MARK' "$policy_source" \
+    || fail "protected socket-group fallback has no nft mark"
+rg -q 'setpriv.*--reuid' "$policy_source" \
+    || fail "protected fallback does not drop root before command execution"
+rg -q 'rg-us-egress-policy run-protected -- \*' "$provision" \
+    || fail "protected fallback lacks a narrow sudoers grant"
 
 tmp=$(mktemp -d)
 trap 'rtrash -rf "$tmp"' EXIT

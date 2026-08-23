@@ -11,9 +11,10 @@ die() {
 if [ "${1:-}" = --inside-scope ]; then
     shift
     [ "$#" -gt 0 ] || die "protected scope has no command"
-    sudo -n /usr/local/sbin/rg-us-egress-policy register-pid "$$" \
-        || die "cannot register protected routing; command refused"
-    exec "$@"
+    if sudo -n /usr/local/sbin/rg-us-egress-policy register-pid "$$" 2>/dev/null; then
+        exec "$@"
+    fi
+    exec sudo -n /usr/local/sbin/rg-us-egress-policy run-protected -- "$@"
 fi
 
 command -v systemd-run >/dev/null 2>&1 || die "systemd-run is unavailable"
