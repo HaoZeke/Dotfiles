@@ -532,6 +532,19 @@ fi
 # transport endpoints would fight that, so this section only cleans up.
 rm -f "$hz_underlay_set"
 
+# --- 3c. teachx connector pin ----------------------------------------------
+# Cloudflare serves teachx from many edges, but only the /32s the tailnet
+# app connector advertises reach it from the sanctioned exit. Browsers
+# resolve names locally, and the userspace SOCKS door forwards dials to
+# uncovered addresses out the LAN egress, which teachx blocks. Pinning the
+# app hosts to a covered edge makes every local resolution land on the
+# connector path.
+TEACHX_PIN_IP="${RG_TEACHX_PIN_IP:-104.18.16.64}"
+TEACHX_PIN_HOSTS="${RG_TEACHX_PIN_HOSTS:-starfleet.teachx.ai starfleet-backend.teachx.ai bifrost.teachx.ai nova.teachx.ai artifacts-evals.teachx.ai}"
+for teachx_host in $TEACHX_PIN_HOSTS; do
+    ensure_hosts_record "$TEACHX_PIN_IP" "$teachx_host"
+done
+
 # --- 4. eduVPN (SURF) carve-out: control channel + portal off the US egress -
 # The split-VPN control channel to the SURF eduVPN server, and the portal /
 # discovery hosts used to fetch or renew a profile, must egress on the LOCAL
