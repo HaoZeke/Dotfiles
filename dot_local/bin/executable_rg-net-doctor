@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Live audit of the multi-path stack on rgx1gen11:
-#   wlan + SURF OpenVPN (tun0) + system tailscale (x.ai) + US WG full tunnel
+#   wlan (LAN default) + SURF OpenVPN (tun0) + system tailscale (x.ai)
+#   + scoped US WG egress (protected table 51821 only)
 #   + haozeke userspace tailscale SOCKS :1055 (rg.terra path).
 set -uo pipefail
 
@@ -129,13 +130,23 @@ for ingress_check in \
   'firewall_service=ok' \
   'input_policy=drop' \
   'forward_policy=drop' \
-  'tailnet_input=accept' \
-  'tailnet_interface=present' \
   'ssh_listener=present'; do
   if printf '%s\n' "$ingress_status" | grep -qx "$ingress_check"; then
     ok "$ingress_check"
   else
     bad "missing ingress invariant $ingress_check"
+  fi
+done
+# Kernel-mode tailscaled owns tailscale0 plus an input-accept rule; a
+# userspace plane has neither and the helper reports the mode instead.
+for tailnet_check in 'tailnet_input=accept' 'tailnet_interface=present'; do
+  key="${tailnet_check%%=*}"
+  if printf '%s\n' "$ingress_status" | grep -qx "$tailnet_check"; then
+    ok "$tailnet_check"
+  elif printf '%s\n' "$ingress_status" | grep -qx "${key}=userspace"; then
+    ok "${key}=userspace (no kernel interface by design)"
+  else
+    bad "missing ingress invariant $tailnet_check"
   fi
 done
 
@@ -174,11 +185,13 @@ rule=$(ip rule show 2>/dev/null | grep "fwmark $HZ_MARK" || true)
 tab=$(ip route show table "$HZ_TABLE" 2>/dev/null | grep '^default ' || true)
 nft_ok=0
 nft list table inet rg_hz_carveout >/dev/null 2>&1 && nft_ok=1
-tunnel_up=0
-ip link show rg-us-egress-wg >/dev/null 2>&1 && tunnel_up=1
-if [ "$tunnel_up" -eq 0 ]; then
-  # Without the 0/0 tunnel there is nothing to carve around; absence is normal.
-  ok "carve-out not required (US egress down); rule=$([ -n "$rule" ] && echo present || echo absent)"
+# The carve-out exists to punch daemon UDP past a 0/0 hijack. A scoped
+# tunnel (routes confined to table 51820, no suppress_prefixlength rule)
+# leaves the default route alone, so nothing needs carving.
+hijack_up=0
+ip rule show 2>/dev/null | grep -q 'suppress_prefixlength 0' && hijack_up=1
+if [ "$hijack_up" -eq 0 ]; then
+  ok "carve-out not required (no 0/0 hijack); rule=$([ -n "$rule" ] && echo present || echo absent)"
 else
   if [ -n "$rule" ]; then ok "ip rule: $rule"; else bad "ip rule for fwmark $HZ_MARK missing"; fi
   if [ -n "$tab" ]; then ok "table $HZ_TABLE: $tab"; else bad "table $HZ_TABLE has no default (stale carve-out)"; fi
@@ -387,7 +400,7 @@ fi
 
 printf '== US egress WG ==\n'
 if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
-  ok "wg-quick@rg-us-egress-wg active (full-tunnel table 51820)"
+  ok "wg-quick@rg-us-egress-wg active (scoped table 51820)"
   if systemctl is-active --quiet rg-us-egress-guard.timer 2>/dev/null || systemctl is-enabled --quiet rg-us-egress-guard.timer 2>/dev/null; then
     ok "rg-us-egress-guard timer present"
   else
@@ -447,13 +460,21 @@ if systemctl is-active --quiet 'wg-quick@rg-us-egress-wg.service'; then
     wrn "no api.x.ai pin in /etc/hosts (rg-net-heal asserts it)"
   fi
 
-  printf '== egress exit geography ==\n'
+  printf '== egress split (scoped tunnel) ==\n'
+  # The tunnel is scoped: only protected-marked traffic may use it. The
+  # default route must stay on the LAN uplink or every consumer site sees
+  # the datacenter exit and bot-blocks it.
+  default_path=$(ip route get 8.8.8.8 2>/dev/null | head -1 || true)
+  if echo "$default_path" | grep -q 'rg-us-egress-wg'; then
+    bad "default egress hijacked by the tunnel: $default_path"
+  else
+    ok "default egress stays on the LAN uplink"
+  fi
   geo=$(curl -4 -sS --connect-timeout 5 --max-time 10 https://ipinfo.io/json 2>/dev/null \
     | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("country","?"), d.get("city","?"), d.get("ip","?"))' 2>/dev/null || true)
   case "$geo" in
-    US*) ok "default egress exits in $geo" ;;
     '') wrn "egress geography probe failed" ;;
-    *) bad "default egress exits in $geo (expected US with the tunnel up)" ;;
+    *) ok "default egress exits in $geo (LAN uplink)" ;;
   esac
 else
   wrn "US egress WG not active; protected traffic must remain closed"
@@ -565,9 +586,9 @@ fi
 printf '\n== summary: %d ok, %d warn, %d bad ==\n' "$pass" "$warn" "$fail"
 if [ "$fail" -gt 0 ]; then
   printf 'Fix order:\n'
-  printf '  1) systemctl --user start rg-tailscale-refresh.service\n'
-  printf '  2) sudo rg-haozeke-tunnel-carveout up\n'
-  printf '  3) sudo systemctl restart rg-us-egress-guard.timer  # if unit exists\n'
+  printf '  1) sudo rg-net-heal --repair\n'
+  printf '  2) sudo systemctl restart wg-quick@rg-us-egress-wg.service  # protected egress\n'
+  printf '  3) rg-net drift  # stale deployed helpers need rg-net provision\n'
   exit 1
 fi
 exit 0

@@ -38,10 +38,21 @@ verdict input_policy drop unsafe \
     grep -Eq 'hook input .*policy drop' <<<"$input_rules"
 verdict forward_policy drop unsafe \
     grep -Eq 'hook forward .*policy drop' <<<"$forward_rules"
-verdict tailnet_input accept missing \
-    grep -Eq 'iifname "tailscale0"[[:space:]]+accept' <<<"$input_rules"
-verdict tailnet_interface present missing \
-    "$IP" link show tailscale0
+# A userspace-networking tailscaled has no kernel interface and needs no
+# input-accept rule: inbound tailnet traffic terminates inside the daemon.
+tailnet_userspace() {
+    "$SYSTEMCTL" show -p ExecStart tailscaled.service 2>/dev/null \
+        | grep -q -- '--tun=userspace-networking'
+}
+if tailnet_userspace; then
+    printf 'tailnet_input=userspace\n'
+    printf 'tailnet_interface=userspace\n'
+else
+    verdict tailnet_input accept missing \
+        grep -Eq 'iifname "tailscale0"[[:space:]]+accept' <<<"$input_rules"
+    verdict tailnet_interface present missing \
+        "$IP" link show tailscale0
+fi
 verdict ssh_listener present missing \
     grep -Eq '(^|[[:space:]])(\[::\]|\*|0\.0\.0\.0|127\.0\.0\.1|[0-9a-fA-F:.]+):22([[:space:]]|$)' <<<"$listeners"
 

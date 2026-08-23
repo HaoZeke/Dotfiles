@@ -78,6 +78,13 @@ set -euo pipefail
 case "$*" in
     'is-enabled --quiet nftables.service') ;;
     'show --property=Result --value nftables.service') printf 'success\n' ;;
+    'show -p ExecStart tailscaled.service')
+        if [ "${RG_TEST_TS_USERSPACE:-0}" = 1 ]; then
+            printf 'ExecStart={ path=/usr/bin/tailscaled ; argv[]=/usr/bin/tailscaled --tun=userspace-networking }\n'
+        else
+            printf 'ExecStart={ path=/usr/bin/tailscaled ; argv[]=/usr/bin/tailscaled }\n'
+        fi
+        ;;
     *) exit 2 ;;
 esac
 SH
@@ -124,5 +131,14 @@ sed -i '/tailscale0/d' "$tmp/input.rules"
 if run_helper >/dev/null 2>&1; then
     fail "ingress helper accepted a firewall without the tailnet rule"
 fi
+
+# A userspace-networking plane has no tailscale0 and no input-accept rule;
+# the helper must report the mode instead of a missing invariant.
+out=$(RG_TEST_TS_USERSPACE=1 run_helper) \
+    || fail "ingress helper rejected a healthy userspace tailnet plane"
+for verdict in 'tailnet_input=userspace' 'tailnet_interface=userspace'; do
+    printf '%s\n' "$out" | rg -q "^${verdict}$" \
+        || fail "missing userspace ingress verdict: $verdict"
+done
 
 printf 'ok\n'

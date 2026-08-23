@@ -87,13 +87,24 @@ raise SystemExit(0 if ok else 1)
 ' "$TERRA_IP"
 }
 
+system_userspace() {
+    "$SYSTEMCTL" show -p ExecStart tailscaled.service 2>/dev/null \
+        | grep -q -- '--tun=userspace-networking'
+}
+
 system_healthy() {
     local status route
     "$SYSTEMCTL" is-active --quiet tailscaled.service || return 1
     status="$($TAILSCALE --socket="$SYSTEM_SOCKET" status --json 2>/dev/null)" || return 1
     printf '%s\n' "$status" | status_online || return 1
-    route="$($IP route get 100.100.100.100 2>/dev/null | head -n 1)" || return 1
-    printf '%s\n' "$route" | grep -q ' dev tailscale0\([[:space:]]\|$\)'
+    if system_userspace; then
+        # A userspace plane has no kernel interface; its data path is the
+        # SOCKS door, so a listener there is the health signal.
+        "$SS" -H -ltn 'sport = :1056' 2>/dev/null | grep -q '127\.0\.0\.1:1056'
+    else
+        route="$($IP route get 100.100.100.100 2>/dev/null | head -n 1)" || return 1
+        printf '%s\n' "$route" | grep -q ' dev tailscale0\([[:space:]]\|$\)'
+    fi
 }
 
 personal_control_healthy() {
