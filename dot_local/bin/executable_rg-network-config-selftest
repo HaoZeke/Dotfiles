@@ -79,6 +79,9 @@ test -r "$top_bar" || fail "missing top i3status-rs config"
 test -r "$bottom_bar" || fail "missing bottom i3status-rs config"
 test -r "$sway_config" || fail "missing sway config"
 
+! rg -q 'pref-5205|pref 5205' "$net_cli" "$net_heal" \
+    || fail "network operator text still names the retired xAI rule preference"
+
 rg -q 'rfkill block wlan wwan gps fm nfc uwb wimax' "$airplane" \
     || fail "airplane mode does not block non-Bluetooth radios"
 rg -q 'bluetoothctl power on' "$airplane" \
