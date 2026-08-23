@@ -14,6 +14,7 @@ if [[ $# -gt 0 ]]; then
     tailnet="$bindir/executable_rg-us-tailnet"
     tailscaled="$repo/dot_config/systemd/user/tailscale-haozeke.service.tmpl"
     provision="$repo/.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl"
+    heal_provision="$repo/.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl"
     guard="$bindir/executable_rg-us-egress-guard.tmpl"
     guard_test="$bindir/executable_rg-us-egress-guard-selftest"
     policy_test="$bindir/executable_rg-us-egress-policy-selftest"
@@ -74,6 +75,10 @@ rg -q 'grok models.*grok-4\.6|grok-4\.6.*grok models' "$doctor" \
     || fail "periodic route healer changes system tailnet login state"
 rg -q 'x\.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active' "$heal" \
     || fail "route healer does not notify about isolated x.ai degradation"
+rg -q 'ExecStart=/usr/local/sbin/rg-net-heal --audit' "$heal_provision" \
+    || fail "periodic net-heal still runs the mutating repair path"
+rg -q '\$\{1:---audit\}' "$heal" \
+    || fail "net-heal defaults to route mutation"
 
 rg -q 'sha256sum' "$alert" || fail "alert does not hash the normalized BAD set"
 rg -q 'LC_ALL=C sort -u' "$alert" || fail "alert does not normalize the complete BAD set"

@@ -63,6 +63,33 @@ EOF
     return 0
 }
 
+audit_stack() {
+    local ts_state=""
+    if systemctl is-active --quiet tailscaled.service; then
+        ts_state="$(tailscale status --json 2>/dev/null \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin).get("BackendState",""))' 2>/dev/null || true)"
+        case "$ts_state" in
+            Running) : ;;
+            *) notify "x.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active" ;;
+        esac
+    else
+        notify "x.ai system tailnet unavailable; leaving Houston, SURF, and personal tailnet active"
+    fi
+
+    if ip link show "${RG_US_EGRESS_IFACE:-rg-us-egress-wg}" >/dev/null 2>&1; then
+        ip -4 route show table 51820 2>/dev/null | grep -q '^default' \
+            || notify "Houston interface is active without its routing-table default"
+        ip -4 route show table 51821 2>/dev/null | grep -q '^default.*rg-us-egress-wg' \
+            || notify "Houston is active without the protected-egress live default"
+    fi
+}
+
+case "${1:---audit}" in
+    --audit) audit_stack; exit 0 ;;
+    --repair) shift ;;
+    *) printf 'usage: rg-net-heal [--audit|--repair]\n' >&2; exit 2 ;;
+esac
+
 # Dynamic /32 carve-outs are recorded per run so stale ones can be pruned: a
 # /32 left behind after a roam keeps a dead gateway and blackholes that CDN
 # edge for every site it serves. Static /24 carve-outs are not recorded and

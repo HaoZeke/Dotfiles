@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
-# Install rg-net-heal as a root timer: keeps the x.ai tailscale up and its
-# transport on the US egress (Houston visibility), keeps the haozeke tailnet
-# transport on the LAN uplink, and keeps selected direct carve-outs off the
-# US egress.
+# Install rg-net-heal as a read-only root audit timer. Mutating repair remains
+# available only through the explicit `rg-net-heal --repair` command.
 # rg-net-heal-sha256: {{ include "dot_local/bin/executable_rg-net-heal" | sha256sum }}
 # rg-net-recover-sha256: {{ include "dot_local/bin/executable_rg-net-recover.tmpl" | sha256sum }}
 # rg-haozeke-derp-targets-sha256: {{ include "dot_local/bin/executable_rg-haozeke-derp-targets" | sha256sum }}
@@ -92,18 +90,18 @@ done
 
 install_root /etc/systemd/system/rg-net-heal.service <<'EOF'
 [Unit]
-Description=Heal x.ai tailscale and local underlay carve-outs
+Description=Audit x.ai, Houston, and protected-egress network planes
 After=network-online.target tailscaled.service
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/rg-net-heal
+ExecStart=/usr/local/sbin/rg-net-heal --audit
 EOF
 
 install_root /etc/systemd/system/rg-net-heal.timer <<'EOF'
 [Unit]
-Description=Periodic rg-net-heal (x.ai tailscale + local underlay carve-outs)
+Description=Periodic read-only network-plane audit
 
 [Timer]
 OnBootSec=20
@@ -122,7 +120,7 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/rg-surf-vpn-install install /home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn
+ExecStart=/usr/local/sbin/rg-surf-vpn-install install {{ .chezmoi.homeDir }}/.local/state/rg-surf-vpn/pending.ovpn
 TimeoutStartSec=90
 EOF
 
@@ -131,7 +129,7 @@ install_root /etc/systemd/system/rg-surf-vpn-install.path <<'EOF'
 Description=Watch for authenticated SURF eduVPN exports
 
 [Path]
-PathChanged=/home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn
+PathChanged={{ .chezmoi.homeDir }}/.local/state/rg-surf-vpn/pending.ovpn
 Unit=rg-surf-vpn-install.service
 
 [Install]
@@ -142,13 +140,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now rg-net-heal.timer
 sudo systemctl enable --now rg-surf-vpn-install.path
 sudo systemctl start rg-net-heal.service || true
-if sudo test -f /home/rgoswami/.local/state/rg-surf-vpn/pending.ovpn; then
+if sudo test -f {{ .chezmoi.homeDir }}/.local/state/rg-surf-vpn/pending.ovpn; then
     sudo systemctl start rg-surf-vpn-install.service || true
 fi
 echo "chezmoi: rg-net-heal timer enabled"
 
 # Live-audit timer (user unit: needs the session bus for notify-send). Best
-# effort on first apply: the unit files land with the same chezmoi run.
+# effort on first apply: the unit files land within the same apply pass.
 if systemctl --user daemon-reload >/dev/null 2>&1; then
     systemctl --user enable --now rg-net-doctor.timer >/dev/null 2>&1 \
         && echo "chezmoi: rg-net-doctor timer enabled" \
