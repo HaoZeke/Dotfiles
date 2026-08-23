@@ -39,7 +39,9 @@ set -euo pipefail
 test "${1:-}" = info
 printf '    Vendor: The systemd Project\n'
 printf '   Product: systemd (systemd-networkd)\n'
-printf '   Version: 260.2 (260.2-2-arch)\n'
+printf '   Version: %s (%s)\n' \
+    "${RG_TEST_SERVER_VERSION:-260.2}" \
+    "${RG_TEST_SERVER_PACKAGE:-260.2-2-arch}"
 EOF
 
 cat >"$fake_bin/busctl" <<'EOF'
@@ -69,5 +71,19 @@ test "${calls[0]}" = \
 test "${calls[1]}" = \
     'busctl call org.freedesktop.network1 /org/freedesktop/network1 org.freedesktop.network1.Manager ReconfigureLink i 3' \
     || fail "mixed-version apply did not reconfigure wlan0 by index"
+
+: >"$call_log"
+PATH="$fake_bin:$PATH" RG_TEST_CALL_LOG="$call_log" \
+    RG_TEST_SERVER_VERSION=261.2 \
+    RG_TEST_SERVER_PACKAGE=261.2-1-arch \
+    "$helper" wlan0
+
+mapfile -t calls <"$call_log"
+test "${#calls[@]}" -eq 2 \
+    || fail "same-version apply issued ${#calls[@]} mutation calls instead of 2"
+test "${calls[0]}" = 'networkctl reload' \
+    || fail "same-version apply did not use networkctl reload"
+test "${calls[1]}" = 'networkctl reconfigure wlan0' \
+    || fail "same-version apply did not use networkctl reconfigure"
 
 printf 'ok\n'
