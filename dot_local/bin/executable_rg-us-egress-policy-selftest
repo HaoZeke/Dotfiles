@@ -188,8 +188,12 @@ rg -qx '203\.0\.113\.10' "$tmp/state/xai-v4" \
     || fail "api.x.ai address is not protected"
 rg -qx '203\.0\.113\.11' "$tmp/state/xai-v4" \
     || fail "grok.com address is not protected"
-! rg -q '203\.0\.113\.(12|13|99)' "$tmp/state/xai-v4" \
-    || fail "protected set captures Teachx, SURF, or recovery overlap"
+! rg -q '203\.0\.113\.(12|13)' "$tmp/state/xai-v4" \
+    || fail "protected set captures Teachx or SURF route exclusions"
+rg -qx '203\.0\.113\.99' "$tmp/state/xai-v4" \
+    || fail "a recovery-shared edge must stay protected (identity outranks recovery reach)"
+rg -qx '203\.0\.113\.99' "$tmp/state/collisions-v4" \
+    || fail "a recovery-shared edge must be reported as a collision"
 rg -qx '203\.0\.113\.99' "$tmp/state/collisions-v4" \
     || fail "recovery/xAI overlap is not recorded"
 rg -qx '2001:db8:99::1' "$tmp/state/collisions-v6" \
@@ -224,12 +228,15 @@ for expected in \
     '-4 rule add pref 5195 to 203.0.113.13/32 lookup main'; do
     rg -F -qx -- "$expected" "$log" || fail "missing policy operation: $expected"
 done
-! rg -q '203\.0\.113\.(12|99).*lookup 51821' "$log" \
-    || fail "excluded address was routed into the protected table"
+! rg -q '203\.0\.113\.12.*lookup 51821' "$log" \
+    || fail "route-excluded address was routed into the protected table"
+rg -F -qx -- '-4 rule add pref 5188 to 203.0.113.99/32 lookup 51821' "$log" \
+    || fail "recovery-shared edge did not receive its protected destination rule"
 
 cat >"$rules4" <<'EOF'
 5188:	from all to 203.0.113.10 lookup 51821
 5188:	from all to 203.0.113.11 lookup 51821
+5188:	from all to 203.0.113.99 lookup 51821
 5194:	from all lookup 52
 5195:	from all to 192.200.0.0/24 lookup main
 5195:	from all to 203.0.113.13 lookup main
@@ -237,6 +244,7 @@ cat >"$rules4" <<'EOF'
 EOF
 cat >"$rules6" <<'EOF'
 5188:	from all to 2001:db8:10::1 lookup 51821
+5188:	from all to 2001:db8:99::1 lookup 51821
 5194:	from all lookup 52
 5195:	from all to 2001:db8:13::/64 lookup main
 5195:	from all to 2606:b740::/32 lookup main

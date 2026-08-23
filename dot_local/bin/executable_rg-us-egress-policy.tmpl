@@ -38,6 +38,7 @@ RECOVERY_HOST_FILE="${RG_RECOVERY_HOST_FILE:-/etc/rg-us-egress-policy/recovery-h
 XAI_HOSTS="${RG_XAI_PROTECTED_HOSTS:-api.x.ai grok.com auth.x.ai cli-chat-proxy.grok.com}"
 NFT_TABLE="rg_houston_protected"
 PREF_DEST=5188
+PREF_SRC=5189
 PREF_TAILNET=5194
 PREF_SURF=5195
 PREF_PROCESS=5196
@@ -141,9 +142,13 @@ def lines(path):
 candidates = {ipaddress.ip_address(value) for value in lines(candidates_path)}
 recovery = {ipaddress.ip_address(value) for value in lines(recovery_path)}
 excluded = [ipaddress.ip_network(value, strict=False) for value in lines(excluded_path)]
+# A shared edge is PROTECTED: the x.ai identity requirement outranks
+# keeping every recovery edge reachable, and the recovery hosts always
+# have non-shared addresses of their own. Collisions are reported so the
+# audit can name which recovery edges ride the tunnel.
 collisions = sorted(candidates & recovery, key=lambda value: (value.version, int(value)))
 protected = sorted(
-    (value for value in candidates - recovery if not any(value in network for network in excluded)),
+    (value for value in candidates if not any(value in network for network in excluded)),
     key=lambda value: (value.version, int(value)),
 )
 protected_path.write_text("".join(f"{value}\n" for value in protected))
@@ -209,6 +214,9 @@ owned_rule() {
         "$PREF_DEST")
             [[ "$line" =~ ^${PREF_DEST}:[[:space:]]+from[[:space:]]+all[[:space:]]+to[[:space:]]+[^[:space:]]+[[:space:]]+lookup[[:space:]]+${PROTECTED_TABLE}$ ]]
             ;;
+        "$PREF_SRC")
+            [[ "$line" =~ ^${PREF_SRC}:[[:space:]]+from[[:space:]]+[^[:space:]]+[[:space:]]+lookup[[:space:]]+${PROTECTED_TABLE}$ ]]
+            ;;
         "$PREF_TAILNET")
             [[ "$line" =~ ^${PREF_TAILNET}:[[:space:]]+from[[:space:]]+all[[:space:]]+lookup[[:space:]]+52$ ]]
             ;;
@@ -228,7 +236,7 @@ owned_rule() {
 validate_preferences() {
     local flag pref line
     for flag in -4 -6; do
-        for pref in "$PREF_DEST" "$PREF_TAILNET" "$PREF_SURF" "$PREF_PROCESS" "$PREF_TS_MARK"; do
+        for pref in "$PREF_DEST" "$PREF_SRC" "$PREF_TAILNET" "$PREF_SURF" "$PREF_PROCESS" "$PREF_TS_MARK"; do
             while IFS= read -r line; do
                 [ -n "$line" ] || continue
                 owned_rule "$pref" "$line" \
@@ -270,6 +278,20 @@ surf_rule_specs() {
         | LC_ALL=C sort -u)
 }
 
+# A socket bound to a tunnel address gets the protected table at FIRST
+# lookup, source correct by construction - the mechanism the Livingston
+# relay uses for the browser's Houston identity. Output-hook re-marking
+# cannot do this (it fires after source selection); source rules can.
+tunnel_source_rule_specs() {
+    local flag="$1" addr
+    while IFS= read -r addr; do
+        [ -n "$addr" ] || continue
+        case "$addr" in fe80:*) continue ;; esac
+        canonical_rule "$PREF_SRC" from "${addr%%/*}" "$PROTECTED_TABLE"
+    done < <("$IP" "$flag" -br addr show "$IFACE" 2>/dev/null \
+        | awk '{for (i = 3; i <= NF; i++) print $i}' | LC_ALL=C sort -u)
+}
+
 # Tailscale coordination and logging live in Tailscale Inc. address space
 # (192.200.0.0/24 v4, 2606:b740::/32 v6). The Houston provider drops that
 # space even on a healthy tunnel, so marked daemon traffic steered there
@@ -288,6 +310,7 @@ control_plane_rule_specs() {
 desired_rule_specs() {
     local flag="$1" bits="$2" suffix="$3"
     state_rule_specs "$suffix" "$bits"
+    tunnel_source_rule_specs "$flag"
     canonical_rule "$PREF_TAILNET" lookup - 52
     control_plane_rule_specs "$flag"
     surf_rule_specs "$flag" "$bits"
@@ -301,13 +324,17 @@ desired_rule_specs() {
 
 actual_rule_specs() {
     local flag="$1" bits="$2" pref line target
-    for pref in "$PREF_DEST" "$PREF_TAILNET" "$PREF_SURF" "$PREF_PROCESS" "$PREF_TS_MARK"; do
+    for pref in "$PREF_DEST" "$PREF_SRC" "$PREF_TAILNET" "$PREF_SURF" "$PREF_PROCESS" "$PREF_TS_MARK"; do
         while IFS= read -r line; do
             [ -n "$line" ] || continue
             case "$pref" in
                 "$PREF_DEST")
                     target="$(awk '{for (i = 1; i <= NF; i++) if ($i == "to") {print $(i + 1); exit}}' <<<"$line")"
                     canonical_rule "$pref" to "$(normalize_target "$target" "$bits")" "$PROTECTED_TABLE"
+                    ;;
+                "$PREF_SRC")
+                    target="$(awk '{for (i = 1; i <= NF; i++) if ($i == "from") {print $(i + 1); exit}}' <<<"$line")"
+                    canonical_rule "$pref" from "$target" "$PROTECTED_TABLE"
                     ;;
                 "$PREF_TAILNET") canonical_rule "$pref" lookup - 52 ;;
                 "$PREF_SURF")
@@ -338,6 +365,9 @@ mutate_rule() {
             ;;
         fwmark)
             "$IP" "$flag" rule "$action" pref "$pref" fwmark "$value" lookup "$table"
+            ;;
+        from)
+            "$IP" "$flag" rule "$action" pref "$pref" from "$value" lookup "$table"
             ;;
         *) die "invalid canonical rule kind: $kind" ;;
     esac

@@ -64,10 +64,15 @@ class DirectEgress:
     """Open the connection here rather than forwarding to another proxy.
 
     Used when the relay runs inside a network namespace whose only route is a
-    VPN tunnel. Every CONNECT, and every name it resolves, can then leave only
-    through that tunnel, so there is no configuration mistake that can put the
-    browser back on the local address.
+    VPN tunnel, or with a source address bound to a tunnel interface: a
+    from-<address> routing rule then steers every CONNECT into the tunnel's
+    table at first lookup, with the source correct by construction. Either
+    way there is no configuration mistake that can put the browser back on
+    the local address.
     """
+
+    def __init__(self, source_address=None):
+        self.source_address = (source_address, 0) if source_address else None
 
     def connect(self, atyp, addr_bytes, dest_port):
         if atyp == ATYP_IPV4:
@@ -76,7 +81,9 @@ class DirectEgress:
             host = socket.inet_ntop(socket.AF_INET6, addr_bytes)
         else:
             host = addr_bytes[1:].decode("idna")
-        return socket.create_connection((host, dest_port), CONNECT_TIMEOUT)
+        return socket.create_connection(
+            (host, dest_port), CONNECT_TIMEOUT, source_address=self.source_address
+        )
 
 
 class Upstream:
@@ -253,6 +260,11 @@ def main():
         help="connect from this process instead of forwarding to an upstream proxy",
     )
     parser.add_argument(
+        "--source-address",
+        help="bind outbound connections to this local address (with --direct); "
+        "a from-<address> policy rule then owns the egress path",
+    )
+    parser.add_argument(
         "--credentials-stdin",
         action="store_true",
         help="read username then password from stdin instead of the environment",
@@ -262,9 +274,14 @@ def main():
     if args.direct:
         if args.upstream:
             raise SystemExit("rg-socks-auth-relay: --direct takes no --upstream")
-        upstream_cfg = DirectEgress()
-        target = "direct (this namespace's routes)"
+        upstream_cfg = DirectEgress(args.source_address)
+        if args.source_address:
+            target = f"direct (source {args.source_address})"
+        else:
+            target = "direct (this namespace's routes)"
     else:
+        if args.source_address:
+            raise SystemExit("rg-socks-auth-relay: --source-address requires --direct")
         if not args.upstream:
             raise SystemExit("rg-socks-auth-relay: need --upstream or --direct")
         if ":" not in args.upstream:
