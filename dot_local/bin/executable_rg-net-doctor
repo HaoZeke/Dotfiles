@@ -517,8 +517,7 @@ for family in -4 -6; do
 
   for owned in \
     '5194:.*lookup 52' \
-    '5196:.*fwmark 0x5252.*lookup 51821' \
-    '5197:.*fwmark 0x80000.*lookup 51821'; do
+    '5196:.*fwmark 0x5252.*lookup 51821'; do
     if ip "$family" rule show 2>/dev/null | grep -q "$owned"; then
       ok "$family owned rule ${owned%%:*} present"
     else
@@ -547,25 +546,17 @@ for family_state in v4 v6; do
   collision_file="$policy_state/collisions-$family_state"
   if [ -s "$collision_file" ]; then
     collision_list=$(tr '\n' ' ' <"$collision_file")
-    bad "$family_state protected/recovery address collision: ${collision_list% }"
+    # Shared edges are excluded from protection BY DESIGN so the recovery
+    # hosts stay reachable; the cost is that those grok edges ride the LAN.
+    wrn "$family_state protected/recovery collision (excluded, rides the LAN): ${collision_list% }"
   else
     ok "$family_state protected/recovery address set is disjoint"
   fi
 done
 
-marked_policy=$(ip route get 8.8.8.8 mark 0x80000 2>&1 | head -1 || true)
-if [ "$houston_live" -eq 1 ]; then
-  if printf '%s\n' "$marked_policy" | grep -q 'rg-us-egress-wg'; then
-    ok "tailscale-marked policy result uses Houston"
-  else
-    bad "tailscale-marked policy result bypasses Houston: ${marked_policy:-no route}"
-  fi
-elif [ -z "$marked_policy" ] \
-  || printf '%s\n' "$marked_policy" | grep -qiE 'unreachable|network is unreachable'; then
-  ok "tailscale-marked policy is closed without Houston"
-else
-  bad "tailscale-marked policy leaks without Houston: $marked_policy"
-fi
+# The tailscale mark (0x80000) is deliberately unsteered: the underlay rides
+# the LAN like the personal plane. Only a reappearing 5197 rule is a fault,
+# and that is checked in the underlay section above.
 
 process_policy=$(ip route get 8.8.8.8 mark 0x5252 2>&1 | head -1 || true)
 if [ "$houston_live" -eq 1 ]; then
