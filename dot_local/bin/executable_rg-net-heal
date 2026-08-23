@@ -491,10 +491,10 @@ fi
 
 # --- 3b. x.ai tailnet visibility: keep its transport OFF the LAN uplink -----
 # The x.ai tailnet must see this node from the Houston exit or model access is
-# refused. The marked pref-5205 rule (rg-us-egress-up) already tunnels the
-# system tailscaled's own flows; here we delete any stale LAN /32 for x.ai
-# control-plane hosts or system-tailnet transport endpoints (left by the
-# retired underlay carve-out), except IPs the haozeke tailnet needs local.
+# refused. The protected policy's preference-5197 rule sends the system
+# tailscaled transport mark through table 51821; here we delete stale LAN /32s
+# for x.ai control-plane hosts or system-tailnet transport endpoints, except
+# addresses the haozeke tailnet needs on the residential underlay.
 if command -v tailscale >/dev/null 2>&1; then
     { tailscale_underlay_ips; xai_control_host_ips; } | sort -u | while read -r ip; do
         public_underlay_v4 "$ip" || continue
