@@ -430,8 +430,8 @@ test -r "$repo/dot_config/systemd/user/rg-net-doctor.timer" || fail "missing doc
 bash -n "$net_doctor" && bash -n "$net_doctor_alert" || fail "doctor helpers do not parse"
 rg -q 'retired pref-5197' "$net_doctor" \
     || fail "doctor must flag a reappearing tailscale-mark steering rule"
-rg -q 'ip route get 8.8.8.8 mark 0x80000' "$net_doctor" \
-    || fail "doctor must verify tailscale-marked traffic exits via the tunnel"
+! rg -q 'mark 0x80000' "$net_doctor" \
+    || fail "doctor still probes the retired tailscale-mark steering"
 rg -q 'ip route get 8.8.8.8 mark 0x5252' "$net_doctor" \
     || fail "doctor must verify protected-process traffic cannot bypass Houston"
 rg -q 'table 51821' "$net_doctor" \
@@ -548,14 +548,16 @@ rg -q 'PreDown = .*rg-us-egress-policy houston-down' "$us_egress_up" \
     || fail "WireGuard teardown does not close the protected table before interface removal"
 ! rg -q 'pref 5205|pref 5206' "$us_egress_up" \
     || fail "US egress helper still installs obsolete fall-through policy rules"
-rg -q 'ip route get 8.8.8.8 mark 0x80000' "$us_egress_up" \
-    || fail "US egress helper must verify tailscale-marked traffic exits via the tunnel"
+rg -q 'ip route get 8.8.8.8 mark 0x5252' "$us_egress_up" \
+    || fail "US egress helper must verify protected-marked traffic exits via the tunnel"
+rg -q 'scoped mode requires the LAN default' "$us_egress_up" \
+    || fail "US egress helper must refuse a default route riding the tunnel"
 rg -q 'table 51821' "$us_egress_up" \
     || fail "US egress helper does not verify the protected table"
 rg -q 'verify_route_uses_tailscale "Tailscale DNS" 100\.100\.100\.100' "$us_egress_up" \
     || fail "US egress helper does not verify Tailscale DNS routing after WireGuard activation"
-rg -q 'verify_route_uses_interface "IPv4 default egress" 1\.1\.1\.1 "\$iface"' "$us_egress_up" \
-    || fail "US egress helper does not verify default IPv4 egress after prioritizing mesh routes"
+rg -q 'default_route=.*ip route get 1\.1\.1\.1' "$us_egress_up" \
+    || fail "US egress helper does not verify the default egress stays on the LAN"
 rg -q 'retry_cmd "ipinfo IPv4 egress"' "$us_egress_up" \
     || fail "US egress helper does not retry transient IPv4 egress checks"
 rg -q 'cleanup_us_egress_state' "$us_egress_up" \
