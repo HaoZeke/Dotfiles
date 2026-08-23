@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-"$HOME/.local/share/chezmoi"}
+helper="$repo/dot_local/bin/executable_rg-networkd-apply"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+test -x "$helper" || fail "missing networkd apply helper"
+
+tmp_selftest=$(mktemp -d)
+trap 'rtrash -rf -- "$tmp_selftest"' EXIT
+fake_bin="$tmp_selftest/bin"
+call_log="$tmp_selftest/calls"
+mkdir -p "$fake_bin"
+
+cat >"$fake_bin/networkctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case ${1:-} in
+--version)
+    printf 'systemd 261 (261.2-1-arch)\n'
+    ;;
+reload | reconfigure)
+    printf 'networkctl %s\n' "$*" >>"$RG_TEST_CALL_LOG"
+    ;;
+*)
+    exit 64
+    ;;
+esac
+EOF
+
+cat >"$fake_bin/varlinkctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+test "${1:-}" = info
+printf '    Vendor: The systemd Project\n'
+printf '   Product: systemd (systemd-networkd)\n'
+printf '   Version: 260.2 (260.2-2-arch)\n'
+EOF
+
+cat >"$fake_bin/busctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'busctl %s\n' "$*" >>"$RG_TEST_CALL_LOG"
+EOF
+
+cat >"$fake_bin/ip" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+test "$*" = '-o link show dev wlan0'
+printf '3: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500\n'
+EOF
+
+chmod +x "$fake_bin/networkctl" "$fake_bin/varlinkctl" \
+    "$fake_bin/busctl" "$fake_bin/ip"
+
+PATH="$fake_bin:$PATH" RG_TEST_CALL_LOG="$call_log" "$helper" wlan0
+
+mapfile -t calls <"$call_log"
+test "${#calls[@]}" -eq 2 \
+    || fail "mixed-version apply issued ${#calls[@]} mutation calls instead of 2"
+test "${calls[0]}" = \
+    'busctl call org.freedesktop.network1 /org/freedesktop/network1 org.freedesktop.network1.Manager Reload' \
+    || fail "mixed-version apply did not use the D-Bus Reload method"
+test "${calls[1]}" = \
+    'busctl call org.freedesktop.network1 /org/freedesktop/network1 org.freedesktop.network1.Manager ReconfigureLink i 3' \
+    || fail "mixed-version apply did not reconfigure wlan0 by index"
+
+printf 'ok\n'
