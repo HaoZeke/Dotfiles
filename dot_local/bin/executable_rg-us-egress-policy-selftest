@@ -231,6 +231,7 @@ cat >"$rules4" <<'EOF'
 5188:	from all to 203.0.113.10 lookup 51821
 5188:	from all to 203.0.113.11 lookup 51821
 5194:	from all lookup 52
+5195:	from all to 192.200.0.0/24 lookup main
 5195:	from all to 203.0.113.13 lookup main
 5196:	from all fwmark 0x5252/0xffff lookup 51821
 5197:	from all fwmark 0x80000/0xff0000 lookup 51821
@@ -239,6 +240,7 @@ cat >"$rules6" <<'EOF'
 5188:	from all to 2001:db8:10::1 lookup 51821
 5194:	from all lookup 52
 5195:	from all to 2001:db8:13::/64 lookup main
+5195:	from all to 2606:b740::/32 lookup main
 5196:	from all fwmark 0x5252/0xffff lookup 51821
 5197:	from all fwmark 0x80000/0xff0000 lookup 51821
 EOF
