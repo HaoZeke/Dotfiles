@@ -38,7 +38,6 @@ printf 'cpuset cpu io memory pids\n' >"$fake_root/sys/fs/cgroup/cgroup.controlle
 
 cat >"$fake_root/etc/systemd/system.conf.d/20-rg-resource-accounting.conf" <<'EOF'
 [Manager]
-DefaultCPUAccounting=true
 DefaultIOAccounting=true
 DefaultMemoryAccounting=true
 DefaultTasksAccounting=true
@@ -112,6 +111,18 @@ rg -q 'ok: facebook oomd.service active' "$tmpdir/ok.out" \
 rg -q 'ok: oomd binary present' "$tmpdir/ok.out" \
     || fail "checker must report the oomd binary when present"
 
+printf 'DefaultCPUAccounting=true\n' \
+    >>"$fake_root/etc/systemd/system.conf.d/20-rg-resource-accounting.conf"
+if RG_OOMD_CHECK_ROOT="$fake_root" \
+    PATH="$fake_bin:$PATH" \
+    "$script" --check >"$tmpdir/deprecated-accounting.out" 2>&1; then
+    fail "removed DefaultCPUAccounting must fail policy validation"
+fi
+rg -q 'fail: removed systemd option DefaultCPUAccounting' "$tmpdir/deprecated-accounting.out" \
+    || fail "checker must identify removed DefaultCPUAccounting"
+sed -i '/^DefaultCPUAccounting=/d' \
+    "$fake_root/etc/systemd/system.conf.d/20-rg-resource-accounting.conf"
+
 rm -f "$fake_root/etc/oomd/oomd.json"
 if RG_OOMD_CHECK_ROOT="$fake_root" PATH="$fake_bin:$PATH" "$script" --check >"$tmpdir/missing.out" 2>&1; then
     fail "missing facebook oomd profile should fail"
@@ -161,6 +172,19 @@ stage_helper="$repo/dot_local/bin/executable_rg-oomd-install-from-stage"
 test -r "$stage_helper" || fail "missing rg-oomd-install-from-stage helper"
 rg -q 'oomd --check-config' "$stage_helper" \
     || fail "stage install must validate config before enable"
+
+root_setup="$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup"
+for accounting_installer in "$install_helper" "$stage_helper" "$root_setup"; do
+    ! rg -q 'DefaultCPUAccounting=' "$accounting_installer" \
+        || fail "$(basename "$accounting_installer") installs removed DefaultCPUAccounting"
+done
+
+ananicy_repair="$repo/.chezmoiscripts/run_onchange_linux_ananicy_systemd.sh.tmpl"
+test -r "$ananicy_repair" || fail "missing managed ananicy unit repair"
+! rg -q '^[[:space:]]*CPUAccounting=' "$ananicy_repair" \
+    || fail "managed ananicy unit retains removed CPUAccounting"
+rg -q '^MemoryHigh=16M$' "$ananicy_repair" \
+    || fail "managed ananicy unit loses its memory ceiling"
 
 # Profile must not ship reap_memory (unknown to Meta oomd 0.5.0)
 ! rg -q 'reap_memory' "$profile" \
