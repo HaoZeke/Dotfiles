@@ -331,6 +331,12 @@ retire_legacy_tailnet_rules() {
                     ;;
             esac
         done < <(rules_at_pref "$flag" 5205)
+        while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            if [[ "$line" =~ ^5206:[[:space:]]+from[[:space:]]+all[[:space:]]+lookup[[:space:]]+52$ ]]; then
+                "$IP" "$flag" rule del pref 5206 lookup 52
+            fi
+        done < <(rules_at_pref "$flag" 5206)
     done
 }
 
