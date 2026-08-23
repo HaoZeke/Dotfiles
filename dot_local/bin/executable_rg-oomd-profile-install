@@ -24,7 +24,7 @@ install -Dm0644 "$profile" /etc/oomd/oomd.json
 install -d -m0755 /etc/systemd/system.conf.d
 cat >/etc/systemd/system.conf.d/20-rg-resource-accounting.conf <<'EOF'
 [Manager]
-DefaultCPUAccounting=true
+# CPU accounting is unconditional on cgroup v2.
 DefaultIOAccounting=true
 DefaultMemoryAccounting=true
 DefaultTasksAccounting=true

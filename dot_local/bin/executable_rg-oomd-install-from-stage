@@ -12,14 +12,14 @@ set -euo pipefail
 
 stage_tgz=${1:-${RG_OOMD_STAGE:-$HOME/.local/share/rg-oomd/oomd-0.5.0-arch-x86_64-stage.tgz}}
 profile=${RG_OOMD_PROFILE:-$HOME/.config/oomd/oomd-rgx1gen11.json}
-chezmoi_profile=$HOME/.local/share/chezmoi/dot_config/oomd/oomd-rgx1gen11.json
+source_profile=${RG_OOMD_SOURCE_PROFILE:-}
 
 if [ ! -r "$stage_tgz" ]; then
     printf 'rg-oomd-install-from-stage: missing stage tarball: %s\n' "$stage_tgz" >&2
     exit 1
 fi
-if [ ! -r "$profile" ] && [ -r "$chezmoi_profile" ]; then
-    profile=$chezmoi_profile
+if [ ! -r "$profile" ] && [ -n "$source_profile" ] && [ -r "$source_profile" ]; then
+    profile=$source_profile
 fi
 if [ ! -r "$profile" ]; then
     printf 'rg-oomd-install-from-stage: missing profile: %s\n' "$profile" >&2
@@ -51,7 +51,7 @@ install -Dm0644 "$profile" /etc/oomd/oomd.json
 install -d -m0755 /etc/systemd/system.conf.d
 cat >/etc/systemd/system.conf.d/20-rg-resource-accounting.conf <<'DROP'
 [Manager]
-DefaultCPUAccounting=true
+# CPU accounting is unconditional on cgroup v2.
 DefaultIOAccounting=true
 DefaultMemoryAccounting=true
 DefaultTasksAccounting=true

@@ -2,8 +2,14 @@
 set -euo pipefail
 
 kver=${1:-7.0.12-arch1-1-rg}
-repo=${RG_LINUX_RG_REPO:-/home/rgoswami/Git/Github/Tools/linux-rg}
-user_home=${RG_USER_HOME:-/home/rgoswami}
+default_user=${SUDO_USER:-$(id -un)}
+default_home=$(getent passwd "$default_user" | cut -d: -f6)
+[[ -n $default_home ]] || {
+  printf 'error: no passwd home for %s\n' "$default_user" >&2
+  exit 1
+}
+user_home=${RG_USER_HOME:-$default_home}
+repo=${RG_LINUX_RG_REPO:-$user_home/Git/Github/Tools/linux-rg}
 user_name=${RG_USER_NAME:-$(basename "$user_home")}
 jobs=${RG_DKMS_JOBS:-}
 profile_root_helper=/usr/local/sbin/rg-x1gen11-profile-root
@@ -230,7 +236,7 @@ install_facebook_oomd_policy() {
 
   install_content /etc/systemd/system.conf.d/20-rg-resource-accounting.conf 0644 "$(cat <<'ACCOUNTING'
 [Manager]
-DefaultCPUAccounting=true
+# CPU accounting is unconditional on cgroup v2.
 DefaultIOAccounting=true
 DefaultMemoryAccounting=true
 DefaultTasksAccounting=true

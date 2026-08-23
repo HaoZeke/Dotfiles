@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Shadow the archived ananicy 2.2.1 vendor unit with the same service contract
+# minus CPUAccounting=. CPU accounting is unconditional on cgroup v2, and
+# systemd rejects that setting while parsing the vendor unit.
+
+set -euo pipefail
+
+if ! command -v ananicy >/dev/null 2>&1; then
+    exit 0
+fi
+if ! sudo -n true 2>/dev/null; then
+    printf '%s\n' \
+        'chezmoi: no cached sudo credentials; skipping ananicy unit repair' >&2
+    exit 0
+fi
+
+tmp_unit=$(mktemp --suffix=.service)
+rtrash_bin=$(command -v rtrash)
+trap '"$rtrash_bin" -f "$tmp_unit"' EXIT
+
+cat >"$tmp_unit" <<'UNIT'
+[Unit]
+Description=Ananicy - ANother Auto NICe daemon
+After=local-fs.target
+
+[Service]
+Type=notify
+ExecStartPre=/sbin/sysctl -e kernel.sched_autogroup_enabled=0
+ExecStart=/usr/bin/ananicy start
+ExecStopPost=/sbin/sysctl -e kernel.sched_autogroup_enabled=1
+Nice=19
+SuccessExitStatus=143
+OOMScoreAdjust=-999
+Restart=always
+MemoryHigh=16M
+MemoryMax=64M
+ProtectSystem=true
+ProtectHome=true
+PrivateTmp=yes
+
+[Install]
+WantedBy=local-fs.target
+UNIT
+
+systemd-analyze verify "$tmp_unit"
+if ! sudo cmp -s "$tmp_unit" /etc/systemd/system/ananicy.service 2>/dev/null; then
+    sudo install -D -m 0644 -o root -g root \
+        "$tmp_unit" /etc/systemd/system/ananicy.service
+    sudo systemctl daemon-reload
+    sudo systemctl restart ananicy.service
+fi
+
+sudo systemctl is-active --quiet ananicy.service
+test "$(sudo systemctl show ananicy.service --property=FragmentPath --value)" \
+    = /etc/systemd/system/ananicy.service
+{{- end }}

@@ -143,6 +143,12 @@ require_pattern /etc/systemd/system.conf.d/20-rg-resource-accounting.conf \
 require_pattern /etc/systemd/system.conf.d/20-rg-resource-accounting.conf \
     'DefaultIOAccounting=true' \
     "systemd IO accounting default enabled"
+accounting_defaults=$(host_path /etc/systemd/system.conf.d/20-rg-resource-accounting.conf)
+if [[ -r $accounting_defaults ]] && rg -q '^[[:space:]]*DefaultCPUAccounting=' "$accounting_defaults"; then
+    fail "removed systemd option DefaultCPUAccounting is present"
+else
+    pass "CPU accounting relies on the unconditional cgroup v2 metric"
+fi
 require_pattern /etc/systemd/system/hostcritical.slice.d/10-rg-reserve.conf \
     'MemoryMin=256M' \
     "hostcritical memory reserve installed"
