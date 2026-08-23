@@ -21,6 +21,10 @@ iface="${RG_US_EGRESS_IFACE:-rg-us-egress-wg}"
 unit="wg-quick@${iface}.service"
 managed_unit="rg-us-egress.service"
 probe="${RG_US_EGRESS_PROBE:-1.1.1.1}"
+# The tunnel is scoped: only traffic carrying the protected mark may use it,
+# so the routing-side health probe must look up the probe address with that
+# mark. An unmarked lookup lands on the LAN default by design.
+protected_mark="${RG_US_EGRESS_PROTECTED_MARK:-0x5252}"
 quality_url="${RG_US_EGRESS_QUALITY_URL:-https://api.x.ai/v1/models}"
 # Second probe target that does NOT depend on the api.x.ai /etc/hosts pin: if
 # api.x.ai fails but this answers through the tunnel, the pin is stale (a dead
@@ -78,8 +82,11 @@ quality_probe_once() {
     [ "$quality_probe" = "0" ] && return 0
     command -v "$CURL" >/dev/null 2>&1 || return 0
 
+    # Bind the probe to the tunnel interface: the tunnel is scoped (routes
+    # live only in its own table), so an unbound probe would ride the LAN
+    # default and prove nothing about the tunnel.
     local url="${1:-$quality_url}" result code
-    result="$($CURL -4 -sS --connect-timeout 4 --max-time 8 -o /dev/null \
+    result="$($CURL -4 -sS --interface "$iface" --connect-timeout 4 --max-time 8 -o /dev/null \
         -w '%{http_code} %{time_total} %{local_ip}\n' "$url" 2>/dev/null)" || return 1
     set -- $result
     code="${1:-000}"
@@ -266,7 +273,7 @@ reassert_ctrld_carveout || $LOG "failed to keep Control D upstreams on the local
 
 # Healthy = interface present AND the public probe egresses through it.
 if $IP link show "$iface" >/dev/null 2>&1 \
-    && $IP route get "$probe" 2>/dev/null | grep -q " dev $iface"; then
+    && $IP route get "$probe" mark "$protected_mark" 2>/dev/null | grep -q " dev $iface"; then
     if quality_ok; then
         # Reachable through the tunnel: clear the consecutive-failure counter.
         : >"$quality_state" 2>/dev/null || true
