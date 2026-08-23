@@ -387,9 +387,9 @@ sudo_gate_line="$(rg -n -F 'if ! sudo -n true' "$net_heal_script" | head -1 | cu
     || fail "user SURF cleanup must run without a cached sudo credential"
 rg -q '/etc/systemd/system/rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must install the SURF spool path unit"
-rg -q "PathChanged=$HOME/\.local/state/rg-surf-vpn/pending\.ovpn" "$net_heal_script" \
+rg -F -q 'PathChanged={{ .chezmoi.homeDir }}/.local/state/rg-surf-vpn/pending.ovpn' "$net_heal_script" \
     || fail "SURF spool path unit must watch the authenticated export"
-rg -q "ExecStart=/usr/local/sbin/rg-surf-vpn-install install $HOME/\.local/state/rg-surf-vpn/pending\.ovpn" "$net_heal_script" \
+rg -F -q 'ExecStart=/usr/local/sbin/rg-surf-vpn-install install {{ .chezmoi.homeDir }}/.local/state/rg-surf-vpn/pending.ovpn' "$net_heal_script" \
     || fail "SURF install unit must pass the watched profile to the strict installer"
 rg -q 'enable --now rg-surf-vpn-install\.path' "$net_heal_script" \
     || fail "root provisioning must enable the SURF spool path unit"
@@ -626,10 +626,27 @@ test "$hook_sections" = "[Interface]" \
     || fail "policy-rule hooks must land only inside [Interface] (got: ${hook_sections:-none})"
 rg -q '^MTU = 1280$' "$rendered" || fail "rendered conf must carry the carrier-safe MTU"
 ! rg -q '^DNS' "$rendered" || fail "rendered conf must strip provider DNS"
+rg -q '^Table = 51820$' "$rendered" \
+    || fail "rendered conf must scope wg-quick to table 51820 (no 0/0 hijack of the default route)"
+table_sections=$(awk '/^\[/{sect=$0} /^Table/{print sect}' "$rendered" | sort -u)
+test "$table_sections" = "[Interface]" \
+    || fail "Table must land only inside [Interface] (got: ${table_sections:-none})"
 rendered="$(render_wg_case "${sample}
 PersistentKeepalive=15" keepalive)"
 test "$(rg -c '^PersistentKeepalive' "$rendered")" = "1" \
     || fail "an existing keepalive must be normalized, not duplicated"
+rendered_table="$(render_wg_case "[Interface]
+PrivateKey = xPRIVx
+Table = auto
+Address = 10.10.10.2/32
+[Peer]
+PublicKey = xPUBx
+AllowedIPs = 0.0.0.0/0,::/0
+Endpoint = 1.2.3.4:443" table)"
+test "$(rg -c '^Table' "$rendered_table")" = "1" \
+    || fail "a provider Table line must be normalized, not duplicated"
+rg -q '^Table = 51820$' "$rendered_table" \
+    || fail "a provider Table line must be replaced by the scoped table"
 rg -q '^PersistentKeepalive = 25$' "$rendered" \
     || fail "an existing keepalive must be normalized to 25"
 # The peer Endpoint must reach the runtime conf as a literal address. wg-quick
