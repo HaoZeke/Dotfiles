@@ -81,6 +81,10 @@ test -r "$sway_config" || fail "missing sway config"
 
 ! rg -q 'pref-5205|pref 5205' "$net_cli" "$net_heal" \
     || fail "network operator text still names the retired xAI rule preference"
+rg -q 'state delete-bucket --bucket=entryState' "$net_cli" \
+    || fail "network reprovision does not reset run_onchange state"
+! rg -q 'state delete-bucket --bucket=scriptState' "$net_cli" \
+    || fail "network reprovision resets run_once state instead of run_onchange state"
 
 rg -q 'rfkill block wlan wwan gps fm nfc uwb wimax' "$airplane" \
     || fail "airplane mode does not block non-Bluetooth radios"
