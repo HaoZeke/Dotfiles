@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is a common AI writing pattern. Rephrase in your own voice."
+message: "'%s' is a blog/assistant formula. Kill it: delete the opener or closer and start at the claim."
 ignorecase: true
 level: error
 tokens:

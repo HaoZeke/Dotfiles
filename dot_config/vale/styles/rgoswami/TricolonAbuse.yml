@@ -1,5 +1,5 @@
 extends: existence
-message: "Tricolon detected (%s). AI defaults to lists of three. Vary list length or restructure."
+message: "Tricolon (%s). Models default to three. Kill it: keep two items, or put the list in a table."
 ignorecase: true
 level: suggestion
 scope: sentence

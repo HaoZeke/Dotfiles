@@ -1,5 +1,5 @@
 extends: existence
-message: "LLM cliche highlighter ('%s'). State the fact; see https://tools.simonwillison.net/llm-cliche-highlighter"
+message: "Highlighter tic ('%s'). Kill it: drop the tic and keep the measured claim. Catalog: https://tools.simonwillison.net/llm-cliche-highlighter"
 link: "https://tools.simonwillison.net/llm-cliche-highlighter"
 ignorecase: true
 nonword: true

@@ -1,7 +1,7 @@
 # Unified human-prose linter: lexical (rgoswami vale-YAML) + harper grammar.
 # Use with: proseguard --profile prose-human --styles-path ~/.config/vale/styles FILE
 name = "prose-human"
-description = "House prose linter: rgoswami + write-good + proselint + Readability metrics + harper."
+description = "House prose linter: rgoswami tell pack (with kill hints) + write-good + proselint + Readability + harper."
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]

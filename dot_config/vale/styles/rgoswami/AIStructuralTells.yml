@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is a structural AI tell. Restructure the sentence."
+message: "'%s' is a structural model hinge. Kill it: write the two facts as two sentences, or keep one fact and drop the contrast."
 ignorecase: true
 level: error
 tokens:

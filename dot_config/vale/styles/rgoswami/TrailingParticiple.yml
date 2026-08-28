@@ -1,5 +1,5 @@
 extends: existence
-message: "Trailing participle clause '%s'. Rewrite as relative clause or new sentence."
+message: "Trailing participle '%s'. Kill the tacked-on analysis: end the sentence, then state the measured result."
 ignorecase: true
 level: warning
 nonword: true

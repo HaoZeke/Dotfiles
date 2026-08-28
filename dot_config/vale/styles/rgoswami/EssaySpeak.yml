@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is essay-speak. State the point directly."
+message: "'%s' is essay-speak. Kill the signpost: delete it and leave the claim."
 ignorecase: true
 level: warning
 tokens:

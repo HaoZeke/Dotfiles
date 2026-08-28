@@ -1,10 +1,10 @@
 extends: existence
-message: "'%s' is flagged AI/assistant vocabulary. Rephrase."
+message: "'%s' is a model style-word. Kill it: use the concrete verb (measure, compute, write, cut) or delete the clause."
 link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
 ignorecase: true
 level: warning
 tokens:
-  # Classic GPT-era words
+  # Classic style-words
   - crucial
   - pivotal
   - vibrant
@@ -105,7 +105,7 @@ tokens:
   - ever-evolving
   - increasingly important
   - increasingly vital
-  # 2025-era additions (GPT-4o, Claude patterns)
+  # Later style-word additions
   - at its core
   - rich cultural heritage
   - enduring legacy
@@ -296,8 +296,30 @@ tokens:
   - igniting
   - beacon of
   - symphony of
+  - firstly
+  - cultivate
+  - cultivating
+  - cultivates
+  - transcend
+  - transcending
+  - transcends
+  - exemplify
+  - exemplifies
+  - exemplifying
+  - reshape
+  - reshaping
+  - reshapes
+  - redefine
+  - redefining
+  - redefines
+  - lean into
+  - leaning into
+  - double down
+  - doubling down
+  - breathe new life
+  - breathes new life
 
-  # Mid-2024 → mid-2025 (GPT-4o era, WP:AISIGNS) + mid-2025+ residual forms
+  # Residual forms (WP:AISIGNS)
   - highlighting
   - highlights the
   - streamlines

@@ -1,5 +1,5 @@
 extends: existence
-message: "'%s' is assistant-style scaffolding. State the fact, action, or result directly."
+message: "'%s' is assistant scaffolding. Kill it: delete the tic and start at the fact, action, or result."
 link: "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing"
 ignorecase: true
 nonword: true
