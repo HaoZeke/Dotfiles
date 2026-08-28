@@ -1,13 +1,15 @@
 # Unified human-prose linter: lexical (rgoswami vale-YAML) + harper grammar.
 # Use with: proseguard --profile prose-human --styles-path ~/.config/vale/styles FILE
 name = "prose-human"
-description = "House prose linter: rgoswami tell pack (with kill hints) + write-good + proselint + Readability + harper."
+description = "House prose linter: rgoswami tell pack (with kill hints) + structure runs + write-good + proselint + Readability + harper."
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
 lexical_styles = ["rgoswami", "write-good", "proselint", "Readability"]
 
 # Match house ~/.config/vale/.vale.ini disables for write-good / proselint noise.
+structure_rules = ["rules/structure/model-tells.toml"]
+
 lexical_disable = [
   "write-good.Passive",
   "write-good.So",
@@ -27,7 +29,7 @@ lexical_disable = [
 [engines]
 lexical = true
 leak = false
-structure = false
+structure = true
 harper = true
 judge = false
 

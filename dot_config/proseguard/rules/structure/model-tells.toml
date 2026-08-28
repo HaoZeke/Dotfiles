@@ -1,0 +1,47 @@
+# Model-tell runs vale cannot count: echoed skeletons, stacked questions,
+# sentence anaphora, colon-triples, dash density, uniform sentence length.
+# Kill hints live in the default messages.
+
+[[rules]]
+kind = "echo_skeleton"
+id = "echo-skeleton"
+min_gram = 4
+min_run = 2
+level = "warning"
+message = "echoed skeleton. Kill it: rewrite the later sentence so it does not reuse a four-word chunk."
+
+[[rules]]
+kind = "stacked_questions"
+id = "stacked-questions"
+min_run = 2
+level = "warning"
+message = "stacked questions. Kill it: keep one question, or none."
+
+[[rules]]
+kind = "sentence_anaphora"
+id = "sentence-anaphora"
+min_run = 3
+level = "warning"
+message = "sentence anaphora. Kill it: vary the opener."
+
+[[rules]]
+kind = "colon_triple"
+id = "colon-triple"
+level = "suggestion"
+message = "colon into a triple. Kill it: keep two items, or put the list in a table."
+
+[[rules]]
+kind = "em_dash_density"
+id = "em-dash-density"
+max_per_thousand = 20
+min_words = 80
+level = "warning"
+message = "dash density is high. Kill it: use a comma or a period."
+
+[[rules]]
+kind = "sentence_length_cv"
+id = "sentence-length-cv"
+min_cv_milli = 300
+min_sentences = 6
+level = "suggestion"
+message = "sentence lengths are too uniform. Kill the rhythm: mix a short sentence with a long one."
