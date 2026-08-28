@@ -5,7 +5,7 @@ ignorecase: true
 nonword: true
 level: error
 tokens:
-  - 'turn\d+(search|view|fetch|source)\d+'
+  - 'turn\d+(search|view|fetch|source|news|image)\d+'
   - 'contentReference'
   - 'oaicite'
   - 'oai_citation'
@@ -13,5 +13,8 @@ tokens:
   - 'grok_card'
   - ':::writing'
   - '\[citation needed\]'
-  - 'utm_source=chatgpt'
-  - 'utm_source=perplexity'
+  - 'utm_source='
+  - 'as an ai language model'
+  - 'as of my last update'
+  - 'as of my last training'
+  - 'knowledge cutoff'
