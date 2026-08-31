@@ -5,3 +5,11 @@ Before=shutdown.target
 [Slice]
 MemoryAccounting=yes
 TasksAccounting=yes
+
+# The tunnel's PostUp installs an nftables rule that matches this slice by its
+# cgroup path, and nft resolves that path when the rule loads. systemd creates
+# the cgroup only while the slice is active, so an inactive slice fails the
+# rule, fails PostUp, and takes the interface down with it. Starting the slice
+# with the session keeps the path present for the rule to find.
+[Install]
+WantedBy=default.target
