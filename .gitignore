@@ -1,5 +1,447 @@
-1 matches in 1F:
 
-[file] .gitignore (1):
-   434: dot_local/bin/executable_rg-tunnel-teachx-carveout.tmpl
+# Created by https://www.toptal.com/developers/gitignore/api/zsh
+# Edit at https://www.toptal.com/developers/gitignore?templates=zsh
 
+### Zsh ###
+# Zsh compiled script + zrecompile backup
+*.zwc
+*.zwc.old
+
+# Zsh completion-optimization dumpfile
+*zcompdump*
+
+# Zsh zcalc history
+.zcalc_history
+
+# A popular plugin manager's files
+._zinit
+.zinit_lstupd
+
+# zdharma/zshelldoc tool's files
+zsdoc/data
+
+# robbyrussell/oh-my-zsh/plugins/per-directory-history plugin's files
+# (when set-up to store the history in the local directory)
+.directory_history
+
+# MichaelAquilina/zsh-autoswitch-virtualenv plugin's files
+# (for Zsh plugins using Python)
+.venv
+
+# Zunit tests' output
+/tests/_output/*
+!/tests/_output/.gitkeep
+
+# End of https://www.toptal.com/developers/gitignore/api/zsh
+
+# Created by https://www.toptal.com/developers/gitignore/api/macos
+# Edit at https://www.toptal.com/developers/gitignore?templates=macos
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# End of https://www.toptal.com/developers/gitignore/api/macos
+
+# Vault temporary files (blobs are tracked)
+.vault/.manifest.plain
+.vault/.status-tmp-*
+
+# RAG embedding cache (regenerable)
+.fastembed_cache/
+
+# Build/staging directory
+src/
+.kernel-build/
+
+# Private config (sealed in vault, never commit)
+private_dot_codex/
+private_dot_omp/
+CLAUDE.md
+.claude/
+dot_claude/
+dot_grok/
+.chezmoiscripts/*setup*.tmpl
+~/.codex/AGENTS.md
+~/.codex/config.toml
+~/.codex/RTK.md
+~/.codex/TOOLING.md
+~/.codex/AGENTS.md
+~/.codex/RTK.md
+~/.codex/config.toml
+~/.omp/mcp.json
+~/.omp/agent/AGENTS.md
+~/.omp/agent/config.yml
+~/.omp/agent/models.yml
+~/.omp/agent/mcp.json
+~/.omp/agent/GITHUB_CONTRACT.md
+
+# Local Rust build output for chezmoi-managed helper sources
+dot_local/share/rg-caffeine-src/target/
+dot_local/share/rg-desktop-help-src/target/
+dot_local/share/rg-wob-bridge-src/target/
+dot_local/share/rg-space-sweep-src/target/
+dot_local/share/rg-tmux-role-src/target/
+dot_local/share/rg-sway-route-watcher-src/target/
+~/.claude/CLAUDE.md
+~/.claude/RTK.md
+~/.claude/cf-ci.md
+~/.claude/claude-mcp-servers.json
+~/.claude/settings.json
+~/.claude/doc-guidelines.md
+~/.claude/writing-style.md
+~/.claude/superpowers-overrides.md
+~/.claude/agents/metatensor-ecosystem.md
+~/.claude/agents/android-rust-dev.md
+~/.claude/agents/f2py-fortran-expert.md
+~/.claude/agents/hpc-saddle-point-analyst.md
+~/.claude/agents/math-proof-engine.md
+~/.claude/agents/realpython-reviewer.md
+~/.claude/agents/ttech-ops-infra.md
+~/.claude/hooks/rtk-rewrite.sh
+~/.claude/rules/context7.md
+~/.claude/agent-memory/realpython-reviewer/reference_publishing_pipeline.md
+~/.claude/.project-ctx.toml
+~/.claude/projects/-home-rgoswami--claude/memory/MEMORY.md
+~/.claude/projects/-home-rgoswami--claude/memory/reference_nimtasks_binaries.md
+~/.claude/projects/-home-rgoswami--claude/memory/feedback_tool_defaults.md
+~/.claude/projects/-home-rgoswami--claude/memory/feedback_claude_config_edit_flow.md
+~/.claude/agent-memory/android-rust-dev/build-workflow.md
+~/.claude/agent-memory/android-rust-dev/design-system.md
+~/.claude/agent-memory/android-rust-dev/MEMORY.md
+~/.claude/agent-memory/grant-funding-scout/MEMORY.md
+~/.claude/agent-memory/realpython-reviewer/user_rohit_goswami.md
+~/.claude/agent-memory/realpython-reviewer/project_python_script_structure.md
+~/.claude/agent-memory/realpython-reviewer/project_pointblank_exploration.md
+~/.claude/agent-memory/realpython-reviewer/feedback_quality_pipeline.md
+~/.claude/agent-memory/realpython-reviewer/feedback_rp_index_tool.md
+~/.claude/agent-memory/realpython-reviewer/project_pointblank_submission.md
+~/.claude/agent-memory/realpython-reviewer/feedback_submission_ready.md
+~/.claude/agent-memory/realpython-reviewer/MEMORY.md
+~/.claude/agent-memory/realpython-reviewer/project_pointblank_showcase_review.md
+~/.claude/agent-memory/ttech-marketing-specialist/MEMORY.md
+~/.claude/agent-memory/ttech-ops-infra/reference_kanidm_api.md
+~/.claude/agent-memory/ttech-ops-infra/project_kanidm_migration.md
+~/.claude/agent-memory/ttech-ops-infra/MEMORY.md
+~/.claude/projects/-home-rgoswami--claude/memory/feedback_disk_full_triage.md
+~/.config/vale/styles/realpython/UseImgMacro.yml
+~/.config/vale/styles/realpython/MixedMonospacePossessive.yml
+~/.config/vale/styles/realpython/AlertMacroRequired.yml
+~/.config/vale/styles/realpython/UseYouNotWe.yml
+~/.config/vale/styles/realpython/ActiveVoice.yml
+~/.config/vale/styles/realpython/AvoidEasy.yml
+~/.config/vale/styles/realpython/PreferContractions.yml
+~/.config/vale/styles/realpython/Conversational.yml
+~/.config/vale/styles/realpython/InclusiveLanguage.yml
+~/.config/vale/styles/realpython/CasualOpeners.yml
+~/.config/vale/styles/realpython/Wordiness.yml
+~/.config/vale/styles/realpython/AvoidAbbreviations.yml
+~/.config/vale/styles/realpython/CodeObjectNouns.yml
+~/.config/vale/styles/realpython/IntroduceCodeBlocks.yml
+~/.config/vale/styles/realpython/PipUsage.yml
+~/.config/vale/styles/realpython/HeadingCase.yml
+~/.config/vale/styles/realpython/HeadingPunctuation.yml
+~/.config/vale/styles/realpython/SpellingPython.yml
+~/.config/vale/styles/realpython/InternetLowercase.yml
+~/.config/vale/styles/realpython/USSpelling.yml
+~/.config/vale/styles/realpython/BooleanCapitalization.yml
+~/.config/vale/styles/realpython/Semicolons.yml
+~/.config/vale/styles/realpython/DoubleSpaces.yml
+~/.config/vale/styles/realpython/EmDashSpacing.yml
+~/.config/vale/styles/realpython/StraightQuotes.yml
+~/.config/vale/styles/realpython/VsDot.yml
+~/.config/vale/styles/realpython/LimitParentheses.yml
+~/.config/vale/styles/realpython/NaturalLinks.yml
+~/.config/vale/styles/realpython/ArticleReference.yml
+~/.config/vale/styles/realpython/UseYouNotWe.yml
+~/.config/vale/styles/realpython/ActiveVoice.yml
+~/.config/vale/styles/realpython/AvoidEasy.yml
+~/.config/vale/styles/realpython/PreferContractions.yml
+~/.config/vale/styles/realpython/Conversational.yml
+~/.config/vale/styles/realpython/InclusiveLanguage.yml
+~/.config/vale/styles/realpython/CasualOpeners.yml
+~/.config/vale/styles/realpython/Wordiness.yml
+~/.config/vale/styles/realpython/AvoidAbbreviations.yml
+~/.config/vale/styles/realpython/CodeObjectNouns.yml
+~/.config/vale/styles/realpython/IntroduceCodeBlocks.yml
+~/.config/vale/styles/realpython/PipUsage.yml
+~/.config/vale/styles/realpython/HeadingCase.yml
+~/.config/vale/styles/realpython/HeadingPunctuation.yml
+~/.config/vale/styles/realpython/SpellingPython.yml
+~/.config/vale/styles/realpython/InternetLowercase.yml
+~/.config/vale/styles/realpython/USSpelling.yml
+~/.config/vale/styles/realpython/BooleanCapitalization.yml
+~/.config/vale/styles/realpython/Semicolons.yml
+~/.config/vale/styles/realpython/DoubleSpaces.yml
+~/.config/vale/styles/realpython/EmDashSpacing.yml
+~/.config/vale/styles/realpython/StraightQuotes.yml
+~/.config/vale/styles/realpython/VsDot.yml
+~/.config/vale/styles/realpython/LimitParentheses.yml
+~/.config/vale/styles/realpython/NaturalLinks.yml
+~/.config/vale/styles/realpython/ArticleReference.yml
+~/.config/vale/styles/realpython/ActiveVoice.yml
+~/.config/vale/styles/realpython/ArticleReference.yml
+~/.config/vale/styles/realpython/AvoidAbbreviations.yml
+~/.config/vale/styles/realpython/AvoidEasy.yml
+~/.config/vale/styles/realpython/BooleanCapitalization.yml
+~/.config/vale/styles/realpython/CasualOpeners.yml
+~/.config/vale/styles/realpython/CodeObjectNouns.yml
+~/.config/vale/styles/realpython/Conversational.yml
+~/.config/vale/styles/realpython/DoubleSpaces.yml
+~/.config/vale/styles/realpython/EmDashSpacing.yml
+~/.config/vale/styles/realpython/HeadingCase.yml
+~/.config/vale/styles/realpython/HeadingPunctuation.yml
+~/.config/vale/styles/realpython/InclusiveLanguage.yml
+~/.config/vale/styles/realpython/InternetLowercase.yml
+~/.config/vale/styles/realpython/IntroduceCodeBlocks.yml
+~/.config/vale/styles/realpython/LimitParentheses.yml
+~/.config/vale/styles/realpython/NaturalLinks.yml
+~/.config/vale/styles/realpython/PipUsage.yml
+~/.config/vale/styles/realpython/PreferContractions.yml
+~/.config/vale/styles/realpython/Semicolons.yml
+~/.config/vale/styles/realpython/SpellingPython.yml
+~/.config/vale/styles/realpython/StraightQuotes.yml
+~/.config/vale/styles/realpython/UseYouNotWe.yml
+~/.config/vale/styles/realpython/USSpelling.yml
+~/.config/vale/styles/realpython/VsDot.yml
+~/.config/vale/styles/realpython/Wordiness.yml
+~/.config/vale/styles/realpython/ClickHereLink.yml
+~/.config/vale/styles/realpython/BashHighlighter.yml
+~/.config/vale/styles/realpython/PyconPrompt.yml
+~/.config/vale/styles/realpython/NoCodeBlockBeforeHeading.yml
+~/.config/vale/styles/realpython/ColonIntroducesVisual.yml
+~/.config/vale/styles/realpython/FileTreeNoLangHeader.yml
+~/.local/share/chezmoi/hooks/pre-push
+~/.claude/rules/coding.md
+~/.claude/rules/process.md
+~/.claude/rules/tooling.md
+~/.claude/obsidian-sql.md
+~/.claude/graphviz-style.md
+~/.config/vale/styles/realpython/AbstractBusinessRegister.yml
+~/.config/leakguard/config.toml
+~/.config/git/hooks/pre-commit
+~/.config/git/hooks/commit-msg
+~/.claude/rules/starfleet.md
+~/.claude/agents/xait-single-turn-author.md
+~/.claude/agents/xait-single-turn-grader.md
+~/.config/davmail/modify_queensu.properties
+~/.config/davmail/epfl.properties
+~/.config/davmail/queensu.properties
+~/.config/davmail/rog32hi.properties
+~/.config/davmail/surf.properties
+~/.config/isyncrc
+~/.davmail.properties
+~/.mail/.gitattributes
+~/.mail/.gitignore
+~/.mail/pixi.toml
+~/.mail/pixi.lock
+~/.mail/rg95ru.gmail/.gmailieer.json
+~/.mail/stores/r95g10.gmail/.credentials.gmailieer.json
+~/.mail/stores/r95g10.gmail/.gmailieer.json
+~/.mail/stores/rg95ru.gmail/.credentials.gmailieer.json
+~/.mail/stores/rg95ru.gmail/.gmailieer.json
+~/.mail/stores/rgoswami.ieee/.credentials.gmailieer.json
+~/.mail/stores/rgoswami.ieee/.gmailieer.json
+~/.mail/stores/rgoswami.quansight/.credentials.gmailieer.json
+~/.mail/stores/rgoswami.quansight/.gmailieer.json
+~/.config/rg-us-egress/wireguard.conf
+~/.ssh/config
+~/.ssh/known_hosts
+
+# DavMail OAuth tokens — host-local only (never commit / never nimvault tokens)
+.config/davmail/*.token
+~/.config/davmail/*.token
+
+# eduroam 802.1X profile (carries a credential) — nimvault only
+.local/share/rg-net/private/
+~/.local/share/rg-net/private/
+dot_local/share/rg-net/private/
+
+# Terra DNS private (ControlD path tokens) — nimvault only
+.local/share/terra-dns/private/
+~/.local/share/terra-dns/private/
+dot_local/share/terra-dns/private/
+
+# Borgmatic live config — nimvault (never plain in source)
+.config/borgmatic/config.yaml
+~/.config/borgmatic/config.yaml
+~/.config/borgmatic/config.yaml
+~/.local/share/terra-dns/private/ctrld.service
+
+# Agent/LLM configs with API keys — live paths only via nimvault unseal (~/.omp, ~/.codex, ~/.claude).
+# Do NOT commit private_* copies in chezmoi source (private_ is mode 600, NOT encryption).
+private_dot_omp/agent/private_models.yml
+private_dot_codex/private_config.toml
+dot_claude/private_claude-mcp-servers.json
+**/private_models.yml
+~/.grok/AGENTS.md
+~/.ssh/cua_ed25519
+~/.ssh/cua_ed25519.pub
+~/.ssh/cua_nopass
+~/.ssh/cua_nopass.pub
+~/.config/vivaldi/Default/Preferences
+~/.config/vivaldi/Profile 1/Preferences
+~/.config/vivaldi/Profile 2/Preferences
+~/.config/vivaldi/Profile 4/Preferences
+~/.config/vivaldi/Profile 5/Preferences
+~/.config/vivaldi/Profile 6/Preferences
+~/.config/vivaldi/Profile 7/Preferences
+~/.claude/skills/f2py-tasks/SKILL.md
+~/.claude/skills/f2py-c-refcount/SKILL.md
+~/.grok/skills/f2py-c-refcount/SKILL.md
+~/.grok/skills/f2py-tasks/SKILL.md
+~/.local/share/terra-dns/private/ctrld.toml
+~/.local/share/rg-net/private/eduroam.env
+~/.local/share/rg-net/private/eduroam-ca.pem
+~/.config/orgaw/config.toml
+~/.config/rg-us-egress/us-domains.txt
+
+# US split-tunnel destination list (vaulted, never public)
+dot_config/rg-us-egress/
+.config/rg-us-egress/us-domains.txt
+~/.local/share/rg-dns/private/ctrld.toml
+~/.config/rg-geo-egress/in/domains.txt
+~/.config/rg-geo-egress/in/wireguard.conf
+
+# Destination lists and tunnel configs, vaulted, never public. The ~/ forms
+# above cannot match anything, since gitignore patterns are matched against
+# repo relative paths; these source-directory forms are the ones that hold, and
+# they are what stops a chezmoi add from putting a list back in a public repo.
+dot_config/rg-geo-egress/
+dot_config/rg-us-egress/
+private_dot_config/rg-geo-egress/
+private_dot_config/rg-us-egress/
+~/.config/rg-geo-egress/us/domains.txt
+~/.config/rg-geo-egress/us/wireguard.conf
+~/.local/share/rg-dns/private/unbound-rg-local.conf
+~/.local/share/rg-dns/private/README.org
+.chezmoitemplates/buildbot-agent-contract.md
+~/.local/share/terra-mail/ttech/isync-ttech.rc
+~/.local/share/terra-mail/ttech/borgmatic-ttech.yaml
+.chezmoitemplates/surfwork-agent-contract.md
+
+# Test fixtures and runtime state that reached the tree through a broad add.
+# chezmoi reads the source directory rather than the index, so anything left
+# here is deployed to every host: exit-1 stubs for dig and getent would break
+# name resolution wherever they landed on PATH.
+cache/
+stub/
+.chezmoitemplates/lib/machine-contract-override.md
+.chezmoitemplates/harness/claude-global.md
+.chezmoitemplates/harness/codex-global.md
+.chezmoitemplates/harness/grok-global.md
+# Agent-config fragment library: sealed via nimvault, never committed plain
+.chezmoitemplates/roles/
+.chezmoitemplates/harness/
+.chezmoitemplates/lib/
+~/.claude/profiles/surf/claude-mcp-servers.json
+~/.config/rg-tmp-reaper.env
+dot_config/shellrc/posix.d/private_07_local_env.sh
+~/.config/shellrc/posix.d/07_local_env.sh
+
+# Network stack sources live in the private vault (nimvault); the
+# plaintext stays local for chezmoi and is restored by unseal.
+.chezmoiscripts/run_onchange_linux_laptop_power.sh.tmpl
+.chezmoiscripts/run_onchange_linux_net_heal.sh.tmpl
+.chezmoiscripts/run_onchange_linux_tailscale_refresh.sh.tmpl
+.chezmoiscripts/run_onchange_linux_us_egress_guard.sh.tmpl
+dot_config/systemd/user/rg-net-doctor.service
+dot_config/systemd/user/rg-net-doctor.timer
+dot_config/systemd/user/rg-surf-tailnet-watchdog.service.tmpl
+dot_config/systemd/user/rg-surf-tailnet-watchdog.timer.tmpl
+dot_config/systemd/user/rg-surf-vpn-refresh.service
+dot_config/systemd/user/rg-surf-vpn-refresh.timer
+dot_config/systemd/user/rg-tailscale-refresh.service
+dot_config/systemd/user/rg-tailscale-refresh.timer
+dot_config/systemd/user/tailscale-haozeke.service.tmpl
+dot_config/systemd/user/terra-caldav-tunnel.service.tmpl
+dot_config/systemd/user/terra-calendar-reminders.service.tmpl
+dot_config/systemd/user/terra-calendar-reminders.timer.tmpl
+dot_config/systemd/user/terra-canary-dns.service.tmpl
+dot_config/systemd/user/terra-canary-dns.timer.tmpl
+dot_config/systemd/user/terra-canary-heartbeat.service.tmpl
+dot_config/systemd/user/terra-canary-heartbeat.timer.tmpl
+dot_config/systemd/user/terra-canary-hermetic.service.tmpl
+dot_config/systemd/user/terra-canary-hermetic.timer.tmpl
+dot_config/systemd/user/terra-mail-tunnel.service.tmpl
+dot_config/systemd/user/terra-netdata-tunnel.service.tmpl
+dot_config/systemd/user/terra-notify-failure@.service.tmpl
+dot_local/bin/executable_rg-airplane
+dot_local/bin/executable_rg-fix-local-dns.tmpl
+dot_local/bin/executable_rg-fix-networkmanager-ctrld.tmpl
+dot_local/bin/executable_rg-geo-dnsmasq
+dot_local/bin/executable_rg-geo-split
+dot_local/bin/executable_rg-haozeke-derp-targets
+dot_local/bin/executable_rg-haozeke-derp-targets-selftest
+dot_local/bin/executable_rg-haozeke-tunnel-carveout.tmpl
+dot_local/bin/executable_rg-livingston-egress.tmpl
+dot_local/bin/executable_rg-livingston-netns.tmpl
+dot_local/bin/executable_rg-livingston-profile
+dot_local/bin/executable_rg-livingston-profile-selftest
+dot_local/bin/executable_rg-net
+dot_local/bin/executable_rg-net-doctor
+dot_local/bin/executable_rg-net-doctor-alert
+dot_local/bin/executable_rg-net-doctor-alert-selftest
+dot_local/bin/executable_rg-net-heal
+dot_local/bin/executable_rg-net-recover.tmpl
+dot_local/bin/executable_rg-net-reliability-selftest
+dot_local/bin/executable_rg-net-verify
+dot_local/bin/executable_rg-network-config-selftest
+dot_local/bin/executable_rg-network-failure-matrix
+dot_local/bin/executable_rg-network-failure-matrix-selftest
+dot_local/bin/executable_rg-network-ingress-selftest
+dot_local/bin/executable_rg-network-ingress-status
+dot_local/bin/executable_rg-network-profile-selftest
+dot_local/bin/executable_rg-network-status-json
+dot_local/bin/executable_rg-networkd-apply
+dot_local/bin/executable_rg-networkd-apply-selftest
+dot_local/bin/executable_rg-socks-auth-relay
+dot_local/bin/executable_rg-surf-tailnet-watchdog
+dot_local/bin/executable_rg-surf-vpn
+dot_local/bin/executable_rg-surf-vpn-install
+dot_local/bin/executable_rg-tailscale-operator-bootstrap
+dot_local/bin/executable_rg-tailscale-operator-bootstrap-selftest
+dot_local/bin/executable_rg-tailscale-refresh
+dot_local/bin/executable_rg-tailscale-refresh-selftest
+dot_local/bin/executable_rg-terra-power
+dot_local/bin/executable_rg-terra-power-selftest
+dot_local/bin/executable_rg-terra-wifi-watchdog
+dot_local/bin/executable_rg-tunnel-akamai-carveout.tmpl
+dot_local/bin/executable_rg-us-egress-endpoint-pin.tmpl
+dot_local/bin/executable_rg-us-egress-guard-selftest
+dot_local/bin/executable_rg-us-egress-guard.tmpl
+dot_local/bin/executable_rg-us-egress-policy-selftest
+dot_local/bin/executable_rg-us-egress-policy.tmpl
+dot_local/bin/executable_rg-us-egress-restore.tmpl
+dot_local/bin/executable_rg-us-egress-resume-selftest
+dot_local/bin/executable_rg-us-egress-up.tmpl
+dot_local/bin/executable_rg-us-split
+dot_local/bin/executable_rg-us-tailnet
+dot_local/bin/executable_rg-wide-net-collect
+dot_local/share/rg-location-profiles/livingston/chromium-geolocation/content.js
+dot_local/share/rg-location-profiles/livingston/chromium-geolocation/manifest.json
+dot_local/share/rg-location-profiles/livingston/xai-tailnet.pac
