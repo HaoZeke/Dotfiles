@@ -1,11 +1,11 @@
 # Unified human-prose linter: lexical (rgoswami vale-YAML) + harper grammar.
 # Use with: proseguard --profile prose-human --styles-path ~/.config/vale/styles FILE
 name = "prose-human"
-description = "House prose linter: rgoswami tell pack (with kill hints) + structure runs + write-good + proselint + Readability + harper."
+description = "House prose linter: rgoswami tell pack (with kill hints) + kill-stack structure + write-good + proselint + harper."
 severity_floor = "warning"
 include = ["**/*.md", "**/*.org", "**/*.txt", "**/*.rst"]
 exclude = ["**/node_modules/**", "**/.git/**"]
-lexical_styles = ["rgoswami", "write-good", "proselint", "Readability"]
+lexical_styles = ["rgoswami", "write-good", "proselint"]
 
 # Match house ~/.config/vale/.vale.ini disables for write-good / proselint noise.
 structure_rules = ["rules/structure/model-tells.toml"]
@@ -39,6 +39,9 @@ judge = false
 # Rule-off: <!-- vale Rule = NO --> … YES  or  # proseguard:off Rule
 # Inline code/links blanked before engines (span-faithful).
 
-# Hemingway-style sentence complexity (word-count hard/very-hard) runs in-process
-# with defaults hard=14, very_hard=25. McCabe cyclomatic complexity is a code metric;
-# for prose use Readability.* (ARI/Flesch/Gunning Fog) + hard sentences.
+# Flesch / Hemingway word-count grades are not a quality gate for scientific
+# English. hard_words = 0 disables the in-process long-sentence pass.
+
+[sentences]
+hard_words = 0
+very_hard_words = 0

@@ -45,3 +45,93 @@ min_cv_milli = 300
 min_sentences = 6
 level = "suggestion"
 message = "sentence lengths are too uniform. Kill the rhythm: mix a short sentence with a long one."
+
+[[rules]]
+kind = "paragraph_length_cv"
+id = "paragraph-length-cv"
+min_cv_milli = 300
+min_paragraphs = 3
+level = "suggestion"
+message = "paragraph lengths are too uniform. Kill the block rhythm: vary paragraph length."
+
+[[rules]]
+kind = "start_word_entropy"
+id = "start-word-entropy"
+min_entropy_milli = 1500
+min_sentences = 8
+level = "suggestion"
+message = "sentence openers are too uniform. Kill it: vary the first content word."
+
+[[rules]]
+kind = "near_duplicate_paragraphs"
+id = "near-duplicate-paragraphs"
+min_jaccard_milli = 700
+min_words = 12
+level = "warning"
+message = "near-duplicate paragraphs. Kill it: keep one, or change the claim."
+
+[[rules]]
+kind = "paragraph_cohesion"
+id = "paragraph-cohesion"
+min_overlap_milli = 80
+min_words = 20
+level = "warning"
+message = "adjacent paragraphs do not share content words. Kill the jump: open on a noun from the previous landing."
+
+[[rules]]
+kind = "subject_verb_distance"
+id = "subject-verb-distance"
+max_tokens = 12
+min_words = 8
+level = "warning"
+message = "subject sits far from the verb. Kill the delay: put the actor next to the verb."
+
+[[rules]]
+kind = "topic_stress_break"
+id = "topic-stress-break"
+min_run = 3
+level = "suggestion"
+message = "topic never picks up the previous stress. Kill it: open on a noun from the last landing."
+
+[[rules]]
+kind = "conversational_syntax"
+id = "conversational-syntax"
+min_sentences = 6
+min_coord_milli = 80
+max_of_pp_milli = 25
+level = "suggestion"
+message = "chat coordination with thin noun phrases. Kill it: pack the nominal, do not add and-then clauses."
+
+[[rules]]
+kind = "az_spine"
+id = "az-spine"
+min_words = 80
+level = "warning"
+message = "rhetorical spine is missing a required cue. Kill it: add Aim, Contrast, Own, or Result in the section that needs it."
+
+[[rules]]
+kind = "citance_function"
+id = "citance-function"
+min_cites = 3
+level = "suggestion"
+message = "citances do not do work in this section. Kill it: contrast, reuse, or compare."
+
+[[rules]]
+kind = "negative_parallelism"
+id = "negative-parallelism"
+min_run = 3
+level = "warning"
+message = "negative parallelism. Kill it: keep one negation, or name the thing that is true."
+
+[[rules]]
+kind = "title_case_heading"
+id = "title-case-heading"
+min_words = 4
+level = "suggestion"
+message = "title-case heading. Kill it: write a sentence-case heading."
+
+[[rules]]
+kind = "contrastive_cleft"
+id = "contrastive-cleft"
+level = "warning"
+message = "contrastive cleft. Kill it: state the second fact and drop the hinge."
