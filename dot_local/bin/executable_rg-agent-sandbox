@@ -22,6 +22,9 @@ die() {
     exit 2
 }
 
+if [ "$(uname -s)" = Darwin ]; then
+    die "this wrapper needs bubblewrap (Linux). On macOS use the client flags (--disable-web-search / --safe-mode) and optional grok --sandbox strict (Seatbelt). Colima/Lima is a Linux VM, not a same-host jail. A Seatbelt backend is tracked separately."
+fi
 command -v bwrap >/dev/null 2>&1 || die "bubblewrap (bwrap) is not installed"
 
 allow_paths=()
