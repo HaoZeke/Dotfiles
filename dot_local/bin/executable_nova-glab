@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# glab against nova.teachx.ai. Cloudflare only admits API traffic that
+# arrives through the xai userspace SOCKS door on 127.0.0.1:1056.
+# Direct HTTPS and the Tailscale userspace door on :1055 are blocked.
+# GITGUARD_BYPASS_GH is scoped to this wrapper: Nova MR/issue writes
+# are ordinary work on the private instance.
+set -eu
+export HTTPS_PROXY=socks5://127.0.0.1:1056
+export NO_PROXY=gitlab.com
+export GITGUARD_BYPASS_GH=1
+exec glab "$@"
