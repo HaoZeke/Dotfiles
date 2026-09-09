@@ -139,6 +139,11 @@ dot_omp/puppeteer/
 {{ if eq $claudeProfile "surf" }}
 .claude/rules/conda-forge.md
 .claude/skills/conda-forge-author/**
+# The global prompt is a symlink into the profile here, which is what the
+# profile selftest asserts and what every rule file beside it already is.
+# Rendering the personal one over it puts the personal rules, and the tokens
+# in them, back on the work laptop.
+.claude/CLAUDE.md
 {{ end }}
 # Owned by the sealed store, not by this one. Two writers for one file meant
 # whichever ran last silently reverted the other: an apply would put back the
