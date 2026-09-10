@@ -82,6 +82,9 @@ src/
 private_dot_codex/
 private_dot_omp/
 CLAUDE.md
+# The bare name above does not cover the template form; list it explicitly
+# rather than widening to a glob.
+CLAUDE.md.tmpl
 .claude/
 dot_claude/
 dot_grok/
