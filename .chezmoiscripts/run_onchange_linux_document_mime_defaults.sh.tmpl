@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# The declarative MIME file owns document defaults when it is installed.
+mimeapps="${XDG_CONFIG_HOME:-$HOME/.config}/mimeapps.list"
+if [ -r "$mimeapps" ] && grep -Fxq '# Managed by chezmoi: desktop MIME defaults.' "$mimeapps"; then
+    exit 0
+fi
+
 if command -v xdg-mime >/dev/null 2>&1; then
     mime_tool=xdg
 elif command -v gio >/dev/null 2>&1; then

@@ -11,11 +11,13 @@ encrypted_chezmoi_darwin.toml.asc
 {{ if ne .chezmoi.os "linux" }}
 # Only on linux
 encrypted_chezmoi_toml_linux
+.config/mimeapps.list
 **/systemd/user/*
 **/share/applications/*
 {{ end }}
 {{ if eq .display_manager "none" }}
 # Graphical session files
+.config/mimeapps.list
 Pictures/Walls/*
 .config/alacritty/*
 .config/dunst/*
