@@ -1,0 +1,11 @@
+[Unit]
+Description=Reclassify leftover agent processes into agent.slice
+
+[Timer]
+OnStartupSec=20s
+OnUnitActiveSec=15s
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,21 @@
+# Managed by chezmoi (dot_config/systemd/user/agent.slice).
+#
+# Collective throttle for leftover CLI farm processes. Attach live
+# leftovers with rg-agent-slice-classify; do not kill them. No
+# MemoryMax: a hard ceiling would OOM the farm. MemoryHigh
+# reclaim-throttles. CPUQuota keeps six of twelve cores for the
+# compositor and foot.
+[Unit]
+Description=Agent farm resource class (throttle, never kill)
+Before=shutdown.target
+
+[Slice]
+MemoryAccounting=yes
+TasksAccounting=yes
+CPUWeight=20
+CPUQuota=600%
+MemoryHigh=10G
+IOWeight=50
+
+[Install]
+WantedBy=default.target

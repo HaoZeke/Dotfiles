@@ -1,0 +1,15 @@
+[Unit]
+Description=Attach live agent processes to agent.slice without killing them
+Documentation=file://%h/.local/bin/rg-agent-slice-classify
+Wants=agent.slice
+After=agent.slice
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-agent-slice-classify
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30
+
+[Install]
+WantedBy=default.target
