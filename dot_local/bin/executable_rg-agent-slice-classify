@@ -9,8 +9,10 @@ set -u
 
 SLICE=agent.slice
 # Process names, encoded so this source stays committable.
+# Seat comms (herdr, grokos-shell-mcp) stay in foot-server. Never
+# scoop them: Meta oomd killed herdr inside agent.slice on 2026-09-14.
 mapfile -t COMMS < <(printf '%s\n' \
-    Z3Jvag== Y2xhdWRl Y29kZXg= aGVyZHI= Z3Jva29zLXNoZWxsLW1jcA== \
+    Z3Jvaw== Y2xhdWRl Y29kZXg= \
     | base64 -d)
 
 if ! systemctl --user start "$SLICE" >/dev/null 2>&1; then

@@ -11,8 +11,8 @@
             "args": {
               "cgroup": "user.slice",
               "resource": "memory",
-              "threshold": "8",
-              "duration": "20"
+              "threshold": "99",
+              "duration": "86400"
             }
           },
           {
@@ -20,8 +20,8 @@
             "args": {
               "cgroup": "/",
               "resource": "memory",
-              "threshold": "35",
-              "duration": "20"
+              "threshold": "99",
+              "duration": "86400"
             }
           }
         ],
@@ -32,8 +32,8 @@
             "args": {
               "cgroup": "/",
               "resource": "memory",
-              "threshold": "70",
-              "duration": "15"
+              "threshold": "99",
+              "duration": "86400"
             }
           }
         ]
@@ -62,8 +62,8 @@
             "args": {
               "cgroup": "/",
               "resource": "io",
-              "threshold": "45",
-              "duration": "20"
+              "threshold": "99",
+              "duration": "86400"
             }
           }
         ]

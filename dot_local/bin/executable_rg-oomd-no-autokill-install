@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-oomd-no-autokill-install).
+# Install the observe-only Meta oomd profile and turn off systemd-oomd
+# kills on user-.slice. Does not signal leftover sessions or herdr.
+
+set -euo pipefail
+
+profile=${1:-"$HOME/.config/oomd/oomd-rgx1gen11.json"}
+root_script=${RG_OOMD_NO_AUTOKILL_ROOT:-/tmp/rg-oomd-no-autokill-root.sh}
+
+if [ ! -r "$profile" ]; then
+    printf 'rg-oomd-no-autokill-install: missing profile: %s\n' "$profile" >&2
+    exit 1
+fi
+
+cat >"$root_script" <<ROOT
+#!/usr/bin/env bash
+set -euo pipefail
+install -Dm0644 "$profile" /etc/oomd/oomd.json
+install -d -m0755 /etc/systemd/system/user-.slice.d
+cat >/etc/systemd/system/user-.slice.d/60-no-autokill.conf <<'EOF'
+# Overrides 50-oomd.conf. Leftover farm CLIs and herdr are not kill targets.
+[Slice]
+ManagedOOMMemoryPressure=auto
+ManagedOOMSwap=auto
+EOF
+if command -v oomd >/dev/null 2>&1; then
+    oomd --check-config /etc/oomd/oomd.json
+fi
+systemctl daemon-reload
+if systemctl is-enabled --quiet oomd.service 2>/dev/null; then
+    systemctl reload-or-restart oomd.service
+fi
+if systemctl is-enabled --quiet systemd-oomd.service 2>/dev/null; then
+    systemctl try-reload-or-restart systemd-oomd.service
+fi
+printf 'ok: no-autokill oomd profile and user-.slice drop-in installed\n'
+ROOT
+chmod 0755 "$root_script"
+printf 'wrote %s\n' "$root_script"
+printf 'run: sudo bash %s\n' "$root_script"

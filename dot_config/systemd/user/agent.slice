@@ -16,6 +16,11 @@ CPUWeight=20
 CPUQuota=600%
 MemoryHigh=10G
 IOWeight=50
+# systemd-oomd must not reap this slice. Pressure is auto (not kill);
+# Preference=omit keeps the slice off the kill list.
+ManagedOOMMemoryPressure=auto
+ManagedOOMSwap=auto
+ManagedOOMPreference=omit
 
 [Install]
 WantedBy=default.target
