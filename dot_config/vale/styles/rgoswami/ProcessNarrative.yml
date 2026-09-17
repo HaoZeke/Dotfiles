@@ -9,3 +9,17 @@ tokens:
   - 'first attempt.*second attempt'
   - 'took \d+ (tries|attempts|rounds)'
   - 'after \d+ (tries|attempts|rounds|iterations)'
+  # Reviewer narrating its own drafting rather than the work under review.
+  # The reader wants the finding, not the reviewer's near-misses or revisions.
+  - 'something I nearly (wrote|said|sent)'
+  - 'I nearly (wrote|said|sent|read it)'
+  - 'what I nearly'
+  - 'one correction to something'
+  - 'correction to (something|what) I'
+  - 'I first read (it|this|the)'
+  - 'I had (written|said) that'
+  - 'I was (heading|about) to (write|say|call)'
+  - 'before I (wrote|sent) this'
+  - 'in an earlier (draft|version) I'
+  - 'my (earlier|first) (reading|draft|version)'
+  - 'I would have (told|written|sent)'
