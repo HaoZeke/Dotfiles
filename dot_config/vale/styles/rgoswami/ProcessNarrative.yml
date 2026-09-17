@@ -23,3 +23,7 @@ tokens:
   - 'in an earlier (draft|version) I'
   - 'my (earlier|first) (reading|draft|version)'
   - 'I would have (told|written|sent)'
+  # Crediting a helper that the reader cannot see or check.
+  - 'a second (reader|pass|reviewer|opinion)'
+  - 'another (reader|agent|model) (confirmed|checked|read)'
+  - 'my (co-reader|helper|assistant)'
