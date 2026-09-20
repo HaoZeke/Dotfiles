@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/private_agent/
-# Hash: specialize-v15-willma-devtools-hermes
+# Hash: specialize-v16-willma-rgsurf-key
 # Re-run whenever a target carrying an injected secret changes, so a freshly
 # applied models.yml / config.yml / mcp.json never keeps its PLACEHOLDER value:
 #   models.yml {{ include "dot_omp/private_agent/encrypted_private_models.yml.tmpl.age" | sha256sum }}
@@ -223,13 +223,21 @@ fi
 # ---------- resolve Willma token ----------
 models="${AGENT}/models.yml"
 token=""
-if command -v pass >/dev/null 2>&1 && pass show surf/ai-hub/token >/dev/null 2>&1; then
-  token=$(pass show surf/ai-hub/token | head -n1 | tr -d '\r\n')
-elif [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
+# Live Willma key is surf/ai-hub/rg.surf. surf/ai-hub/token still decrypts
+# but ComputeAPI rejects it (401 this key does not exist).
+if command -v pass >/dev/null 2>&1; then
+  for entry in surf/ai-hub/rg.surf surf/ai-hub/token; do
+    if pass show "$entry" >/dev/null 2>&1; then
+      token=$(pass show "$entry" | head -n1 | tr -d '\r\n')
+      [[ -n "${token}" ]] && break
+    fi
+  done
+fi
+if [[ -z "${token}" && -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
   token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
-elif [[ -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
+elif [[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
   token="${SURF_AI_HUB_TOKEN}"
-elif [[ -f "$models" ]]; then
+elif [[ -z "${token}" && -f "$models" ]]; then
   token=$(python3 - <<'PY' 2>/dev/null || true
 import re
 from pathlib import Path
