@@ -32,6 +32,7 @@ export PATH
 # store later. Adding an entry here is a deliberate act.
 SECRET_ALLOW='
 surf/ai-hub/token
+surf/ai-hub/rg.surf
 '
 
 reject() {

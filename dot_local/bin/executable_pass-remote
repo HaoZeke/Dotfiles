@@ -61,7 +61,7 @@ case "$sub" in
             || die "could not read '$entry': either no broker is reachable, or the gate does not allow this entry.
        Allowed entries: pass ls"
         ;;
-    insert|edit|generate|rm|mv|cp|init|git|grep|find)
+    add|insert|edit|generate|rm|mv|cp|init|git|grep|find)
         usage_refuse "$sub"
         ;;
     -h|--help|help)
