@@ -783,15 +783,18 @@ fn run_loop(config: &Config, state_dir: &Path) -> Result<(), String> {
         eprintln!("rg-matrix-notifier: Matrix homeserver/auth is not configured");
         return Ok(());
     }
-    if let Err(err) = access_token(config) {
+    let retry = Duration::from_secs(config.retry_seconds.unwrap_or(30));
+    // Auth is configured, so a failing token lookup is transient: the
+    // password store is often still locked when the session starts. Wait for
+    // it instead of exiting 0, which systemd treats as a clean stop.
+    while let Err(err) = access_token(config) {
         write_json(
             &state_dir.join("status.json"),
-            &serde_json::json!({ "state": "Warning", "text": "Mx setup", "short_text": "Mx!" }),
+            &serde_json::json!({ "state": "Warning", "text": "Mx auth", "short_text": "Mx!" }),
         )?;
-        eprintln!("rg-matrix-notifier: Matrix access token is not configured: {err}");
-        return Ok(());
+        eprintln!("rg-matrix-notifier: Matrix access token unavailable, retrying: {err}");
+        thread::sleep(retry);
     }
-    let retry = Duration::from_secs(config.retry_seconds.unwrap_or(30));
     loop {
         match sync_request(config, state_dir)
             .and_then(|sync| process_sync(&sync, config, state_dir))
