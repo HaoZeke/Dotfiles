@@ -50,6 +50,16 @@ LPSS I2C controllers of the ELAN touchscreen and touchpad pinned on.
 login into ~start-sway~, uinput and the input group for kanata (Colemak),
 and enables bluetooth, tailscaled and sshd.
 
+EESSI is the primary software stack there. The same script mounts
+~software.eessi.io~ system-wide through ~cvmfs-eessi.service~, running
+~cvmfs2 -o libfuse=2~ with CERN's el9 fuse2 libraries in ~/opt/cvmfs-fuse2~,
+because the fuse3 path of the Arch package never answers a read. It needs
+the AUR ~cvmfs~ and ~cvmfs-config-eessi~ packages. ~eessi [VERSION]~ in any
+shell then loads the stack:
+#+begin_src bash
+eessi 2025.06 && module load GCC/13.3.0
+#+end_src
+
 Three ~rgx1gen11~ pieces are not extended yet. Meta oomd needs its stage
 tarball on the host first, and the two cosmoet relay forwards name the X1
 itself.

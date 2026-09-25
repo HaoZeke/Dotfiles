@@ -121,3 +121,22 @@ killmosh() {
 # Find and replace, e.g. agr "np.float" "float"
 # Kanged from: https://gist.github.com/hlissner/db74d23fc00bed81ff62?permalink_comment_id=4492301#gistcomment-4492301
 agr() { ag -0 -l "$1" | AGR_FROM="$1" AGR_TO="$2" xargs -r0 perl -pi -e 'BEGIN{undef $/;} s/$ENV{AGR_FROM}/$ENV{AGR_TO}/g'; }
+
+# Load EESSI from the system CernVM-FS mount: `eessi [VERSION]`.
+# Prefers the Lmod init for the running shell and falls back to init/bash.
+eessi() {
+	_eessi_root="/cvmfs/software.eessi.io/versions/${1:-${EESSI_VERSION:-2025.06}}/init"
+	if [ ! -d "$_eessi_root" ]; then
+		echo "eessi: $_eessi_root is not mounted (systemctl status cvmfs-eessi)" >&2
+		unset _eessi_root
+		return 1
+	fi
+	_eessi_shell=bash
+	[ -n "${ZSH_VERSION:-}" ] && _eessi_shell=zsh
+	if [ -r "$_eessi_root/lmod/$_eessi_shell" ]; then
+		. "$_eessi_root/lmod/$_eessi_shell"
+	else
+		. "$_eessi_root/bash"
+	fi
+	unset _eessi_root _eessi_shell
+}

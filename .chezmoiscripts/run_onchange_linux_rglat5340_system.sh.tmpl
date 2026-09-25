@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rglat5340") }}
-# rglat5340 system provisioning: greeter, uinput for kanata, bluetooth,
-# tailscale, sshd. The same pieces as the rgSURFLat system script without its
+# rglat5340 system provisioning: greeter, uinput for kanata, the EESSI
+# CernVM-FS mount, bluetooth, tailscale, sshd. The same pieces as the rgSURFLat system script without its
 # work DNS and VPN; the Livingston network stack comes from the sealed store.
 set -euo pipefail
 
@@ -57,6 +57,67 @@ write_if_diff /etc/modules-load.d/uinput.conf 0644 'uinput
 if ! id -nG "{{ .chezmoi.username }}" | tr ' ' '\n' | grep -qx input; then
     sudo usermod -aG input "{{ .chezmoi.username }}"
     echo "chezmoi: added {{ .chezmoi.username }} to input (re-login for kanata)"
+fi
+
+# --- EESSI: system CernVM-FS mount through libfuse 2 ----------------------
+# cvmfs's libfuse 3 path serves metadata and never answers a read here, while
+# its libfuse 2 path is immediate. The Arch package ships only the fuse3
+# variant, so the fuse2 libraries come from CERN's matching el9 build.
+CVMFS_EL9_VERSION=2.13.3
+FUSE2_DIR=/opt/cvmfs-fuse2/lib64
+if pacman -Qi cvmfs >/dev/null 2>&1 && pacman -Qi cvmfs-config-eessi >/dev/null 2>&1; then
+    pacman -Qi fuse2 >/dev/null 2>&1 || sudo pacman -S --needed --noconfirm fuse2
+    if ! sudo test -e "$FUSE2_DIR/libcvmfs_fuse.so.$CVMFS_EL9_VERSION"; then
+        rpm_dir=$(mktemp -d)
+        for rpm in cvmfs cvmfs-libs; do
+            curl -fsSL --retry 3 -o "$rpm_dir/$rpm.rpm" \
+                "https://ecsft.cern.ch/dist/cvmfs/cvmfs-$CVMFS_EL9_VERSION/$rpm-$CVMFS_EL9_VERSION-1.el9.x86_64.rpm"
+            bsdtar -xf "$rpm_dir/$rpm.rpm" -C "$rpm_dir"
+        done
+        sudo install -d -m 0755 "$FUSE2_DIR"
+        sudo cp -a "$rpm_dir"/usr/lib64/libcvmfs_* "$FUSE2_DIR"/
+        rm -rf "$rpm_dir"
+        echo "chezmoi: installed cvmfs $CVMFS_EL9_VERSION fuse2 libraries in $FUSE2_DIR"
+    fi
+    CVMFS_LOCAL='CVMFS_REPOSITORIES=software.eessi.io
+CVMFS_HTTP_PROXY=DIRECT
+CVMFS_CLIENT_PROFILE=single
+CVMFS_QUOTA_LIMIT=10000
+CVMFS_IPFAMILY_PREFER=4
+CVMFS_LOW_SPEED_LIMIT=0
+CVMFS_TIMEOUT=60
+CVMFS_TIMEOUT_DIRECT=60
+'
+    write_if_diff /etc/cvmfs/default.local 0644 "$CVMFS_LOCAL" || true
+    cvmfs_uid=$(id -u cvmfs)
+    cvmfs_gid=$(id -g cvmfs)
+    EESSI_UNIT="[Unit]
+Description=CernVM-FS foreground mount of software.eessi.io (libfuse 2)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$FUSE2_DIR
+Environment=LD_LIBRARY_PATH=$FUSE2_DIR
+ExecStartPre=-/usr/bin/fusermount -u -z /cvmfs/software.eessi.io
+ExecStartPre=/usr/bin/mkdir -p /cvmfs/software.eessi.io
+ExecStart=/usr/bin/cvmfs2 -f -o rw,system_mount,fsname=cvmfs2,allow_other,grab_mountpoint,uid=$cvmfs_uid,gid=$cvmfs_gid,libfuse=2 software.eessi.io /cvmfs/software.eessi.io
+ExecStop=/usr/bin/fusermount -u -z /cvmfs/software.eessi.io
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+"
+    if write_if_diff /etc/systemd/system/cvmfs-eessi.service 0644 "$EESSI_UNIT"; then
+        sudo systemctl daemon-reload
+        sudo systemctl restart cvmfs-eessi.service || true
+    fi
+    sudo systemctl enable --now cvmfs-eessi.service >/dev/null 2>&1 \
+        || echo "chezmoi: WARN cvmfs-eessi.service did not start" >&2
+else
+    echo "chezmoi: WARN cvmfs and cvmfs-config-eessi (AUR) are not installed; EESSI mount skipped" >&2
 fi
 
 # --- services -------------------------------------------------------------
