@@ -46,6 +46,9 @@ The 5340 has its own ~run_onchange_linux_rglat5340_power.sh.tmpl~ and
 ~dot_local/share/rglat5340/tlp-00-base.conf~: Dell platform profile
 balanced on AC and quiet on battery, charge thresholds 75 to 90, and the
 LPSS I2C controllers of the ELAN touchscreen and touchpad pinned on.
+~run_onchange_linux_rglat5340_system.sh.tmpl~ sets up the greetd and tuigreet
+login into ~start-sway~, uinput and the input group for kanata (Colemak),
+and enables bluetooth, tailscaled and sshd.
 
 Three ~rgx1gen11~ pieces are not extended yet. Meta oomd needs its stage
 tarball on the host first, and the two cosmoet relay forwards name the X1

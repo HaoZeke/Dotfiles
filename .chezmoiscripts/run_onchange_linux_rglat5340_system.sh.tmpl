@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rglat5340") }}
+# rglat5340 system provisioning: greeter, uinput for kanata, bluetooth,
+# tailscale, sshd. The same pieces as the rgSURFLat system script without its
+# work DNS and VPN; the Livingston network stack comes from the sealed store.
+set -euo pipefail
+
+# Never hang a plain apply on a password prompt; skip until sudo -v.
+if ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; skipping rglat5340 system provisioning (sudo -v, then re-apply)" >&2
+    exit 1
+fi
+
+write_if_diff() {
+    local dst="$1" mode="$2" content="$3"
+    local tmp
+    tmp=$(mktemp)
+    printf '%s' "$content" >"$tmp"
+    if ! sudo test -f "$dst" || ! sudo cmp -s "$tmp" "$dst"; then
+        echo "chezmoi: updating $dst"
+        sudo install -D -m "$mode" -o root -g root "$tmp" "$dst"
+        rm -f "$tmp"
+        return 0
+    fi
+    rm -f "$tmp"
+    return 1
+}
+
+# --- greeter: greetd + tuigreet -> start-sway (VT1) -----------------------
+GREETD_CONF='[terminal]
+vt = 1
+
+[default_session]
+command = "tuigreet --time --remember --asterisks --cmd /usr/local/bin/start-sway"
+user = "greeter"
+'
+write_if_diff /etc/greetd/config.toml 0644 "$GREETD_CONF" || true
+sudo gpasswd -a greeter video >/dev/null 2>&1 || true
+sudo systemctl enable greetd >/dev/null 2>&1 || true
+
+# Sandboxed browsers and portals need to traverse $HOME to reach chosen files.
+chmod 711 "$HOME"
+
+if ! command -v Xwayland >/dev/null 2>&1; then
+    sudo pacman -S --needed --noconfirm xorg-xwayland
+fi
+
+# --- uinput for kanata (colemak) ------------------------------------------
+UINPUT_RULE='KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+'
+if write_if_diff /etc/udev/rules.d/99-uinput.rules 0644 "$UINPUT_RULE"; then
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    sudo udevadm trigger 2>/dev/null || true
+fi
+write_if_diff /etc/modules-load.d/uinput.conf 0644 'uinput
+' || true
+if ! id -nG "{{ .chezmoi.username }}" | tr ' ' '\n' | grep -qx input; then
+    sudo usermod -aG input "{{ .chezmoi.username }}"
+    echo "chezmoi: added {{ .chezmoi.username }} to input (re-login for kanata)"
+fi
+
+# --- services -------------------------------------------------------------
+for unit in bluetooth.service tailscaled.service sshd.service; do
+    sudo systemctl enable "$unit" >/dev/null 2>&1 || echo "chezmoi: WARN could not enable $unit" >&2
+done
+{{- end }}
