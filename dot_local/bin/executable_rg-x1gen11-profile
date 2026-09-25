@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-x1gen11-profile).
 #
-# Workload profile switcher for ThinkPad X1 Carbon Gen 11 (rgx1gen11).
+# Workload profile switcher for the Intel laptops: the ThinkPad X1 Carbon Gen 11
+# (rgx1gen11) and the Dell Latitudes (rglat5340, rgSURFLat).
 # Applies industry-style userspace policy: ACPI platform_profile, intel_pstate
 # governor, iwlwifi power_save, zram-generator sizing, DAMON reclaim, and
 # per-slice MemoryHigh caps. Pairs with Meta facebookincubator/oomd,
@@ -187,18 +188,44 @@ write_scaling_max_freq() {
     done
 }
 
+# Firmware names its low-power profile differently: ThinkPad offers
+# low-power, Dell offers cool and quiet. Resolve a requested name to the
+# closest one this machine lists, matching whole names only.
+resolve_platform_profile() {
+    local want="$1" choices="$2" alt
+    if [ ! -r "$choices" ]; then
+        printf '%s\n' "$want"
+        return 0
+    fi
+    for alt in $want $(platform_profile_alternatives "$want"); do
+        if tr ' ' '\n' <"$choices" | grep -qx -- "$alt"; then
+            printf '%s\n' "$alt"
+            return 0
+        fi
+    done
+    return 1
+}
+
+platform_profile_alternatives() {
+    case "$1" in
+        low-power) printf 'quiet cool\n' ;;
+        quiet | cool) printf 'low-power quiet cool\n' ;;
+        balanced-performance) printf 'performance balanced\n' ;;
+        balanced-power) printf 'balanced quiet low-power\n' ;;
+    esac
+}
+
 write_platform_profile() {
     local profile="$1"
-    local path choices
+    local path choices resolved
     path=$(platform_profile_path) || {
         printf 'platform_profile sysfs missing; skip\n' >&2
         return 0
     }
     choices="${path}_choices"
-    if [ -r "$choices" ] && ! grep -qw "$profile" "$choices"; then
-        die "platform profile $profile not in $choices"
-    fi
-    echo "$profile" | $SUDO tee "$path" >/dev/null
+    resolved=$(resolve_platform_profile "$profile" "$choices") \
+        || die "platform profile $profile has no equivalent in $choices"
+    echo "$resolved" | $SUDO tee "$path" >/dev/null
 }
 
 write_iwl_power_save() {
@@ -539,17 +566,44 @@ write_sysfs_value() {
     printf "%s\n" "$value" >"$path" 2>/dev/null
 }
 
+# Firmware names its low-power profile differently: ThinkPad offers
+# low-power, Dell offers cool and quiet. Resolve a requested name to the
+# closest one this machine lists, matching whole names only.
+resolve_platform_profile() {
+    local want="$1" choices="$2" alt
+    if [ ! -r "$choices" ]; then
+        printf '%s\n' "$want"
+        return 0
+    fi
+    for alt in $want $(platform_profile_alternatives "$want"); do
+        if tr ' ' '\n' <"$choices" | grep -qx -- "$alt"; then
+            printf '%s\n' "$alt"
+            return 0
+        fi
+    done
+    return 1
+}
+
+platform_profile_alternatives() {
+    case "$1" in
+        low-power) printf 'quiet cool\n' ;;
+        quiet | cool) printf 'low-power quiet cool\n' ;;
+        balanced-performance) printf 'performance balanced\n' ;;
+        balanced-power) printf 'balanced quiet low-power\n' ;;
+    esac
+}
+
 write_platform_profile() {
-    local path choices
+    local path choices resolved
     for path in /sys/firmware/acpi/platform_profile /sys/devices/platform/thinkpad_acpi/platform_profile; do
         [ -e "$path" ] || continue
         choices="${path}_choices"
-        if [ -r "$choices" ] && ! grep -qw "$platform" "$choices"; then
-            printf "platform profile %s unavailable in %s\n" "$platform" "$choices" >&2
+        if ! resolved=$(resolve_platform_profile "$platform" "$choices"); then
+            printf "platform profile %s has no equivalent in %s\n" "$platform" "$choices" >&2
             exit 1
         fi
-        if ! write_sysfs_value "$path" "$platform"; then
-            printf "platform profile %s write rejected; skip\n" "$platform" >&2
+        if ! write_sysfs_value "$path" "$resolved"; then
+            printf "platform profile %s write rejected; skip\n" "$resolved" >&2
         fi
         return 0
     done
@@ -696,6 +750,7 @@ profile_policy_check() {
 
     expected=$(profile_field "$profile" platform_profile)
     if path=$(platform_profile_path 2>/dev/null) && live=$(read_trimmed "$path"); then
+        expected=$(resolve_platform_profile "$expected" "${path}_choices") || true
         compare_value platform_profile "$live" "$expected"
     else
         printf 'profile drift: platform_profile live=unavailable expected=%s\n' "$expected" >&2

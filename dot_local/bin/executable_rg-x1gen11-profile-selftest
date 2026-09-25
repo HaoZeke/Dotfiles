@@ -348,4 +348,32 @@ RG_X1GEN11_PROFILES="$profiles" \
 rg -q '^profile policy: ok$' "$tmpdir/doctor-ok.out" \
     || fail "doctor --check must print policy success"
 
+# Dell firmware offers cool/quiet instead of ThinkPad's low-power; the
+# low-power profiles must resolve to quiet there, and drift is judged against
+# the resolved name.
+printf 'cool quiet balanced performance\n' >"$fake_sys/firmware/acpi/platform_profile_choices"
+printf 'quiet\n' >"$fake_sys/firmware/acpi/platform_profile"
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-dell.out" 2>&1 || true
+if rg -q 'profile drift: platform_profile' "$tmpdir/doctor-dell.out"; then
+    fail "quiet on Dell choices must satisfy a low-power profile"
+fi
+printf 'balanced\n' >"$fake_sys/firmware/acpi/platform_profile"
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$check_state" \
+    RG_X1GEN11_SYSFS_ROOT="$fake_sys" \
+    RG_X1GEN11_PROC_ROOT="$fake_proc" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" doctor --check >"$tmpdir/doctor-dell-drift.out" 2>&1 || true
+rg -q 'profile drift: platform_profile live=balanced expected=quiet' "$tmpdir/doctor-dell-drift.out" \
+    || fail "Dell drift must be reported against the resolved quiet profile"
+printf 'low-power balanced performance\n' >"$fake_sys/firmware/acpi/platform_profile_choices"
+printf 'low-power\n' >"$fake_sys/firmware/acpi/platform_profile"
+
 printf 'ok\n'
