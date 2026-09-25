@@ -5,7 +5,8 @@
 # and whenever the source tree's HEAD commit changes -- triggered via
 # the HEAD stamp baked into the comment below.
 #
-# HEAD stamp (updates on apply): {{ output "git" "-C" (printf "%s/Git/Github/Tools/rg-theme" .chezmoi.homeDir) "rev-parse" "HEAD" | trim }}
+{{- $themeSrc := printf "%s/Git/Github/Tools/rg-theme" .chezmoi.homeDir }}
+# HEAD stamp (updates on apply): {{ if stat (joinPath $themeSrc ".git") }}{{ output "git" "-C" $themeSrc "rev-parse" "HEAD" | trim }}{{ else }}no-checkout{{ end }}
 
 set -euo pipefail
 
