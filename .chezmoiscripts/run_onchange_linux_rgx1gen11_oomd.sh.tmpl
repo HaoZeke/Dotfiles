@@ -33,7 +33,8 @@ MSG
         exit 1
     fi
     echo "chezmoi: installing Meta oomd from $stage_tgz"
-    sudo bash "$install_bin" "$stage_tgz"
+    # sudo resets HOME to /root, so the installer would look for the profile there.
+    sudo env RG_OOMD_PROFILE="$profile" bash "$install_bin" "$stage_tgz"
 else
     # Binary present: refresh profile + drop-ins + ensure service is up.
     root_script=$(mktemp)
