@@ -484,6 +484,21 @@ write_scaling_governor ${governor@Q}
 write_energy_performance_preference ${epp@Q}
 write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost ${hwp@Q} hwp_dynamic_boost
 write_if_path /sys/module/iwlwifi/parameters/power_save ${iwl@Q} iwlwifi_power_save
+# The module parameter is read-only on the AX211 (5340); the runtime knob is
+# the interface's power save, which iw sets without a reload.
+if [ ! -w /sys/module/iwlwifi/parameters/power_save ] && command -v iw >/dev/null 2>&1; then
+    case ${iwl@Q} in
+        Y) iw_ps=on ;;
+        N) iw_ps=off ;;
+        *) iw_ps= ;;
+    esac
+    if [ -n "\$iw_ps" ]; then
+        for wdev in \$(iw dev 2>/dev/null | awk '/Interface/ { print \$2 }'); do
+            iw dev "\$wdev" set power_save "\$iw_ps" 2>/dev/null \\
+                || printf 'iwlwifi_power_save: iw refused %s on %s\\n' "\$iw_ps" "\$wdev" >&2
+        done
+    fi
+fi
 
 install -d -m0755 /etc/systemd/zram-generator.conf.d
 cat >/etc/systemd/zram-generator.conf.d/10-rg-profile.conf <<'ZRAM'
@@ -688,6 +703,14 @@ write_cpufreq_value scaling_max_freq "$scaling_max" ""
 write_if_path /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost "$hwp" hwp_dynamic_boost
 write_if_path /sys/devices/system/cpu/intel_pstate/max_perf_pct "$max_perf" max_perf_pct
 write_if_path /sys/module/iwlwifi/parameters/power_save "$iwl" iwlwifi_power_save
+if [ ! -w /sys/module/iwlwifi/parameters/power_save ] && command -v iw >/dev/null 2>&1; then
+    case "$iwl" in Y) iw_ps=on ;; N) iw_ps=off ;; *) iw_ps= ;; esac
+    if [ -n "$iw_ps" ]; then
+        for wdev in $(iw dev 2>/dev/null | awk '/Interface/ { print $2 }'); do
+            $SUDO iw dev "$wdev" set power_save "$iw_ps" 2>/dev/null || true
+        done
+    fi
+fi
 write_zram
 write_damon
 
@@ -804,7 +827,21 @@ profile_policy_check() {
 
     expected=$(profile_field "$profile" iwlwifi_power_save)
     path=$(sys_path /module/iwlwifi/parameters/power_save)
-    if live=$(read_trimmed "$path"); then
+    if [ -e "$path" ] && [ ! -w "$path" ] && command -v iw >/dev/null 2>&1; then
+        # Read-only module parameter: the interface state is the live value.
+        live=
+        for wdev in $(iw dev 2>/dev/null | awk '/Interface/ { print $2 }'); do
+            case "$(iw dev "$wdev" get power_save 2>/dev/null)" in
+                *": on") live=Y ;;
+                *": off") live=N ;;
+            esac
+        done
+        if [ -n "$live" ]; then
+            compare_value iwlwifi_power_save "$live" "$expected"
+        else
+            printf 'profile drift: iwlwifi_power_save live=unavailable expected=%s\n' "$expected" >&2
+        fi
+    elif live=$(read_trimmed "$path"); then
         compare_value iwlwifi_power_save "$live" "$expected"
     else
         printf 'profile drift: iwlwifi_power_save live=unavailable expected=%s\n' "$expected" >&2
