@@ -63,6 +63,9 @@ fi
 # cvmfs's libfuse 3 path serves metadata and never answers a read here, while
 # its libfuse 2 path is immediate. The Arch package ships only the fuse3
 # variant, so the fuse2 libraries come from CERN's matching el9 build.
+# The shared cache manager loads the fuse3 library regardless of libfuse=2,
+# so the cache stays private; the loader needs /run/cvmfs, which the Arch
+# package never creates.
 CVMFS_EL9_VERSION=2.13.3
 FUSE2_DIR=/opt/cvmfs-fuse2/lib64
 if pacman -Qi cvmfs >/dev/null 2>&1 && pacman -Qi cvmfs-config-eessi >/dev/null 2>&1; then
@@ -87,6 +90,7 @@ CVMFS_IPFAMILY_PREFER=4
 CVMFS_LOW_SPEED_LIMIT=0
 CVMFS_TIMEOUT=60
 CVMFS_TIMEOUT_DIRECT=60
+CVMFS_SHARED_CACHE=no
 '
     write_if_diff /etc/cvmfs/default.local 0644 "$CVMFS_LOCAL" || true
     cvmfs_uid=$(id -u cvmfs)
@@ -102,6 +106,7 @@ WorkingDirectory=$FUSE2_DIR
 Environment=LD_LIBRARY_PATH=$FUSE2_DIR
 ExecStartPre=-/usr/bin/fusermount -u -z /cvmfs/software.eessi.io
 ExecStartPre=/usr/bin/mkdir -p /cvmfs/software.eessi.io
+ExecStartPre=/usr/bin/install -d -m 0755 -o cvmfs -g cvmfs /run/cvmfs
 ExecStart=/usr/bin/cvmfs2 -f -o rw,system_mount,fsname=cvmfs2,allow_other,grab_mountpoint,uid=$cvmfs_uid,gid=$cvmfs_gid,libfuse=2 software.eessi.io /cvmfs/software.eessi.io
 ExecStop=/usr/bin/fusermount -u -z /cvmfs/software.eessi.io
 Restart=on-failure
