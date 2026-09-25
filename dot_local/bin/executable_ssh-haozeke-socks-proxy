@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# ssh ProxyCommand into the personal tailnet through the userspace
+# tailscale-haozeke daemon, for hosts whose system tailscaled sits on another
+# tailnet.
+#
+#   ProxyCommand ssh-haozeke-socks-proxy %h %p [label]
+#
+# The label (the ssh alias) only names the target in errors.
+set -euo pipefail
+host=${1:?usage: ssh-haozeke-socks-proxy HOST PORT [LABEL]}
+port=${2:?usage: ssh-haozeke-socks-proxy HOST PORT [LABEL]}
+label=${3:-$host}
+sock="${RG_HAOZEKE_TS_SOCKET:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/tailscale-haozeke/tailscaled.sock}"
+if [ ! -S "$sock" ]; then
+    echo "ssh-haozeke-socks-proxy: $label: no tailscale-haozeke socket at $sock (systemctl --user start tailscale-haozeke)" >&2
+    exit 1
+fi
+exec tailscale --socket="$sock" nc "$host" "$port"
