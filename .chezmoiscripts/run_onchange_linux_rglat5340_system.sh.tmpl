@@ -71,6 +71,23 @@ NamePolicy=keep kernel
 '
 write_if_diff /etc/systemd/network/80-wifi-kernel-name.link 0644 "$WIFI_LINK" || true
 
+# --- network stack: NetworkManager owns Wi-Fi ------------------------------
+# The sealed helpers expect the Control D binary where the X1 had it, and
+# NetworkManager must leave tunnel and veth interfaces to their owners.
+if [ -x /usr/bin/ctrld ] && [ ! -e /usr/local/bin/ctrld ]; then
+    sudo ln -s /usr/bin/ctrld /usr/local/bin/ctrld
+fi
+NM_UNMANAGED='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rglat5340_system.sh.tmpl)
+# WireGuard, OpenVPN and the Livingston namespace veth are owned by their
+# helpers; NetworkManager must not address or route them.
+[keyfile]
+unmanaged-devices=interface-name:rg-*;interface-name:wg*;interface-name:tun*;interface-name:tailscale*
+'
+if write_if_diff /etc/NetworkManager/conf.d/20-rg-unmanaged.conf 0644 "$NM_UNMANAGED"; then
+    sudo nmcli general reload conf >/dev/null 2>&1 || true
+fi
+sudo systemctl enable systemd-resolved >/dev/null 2>&1 || true
+
 # --- services -------------------------------------------------------------
 for unit in bluetooth.service tailscaled.service sshd.service; do
     sudo systemctl enable "$unit" >/dev/null 2>&1 || echo "chezmoi: WARN could not enable $unit" >&2
