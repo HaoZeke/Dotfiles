@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+{{- if and (eq .chezmoi.os "linux") (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
 set -euo pipefail
 
 systemctl --user daemon-reload 2>/dev/null || true

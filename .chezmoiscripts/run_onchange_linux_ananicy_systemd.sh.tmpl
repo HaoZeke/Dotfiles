@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+{{- if and (eq .chezmoi.os "linux") (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
 # Shadow the archived ananicy 2.2.1 vendor unit with the same service contract
 # minus CPUAccounting=. CPU accounting is unconditional on cgroup v2, and
 # systemd rejects that setting while parsing the vendor unit.

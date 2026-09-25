@@ -70,7 +70,7 @@ if [ -z "${VISSUE_ROOT:-}" ]; then
     unset _issue_root
 fi
 
-{{ if eq .machine_name "rgx1gen11" -}}
+{{ if has .machine_name (list "rgx1gen11" "rglat5340") -}}
 # For grabbing CPU-PyTorch
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 export UV_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"

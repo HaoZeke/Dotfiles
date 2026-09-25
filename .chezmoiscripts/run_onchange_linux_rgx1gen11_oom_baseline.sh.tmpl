@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+{{- if and (eq .chezmoi.os "linux") (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
 # Give the user session manager a negative oom_score_adj baseline.
 #
 # An unprivileged manager can raise oom_score_adj but never lower it below its

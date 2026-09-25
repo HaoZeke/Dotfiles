@@ -63,8 +63,8 @@ Pictures/Walls/*
 .local/share/rg-sway-route-watcher-src
 .local/share/rg-wob-bridge-src
 {{ end }}
-{{ if ne .chezmoi.hostname "rgx1gen11" }}
-# rgx1gen11-only services and helpers
+{{ if not (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
+# Services and helpers for rgx1gen11 and rglat5340, the laptop replacing it
 .config/systemd/user/rg-surf-vpn-refresh.service
 .config/systemd/user/rg-surf-vpn-refresh.timer
 .config/systemd/user/turtleback-push.service
@@ -74,6 +74,10 @@ Pictures/Walls/*
 .local/bin/rclone-pcloud
 .local/bin/rgpower
 .local/bin/turtleback-push
+{{ end }}
+{{ if ne .chezmoi.hostname "rglat5340" }}
+# Dell Latitude 5340 TLP baseline, read by its power script only
+.local/share/rglat5340
 {{ end }}
 # No encryption, so don't try to restore..
 {{ if eq .encrypted "no" }}

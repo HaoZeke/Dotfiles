@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+{{- if (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) -}}
 # Evidence sampler for orgaw (focus / AFK / git).
 # Must start with Sway, not linger default.target: a pre-compositor
 # start has no SWAYSOCK and records 24 h of IdleHint=active with

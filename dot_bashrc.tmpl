@@ -56,7 +56,7 @@ if [ -d $shellHome/posix.d ]; then
 	[ -r "$shellHome/posix.d/07_local_env.sh" ] && . "$shellHome/posix.d/07_local_env.sh"
 fi
 
-{{- if eq .chezmoi.hostname "rgx1gen11" }}
+{{- if (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
 [ ! -f "$HOME/.x-cmd.root/X" ] || . "$HOME/.x-cmd.root/X"
 {{- end }}
 

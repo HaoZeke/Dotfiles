@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+{{- if (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) -}}
 [Unit]
 Description=orgaw HTTP clock API (loopback)
 After=graphical-session.target

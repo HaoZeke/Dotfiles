@@ -23,5 +23,40 @@ information which needs the encryption settings, as [[https://github.com/twpayne
 The current sway-session semantics, tmux integration, and keyboard controls are documented in
 [[file:dot_config/sway/readme.org][dot_config/sway/readme.org]].
 
+* Hosts
+Templates branch on ~.chezmoi.hostname~. Hardware gates name one host;
+role gates list every host that shares the role.
+
+| Host | Hardware | Role |
+|------+----------+------|
+| ~rgx1gen11~ | ThinkPad X1 Carbon Gen 11 | Personal laptop, Livingston profile |
+| ~rglat5340~ | Dell Latitude 5340, i5-1345U, 16 GB, 256 GB | Replaces ~rgx1gen11~; same role gates |
+| ~rgSURFLat~ | Dell Latitude 7430 | SURF work laptop |
+| ~rgam5terra~ | AM5 desktop, NVIDIA | Build and serve box |
+
+** rglat5340
+Installed from hzArchiso with ~hz-install --profile rglat5340~. The role
+gates it shares with ~rgx1gen11~ cover the shell environment, the x-cmd
+bundle, KSM, ananicy, realtime audio, the session OOM baseline, memory and
+zram tuning, network ingress, the terra mail tunnel, and orgaw.
+
+The hardware gates stay per host. The ThinkPad trackpoint, power bindings,
+plymouth resume, TLP baseline and ~linux-rg~ fragment stay on ~rgx1gen11~.
+The 5340 has its own ~run_onchange_linux_rglat5340_power.sh.tmpl~ and
+~dot_local/share/rglat5340/tlp-00-base.conf~: Dell platform profile
+balanced on AC and quiet on battery, charge thresholds 75 to 90, and the
+LPSS I2C controllers of the ELAN touchscreen and touchpad pinned on.
+
+Three ~rgx1gen11~ pieces are not extended yet. Meta oomd needs its stage
+tarball on the host first, and the two cosmoet relay forwards name the X1
+itself.
+
+First apply, as the user, after the age identity is at ~~/key.txt~:
+#+begin_src bash
+chezmoi init --apply HaoZeke --branch chezmoi
+#+end_src
+The Livingston stack and the full assistant profile come from the sealed
+store; unseal it before the second apply.
+
 * License
 MIT.
