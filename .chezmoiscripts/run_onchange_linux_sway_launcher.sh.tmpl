@@ -37,6 +37,14 @@ export QT_QPA_PLATFORMTHEME=gtk3
 export SDL_VIDEODRIVER=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
 
+# greetd runs this without a login shell, so the user PATH additions never
+# happen and sway, plus everything it starts and imports into the user
+# manager, searches only the system directories. Menu entries that name a
+# helper in ~/.local/bin then fail with "No such file or directory".
+if [ -r "$HOME/.config/shellrc/posix.d/05_paths.sh" ]; then
+    . "$HOME/.config/shellrc/posix.d/05_paths.sh"
+fi
+
 exec sway "$@"
 '
 
