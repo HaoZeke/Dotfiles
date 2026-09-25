@@ -29,7 +29,7 @@ die() {
 
 # The door answers only while the namespace tunnel is up. Verify the exit
 # country through the same path the CLI will use.
-country="$(curl -s --max-time 12 --proxy "$door" https://ipinfo.io/json 2>/dev/null \
+country="$( { curl -s --max-time 12 --proxy "$door" https://ipinfo.io/json 2>/dev/null || true; } \
     | sed -n 's/.*"country": *"\([A-Z][A-Z]\)".*/\1/p')"
 [ "$country" = "US" ] || die "egress through $door is not a US exit (got '${country:-none}'); raise it with: rg-net livingston up"
 
