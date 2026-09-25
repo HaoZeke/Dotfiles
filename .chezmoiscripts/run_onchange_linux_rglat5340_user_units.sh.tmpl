@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rglat5340") }}
+# Enable the Sway session user units on rglat5340, the set rgSURFLat runs
+# minus its work tunnels. An apply from the install chroot has no user bus,
+# so this exits non-zero there and reruns on the booted host.
+set -euo pipefail
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+    echo "chezmoi: no user systemd bus; rglat5340 user units wait for a login session" >&2
+    exit 1
+fi
+units=(
+    kanata.service rg-kanata-watchdog.service
+    foot-server.service dunst.service kanshi.service swayidle.service wob.service
+    battery-warn.service browser-media-watchdog.service rg-sway-route-watcher.service
+)
+available=()
+for unit in "${units[@]}"; do
+    if systemctl --user cat "$unit" >/dev/null 2>&1; then
+        available+=("$unit")
+    else
+        echo "chezmoi: WARN user unit $unit is not installed" >&2
+    fi
+done
+systemctl --user daemon-reload
+systemctl --user enable "${available[@]}"
+{{- end }}
