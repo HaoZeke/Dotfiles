@@ -87,6 +87,16 @@ if write_if_diff /etc/NetworkManager/conf.d/20-rg-unmanaged.conf 0644 "$NM_UNMAN
     sudo nmcli general reload conf >/dev/null 2>&1 || true
 fi
 sudo systemctl enable systemd-resolved >/dev/null 2>&1 || true
+# Same IPv6 source contract as the X1's networkd profile: temporary
+# addresses exist but the stable per-prefix address is the outbound source.
+NM_IPV6='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rglat5340_system.sh.tmpl)
+[connection]
+ipv6.ip6-privacy=1
+ipv6.addr-gen-mode=stable-privacy
+'
+if write_if_diff /etc/NetworkManager/conf.d/30-rg-ipv6.conf 0644 "$NM_IPV6"; then
+    sudo nmcli general reload conf >/dev/null 2>&1 || true
+fi
 
 # --- host firewall: default-deny inbound, same ruleset as the X1 -----------
 # Both tailnets run in userspace here, so inbound tailnet connections arrive
