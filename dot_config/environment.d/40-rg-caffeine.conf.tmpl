@@ -1,0 +1,6 @@
+{{- /* The laptops whose power modes run through rg-x1gen11-profile and its
+       sudo-allowed root helper; rg-caffeine only drives privileged backends
+       when told so. */ -}}
+{{- if has .chezmoi.hostname (list "rgx1gen11" "rglat5340" "rgSURFLat") -}}
+RG_CAFFEINE_ALLOW_PRIVILEGED_POWER=1
+{{- end }}

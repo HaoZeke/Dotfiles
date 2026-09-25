@@ -45,6 +45,22 @@ if [ -r "$HOME/.config/shellrc/posix.d/05_paths.sh" ]; then
     . "$HOME/.config/shellrc/posix.d/05_paths.sh"
 fi
 
+# Nor does ~/.config/environment.d reach sway: only the user manager reads
+# it. The generator prints the assignments the user manager sees, one per
+# line, so the session and its user services agree.
+gen=/usr/lib/systemd/user-environment-generators/30-systemd-environment-d-generator
+if [ -x "$gen" ]; then
+    envfile=$(mktemp)
+    "$gen" >"$envfile" 2>/dev/null || :
+    while IFS= read -r line; do
+        case $line in
+            # shellcheck disable=SC2163 # exports NAME=value, as intended
+            [A-Za-z_]*=*) export "$line" ;;
+        esac
+    done <"$envfile"
+    rm -f "$envfile"
+fi
+
 exec sway "$@"
 '
 
