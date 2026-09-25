@@ -126,6 +126,7 @@ RGPOWER_SUDOERS_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linu
 {{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g powersave
 {{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g schedutil
 {{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/bin/cpupower frequency-set -g ondemand
+{{ .chezmoi.username }} ALL=(root) NOPASSWD: /usr/local/sbin/rg-x1gen11-profile-root
 '
 
 # --- packages (report only; do not pacman from onchange without consent) ---
@@ -189,6 +190,24 @@ if ! as_root test -f /etc/sudoers.d/rgpower \
         echo "chezmoi: WARN /etc/sudoers.d/rgpower would be invalid; keeping existing" >&2
     fi
     rm -f "$TMP"
+fi
+
+# --- workload profile root helper -----------------------------------------
+# rg-x1gen11-profile applies its privileged knobs through this helper, which
+# it generates itself; the sudoers line above lets the user service call it.
+# profile-sha256: {{ include "dot_local/bin/executable_rg-x1gen11-profile" | sha256sum }}
+profile_bin="$USER_HOME/.local/bin/rg-x1gen11-profile"
+if [ -x "$profile_bin" ]; then
+    helper_tmp=$(mktemp)
+    if HOME="$USER_HOME" "$profile_bin" root-helper-script "$helper_tmp" >/dev/null && bash -n "$helper_tmp"; then
+        if ! as_root cmp -s "$helper_tmp" /usr/local/sbin/rg-x1gen11-profile-root; then
+            as_root install -D -m 0755 -o root -g root "$helper_tmp" /usr/local/sbin/rg-x1gen11-profile-root
+            echo "chezmoi: updated /usr/local/sbin/rg-x1gen11-profile-root"
+        fi
+    else
+        echo "chezmoi: WARN could not generate the workload profile root helper" >&2
+    fi
+    rm -f "$helper_tmp"
 fi
 
 # --- post-deploy activation ----------------------------------------------
