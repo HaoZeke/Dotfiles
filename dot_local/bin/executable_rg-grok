@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-grok).
+#
+# Run the Grok CLI from the Livingston egress. The host keeps xAI destinations
+# closed unless the Houston tunnel is up, and that tunnel shares its provider
+# session with the Livingston namespace, so the CLI rides the namespace door
+# instead: a SOCKS listener whose only route is the tunnel. A request either
+# leaves from Houston or does not leave.
+#
+#   rg-grok [grok args...]        e.g. rg-grok, rg-grok login --oauth
+#
+# The door is verified as a US exit before every run; a failure refuses the
+# launch rather than falling back to the local address.
+set -euo pipefail
+
+door="${RG_GROK_DOOR:-socks5h://10.201.0.2:1080}"
+grok_bin="${RG_GROK_BIN:-$HOME/.grok/bin/grok}"
+profile="${RG_GROK_PROFILE:-$HOME/.local/bin/rg-livingston-profile}"
+
+die() {
+    echo "rg-grok: $*" >&2
+    if [ ! -t 2 ] && command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "Grok CLI blocked" "$*" >/dev/null 2>&1 || true
+    fi
+    exit 2
+}
+
+[ -x "$grok_bin" ] || die "grok CLI not installed at $grok_bin"
+
+# The door answers only while the namespace tunnel is up. Verify the exit
+# country through the same path the CLI will use.
+country="$(curl -s --max-time 12 --proxy "$door" https://ipinfo.io/json 2>/dev/null \
+    | sed -n 's/.*"country": *"\([A-Z][A-Z]\)".*/\1/p')"
+[ "$country" = "US" ] || die "egress through $door is not a US exit (got '${country:-none}'); raise it with: rg-net livingston up"
+
+# Livingston process profile: timezone and locale as the browser has them.
+if [ -x "$profile" ]; then
+    while IFS= read -r line; do
+        case "$line" in
+            TZ=*|LANG=*|LC_*=*|LANGUAGE=*) export "$line" ;;
+        esac
+    done < <("$profile" env)
+fi
+
+# OAuth callbacks stay on loopback; the sign-in page opens in the Livingston
+# browser so the session is created from Houston as well.
+if [ -x "$profile" ]; then
+    export BROWSER="$profile vivaldi"
+fi
+
+export HTTPS_PROXY="$door" HTTP_PROXY="$door" ALL_PROXY="$door"
+export https_proxy="$door" http_proxy="$door" all_proxy="$door"
+export NO_PROXY="localhost,127.0.0.1,::1" no_proxy="localhost,127.0.0.1,::1"
+exec "$grok_bin" "$@"
