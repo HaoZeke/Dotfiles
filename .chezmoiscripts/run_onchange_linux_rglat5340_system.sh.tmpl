@@ -88,6 +88,60 @@ if write_if_diff /etc/NetworkManager/conf.d/20-rg-unmanaged.conf 0644 "$NM_UNMAN
 fi
 sudo systemctl enable systemd-resolved >/dev/null 2>&1 || true
 
+# --- host firewall: default-deny inbound, same ruleset as the X1 -----------
+# Both tailnets run in userspace here, so inbound tailnet connections arrive
+# through the daemons and reach local listeners over loopback; no tailscale0
+# accept is needed for them, and the rule stays for a kernel-mode daemon.
+NFTABLES_CONTENT='#!/usr/sbin/nft -f
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rglat5340_system.sh.tmpl)
+# Host firewall: default-deny inbound, allow established + loopback +
+# ICMP + known-trusted interfaces. Forward disabled. Output unrestricted.
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    ct state established,related accept
+    ct state invalid drop
+
+    iif lo accept
+    ip protocol icmp accept
+    ip6 nexthdr ipv6-icmp accept
+
+    # Trusted interfaces: tailscale mesh, libvirt/docker local bridges.
+    iifname "tailscale0" accept
+    iifname "virbr*"     accept comment "libvirt bridge"
+    iifname "docker0"    accept comment "docker bridge"
+    iifname "podman*"    accept comment "podman bridge"
+
+    counter comment "dropped inbound"
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
+}
+'
+if ! pacman -Q nftables >/dev/null 2>&1; then
+    sudo pacman -S --needed --noconfirm nftables
+fi
+NFT_CHANGED=0
+write_if_diff /etc/nftables.conf 0644 "$NFTABLES_CONTENT" && NFT_CHANGED=1 || true
+if [ "$NFT_CHANGED" = "1" ] || ! sudo systemctl is-enabled nftables.service >/dev/null 2>&1; then
+    if sudo nft -c -f /etc/nftables.conf; then
+        sudo systemctl enable nftables.service >/dev/null 2>&1 || true
+        sudo systemctl restart nftables.service
+        echo "chezmoi: nftables reloaded"
+    else
+        echo "chezmoi: WARN /etc/nftables.conf failed validation; firewall unchanged" >&2
+    fi
+fi
+
 # --- services -------------------------------------------------------------
 for unit in bluetooth.service tailscaled.service sshd.service; do
     sudo systemctl enable "$unit" >/dev/null 2>&1 || echo "chezmoi: WARN could not enable $unit" >&2
