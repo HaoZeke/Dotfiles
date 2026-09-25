@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# ingress-helper-sha256: {{ include "dot_local/bin/executable_rg-network-ingress-status" | sha256sum }}
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+{{- if and (eq .chezmoi.os "linux") (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
+{{- $helper := joinPath .chezmoi.sourceDir "dot_local/bin/executable_rg-network-ingress-status" }}
+{{- if not (stat $helper) }}
+# The helper is sealed; this renders again with its hash once it is unsealed.
+echo "chezmoi: rg-network-ingress-status is not unsealed yet; skipping ingress setup" >&2
+exit 0
+{{- else }}
+# ingress-helper-sha256: {{ include $helper | sha256sum }}
 set -euo pipefail
 
 sudo install -D -m 0755 "$HOME/.local/bin/rg-network-ingress-status" /usr/local/sbin/rg-network-ingress-status
@@ -13,4 +19,5 @@ rgoswami ALL=(root) NOPASSWD: /usr/local/sbin/rg-network-ingress-status
 EOF
 sudo visudo -cf "$sudoers_tmp" >/dev/null
 sudo install -D -m 0440 -o root -g root "$sudoers_tmp" /etc/sudoers.d/rg-network-ingress-status
+{{- end }}
 {{- end }}
