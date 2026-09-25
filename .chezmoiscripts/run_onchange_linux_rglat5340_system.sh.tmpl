@@ -59,6 +59,18 @@ if ! id -nG "{{ .chezmoi.username }}" | tr ' ' '\n' | grep -qx input; then
     echo "chezmoi: added {{ .chezmoi.username }} to input (re-login for kanata)"
 fi
 
+# --- Wi-Fi keeps the kernel name ------------------------------------------
+# rgSURFLat gets wlan0 from the iwd package's 80-iwd.link; without iwd this
+# host would name the card wlp0s20f3, and the sealed network helpers name
+# wlan0. Takes effect at the next boot.
+WIFI_LINK='[Match]
+Type=wlan
+
+[Link]
+NamePolicy=keep kernel
+'
+write_if_diff /etc/systemd/network/80-wifi-kernel-name.link 0644 "$WIFI_LINK" || true
+
 # --- services -------------------------------------------------------------
 for unit in bluetooth.service tailscaled.service sshd.service; do
     sudo systemctl enable "$unit" >/dev/null 2>&1 || echo "chezmoi: WARN could not enable $unit" >&2
