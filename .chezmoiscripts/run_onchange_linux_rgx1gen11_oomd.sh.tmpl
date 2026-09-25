@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+{{- if and (eq .chezmoi.os "linux") (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
 # Require Meta facebookincubator/oomd on rgx1gen11 alongside systemd-oomd.
 # Binary is installed from a terra-built stage tarball (no laptop compile).
 # re-run hash: {{ include "dot_config/oomd/oomd-rgx1gen11.json" | sha256sum }}

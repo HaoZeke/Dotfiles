@@ -60,9 +60,9 @@ shell then loads the stack:
 eessi 2025.06 && module load GCC/13.3.0
 #+end_src
 
-Three ~rgx1gen11~ pieces are not extended yet. Meta oomd needs its stage
-tarball on the host first, and the two cosmoet relay forwards name the X1
-itself.
+Meta oomd joins it too, from a stage tarball built on rg.terra and placed at
+~~/.local/share/rg-oomd/~. The two cosmoet relay forwards stay on the X1, since
+they name it.
 
 First apply, as the user, after the age identity is at ~~/key.txt~:
 #+begin_src bash
