@@ -1,8 +1,9 @@
 {{- /* Tracker root for the issue CLI. cargo install of the -cli crate
      reads VISSUE_ROOT; there is no PATH wrapper. The dest one-line file
-     is the source of truth so this template never stores a home path. */ -}}
+     is the source of truth so this template never stores a home path.
+     environment.d expands ${HOME} but not ~, so a leading ~/ is rewritten. */ -}}
 {{- $root := joinPath .chezmoi.homeDir ".config" "vissue" "root" -}}
 {{- if stat $root -}}
-VISSUE_ROOT={{ trim (output "sed" "-n" "1p" $root) }}
+VISSUE_ROOT={{ regexReplaceAllLiteral "^~/" (trim (output "sed" "-n" "1p" $root)) "${HOME}/" }}
 {{- end }}
 
