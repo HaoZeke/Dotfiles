@@ -13,7 +13,11 @@ while IFS= read -r repo; do
     case "$repo" in ''|'#'*) continue;; esac
     repo=${repo/#\~/$HOME}
     [ -f "$repo/.ttech-sync.toml" ] || { echo "tt-push-all: $repo has no .ttech-sync.toml, skipped"; continue; }
-    if (cd "$repo" && "$bin" push --data-only 2>&1 | grep -v DEBUG | tail -2); then
+    # One tt at a time per repository: a manual pull or save must not overlap.
+    if ! flock -n "$repo/.ttech-sync/.tt.lock" true 2>/dev/null; then
+        echo "tt-push-all: $repo busy (another tt holds .ttech-sync/.tt.lock), skipped this run"; continue
+    fi
+    if (cd "$repo" && flock -n "$repo/.ttech-sync/.tt.lock" "$bin" push --data-only 2>&1 | grep -v DEBUG | tail -2); then
         echo "tt-push-all: published $repo"
     else
         echo "tt-push-all: publish FAILED for $repo" >&2; rc=1
