@@ -17,11 +17,11 @@ while IFS= read -r repo; do
     if ! flock -n "$repo/.ttech-sync/.tt.lock" true 2>/dev/null; then
         echo "tt-push-all: $repo busy (another tt holds .ttech-sync/.tt.lock), skipped this run"; continue
     fi
-    if (cd "$repo" && flock -n "$repo/.ttech-sync/.tt.lock" "$bin" push --data-only 2>&1 | grep -v DEBUG | tail -2); then
+    if (cd "$repo" && flock -n "$repo/.ttech-sync/.tt.lock" timeout 1800 "$bin" push --data-only 2>&1 | grep -v DEBUG | tail -2); then
         echo "tt-push-all: published $repo"
     else
         echo "tt-push-all: publish FAILED for $repo" >&2; rc=1
     fi
-    (cd "$repo" && "$bin" doctor 2>&1 | sed "s#^#tt-push-all: doctor $repo: #") || rc=1
+    (cd "$repo" && timeout 900 "$bin" doctor 2>&1 | sed "s#^#tt-push-all: doctor $repo: #") || rc=1
 done < "$list"
 exit $rc
