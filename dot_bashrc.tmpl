@@ -96,6 +96,10 @@ export PATH="$PATH:{{ $texlive_dir }}/bin/x86_64-linux"
 
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
+{{- if has .machine_name (list "rgx1gen11" "rglat5340") }}
+# Ahead of the real binary: grok runs only through the Livingston door.
+export PATH="$HOME/.local/libexec/rg-grok-shim:$PATH"
+{{- end }}
 # 6203 lines defining one function, 19 ms to parse, for a completion nothing
 # needs until the first TAB after `grok`. The stub loads the real file then
 # returns 124, which is bash's signal to retry the completion with whatever

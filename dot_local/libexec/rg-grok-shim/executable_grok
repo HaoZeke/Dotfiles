@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# `grok` on the Livingston hosts: every launch, including herdr's
+# `grok --resume`, goes through rg-grok and so through the Houston door.
+# Without rg-grok the real binary runs unchanged.
+set -euo pipefail
+if [ -x "$HOME/.local/bin/rg-grok" ]; then
+    exec "$HOME/.local/bin/rg-grok" "$@"
+fi
+exec "$HOME/.grok/bin/grok" "$@"
