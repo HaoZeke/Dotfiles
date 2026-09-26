@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly Tardigrade data publish
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Publish Tardigrade data for each repository named in ~/.config/ttech/sync-repos,
+# one absolute path per line, `#` comments allowed. Data only: Git stays the
+# operator's decision, but bytes never wait on it. `tt doctor` runs after each
+# publish and its verdict lands in the journal, so a drifting prefix or a
+# stub-only clone is loud within the hour.
+set -u
+list="$HOME/.config/ttech/sync-repos"
+[ -f "$list" ] || exit 0
+bin=$(command -v tt || echo "$HOME/.local/bin/tt")
+rc=0
+while IFS= read -r repo; do
+    case "$repo" in ''|'#'*) continue;; esac
+    repo=${repo/#\~/$HOME}
+    [ -f "$repo/.ttech-sync.toml" ] || { echo "tt-push-all: $repo has no .ttech-sync.toml, skipped"; continue; }
+    if (cd "$repo" && "$bin" push --data-only 2>&1 | grep -v DEBUG | tail -2); then
+        echo "tt-push-all: published $repo"
+    else
+        echo "tt-push-all: publish FAILED for $repo" >&2; rc=1
+    fi
+    (cd "$repo" && "$bin" doctor 2>&1 | sed "s#^#tt-push-all: doctor $repo: #") || rc=1
+done < "$list"
+exit $rc

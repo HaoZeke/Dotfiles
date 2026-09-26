@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish Tardigrade-managed data for every repository listed in ~/.config/ttech/sync-repos
+ConditionPathExists=%h/.config/ttech/sync-repos
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/tt-push-all
+Nice=10
+IOSchedulingClass=idle
