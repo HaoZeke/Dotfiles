@@ -152,6 +152,18 @@ if [ "$NFT_CHANGED" = "1" ] || ! sudo systemctl is-enabled nftables.service >/de
     fi
 fi
 
+# --- TCP congestion control ------------------------------------------------
+# linux-rg builds BBR as the default, and systemd's sysctl defaults swap its fq
+# qdisc for fq_codel. On this host BBR then pins pacing near zero on the
+# Livingston veth and on loopback: the SOCKS door moved 40 KB/s under BBR and
+# 2.6 MB/s under cubic, over the same tunnel.
+TCP_CC='# BBR collapses pacing on the Livingston veth and loopback paths here.
+net.ipv4.tcp_congestion_control = cubic
+'
+if write_if_diff /etc/sysctl.d/60-rg-tcp-cubic.conf 0644 "$TCP_CC"; then
+    sudo sysctl -q -p /etc/sysctl.d/60-rg-tcp-cubic.conf || true
+fi
+
 # --- services -------------------------------------------------------------
 for unit in bluetooth.service tailscaled.service sshd.service; do
     sudo systemctl enable "$unit" >/dev/null 2>&1 || echo "chezmoi: WARN could not enable $unit" >&2
