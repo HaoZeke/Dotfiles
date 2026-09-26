@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+#!/usr/bin/env bash
+# Mirror the Tardigrade native store from B2 into a local directory on this
+# host. Copy, never sync: a deletion on the remote must not reach the mirror.
+# Credentials come from pass at run time (read-only key scoped to the prefix).
+set -euo pipefail
+entry=$(timeout 15 pass show turtletech/backblaze/tardigrade-mirror-ro </dev/null)
+key=$(printf '%s\n' "$entry" | sed -n '1p')
+kid=$(printf '%s\n' "$entry" | awk '/^key_id:/{print $2; exit}')
+bucket=$(printf '%s\n' "$entry" | awk '/^bucket:/{print $2; exit}')
+prefix=$(printf '%s\n' "$entry" | awk '/^prefix:/{print $2; exit}')
+dest=${TT_MIRROR_DIR:-$HOME/Backups/tardigrade/${prefix%/}}
+export RCLONE_CONFIG_TTMIRROR_TYPE=b2 RCLONE_CONFIG_TTMIRROR_ACCOUNT="$kid" RCLONE_CONFIG_TTMIRROR_KEY="$key"
+mkdir -p "$dest"
+printf '%(%F %T)T tt-mirror: %s/%s -> %s\n' -1 "$bucket" "$prefix" "$dest"
+rclone copy --transfers 8 --checkers 8 --stats 5m --stats-one-line "ttmirror:$bucket/${prefix%/}/tardigrade" "$dest/tardigrade"
+printf '%(%F %T)T tt-mirror: done, %s objects\n' -1 "$(find "$dest/tardigrade" -type f | wc -l)"
+{{- end -}}

@@ -1,0 +1,11 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Mirror the Tardigrade native store from B2
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/tt-mirror
+Nice=10
+IOSchedulingClass=idle
+{{- end -}}
