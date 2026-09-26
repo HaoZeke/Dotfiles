@@ -8,4 +8,6 @@ set -eu
 export HTTPS_PROXY=socks5://127.0.0.1:1056
 export NO_PROXY=gitlab.com
 export GITGUARD_BYPASS_GH=1
+# Outside a Nova checkout glab would fall back to gitlab.com.
+export GITLAB_HOST=nova.teachx.ai
 exec glab "$@"
