@@ -1,9 +1,11 @@
 {{- if eq .chezmoi.hostname "rgam5terra" -}}
 [Unit]
-Description=Daily Tardigrade mirror
+Description=Tardigrade mirror, four slots a day
 
 [Timer]
-OnCalendar=daily
+# Four slots: the mirror can only run while the key store is unlocked by
+# interactive use, so one daily slot missed a whole day.
+OnCalendar=*-*-* 00,06,12,18:17
 RandomizedDelaySec=30min
 Persistent=true
 
