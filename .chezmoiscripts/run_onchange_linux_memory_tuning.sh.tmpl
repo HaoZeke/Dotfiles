@@ -75,6 +75,24 @@ OOMD_CONF_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memo
 DefaultMemoryPressureDurationSec=20s
 '
 
+{{- if eq .chezmoi.hostname "rglat5340" }}
+USER_SLICE_OOMD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+# rglat5340: no PSI kills in user sessions. Pressure is absorbed by zram and
+# the /swap/swapfile overflow, and background agents are throttled by
+# agent.slice MemoryHigh instead of being killed.
+[Slice]
+ManagedOOMMemoryPressure=auto
+'
+
+RGLAT_ZRAM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
+# rglat5340: zram sized to RAM; the swapfile at priority 10 takes overflow.
+[zram0]
+zram-size = ram
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+'
+{{- else }}
 USER_SLICE_OOMD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl)
 # Enable systemd-oomd PSI-based kills on every user-UID.slice. Kills the
 # largest process inside the user session when memory-pressure stall
@@ -83,6 +101,7 @@ USER_SLICE_OOMD_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linu
 ManagedOOMMemoryPressure=kill
 ManagedOOMMemoryPressureLimit=50%
 '
+{{- end }}
 
 # Ensure zram-generator + playerctl on Arch hosts. playerctl is used by
 # browser-media-watchdog.service to detect active MPRIS playback and
@@ -117,6 +136,17 @@ write_if_diff /etc/systemd/zram-generator.conf                 "$ZRAM_CONTENT"  
 sudo install -d -m 0755 /etc/systemd/zram-generator.conf.d 2>/dev/null || true
 write_if_diff /etc/systemd/oomd.conf.d/aggressive.conf         "$OOMD_CONF_CONTENT"      && OOMD_CHANGED=1   || true
 write_if_diff /etc/systemd/system/user-.slice.d/50-oomd.conf   "$USER_SLICE_OOMD_CONTENT" && OOMD_CHANGED=1   || true
+{{- if eq .chezmoi.hostname "rglat5340" }}
+write_if_diff /etc/systemd/zram-generator.conf.d/20-rglat5340.conf "$RGLAT_ZRAM_CONTENT" && ZRAM_CHANGED=1 || true
+# Overflow swap behind zram so swap never fills: a nested subvolume keeps
+# the swapfile out of snapshots of /.
+if [ ! -f /swap/swapfile ]; then
+    sudo test -d /swap || sudo btrfs subvolume create /swap
+    sudo btrfs filesystem mkswapfile --size 16g /swap/swapfile
+fi
+sudo grep -q '^/swap/swapfile ' /etc/fstab || printf '/swap/swapfile none swap defaults,pri=10 0 0\n' | sudo tee -a /etc/fstab >/dev/null
+swapon --show=NAME | grep -q '^/swap/swapfile$' || sudo swapon -p 10 /swap/swapfile
+{{- end }}
 
 if [ "$SYSCTL_CHANGED" = "1" ]; then
     sudo sysctl --system >/dev/null
