@@ -10,17 +10,29 @@
 # the bootstrap address keeps a failing upstream a failing upstream.
 #
 # The endpoints carry a private resolver uid, so the real file lives in
-# terra-dns/private (gitignored, sealed with nimvault) and only this redacted
+# outside this repo and only this redacted
 # example is committed.
 
 [service]
   log_level = "notice"
   cache_enable = true
   cache_size = 10000
+  # The OS resolver is the head of this chain; a leak to it is a loop.
+  leak_on_upstream_failure = false
 
 [listener.0]
   ip = "127.0.0.1"
   port = 5354
+
+  # The policy is the failover. Without one ctrld hands the first upstream's
+  # SERVFAIL to the application as the final answer; with it a SERVFAIL, a
+  # REFUSED, or a timeout moves down the list, which ends on plain resolvers.
+  [listener.0.policy]
+    name = "laptop"
+    failover_rcodes = ["SERVFAIL", "REFUSED"]
+    networks = [
+      {"network.0" = ["upstream.0", "upstream.1", "upstream.2", "upstream.3"]},
+    ]
 
 [network.0]
   name = "Any"
@@ -39,3 +51,15 @@
   endpoint = "https://76.76.10.22/REPLACE_WITH_CONTROL_D_RESOLVER_UID"
   bootstrap_ip = "76.76.10.22"
   timeout = 5000
+
+[upstream.2]
+  name = "Last resort Cloudflare"
+  type = "legacy"
+  endpoint = "1.1.1.1:53"
+  timeout = 2000
+
+[upstream.3]
+  name = "Last resort Quad9"
+  type = "legacy"
+  endpoint = "9.9.9.9:53"
+  timeout = 2000
