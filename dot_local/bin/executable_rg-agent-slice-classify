@@ -11,9 +11,11 @@ SLICE=agent.slice
 # Process names, encoded so this source stays committable.
 # Seat comms (herdr, grokos-shell-mcp) stay in foot-server. Never
 # scoop them: Meta oomd killed herdr inside agent.slice on 2026-09-14.
-mapfile -t COMMS < <(printf '%s\n' \
-    Z3Jvaw== Y2xhdWRl Y29kZXg= \
-    | base64 -d)
+# Decode each name on its own: one base64 stream of the three would join
+# them into a single string that matches no process.
+mapfile -t COMMS < <(for enc in Z3Jvaw== Y2xhdWRl Y29kZXg=; do
+    printf '%s\n' "$(printf '%s' "$enc" | base64 -d)"
+done)
 
 if ! systemctl --user start "$SLICE" >/dev/null 2>&1; then
     printf 'rg-agent-slice-classify: cannot start %s\n' "$SLICE" >&2
