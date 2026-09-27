@@ -135,7 +135,7 @@ def main() -> None:
                 fail(f"OMP live role {role} not SURF-wired: {val!r}")
 
     # Host-conditional sealed OMP template: rgSURFLat branch is SURF-primary
-    omp_tmpl = CHZ / "dot_omp" / "agent" / "encrypted_config.yml.tmpl.age"
+    omp_tmpl = CHZ / "dot_omp" / "private_agent" / "encrypted_private_config.yml.tmpl.age"
     tmpl = age_decrypt(omp_tmpl)
     if tmpl is not None:
         if '{{- if eq .chezmoi.hostname "rgSURFLat" -}}' not in tmpl:
