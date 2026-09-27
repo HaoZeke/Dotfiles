@@ -396,26 +396,10 @@ if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$db" ]]; then
   sqlite3 "$db" "INSERT OR REPLACE INTO settings (key,value) VALUES ('startup.setupWizard','false');"
 fi
 
-# ---------- wrappers (match chezmoi executable_omp-surf) ----------
-for name in omp-surf omp-eb-stack; do
-  cat > "${HOME}/.local/bin/${name}" <<'WRAP'
-#!/usr/bin/env bash
-set -euo pipefail
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.opencode/bin:$PATH"
-exts=()
-for e in \
-  "$HOME/.omp/agent/extensions/gpt-oss-priors.ts" \
-  "$HOME/.omp/agent/extensions/rtk-rewrite.ts" \
-  "$HOME/.omp/agent/extensions/code-search.ts" \
-  "$HOME/.omp/agent/extensions/fast-tools.ts" \
-  "$HOME/.omp/agent/extensions/writing-quality.ts"
-do
-  [[ -f "$e" ]] && exts+=(-e "$e")
-done
-exec omp --model surf-ai-hub/openai/gpt-oss-120b --thinking high --advisor "${exts[@]}" "$@"
-WRAP
-  chmod 755 "${HOME}/.local/bin/${name}"
-done
+# ---------- wrappers ----------
+# omp-surf and omp-eb-stack are chezmoi targets (encrypted_executable_*). A
+# second copy written here made every later apply find them changed and stop
+# at an overwrite prompt, which is how an unattended apply hung for 39 hours.
 
 [[ -f "${SHARE}/README-SURF.txt" ]] && \
   install -m 0644 "${SHARE}/README-SURF.txt" "${HOME}/.omp/README-SURF.txt"
