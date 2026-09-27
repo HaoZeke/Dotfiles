@@ -118,6 +118,9 @@ email = {{ $email | quote }}
 name = {{ $name | quote }}
 display_manager = {{ $display_manager | quote }}
 machine_name = {{ $machine_name | quote }}
+{{- if hasKey . "machine_role" }}
+machine_role = {{ .machine_role | quote }}
+{{- end }}
 key_layout = {{ $key_layout | quote }} # colemak / qwerty
 encrypted = {{ $encrypted | quote }}
 setup_mamba = {{ $setup_mamba | quote }}
