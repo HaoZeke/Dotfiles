@@ -6,6 +6,8 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/tt-mirror
+# 75 = the key store was locked; the next slot retries, so it is not a failure.
+SuccessExitStatus=75
 Nice=10
 IOSchedulingClass=idle
 {{- end -}}
