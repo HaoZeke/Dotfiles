@@ -4,7 +4,14 @@
 # host. Copy, never sync: a deletion on the remote must not reach the mirror.
 # Credentials come from pass at run time (read-only key scoped to the prefix).
 set -euo pipefail
-entry=$(timeout 15 pass show turtletech/backblaze/tardigrade-mirror-ro </dev/null)
+# pass needs the agent's passphrase cache, which only interactive use fills.
+# Inside a timer unit a cold cache is "batchmode - can't get input": not an
+# error in the mirror, so leave quietly with EX_TEMPFAIL and let the next
+# timer slot try again.
+if ! entry=$(timeout 15 pass show turtletech/backblaze/tardigrade-mirror-ro </dev/null 2>/dev/null); then
+    printf '%(%F %T)T tt-mirror: key store locked (no cached passphrase); skipped until the next slot\n' -1 >&2
+    exit 75
+fi
 key=$(printf '%s\n' "$entry" | sed -n '1p')
 kid=$(printf '%s\n' "$entry" | awk '/^key_id:/{print $2; exit}')
 bucket=$(printf '%s\n' "$entry" | awk '/^bucket:/{print $2; exit}')
