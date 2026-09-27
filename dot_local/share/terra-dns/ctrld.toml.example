@@ -9,9 +9,8 @@
 # every name lookup on the machine hanging until something is restarted. Pinning
 # the bootstrap address keeps a failing upstream a failing upstream.
 #
-# The endpoints carry a private resolver uid, so the real file lives in
-# outside this repo and only this redacted
-# example is committed.
+# The endpoints carry a private resolver uid, so the real file lives outside
+# this repo and only this redacted example is committed.
 
 [service]
   log_level = "notice"
