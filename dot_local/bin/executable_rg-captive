@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# rg-captive: get through a captive portal without opening a browser.
+#
+#   rg-captive          probe, and accept the portal when a handler knows it
+#   rg-captive probe    probe only; print online, portal URL, or offline
+#   rg-captive install  enable the user timer that runs this every 2 minutes
+#
+# A guest network that is "free" still gates each device behind an Agree page,
+# and the controller forgets the agreement after its session timeout, so access
+# drops every few hours until somebody clicks again. This does the clicking.
+#
+# Probe: the Firefox detection URL answers 200 "success" on an open network and
+# a redirect to the portal behind one. Handlers are matched on the portal host.
+# An unknown portal is not guessed at: it is logged and shown as a desktop
+# notification with its URL, which captive-browser
+# (https://github.com/FiloSottile/captive-browser) opens even when the local
+# resolver cannot see the portal's DNS.
+set -uo pipefail
+
+PROBE="${RG_CAPTIVE_PROBE:-http://detectportal.firefox.com/success.txt}"
+UA="Mozilla/5.0 (X11; Linux x86_64) rg-captive"
+
+log() { printf 'rg-captive: %s\n' "$*" >&2; }
+
+# Prints "online", "offline", or the portal URL the probe was redirected to.
+probe() {
+    local out code url
+    out="$(curl -s -m 10 -A "$UA" -o /dev/null -w '%{http_code} %{redirect_url}' "$PROBE" 2>/dev/null)" || {
+        echo offline
+        return
+    }
+    code="${out%% *}"
+    url="${out#* }"
+    case "$code" in
+        200) echo online ;;
+        301 | 302 | 303 | 307 | 308) echo "${url:-offline}" ;;
+        *) echo offline ;;
+    esac
+}
+
+# Zyxel Nebula click-to-continue: the Agree button posts an empty form back to
+# Clicktocontinue.cgi, and the query string names the AP and the client.
+accept_zyxel_nebula() {
+    local url="$1"
+    curl -s -m 20 -A "$UA" -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+        -H "Referer: $url" --data '' -o /dev/null "$url"
+}
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send -a rg-captive "Captive portal" "$1" 2>/dev/null || true
+}
+
+accept() {
+    local state host
+    state="$(probe)"
+    case "$state" in
+        online) return 0 ;;
+        offline) log "no answer from the probe"; return 1 ;;
+    esac
+    host="$(printf '%s' "$state" | sed -E 's#^[a-z]+://([^/:?]+).*#\1#')"
+    case "$host" in
+        *.nebula.zyxel.com) accept_zyxel_nebula "$state" ;;
+        *)
+            log "unknown portal at $host: $state"
+            notify "Unknown portal at $host. Open it with captive-browser or: $state"
+            return 2
+            ;;
+    esac
+    if [ "$(probe)" = online ]; then
+        log "accepted the portal at $host"
+        return 0
+    fi
+    log "the portal at $host still redirects after accepting"
+    notify "The portal at $host did not let this device through: $state"
+    return 1
+}
+
+install_timer() {
+    systemctl --user daemon-reload &&
+        systemctl --user enable --now rg-captive.timer &&
+        systemctl --user list-timers rg-captive.timer --no-pager
+}
+
+case "${1:-accept}" in
+    accept) accept ;;
+    probe) probe ;;
+    install) install_timer ;;
+    -h | --help) sed -n '2,17p' "$0" ;;
+    *) sed -n '2,17p' "$0" >&2; exit 2 ;;
+esac

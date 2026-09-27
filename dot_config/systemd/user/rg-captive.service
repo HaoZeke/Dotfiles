@@ -1,0 +1,9 @@
+[Unit]
+Description=Accept a captive portal the network put in front of this device
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-captive
+# 2 is an unknown portal, already reported by notification; not a failure.
+SuccessExitStatus=2
