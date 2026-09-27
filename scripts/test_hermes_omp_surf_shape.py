@@ -62,8 +62,10 @@ def assert_hermes_surf_model(model: dict, providers: dict | None, label: str) ->
     providers = providers or {}
     # Docs-valid: provider custom + base_url, OR named providers.<id> with Willma URL
     named_ok = False
-    if provider and provider in providers and isinstance(providers[provider], dict):
-        pbase = str(providers[provider].get("base_url") or providers[provider].get("api") or "")
+    # Hermes names a providers.<id> entry as custom:<id> in model.provider.
+    pname = provider.split(":", 1)[1] if provider.startswith("custom:") else provider
+    if pname and pname in providers and isinstance(providers[pname], dict):
+        pbase = str(providers[pname].get("base_url") or providers[pname].get("api") or "")
         if WILLMA_HOST in pbase or WILLMA_HOST in base:
             named_ok = True
     custom_ok = provider == "custom" and WILLMA_HOST in base
