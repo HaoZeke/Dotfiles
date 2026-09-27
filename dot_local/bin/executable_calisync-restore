@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Pull the Calibre library from pCloud into ~/CalibreLibs/Synced on a
+# machine that does not have it yet. Read-only on the remote; safe to
+# re-run (rclone copy only adds and updates).
+set -u
+lib="$HOME/CalibreLibs/Synced"
+remote="pCloud:/Calibre"
+if ! rclone listremotes 2>/dev/null | grep -qx 'pCloud:'; then
+    echo "calisync-restore: rclone has no pCloud remote; run: rclone config create pCloud pcloud" >&2
+    exit 1
+fi
+mkdir -p "$lib"
+pw=()
+if secret-tool lookup service rclone user calisync >/dev/null 2>&1; then
+    pw=(--ask-password=false --password-command='secret-tool lookup service rclone user calisync')
+fi
+exec rclone copy -P --bwlimit "${CALISYNC_BWLIMIT:-2M}" "$remote" "$lib" "${pw[@]}"
