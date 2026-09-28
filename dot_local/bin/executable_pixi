@@ -1,10 +1,23 @@
 #!/usr/bin/env sh
+# pixi shim: the self-installed pixi under ~/.pixi wins when present; a
+# packaged pixi later on PATH is the fallback, so a host that installs pixi
+# from its package manager still answers `pixi run`.
 set -eu
 
 pixi_bin="${PIXI_BIN:-$HOME/.pixi/bin/pixi}"
 
 if [ ! -x "$pixi_bin" ]; then
-    printf 'pixi: expected executable at %s\n' "$pixi_bin" >&2
+    self="$(command -v -- "$0" 2>/dev/null || printf '%s' "$0")"
+    for candidate in /usr/bin/pixi /usr/local/bin/pixi; do
+        if [ -x "$candidate" ] && [ "$candidate" != "$self" ]; then
+            pixi_bin="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ ! -x "$pixi_bin" ]; then
+    printf 'pixi: expected executable at %s (or a packaged pixi in /usr/bin)\n' "$pixi_bin" >&2
     exit 127
 fi
 
