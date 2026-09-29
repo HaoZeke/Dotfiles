@@ -454,3 +454,4 @@ dot_local/share/rg-location-profiles/livingston/xai-tailnet.pac
 dot_local/bin/executable_rg-resolver-conf
 .chezmoiscripts/run_onchange_linux_local_dns.sh.tmpl
 dot_config/environment.d/50-packset.conf
+dot_config/systemd/user/packsetd.service
