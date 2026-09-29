@@ -18,6 +18,48 @@ RESTART_CMD="${RG_KANATA_RESTART_CMD:-systemctl --user restart $UNIT}"
 JOURNAL_CMD="${RG_KANATA_JOURNAL_CMD:-journalctl --user -u $UNIT -f -n0 -o cat}"
 NOW_CMD="${RG_KANATA_NOW_CMD:-date +%s}"
 
+# kanata reads the keyboard state once at start and treats any key it finds
+# down as held until that key's release comes; a restart that lands in the
+# middle of typing therefore starts with a stuck key (Backspace, mostly, since
+# that is what a person hammers when the keyboard stops). Wait for every key
+# on every keyboard to be up, at most WAIT_IDLE_MS, before the restart.
+WAIT_IDLE_MS="${RG_KANATA_WAIT_IDLE_MS:-5000}"
+KEYS_DOWN_CMD="${RG_KANATA_KEYS_DOWN_CMD:-keys_down}"
+
+keys_down() {
+    python3 - <<'EOF' 2>/dev/null
+import array, fcntl, glob, os
+EVIOCGKEY = (2 << 30) | (ord('E') << 8) | 0x18 | (96 << 16)
+down = 0
+for dev in glob.glob('/dev/input/event*'):
+    try:
+        fd = os.open(dev, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        continue
+    buf = array.array('B', [0] * 96)
+    try:
+        fcntl.ioctl(fd, EVIOCGKEY, buf, True)
+        # buttons (BTN_*, 0x100..0x2ff) are pointer state, not keys
+        down += sum(bin(b).count('1') for b in buf[:32])
+    except OSError:
+        pass
+    os.close(fd)
+print(down)
+EOF
+}
+
+wait_keys_released() {
+    local waited=0 n
+    while [ "$waited" -lt "$WAIT_IDLE_MS" ]; do
+        n=$($KEYS_DOWN_CMD)
+        [ -n "$n" ] || return 0
+        [ "$n" -eq 0 ] && return 0
+        sleep 0.1
+        waited=$((waited + 100))
+    done
+    printf 'rg-kanata-watchdog: keys still down after %s ms; restarting anyway\n' "$WAIT_IDLE_MS" >&2
+}
+
 # Reads journal lines on stdin and restarts the unit when a wedge signature
 # appears, honouring COOLDOWN between restarts.
 watchdog_loop() {
@@ -33,6 +75,7 @@ watchdog_loop() {
         fi
         last=$now
         printf 'rg-kanata-watchdog: wedge signature seen; restarting %s\n' "$UNIT" >&2
+        wait_keys_released
         $RESTART_CMD || true
     done
 }
