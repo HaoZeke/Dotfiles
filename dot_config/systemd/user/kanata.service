@@ -26,11 +26,19 @@ Restart=on-failure
 RestartSec=3
 # Keyboard remapper; losing it makes the user's layout unusable mid-
 # session and can strand them with no way to type out of the freeze.
-OOMScoreAdjust=-500
+OOMScoreAdjust=-1000
 ManagedOOMPreference=avoid
-# User-manager cannot set Nice<0 or IOSchedulingClass=realtime without
-# CAP_SYS_NICE. CPUWeight is cgroup-level and always honored.
-CPUWeight=500
+# The input path must not wait on a thrashing machine: the remapper's
+# pages never go to swap, and it runs round-robin realtime at nice -11.
+# Both fit the user's limits here (RLIMIT_RTPRIO 95, RLIMIT_NICE 31);
+# IOSchedulingClass=realtime would need CAP_SYS_ADMIN, so best-effort 0.
+MemorySwapMax=0
+CPUWeight=10000
+Nice=-11
+CPUSchedulingPolicy=rr
+CPUSchedulingPriority=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=0
 
 [Install]
 WantedBy=sway-session.target
