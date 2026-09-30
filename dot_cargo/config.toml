@@ -1,7 +1,7 @@
 # https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
-# Peak-RSS control for local builds. -j4 matches the CLAUDE.md rule
-# against spawning too many parallel rustc processes on the laptop;
+# Peak-RSS control for local builds. -j4 keeps rustc from spawning
+# too many parallel processes on the laptop;
 # line-tables-only cuts rustc heap usage substantially with no loss of
 # backtrace line numbers. Without these, a single `cargo check` of a
 # multi-crate workspace can reach 8-16 GB RSS and drive the session
@@ -18,13 +18,6 @@ debug = "line-tables-only"
 
 [profile.test]
 debug = "line-tables-only"
-
-# mold linker for every x86_64 Linux target. Cuts link time roughly
-# 5x on large Rust binaries vs GNU ld. Uses clang as the cc frontend
-# so -fuse-ld=mold is understood.
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
 
 [net]
 retry = 2                   # network retries

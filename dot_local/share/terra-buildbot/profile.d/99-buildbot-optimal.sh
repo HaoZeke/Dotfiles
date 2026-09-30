@@ -5,11 +5,6 @@ export SCCACHE_CACHE_SIZE="${SCCACHE_CACHE_SIZE:-50G}"
 export SCCACHE_IDLE_TIMEOUT="${SCCACHE_IDLE_TIMEOUT:-0}"
 export SCCACHE_MAX_FRAME_LENGTH="${SCCACHE_MAX_FRAME_LENGTH:-200000000}"
 export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"
-# Prefer mold for host cargo when installed (huge link speedup on 9950X)
-if [[ -x /usr/bin/mold ]] && [[ -z "${CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER:-}" ]]; then
-  export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang
-  export RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-fuse-ld=mold"
-fi
 # Job defaults: min(28, nproc-4) on ≥16 threads so interactive/GPU keep 4 threads.
 # Explicit 28 is correct for measured 32-thread 9950X; dynamic fallback for smaller hosts.
 _bb_n=$(nproc 2>/dev/null || echo 32)
