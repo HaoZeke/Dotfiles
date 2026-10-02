@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Constructed cases for rg-terra-slurm-reaper. Shims stand in for squeue,
+# scontrol, scancel, logger, wall and notify-send; a fake cgroup and /proc
+# tree carry each job's CPU use, and REAPER_NOW is the clock.
+set -euo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+SCRIPT=${1:-$HERE/rg-terra-slurm-reaper}
+W=$(mktemp -d)
+trap 'rm -rf "$W"' EXIT
+mkdir -p "$W/bin" "$W/state" "$W/proc" "$W/cg/system.slice/slurmstepd.scope" "$W/out"
+export ACT=$W/actions RUN=$W/running PEND=$W/pending JOBS=$W/jobs
+: >"$ACT"; : >"$RUN"; : >"$PEND"
+
+cat >"$W/bin/squeue" <<'SH'
+#!/usr/bin/env bash
+case "$*" in *"-t PD"*) cat "$PEND";; *"-t R"*) cat "$RUN";; esac
+SH
+cat >"$W/bin/scontrol" <<SH
+#!/usr/bin/env bash
+case "\$1" in
+  listpids) echo "PID JOBID STEPID"; echo "\$((\$2 + 1000)) \$2 batch";;
+  show) echo "JobId=\$3 StdOut=$W/out/\$3.out";;
+esac
+SH
+printf '#!/usr/bin/env bash\necho "scancel $*" >>"$ACT"\n' >"$W/bin/scancel"
+printf '#!/usr/bin/env bash\ncat >/dev/null; echo "wall" >>"$ACT"\n' >"$W/bin/wall"
+printf '#!/bin/sh\ntrue\n' >"$W/bin/logger"; printf '#!/bin/sh\ntrue\n' >"$W/bin/notify-send"
+chmod +x "$W/bin/"*
+
+# A job: id, cores, comment. Its cgroup and its process are made here.
+job() {
+    local id=$1
+    mkdir -p "$W/proc/$((id + 1000))" "$W/cg/system.slice/slurmstepd.scope/s$id"
+    echo "0::/system.slice/slurmstepd.scope/s$id/step_batch/user/task_0" >"$W/proc/$((id + 1000))/cgroup"
+    echo "usage_usec 0" >"$W/cg/system.slice/slurmstepd.scope/s$id/cpu.stat"
+    : >"$W/out/$id.out"
+}
+# Advance a job's use by FRACTION of its cores over SECONDS.
+burn() {
+    local id=$1 cores=$2 frac=$3 secs=$4 f="$W/cg/system.slice/slurmstepd.scope/s$1/cpu.stat" u
+    u=$(awk '{print $2}' "$f")
+    echo "usage_usec $(awk -v u="$u" -v c="$cores" -v fr="$frac" -v s="$secs" 'BEGIN{printf "%.0f", u + c*fr*s*1e6}')" >"$f"
+}
+T=1000000
+run() { PATH="$W/bin:$PATH" REAPER_STATE="$W/state" REAPER_CGROUP_ROOT="$W/cg" REAPER_PROC="$W/proc" \
+        REAPER_NOW=$T bash "$SCRIPT" 2>"$W/err" || fail "the reaper exited $?: $(cat "$W/err")"; }
+# Five-minute steps for MIN minutes, the job burning at FRACTION.
+step() { local id=$1 cores=$2 frac=$3 min=$4 i; for ((i = 0; i < min / 5; i++)); do burn "$id" "$cores" "$frac" 300; T=$((T + 300)); run; done; }
+fail() { echo "FAIL: $*"; echo "--- actions"; cat "$ACT"; echo "--- log"; cat "$W/state/reaper.log" 2>/dev/null; exit 1; }
+cancels() { grep -c "^scancel $1$" "$ACT" || true; }
+
+# 1. A busy job beside waiting work is left alone.
+job 1; echo "1|32|(null)|/j/busy.sbatch" >"$RUN"; echo "Resources" >"$PEND"
+run; step 1 32 0.9 120
+[[ $(cancels 1) == 0 && ! -s $W/out/1.out ]] || fail "a busy job was warned or cancelled"
+
+# 2. An idle job beside waiting work: warned at 30 minutes, once, then cancelled 15 later.
+job 2; echo "2|32|(null)|/j/idle.sbatch" >"$RUN"; : >"$ACT"
+run; step 2 32 0.1 25
+[[ ! -s $W/out/2.out ]] || fail "warned before 30 minutes"
+step 2 32 0.1 5
+grep -q "uses 10% of its 32 cores" "$W/out/2.out" || fail "no warning in the job's output at 30 minutes"
+grep -q "scontrol update job=2 comment=keep" "$W/out/2.out" || fail "the warning does not say how to keep the job"
+[[ $(grep -c wall "$ACT") == 1 ]] || fail "the warning did not reach the terminals once"
+step 2 32 0.1 10
+[[ $(cancels 2) == 0 ]] || fail "cancelled inside the grace"
+step 2 32 0.1 5
+[[ $(cancels 2) == 1 ]] || fail "not cancelled at the end of the grace"
+grep -q "cancelled: 10% of its 32 cores" "$W/out/2.out" || fail "the cancel is not said in the job's output"
+
+# 3. Idle with nothing waiting: never touched.
+job 3; echo "3|32|(null)|/j/alone.sbatch" >"$RUN"; : >"$PEND"; : >"$ACT"
+run; step 3 32 0.05 120
+[[ $(cancels 3) == 0 && ! -s $W/out/3.out ]] || fail "an idle job on an idle queue was touched"
+
+# 4. Kept: never touched, whatever it uses.
+job 4; echo "4|32|keep|/j/kept.sbatch" >"$RUN"; echo "Priority" >"$PEND"; : >"$ACT"
+run; step 4 32 0.01 120
+[[ $(cancels 4) == 0 && ! -s $W/out/4.out ]] || fail "a kept job was touched"
+
+# 5. Warned, then busy again: the warning is withdrawn, no cancel.
+job 5; echo "5|16|(null)|/j/phase.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
+run; step 5 16 0.2 30
+grep -q "uses 20%" "$W/out/5.out" || fail "phase job not warned"
+step 5 16 0.95 30
+[[ $(cancels 5) == 0 ]] || fail "a job busy again after the warning was cancelled"
+step 5 16 0.2 25
+[[ $(cancels 5) == 0 ]] || fail "a fresh lull was cancelled on the old warning"
+
+# 6. A job that ended takes its state with it.
+: >"$RUN"; run
+compgen -G "$W/state/job-*" >/dev/null && fail "state left for ended jobs"
+
+# 7. Held or dependent jobs do not count as waiting for cores.
+job 7; echo "7|32|(null)|/j/x.sbatch" >"$RUN"; printf 'JobHeldUser\nDependency\n' >"$PEND"; : >"$ACT"
+run; step 7 32 0.05 120
+[[ $(cancels 7) == 0 ]] || fail "a held or dependent job counted as waiting"
+
+# 8. A dry run says it and does nothing.
+job 8; echo "8|32|(null)|/j/dry.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
+REAPER_DRY=1; export REAPER_DRY
+run; step 8 32 0.1 50
+unset REAPER_DRY
+[[ $(cancels 8) == 0 && ! -s $W/out/8.out ]] || fail "a dry run cancelled or wrote into job output"
+grep -q "would cancel (dry run)" "$W/state/reaper.log" || fail "a dry run did not say what it would do"
+
+echo "ALL REAPER CASES PASS"

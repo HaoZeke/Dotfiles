@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Cancel Slurm jobs on rgam5terra that hold cores they do not use while
+# other work waits, after a loud warning.
+#
+# Run every five minutes by rg-terra-slurm-reaper.timer (a user unit). A
+# job's use is read from its cgroup (cpu.stat usage_usec) between runs and
+# set against the cores it holds. Only while some job is pending for
+# Resources or Priority:
+#   under THRESHOLD of its cores for WARN_AFTER  -> warning in the job's
+#                                                   own output, the journal,
+#                                                   every terminal and the
+#                                                   desktop
+#   still under GRACE after the warning          -> scancel, said the same way
+# A job whose comment holds "keep" is never touched:
+#   scontrol update job=ID comment=keep
+# REAPER_DRY=1 says what it would do in the journal and its own log, and
+# writes nothing into job output and cancels nothing.
+set -euo pipefail
+
+THRESHOLD=${REAPER_THRESHOLD:-0.5}
+WARN_AFTER=${REAPER_WARN_AFTER:-1800}
+GRACE=${REAPER_GRACE:-900}
+STATE=${REAPER_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/rg-terra-slurm-reaper}
+CG_ROOT=${REAPER_CGROUP_ROOT:-/sys/fs/cgroup}
+PROC=${REAPER_PROC:-/proc}
+NOW=${REAPER_NOW:-$(date +%s)}
+DRY=${REAPER_DRY:-0}
+export SLURM_CONF=${SLURM_CONF:-/etc/slurm-llnl/slurm.conf}
+
+mkdir -p "$STATE"
+exec 9>"$STATE/lock"
+flock -n 9 || exit 0
+
+say() {
+    # $1 job id, $2 its output file, $3 message
+    local line="rg-terra-slurm-reaper: job $1: $3"
+    logger -t rg-terra-slurm-reaper -- "$line" 2>/dev/null || true
+    printf '%s %s\n' "$(date -d "@$NOW" '+%F %T' 2>/dev/null || echo "$NOW")" "$line" >>"$STATE/reaper.log"
+    if [[ -n "$2" && -w "$2" ]]; then
+        printf '\n!!!! %s\n\n' "$line" >>"$2" || true
+    fi
+    command -v wall >/dev/null 2>&1 && printf '%s\n' "$line" | wall 2>/dev/null || true
+    command -v notify-send >/dev/null 2>&1 && notify-send -u critical "Slurm reaper" "$line" 2>/dev/null || true
+}
+
+# CPU microseconds a running job has used, from the cgroup of one of its
+# processes; empty when it cannot be read.
+usage_of() {
+    local pid cg
+    pid=$(scontrol listpids "$1" 2>/dev/null | awk 'NR>1 && $1 ~ /^[0-9]+$/ {print $1; exit}')
+    [[ -n "$pid" && -r "$PROC/$pid/cgroup" ]] || return 0
+    cg=$(sed -n 's/^0:://p' "$PROC/$pid/cgroup" | head -1)
+    cg=${cg%/step_*}
+    [[ -r "$CG_ROOT$cg/cpu.stat" ]] || return 0
+    awk '$1 == "usage_usec" {print $2}' "$CG_ROOT$cg/cpu.stat"
+}
+
+pending=$(squeue -h -t PD -o '%r' 2>/dev/null | grep -cE '^(Resources|Priority)$' || true)
+running=$(squeue -h -t R -o '%i|%C|%k|%o' 2>/dev/null || true)
+
+# Jobs gone since the last run take their state with them.
+for f in "$STATE"/job-*; do
+    [[ -e "$f" ]] || continue
+    id=${f##*/job-}
+    grep -q "^$id|" <<<"$running" || rm -f "$f"
+done
+
+while IFS='|' read -r id cpus comment _cmd; do
+    [[ -n "$id" ]] || continue
+    f="$STATE/job-$id"
+    if [[ "$comment" == *keep* ]]; then
+        rm -f "$f"
+        continue
+    fi
+    used=$(usage_of "$id")
+    [[ -n "$used" ]] || continue
+    prev_used='' prev_t='' low_since='' warned_at=''
+    # shellcheck disable=SC1090
+    [[ -r "$f" ]] && source "$f"
+    low=0
+    if [[ -n "$prev_used" && -n "$prev_t" ]] && (( NOW > prev_t )); then
+        low=$(awk -v d="$((used - prev_used))" -v t="$((NOW - prev_t))" -v c="$cpus" -v th="$THRESHOLD" \
+            'BEGIN { u = d / (t * 1e6 * c); print (u < th) ? 1 : 0 }')
+        util=$(awk -v d="$((used - prev_used))" -v t="$((NOW - prev_t))" -v c="$cpus" \
+            'BEGIN { printf "%.0f", 100 * d / (t * 1e6 * c) }')
+    fi
+    if (( pending == 0 )) || (( low == 0 )); then
+        low_since='' warned_at=''
+    else
+        [[ -n "$low_since" ]] || low_since=$prev_t
+        out=$(scontrol show job "$id" 2>/dev/null | grep -oE 'StdOut=[^ ]+' | cut -d= -f2 || true)
+        if [[ -z "$warned_at" ]] && (( NOW - low_since >= WARN_AFTER )); then
+            (( DRY )) && out=''
+            say "$id" "$out" "uses ${util}% of its $cpus cores while $pending job(s) wait; it will be cancelled in $((GRACE / 60)) minutes unless it uses more, or keep it with: scontrol update job=$id comment=keep"
+            warned_at=$NOW
+        elif [[ -n "$warned_at" ]] && (( NOW - warned_at >= GRACE )); then
+            if (( DRY )); then
+                say "$id" "" "would cancel (dry run): ${util}% of its $cpus cores for $(( (NOW - low_since) / 60 )) minutes while $pending job(s) waited"
+            else
+                say "$id" "$out" "cancelled: ${util}% of its $cpus cores for $(( (NOW - low_since) / 60 )) minutes while $pending job(s) waited"
+                scancel "$id" || true
+            fi
+            rm -f "$f"
+            continue
+        fi
+    fi
+    printf 'prev_used=%s\nprev_t=%s\nlow_since=%s\nwarned_at=%s\n' "$used" "$NOW" "$low_since" "$warned_at" >"$f"
+done <<<"$running"

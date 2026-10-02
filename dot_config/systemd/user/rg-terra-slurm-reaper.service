@@ -1,0 +1,7 @@
+[Unit]
+Description=Cancel Slurm jobs that hold cores they do not use while work waits
+
+[Service]
+Type=oneshot
+Environment=SLURM_CONF=/etc/slurm-llnl/slurm.conf
+ExecStart=%h/.local/bin/rg-terra-slurm-reaper

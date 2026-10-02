@@ -234,6 +234,10 @@ AGENTS.md
 # they would also be plainly inappropriate: company correspondence should not
 # be mirrored onto hardware administered by a different organisation.
 {{ if ne .chezmoi.hostname "rgam5terra" }}
+.config/systemd/user/rg-terra-slurm-reaper.service
+.config/systemd/user/rg-terra-slurm-reaper.timer
+.local/bin/rg-terra-slurm-reaper
+.local/bin/rg-terra-slurm-reaper-selftest
 .config/systemd/user/rg-ttech-backup.service
 .config/systemd/user/rg-ttech-backup.timer
 .local/bin/rg-ttech-backup
