@@ -6,8 +6,8 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/tt-mirror
-# 75 = the key store was locked; the next slot retries, so it is not a failure.
-SuccessExitStatus=75
+# Exit 75 means the 0600 mirror key is not seeded yet. It is a failed unit,
+# so a cold store is visible instead of a successful skip.
 Nice=10
 IOSchedulingClass=idle
 {{- end -}}
