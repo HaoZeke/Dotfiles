@@ -439,6 +439,7 @@ dot_local/bin/executable_rg-tailscale-refresh-selftest
 dot_local/bin/executable_rg-terra-power
 dot_local/bin/executable_rg-terra-power-selftest
 dot_local/bin/executable_rg-terra-wifi-watchdog
+dot_local/bin/executable_rg-terra-wifi-watchdog-selftest
 dot_local/bin/executable_rg-tunnel-akamai-carveout.tmpl
 dot_local/bin/executable_rg-us-egress-endpoint-pin.tmpl
 dot_local/bin/executable_rg-us-egress-guard-selftest
