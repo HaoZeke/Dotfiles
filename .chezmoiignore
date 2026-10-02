@@ -211,6 +211,18 @@ dot_gemini/history/
 dot_gemini/tmp/
 dot_gemini/installation_id
 dot_gemini/state.json
+dot_gemini/settings.json
+dot_gemini/config/mcp_config.json
+dot_gemini/antigravity-cli/settings.json
+dot_gemini/antigravity-cli/log/
+dot_gemini/antigravity-cli/conversations/
+dot_gemini/antigravity-cli/crashes/
+dot_gemini/antigravity-cli/brain/
+dot_gemini/antigravity-cli/cache/
+dot_gemini/antigravity-cli/history.jsonl
+dot_gemini/antigravity-cli/installation_id
+dot_gemini/antigravity-cli/*.db
+dot_gemini/antigravity-cli/*.db-*
 {{ if not (and (hasKey . "machine_role") (or (eq .machine_role "buildbot") (eq .machine_role "surfwork"))) }}
 # Role-scoped agent docs
 AGENTS.md

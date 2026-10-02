@@ -96,6 +96,12 @@ dot_grok/
 ~/.codex/AGENTS.md
 ~/.codex/RTK.md
 ~/.codex/config.toml
+~/.gemini/settings.json
+~/.gemini/config/mcp_config.json
+~/.gemini/antigravity-cli/settings.json
+dot_gemini/settings.json
+dot_gemini/config/mcp_config.json
+dot_gemini/antigravity-cli/settings.json
 ~/.omp/mcp.json
 ~/.omp/agent/AGENTS.md
 ~/.omp/agent/config.yml
