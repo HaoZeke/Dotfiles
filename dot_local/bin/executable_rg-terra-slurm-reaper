@@ -56,7 +56,7 @@ usage_of() {
 }
 
 pending=$(squeue -h -t PD -o '%r' 2>/dev/null | grep -cE '^(Resources|Priority)$' || true)
-running=$(squeue -h -t R -o '%i|%C|%k|%o' 2>/dev/null || true)
+running=$(squeue -h -t R -o '%i|%C|%k|%b|%o' 2>/dev/null || true)
 
 # Jobs gone since the last run take their state with them.
 for f in "$STATE"/job-*; do
@@ -65,10 +65,12 @@ for f in "$STATE"/job-*; do
     grep -q "^$id|" <<<"$running" || rm -f "$f"
 done
 
-while IFS='|' read -r id cpus comment _cmd; do
+while IFS='|' read -r id cpus comment gres _cmd; do
     [[ -n "$id" ]] || continue
     f="$STATE/job-$id"
-    if [[ "$comment" == *keep* ]]; then
+    # A job holding a GPU waits on it with its cores idle by design; its
+    # cores are not what it is for, so it is never judged by them.
+    if [[ "$comment" == *keep* || "$gres" == *gpu* ]]; then
         rm -f "$f"
         continue
     fi

@@ -50,12 +50,12 @@ fail() { echo "FAIL: $*"; echo "--- actions"; cat "$ACT"; echo "--- log"; cat "$
 cancels() { grep -c "^scancel $1$" "$ACT" || true; }
 
 # 1. A busy job beside waiting work is left alone.
-job 1; echo "1|32|(null)|/j/busy.sbatch" >"$RUN"; echo "Resources" >"$PEND"
+job 1; echo "1|32|(null)|N/A|/j/busy.sbatch" >"$RUN"; echo "Resources" >"$PEND"
 run; step 1 32 0.9 120
 [[ $(cancels 1) == 0 && ! -s $W/out/1.out ]] || fail "a busy job was warned or cancelled"
 
 # 2. An idle job beside waiting work: warned at 30 minutes, once, then cancelled 15 later.
-job 2; echo "2|32|(null)|/j/idle.sbatch" >"$RUN"; : >"$ACT"
+job 2; echo "2|32|(null)|N/A|/j/idle.sbatch" >"$RUN"; : >"$ACT"
 run; step 2 32 0.1 25
 [[ ! -s $W/out/2.out ]] || fail "warned before 30 minutes"
 step 2 32 0.1 5
@@ -69,17 +69,17 @@ step 2 32 0.1 5
 grep -q "cancelled: 10% of its 32 cores" "$W/out/2.out" || fail "the cancel is not said in the job's output"
 
 # 3. Idle with nothing waiting: never touched.
-job 3; echo "3|32|(null)|/j/alone.sbatch" >"$RUN"; : >"$PEND"; : >"$ACT"
+job 3; echo "3|32|(null)|N/A|/j/alone.sbatch" >"$RUN"; : >"$PEND"; : >"$ACT"
 run; step 3 32 0.05 120
 [[ $(cancels 3) == 0 && ! -s $W/out/3.out ]] || fail "an idle job on an idle queue was touched"
 
 # 4. Kept: never touched, whatever it uses.
-job 4; echo "4|32|keep|/j/kept.sbatch" >"$RUN"; echo "Priority" >"$PEND"; : >"$ACT"
+job 4; echo "4|32|keep|N/A|/j/kept.sbatch" >"$RUN"; echo "Priority" >"$PEND"; : >"$ACT"
 run; step 4 32 0.01 120
 [[ $(cancels 4) == 0 && ! -s $W/out/4.out ]] || fail "a kept job was touched"
 
 # 5. Warned, then busy again: the warning is withdrawn, no cancel.
-job 5; echo "5|16|(null)|/j/phase.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
+job 5; echo "5|16|(null)|N/A|/j/phase.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
 run; step 5 16 0.2 30
 grep -q "uses 20%" "$W/out/5.out" || fail "phase job not warned"
 step 5 16 0.95 30
@@ -92,16 +92,21 @@ step 5 16 0.2 25
 compgen -G "$W/state/job-*" >/dev/null && fail "state left for ended jobs"
 
 # 7. Held or dependent jobs do not count as waiting for cores.
-job 7; echo "7|32|(null)|/j/x.sbatch" >"$RUN"; printf 'JobHeldUser\nDependency\n' >"$PEND"; : >"$ACT"
+job 7; echo "7|32|(null)|N/A|/j/x.sbatch" >"$RUN"; printf 'JobHeldUser\nDependency\n' >"$PEND"; : >"$ACT"
 run; step 7 32 0.05 120
 [[ $(cancels 7) == 0 ]] || fail "a held or dependent job counted as waiting"
 
 # 8. A dry run says it and does nothing.
-job 8; echo "8|32|(null)|/j/dry.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
+job 8; echo "8|32|(null)|N/A|/j/dry.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
 REAPER_DRY=1; export REAPER_DRY
 run; step 8 32 0.1 50
 unset REAPER_DRY
 [[ $(cancels 8) == 0 && ! -s $W/out/8.out ]] || fail "a dry run cancelled or wrote into job output"
 grep -q "would cancel (dry run)" "$W/state/reaper.log" || fail "a dry run did not say what it would do"
+
+# 9. A GPU job idle on its cores beside waiting work: never touched.
+job 9; echo "9|4|(null)|gres/gpu:1|/j/reader.sbatch" >"$RUN"; echo "Resources" >"$PEND"; : >"$ACT"
+run; step 9 4 0.25 120
+[[ $(cancels 9) == 0 && ! -s $W/out/9.out ]] || fail "a GPU job was judged by its cores"
 
 echo "ALL REAPER CASES PASS"
