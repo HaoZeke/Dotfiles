@@ -41,8 +41,20 @@ interval = 60
 
 [[block]]
 block = "battery"
+device = "BAT0"
+driver = "upower"
 interval = 15
-format = "$percentage {$time_remaining.dur(hms:true, min_unit:m) |}{$power |}"
+# Full and not-charging keep the percentage. Those states are icon-only
+# by default, and a charge threshold holds the pack in not-charging while
+# it still has a level worth reading. The icon face is named because the
+# bar font's fallback does not cover this private-use glyph.
+format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}"
+charging_format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}"
+full_format = " $icon $percentage "
+empty_format = " $icon $percentage "
+not_charging_format = " $icon $percentage "
+missing_format = ""
+icons_format = "<span font_family='Font Awesome 7 Free' weight='bold'>{icon}</span>"
 
 [[block]]
 block = "music"
