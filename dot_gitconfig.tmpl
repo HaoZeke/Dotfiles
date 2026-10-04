@@ -95,9 +95,12 @@
 # streams to gitlab.com's Cloudflare edge (packs over ~1MB die mid send-pack;
 # ssh :22 and altssh :443 both), while git-over-HTTP/2 takes a 10MB pack
 # clean. So every gitlab remote, ssh-form included, rewrites to https; auth
-# rides the glab credential helper below.
+# rides the glab credential helper below. The bare scp form gitlab.com:path
+# does not start with git@gitlab.com:, so it needs its own match.
 [url "https://gitlab.com/"]
 	insteadOf = git@gitlab.com:
+	insteadOf = ssh://git@gitlab.com/
+	insteadOf = gitlab.com:
 
 [credential]
 	helper = cache
