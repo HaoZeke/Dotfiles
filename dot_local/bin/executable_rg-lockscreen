@@ -287,7 +287,16 @@ if [ "$DRY_RUN" = "1" ]; then
     exit 0
 fi
 
+log_lock_request() {
+    local trigger="$1" caffeine_mode=unknown
+    if [ -x "$HOME/.local/bin/rg-caffeine" ]; then
+        caffeine_mode=$("$HOME/.local/bin/rg-caffeine" mode 2>/dev/null) || caffeine_mode=unknown
+    fi
+    logger -t rg-lockscreen -- "trigger=$trigger pid=$$ ppid=$PPID caffeine=$caffeine_mode" 2>/dev/null || true
+}
+
 if [ "$PREPARE_SLEEP" = "1" ]; then
+    log_lock_request prepare-sleep
     # Strip --daemonize / -f: we own the fork. With --daemonize set,
     # swaylock's parent exits as soon as the keyboard grab is in place,
     # which is exactly the race --prepare-sleep is here to close.
@@ -369,6 +378,7 @@ if [ "$DAEMONIZE" = "1" ]; then
     if pgrep -x swaylock >/dev/null 2>&1; then
         exit 0
     fi
+    log_lock_request daemonize
 
     # Launch the lock daemon in its own transient scope so it does not
     # inherit the caller's cgroup. Keeping swaylock out of swayidle.service
@@ -385,4 +395,7 @@ if [ "$DAEMONIZE" = "1" ]; then
     fi
 fi
 
+if [ "$DAEMONIZE" = "0" ]; then
+    log_lock_request foreground
+fi
 exec "$@"
