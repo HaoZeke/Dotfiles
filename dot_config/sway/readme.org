@@ -7,15 +7,15 @@ compact mode block so they do not eat the whole status line.
 | Bar label | Meaning | Locking | Idle sleep | Performance backend |
 |-----------+---------+---------+------------+---------------------|
 | = AUTO= | default behavior | yes | normal | unchanged |
-| = AWAKE= | block idle-triggered sleep only | yes | blocked | unchanged |
+| = AWAKE= | block idle lock, display off, and sleep | no | blocked | unchanged |
 | =BOOST ON= | request the performance profile only | unchanged | unchanged | on |
-| =FOCUS ON= | =AWAKE + BOOST= together | yes | blocked | on |
+| =FOCUS ON= | =AWAKE + BOOST= together | no | blocked | on |
 | =MIXED= | unusual combination, usually legacy/manual state | varies | varies | varies |
 
 So the intended reading is:
 
-- =AWAKE=: keep the machine awake, but still let the normal dim / lock /
-  DPMS path happen.
+- =AWAKE=: keep the display on and unlocked during idle time. Dimming
+  still runs. Explicit lock commands and sleep transitions still lock.
 - =BOOST=: ask the power backend for the faster profile without changing
   lock or idle policy.
 - =FOCUS=: turn on both =AWAKE= and =BOOST= at once.
@@ -196,7 +196,7 @@ The current behavior is wired primarily through:
 - =~/.local/bin/rg-power-menu=
 - =~/.local/bin/rg-desktop-help=
 - =~/.local/bin/rg-desktop-help-selftest=
-- =~/.local/share/rg-desktop-help-src/= (Rust source; rebuilt by chezmoi on change)
+- =~/.local/share/rg-desktop-help-src/= (Rust source; rebuilt when the source changes)
 - =~/.local/bin/rg-tmux-role=
 - =~/.local/bin/rg-wob-bridge=
 - =~/.local/bin/rg-sway-route-watcher=
