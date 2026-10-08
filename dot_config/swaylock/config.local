@@ -3,9 +3,6 @@
 # Repo-owned swaylock theme used by rg-lockscreen. Background selection
 # stays in the wrapper so this file can focus on appearance only.
 
-clock
-timestr=%H:%M
-datestr=%A, %d %B
 show-failed-attempts
 show-keyboard-layout
 indicator-idle-visible
@@ -20,7 +17,6 @@ indicator-thickness=16
 line-uses-ring
 separator-color=00000000
 
-effect-vignette=0.30:0.55
 
 color=101418
 inside-color=101418c0
