@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_grok-bot).
+#
+# `grok-bot` on Livingston hosts: every launch goes through rg-grok-bot
+# and so through the Houston door.
+set -euo pipefail
+if [ -x "$HOME/.local/bin/rg-grok-bot" ]; then
+    exec "$HOME/.local/bin/rg-grok-bot" "$@"
+fi
+exec "/opt/Grok Bot/grok-bot" "$@"

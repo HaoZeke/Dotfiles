@@ -453,6 +453,8 @@ dot_local/bin/executable_rg-us-split
 dot_local/bin/executable_rg-us-tailnet
 dot_local/bin/executable_rg-wide-net-collect
 dot_local/bin/executable_rg-grok
+dot_local/bin/executable_rg-grok-bot
+dot_local/bin/executable_rg-grok-bot-selftest
 dot_local/bin/executable_rg-surf-vpn-python
 dot_local/bin/executable_ookcite-mcp-pass
 dot_local/share/rg-location-profiles/livingston/chromium-geolocation/content.js
