@@ -2286,13 +2286,23 @@ fn run_local_auto_clean(options: &Options) -> Result<(), String> {
         return Ok(());
     }
 
+    let entries = collect_candidates(&home, &options.categories)
+        .map(|entries| filter_by_age(entries, options.min_age_days))?;
+    let free = free_bytes_for(&home)?;
+    if free >= threshold {
+        println!(
+            "free={} on {}, above threshold={} GB; no-op",
+            format_bytes(free),
+            home.display(),
+            options.min_free_gb
+        );
+        return Ok(());
+    }
     println!(
         "free={} below threshold={} GB; cleaning",
         format_bytes(free),
         options.min_free_gb
     );
-    let entries = collect_candidates(&home, &options.categories)
-        .map(|entries| filter_by_age(entries, options.min_age_days))?;
     clean_entries(&home, &entries, true)?;
     let after = free_bytes_for(&home)?;
     println!(
