@@ -2269,7 +2269,44 @@ fn run_remote_mode(target_name: &str, options: &Options) -> Result<(), String> {
 }
 
 fn mode_requires_candidate_scan(mode: Mode) -> bool {
-    !matches!(mode, Mode::Snapshots)
+    !matches!(mode, Mode::Snapshots | Mode::AutoClean)
+}
+
+fn run_local_auto_clean(options: &Options) -> Result<(), String> {
+    let home = home_dir()?;
+    let free = free_bytes_for(&home)?;
+    let threshold = options.min_free_gb.saturating_mul(1024 * 1024 * 1024);
+    if free >= threshold {
+        println!(
+            "free={} on {}, above threshold={} GB; no-op",
+            format_bytes(free),
+            home.display(),
+            options.min_free_gb
+        );
+        return Ok(());
+    }
+
+    println!(
+        "free={} below threshold={} GB; cleaning",
+        format_bytes(free),
+        options.min_free_gb
+    );
+    let entries = collect_candidates(&home, &options.categories)
+        .map(|entries| filter_by_age(entries, options.min_age_days))?;
+    clean_entries(&home, &entries, true)?;
+    let after = free_bytes_for(&home)?;
+    println!(
+        "post-clean free={} ({} reclaimed)",
+        format_bytes(after),
+        format_bytes(after.saturating_sub(free))
+    );
+    if after < threshold && Path::new("/.snapshots").is_dir() {
+        println!();
+        println!("still below threshold. btrfs snapshots likely hold reclaimable space.");
+        println!("run: rg-space-sweep snapshots, then run the printed sudo command");
+        println!("if standard mode reports 0 deletes, run: rg-space-sweep snapshots --aggressive");
+    }
+    Ok(())
 }
 
 fn run_local_mode(options: &Options) -> Result<(), String> {
@@ -2291,6 +2328,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                 return run_local_pressure(options);
             }
         }
+        Mode::AutoClean => return run_local_auto_clean(options),
         _ => {}
     }
 
@@ -2342,42 +2380,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                     }
                 }
                 Mode::AutoClean => {
-                    let free = free_bytes_for(&home)?;
-                    let threshold = options.min_free_gb.saturating_mul(1024 * 1024 * 1024);
-                    if free >= threshold {
-                        println!(
-                            "free={} on {}, above threshold={} GB; no-op",
-                            format_bytes(free),
-                            home.display(),
-                            options.min_free_gb
-                        );
-                        return Ok(());
-                    }
-                    println!(
-                        "free={} below threshold={} GB; cleaning",
-                        format_bytes(free),
-                        options.min_free_gb
-                    );
-                    // No du: reclaim ASAP under pressure.
-                    clean_entries(&home, &entries, true)?;
-                    let after = free_bytes_for(&home)?;
-                    println!(
-                        "post-clean free={} ({} reclaimed)",
-                        format_bytes(after),
-                        format_bytes(after.saturating_sub(free))
-                    );
-                    // Still tight? Suggest the snapshot route so the user
-                    // does not have to remember it.
-                    if after < threshold && Path::new("/.snapshots").is_dir() {
-                        println!();
-                        println!(
-                            "still below threshold. btrfs snapshots likely hold reclaimable space."
-                        );
-                        println!("run: rg-space-sweep snapshots, then run the printed sudo command");
-                        println!(
-                            "if standard mode reports 0 deletes, run: rg-space-sweep snapshots --aggressive"
-                        );
-                    }
+                    unreachable!("auto-clean is handled before candidate collection")
                 }
                 Mode::Snapshots => {
                     write_snapshot_script(options)?;
@@ -2545,11 +2548,11 @@ mod tests {
     }
 
     #[test]
-    fn snapshots_mode_does_not_need_cache_candidate_scan() {
+    fn snapshots_and_auto_clean_bypass_the_generic_candidate_scan() {
         assert!(!mode_requires_candidate_scan(Mode::Snapshots));
+        assert!(!mode_requires_candidate_scan(Mode::AutoClean));
         assert!(mode_requires_candidate_scan(Mode::Report));
         assert!(mode_requires_candidate_scan(Mode::Clean));
-        assert!(mode_requires_candidate_scan(Mode::AutoClean));
     }
 
     #[test]
