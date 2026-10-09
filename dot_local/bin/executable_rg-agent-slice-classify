@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_rg-agent-slice-classify).
 #
-# Move live farm CLI comms into agent.slice. Never signals, never kills.
-# Leftovers stay running under a CPU/memory class so foot and the
-# compositor keep shares.
+# Move selected workload trees into agent.slice. Never signals, never kills.
+# Seat clients stay in foot-server because the memory-pressure policy
+# excludes them from agent.slice.
 
 set -u
 
 SLICE=agent.slice
+UID_NOW=$(id -u)
 # Process names, encoded so this source stays committable.
-# Seat comms (herdr, grokos-shell-mcp) stay in foot-server. Never
-# scoop them: Meta oomd killed herdr inside agent.slice on 2026-09-14.
+# Seat comms stay in foot-server and outside the workload slice.
 # Decode each name on its own: one base64 stream of the three would join
 # them into a single string that matches no process.
 mapfile -t COMMS < <(for enc in Z3Jvaw== Y2xhdWRl Y29kZXg=; do
@@ -23,21 +23,49 @@ if ! systemctl --user start "$SLICE" >/dev/null 2>&1; then
 fi
 
 already_in_slice() {
-    local pid="$1" cg
-    cg=$(tr '\0' '\n' <"/proc/${pid}/cgroup" 2>/dev/null || true)
-    printf '%s' "$cg" | grep -q '/agent.slice'
+    local pid="$1" line
+    while IFS= read -r line; do
+        case "$line" in
+            *'/agent.slice'*) return 0 ;;
+        esac
+    done <"/proc/${pid}/cgroup" 2>/dev/null
+    return 1
 }
 
+declare -A seen=()
 pids=()
+collect_tree() {
+    local pid="$1" task child line process_uid
+    local -a children
+    [ -r "/proc/${pid}/status" ] || return
+    [ -n "${seen[$pid]+x}" ] && return
+    seen[$pid]=1
+
+    process_uid=
+    while IFS= read -r line; do
+        case "$line" in
+            Uid:*) read -r _ process_uid _ <<<"$line"; break ;;
+        esac
+    done <"/proc/${pid}/status"
+    [ "$process_uid" = "$UID_NOW" ] || return
+
+    pids+=("$pid")
+    for task in /proc/"$pid"/task/*; do
+        [ -r "$task/children" ] || continue
+        children=()
+        IFS=' ' read -r -a children <"$task/children" 2>/dev/null || true
+        for child in "${children[@]}"; do
+            [ -n "$child" ] && collect_tree "$child"
+        done
+    done
+}
+
 for comm in "${COMMS[@]}"; do
     while read -r pid; do
         [ -n "$pid" ] || continue
         [ -d "/proc/${pid}" ] || continue
-        if already_in_slice "$pid"; then
-            continue
-        fi
-        pids+=("$pid")
-    done < <(pgrep -x --uid "$(id -u)" "$comm" 2>/dev/null || true)
+        collect_tree "$pid"
+    done < <(pgrep -x --uid "$UID_NOW" "$comm" 2>/dev/null || true)
 done
 
 if [ "${#pids[@]}" -eq 0 ]; then
@@ -52,5 +80,6 @@ if [ -z "$cg" ] || [ ! -w "/sys/fs/cgroup/${cg}/cgroup.procs" ]; then
     exit 1
 fi
 for pid in "${pids[@]}"; do
+    already_in_slice "$pid" && continue
     printf '%s\n' "$pid" >"/sys/fs/cgroup/${cg}/cgroup.procs" 2>/dev/null || true
 done
