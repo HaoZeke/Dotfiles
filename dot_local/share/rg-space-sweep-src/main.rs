@@ -1259,10 +1259,7 @@ fn find_named_in_root(
     if names.is_empty() || !root.is_dir() {
         return Ok(Vec::new());
     }
-    let mut args = vec![
-        root.as_os_str().to_os_string(),
-        OsString::from("-xdev"),
-    ];
+    let mut args = vec![root.as_os_str().to_os_string(), OsString::from("-xdev")];
     append_prune_group(&mut args, home, extra_prune_names);
     args.push(OsString::from("-type"));
     args.push(OsString::from("d"));
@@ -1338,11 +1335,12 @@ fn find_path_dirs(home: &Path, pattern: &str) -> Result<Vec<PathBuf>, String> {
         let home_c = home_buf.clone();
         let pattern_c = pattern.clone();
         handles.push(std::thread::spawn(move || {
-            let mut args = vec![
-                root.as_os_str().to_os_string(),
-                OsString::from("-xdev"),
-            ];
-            append_prune_group(&mut args, &home_c, &["target", "target-nomount", ".venv", ".tox"]);
+            let mut args = vec![root.as_os_str().to_os_string(), OsString::from("-xdev")];
+            append_prune_group(
+                &mut args,
+                &home_c,
+                &["target", "target-nomount", ".venv", ".tox"],
+            );
             args.extend([
                 OsString::from("-type"),
                 OsString::from("d"),
@@ -1401,12 +1399,7 @@ fn walk_names_for(categories: &[Category]) -> Vec<&'static str> {
         names.push("target-nomount");
     }
     if wants(Category::Python) {
-        names.extend([
-            ".pytest_cache",
-            ".mypy_cache",
-            ".ruff_cache",
-            ".hypothesis",
-        ]);
+        names.extend([".pytest_cache", ".mypy_cache", ".ruff_cache", ".hypothesis"]);
     }
     if wants(Category::Tox) {
         names.push(".tox");
@@ -1437,14 +1430,8 @@ fn fixed_paths_for(home: &Path, category: Category) -> Vec<PathBuf> {
         Category::Pixi => vec![home.join(".cache/rattler/cache")],
         Category::Tox | Category::Venv => Vec::new(),
         Category::Js => vec![home.join(".npm")],
-        Category::Go => vec![
-            home.join(".cache/go-build"),
-            home.join(".cache/go-mod"),
-        ],
-        Category::Java => vec![
-            home.join(".gradle/caches"),
-            home.join(".m2/repository"),
-        ],
+        Category::Go => vec![home.join(".cache/go-build"), home.join(".cache/go-mod")],
+        Category::Java => vec![home.join(".gradle/caches"), home.join(".m2/repository")],
     }
 }
 
@@ -1553,7 +1540,10 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
             });
         }
         // Shallow ~/.local/share probe for cargo targets (depth-capped, not full share walk).
-        if names.iter().any(|n| *n == "target" || *n == "target-nomount") {
+        if names
+            .iter()
+            .any(|n| *n == "target" || *n == "target-nomount")
+        {
             let share = home.join(".local/share");
             if share.is_dir() {
                 let args = vec![
@@ -1603,10 +1593,10 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
                         continue;
                     }
                     entries.push(Candidate {
-                category,
-                path,
-                age_gated: true,
-            });
+                        category,
+                        path,
+                        age_gated: true,
+                    });
                 }
             }
         }
@@ -1890,10 +1880,14 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
                     .and_then(|value| value.to_str())
                     == Some("node_modules")
         }
-        Category::Go => entry.path.ends_with(Path::new(".cache/go-build"))
-            || entry.path.ends_with(Path::new(".cache/go-mod")),
-        Category::Java => entry.path.ends_with(Path::new(".gradle/caches"))
-            || entry.path.ends_with(Path::new(".m2/repository")),
+        Category::Go => {
+            entry.path.ends_with(Path::new(".cache/go-build"))
+                || entry.path.ends_with(Path::new(".cache/go-mod"))
+        }
+        Category::Java => {
+            entry.path.ends_with(Path::new(".gradle/caches"))
+                || entry.path.ends_with(Path::new(".m2/repository"))
+        }
     }
 }
 
@@ -2379,9 +2373,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                         println!(
                             "still below threshold. btrfs snapshots likely hold reclaimable space."
                         );
-                        println!(
-                            "run: rg-space-sweep snapshots, then run the printed sudo command"
-                        );
+                        println!("run: rg-space-sweep snapshots, then run the printed sudo command");
                         println!(
                             "if standard mode reports 0 deletes, run: rg-space-sweep snapshots --aggressive"
                         );
@@ -2506,7 +2498,10 @@ mod tests {
         let src = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/main.rs"));
         assert!(src.contains("fn project_scan_roots"));
         assert!(src.contains("std::thread::spawn"));
-        assert!(src.contains("Skip du entirely for destructive clean") || src.contains("No du: reclaim ASAP"));
+        assert!(
+            src.contains("Skip du entirely for destructive clean")
+                || src.contains("No du: reclaim ASAP")
+        );
         let _ = home;
     }
 
@@ -2515,12 +2510,7 @@ mod tests {
         let names = walk_names_for(&[Category::Python]);
         assert_eq!(
             names,
-            vec![
-                ".hypothesis",
-                ".mypy_cache",
-                ".pytest_cache",
-                ".ruff_cache",
-            ]
+            vec![".hypothesis", ".mypy_cache", ".pytest_cache", ".ruff_cache",]
         );
     }
 
