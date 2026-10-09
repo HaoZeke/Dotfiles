@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/libexec/rg-grok-bot-shim/executable_xdg-open).
+#
+# Route web browser requests from Grok Bot to the Livingston Vivaldi profile.
+set -euo pipefail
+
+url="${1:-}"
+case "$url" in
+    http://*|https://*)
+        profile="${RG_GROK_PROFILE:-$HOME/.local/bin/rg-livingston-profile}"
+        if [ -x "$profile" ]; then
+            exec "$profile" vivaldi "$@"
+        fi
+        ;;
+esac
+
+exec /usr/bin/xdg-open "$@"
