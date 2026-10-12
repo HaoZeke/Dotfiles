@@ -2,9 +2,11 @@
 # Managed by chezmoi (dot_local/bin/executable_grok-bot).
 #
 # `grok-bot` on Livingston hosts: every launch goes through rg-grok-bot
-# and so through the Houston door.
+# and so through the Houston door. There is no direct Electron fallback.
 set -euo pipefail
-if [ -x "$HOME/.local/bin/rg-grok-bot" ]; then
-    exec "$HOME/.local/bin/rg-grok-bot" "$@"
+launcher="$HOME/.local/bin/rg-grok-bot"
+if [ ! -x "$launcher" ]; then
+    echo "grok-bot: refusing to start without ${launcher}" >&2
+    exit 2
 fi
-exec "/opt/Grok Bot/grok-bot" "$@"
+exec "$launcher" "$@"
