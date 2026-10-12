@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fast-fail all git bundle creation commands
+# Prevents wholesale repository snapshot packaging and uploading
+if [[ "$*" == *"bundle create"* || "$*" == *"bundle "* || "$1" == "bundle" ]]; then
+    echo "git-shim: blocked git bundle (wholesale repository uploads/snapshots are disabled)" >&2
+    exit 1
+fi
+
+exec /usr/bin/git "$@"
