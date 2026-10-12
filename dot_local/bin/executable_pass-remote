@@ -22,7 +22,7 @@
 
 set -uo pipefail
 
-BROKER="${PASS_REMOTE_BROKER:-rgx1gen11}"
+BROKER="${PASS_REMOTE_BROKER:-rglat5340.broker}"
 FALLBACK="${PASS_REMOTE_FALLBACK:-rg.terra}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
 
@@ -35,8 +35,9 @@ ask() {
     printf '%s\n' "$out"
 }
 
-# Try the primary broker, then the always-on one. A laptop that is asleep is
-# the expected case, not an error worth failing on before trying the other.
+# Try the primary broker (rglat5340, over the gated broker key), then the
+# always-on one. A laptop that is asleep is the expected case, not an error
+# worth failing on before trying the other.
 broker_ask() {
     ask "$BROKER" "$1" && return 0
     ask "$FALLBACK" "$1" && return 0

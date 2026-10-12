@@ -33,6 +33,8 @@ export PATH
 SECRET_ALLOW='
 surf/ai-hub/token
 surf/ai-hub/rg.surf
+surf/objectstore/rohit
+surf/src/api_token
 '
 
 reject() {
