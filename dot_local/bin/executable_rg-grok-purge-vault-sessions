@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-grok-purge-vault-sessions).
+#
+# Purges all Grok CLI sessions, subagents, and prompt histories linked
+# to private sync repositories specified in ~/.config/ttech/sync-repos.
+# Invokes `rg-grok sessions delete <id>` with repository CWD to trigger
+# remote backend x.ai/session/delete RPCs, then purges local session directories.
+set -euo pipefail
+
+python3 - <<'EOF'
+import os
+import shutil
+import subprocess
+import sys
+import urllib.parse
+
+base = os.path.expanduser("~/.grok/sessions")
+if not os.path.isdir(base):
+    print(f"No sessions directory found at {base}. Nothing to do.")
+    sys.exit(0)
+
+sync_repos = os.path.expanduser("~/.config/ttech/sync-repos")
+target_keywords = []
+if os.path.exists(sync_repos):
+    with open(sync_repos, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                target_keywords.append(os.path.basename(os.path.expanduser(line)))
+
+if not target_keywords:
+    print("No repositories configured in ~/.config/ttech/sync-repos.")
+    sys.exit(0)
+
+dirs = [
+    d for d in os.listdir(base)
+    if any(k in d for k in target_keywords) and os.path.isdir(os.path.join(base, d))
+]
+
+if not dirs:
+    print("No matching vault session directories found in ~/.grok/sessions/.")
+    sys.exit(0)
+
+print(f"Found {len(dirs)} target vault directories in ~/.grok/sessions/.")
+
+for d in dirs:
+    full_path = os.path.join(base, d)
+    real_cwd = urllib.parse.unquote(d)
+    effective_cwd = real_cwd if os.path.isdir(real_cwd) else os.path.expanduser("~")
+    
+    sessions = [
+        s for s in os.listdir(full_path)
+        if os.path.isdir(os.path.join(full_path, s))
+    ]
+    print(f"\nProcessing {d} ({len(sessions)} sessions)...")
+
+    for s in sessions:
+        s_path = os.path.join(full_path, s)
+        try:
+            res = subprocess.run(
+                ["rg-grok", "sessions", "delete", s],
+                cwd=effective_cwd,
+                capture_output=True,
+                text=True,
+                timeout=12
+            )
+            out = (res.stdout + res.stderr).strip()
+        except Exception as e:
+            out = f"delete error: {e}"
+
+        if os.path.exists(s_path):
+            shutil.rmtree(s_path)
+        print(f"  [{s}] {out}")
+
+    prompt_history = os.path.join(full_path, "prompt_history.jsonl")
+    if os.path.exists(prompt_history):
+        os.remove(prompt_history)
+        print(f"  Removed prompt_history.jsonl for {d}")
+
+    remaining = os.listdir(full_path)
+    if not remaining:
+        os.rmdir(full_path)
+        print(f"  Removed empty directory: {d}")
+    else:
+        print(f"  Remaining in {d}: {remaining}")
+
+print("\nVault session purge completed successfully.")
+EOF
