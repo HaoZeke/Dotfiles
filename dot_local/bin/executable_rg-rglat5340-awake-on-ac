@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Keep rglat5340 awake when the lid closes on external power, and ignore a
+# short press of the power key. On battery the lid still suspends.
+#
+# /etc/systemd/logind.conf.d/50-lid.conf has no [Login] section, so logind
+# ignores every line in it. HandleLidSwitchExternalPower stays unset, and
+# an unset value does not apply on AC: the lid follows HandleLidSwitch,
+# which is suspend. HandlePowerKey stays at its default, poweroff.
+# This drop-in is named 60- so it still wins if 50-lid.conf later grows
+# a [Login] section that asks for suspend.
+#
+# The five-minute idle lock is unchanged.
+#
+# Run: rg-rglat5340-awake-on-ac
+
+set -euo pipefail
+
+host="$(hostnamectl --static 2>/dev/null || hostname)"
+if [[ "$host" != "rglat5340" ]]; then
+    printf 'rg-rglat5340-awake-on-ac: this host is %s, refusing\n' "$host" >&2
+    exit 1
+fi
+
+dest="/etc/systemd/logind.conf.d/60-awake-on-ac.conf"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+cat >"$tmp" <<'EOF'
+# Installed by rg-rglat5340-awake-on-ac.
+# Lid close on external power does not suspend. On battery the lid still
+# suspends. A short power-key press does not power the machine off.
+[Login]
+HandleLidSwitchExternalPower=ignore
+HandlePowerKey=ignore
+EOF
+
+sudo install -Dm644 "$tmp" "$dest"
+sudo systemctl kill -s HUP systemd-logind
+
+prop() {
+    busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager "$1"
+}
+
+ext="$(prop HandleLidSwitchExternalPower)"
+key="$(prop HandlePowerKey)"
+lid="$(prop HandleLidSwitch)"
+printf 'installed %s\n' "$dest"
+printf 'HandleLidSwitchExternalPower=%s\n' "$ext"
+printf 'HandlePowerKey=%s\n' "$key"
+printf 'HandleLidSwitch=%s\n' "$lid"
+
+[[ "$ext" == 's "ignore"' ]] || {
+    printf 'rg-rglat5340-awake-on-ac: external-power lid is %s\n' "$ext" >&2
+    exit 1
+}
+[[ "$key" == 's "ignore"' ]] || {
+    printf 'rg-rglat5340-awake-on-ac: power key is %s\n' "$key" >&2
+    exit 1
+}
+[[ "$lid" == 's "suspend"' ]] || {
+    printf 'rg-rglat5340-awake-on-ac: battery lid is %s\n' "$lid" >&2
+    exit 1
+}
