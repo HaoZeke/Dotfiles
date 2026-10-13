@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-cursor).
+#
+# Run the Cursor CLI from the Livingston egress, the same door rg-grok uses.
+# The host keeps Cursor's API closed unless the Houston tunnel is up, and that
+# tunnel shares its provider session with the Livingston namespace, so the CLI
+# rides the namespace door: a SOCKS listener whose only route is the tunnel.
+# A request either leaves from Houston or does not leave.
+#
+#   rg-cursor [agent args...]     e.g. rg-cursor, rg-cursor login, rg-cursor models
+#
+# The real binary stays at ~/.local/share/cursor-agent/current/cursor-agent.
+# This wrapper does not install itself as `agent`: that name is the Grok CLI
+# at ~/.grok/bin/agent. The PATH name for this CLI is `cursor-agent`.
+#
+# The door is verified as a US exit before every run; a failure refuses the
+# launch rather than falling back to the local address.
+set -euo pipefail
+
+door="${RG_CURSOR_DOOR:-socks5h://10.201.0.2:1080}"
+cursor_bin="${RG_CURSOR_BIN:-$HOME/.local/share/cursor-agent/current/cursor-agent}"
+profile="${RG_CURSOR_PROFILE:-$HOME/.local/bin/rg-livingston-profile}"
+
+die() {
+    echo "rg-cursor: $*" >&2
+    if [ ! -t 2 ] && command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "Cursor CLI blocked" "$*" >/dev/null 2>&1 || true
+    fi
+    exit 2
+}
+
+[ -x "$cursor_bin" ] || die "Cursor CLI not installed at $cursor_bin"
+
+# The door answers only while the namespace tunnel is up. Verify the exit
+# country through the same path the CLI will use.
+country=""
+for attempt in 1 2; do
+    if country="$(curl -fsS --connect-timeout 4 --max-time 12 \
+        --noproxy "" --proxy "$door" https://ipinfo.io/country 2>/dev/null)"; then
+        break
+    fi
+    country=""
+done
+[ "$country" = "US" ] || die "egress through $door is not a US exit (got '${country:-none}'); raise it with: rg-net livingston up"
+
+# Livingston process profile: timezone and locale as the browser has them.
+if [ -x "$profile" ]; then
+    while IFS= read -r line; do
+        case "$line" in
+            TZ=*|LANG=*|LC_*=*|LANGUAGE=*) export "$line" ;;
+        esac
+    done < <("$profile" env)
+fi
+
+# OAuth callbacks stay on loopback; the sign-in page opens in the Livingston
+# browser so the session is created from Houston as well.
+if [ -x "$profile" ]; then
+    export BROWSER="$profile vivaldi"
+fi
+
+# The Cursor CLI's HTTP client rejects a socks:// proxy URL. proxychains sends
+# the process through the same door without exporting one. Inherited proxy
+# variables are cleared so that client does not try to parse the SOCKS URL.
+unset HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy
+unset GLOBAL_AGENT_HTTP_PROXY GLOBAL_AGENT_HTTPS_PROXY GLOBAL_AGENT_NO_PROXY || true
+
+door_rest="${door#*://}"
+door_host="${door_rest%%:*}"
+door_port="${door_rest##*:}"
+door_port="${door_port%%/*}"
+conf_dir="${XDG_STATE_HOME:-$HOME/.local/state}/rg-cursor"
+mkdir -p "$conf_dir"
+conf="$conf_dir/proxychains.conf"
+cat >"$conf" <<EOF
+strict_chain
+proxy_dns
+tcp_read_time_out 20000
+tcp_connect_time_out 8000
+[ProxyList]
+socks5 ${door_host} ${door_port}
+EOF
+
+proxychains_bin="${RG_CURSOR_PROXYCHAINS:-proxychains4}"
+command -v "$proxychains_bin" >/dev/null 2>&1 || die "proxychains4 is not installed"
+
+exec "$proxychains_bin" -q -f "$conf" "$cursor_bin" "$@"
