@@ -107,9 +107,13 @@ options i915 enable_psr=1 enable_fbc=1
 '
 
 LOGIND_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rglat5340_power.sh.tmpl)
-# Lid close and power key use fast suspend for everyday carry.
+# Lid close and power key suspend on battery. On AC the lid is ignored:
+# this host serves as an always-on broker, and s2idle wakes it spuriously,
+# so each lid-closed suspend loops through suspend and lock.
+# logind ignores assignments outside the [Login] section.
+[Login]
 HandleLidSwitch=suspend
-HandleLidSwitchExternalPower=suspend
+HandleLidSwitchExternalPower=ignore
 HandleLidSwitchDocked=ignore
 HandlePowerKey=suspend
 '
@@ -242,7 +246,9 @@ fi
 
 if [ "$LOGIND_CHANGED" = "1" ]; then
     as_root systemctl daemon-reload
-    echo "chezmoi: logind drop-in updated (effective after reboot or manual logind restart)."
+    # SIGHUP reloads logind.conf without ending sessions.
+    as_root systemctl kill -s HUP systemd-logind.service
+    echo "chezmoi: logind drop-in updated and reloaded."
 fi
 
 # TLP owns policy; power-profiles-daemon fights it.
