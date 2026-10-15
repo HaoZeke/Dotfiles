@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Check profile zram writes against active and inactive swap devices.
+set -euo pipefail
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+profile=${1:-$here/executable_rg-x1gen11-profile}
+repo=$(cd "$here/../.." && pwd)
+tmp=$(mktemp -d)
+trap 'rtrash -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/etc/systemd/zram-generator.conf.d" "$tmp/sys/block/zram0"
+export RG_ZRAM_TEST_ROOT="$tmp" RG_ZRAM_TEST_ACTIVE=1
+cat > "$tmp/bin/swapon" <<'MOCK'
+#!/usr/bin/env bash
+if [ "$RG_ZRAM_TEST_ACTIVE" = 1 ]; then echo /dev/zram0; fi
+exit 0
+MOCK
+cat > "$tmp/bin/systemctl" <<'MOCK'
+#!/usr/bin/env bash
+echo "$*" >> "$RG_ZRAM_TEST_ROOT/commands"
+MOCK
+cat > "$tmp/bin/sudo" <<'MOCK'
+#!/usr/bin/env bash
+exec "$@"
+MOCK
+chmod +x "$tmp/bin/"*
+export PATH="$tmp/bin:$PATH"
+
+"$profile" root-helper-script "$tmp/helper" >/dev/null
+"$profile" root-script travel "$tmp/root-script" >/dev/null
+chezmoi execute-template < "$repo/.chezmoiscripts/run_onchange_linux_memory_tuning.sh.tmpl" > "$tmp/provision"
+
+sed -n '/^write_zram() {/,/^}/p' "$tmp/helper" > "$tmp/helper-body"
+sed -n '/^write_zram_size() {/,/^}/p' "$profile" > "$tmp/fallback-body"
+sed -n '/^install -d -m0755 \/etc\/systemd\/zram-generator.conf.d/,/^damon_enabled=/p' "$tmp/root-script" | sed '$d' > "$tmp/root-body"
+sed -n '/^if \[ "$ZRAM_CHANGED" = "1" \]; then/,/^# Always make sure systemd-oomd/p' "$tmp/provision" | sed '$d' > "$tmp/provision-body"
+
+for body in helper fallback root provision; do
+    text=$(cat "$tmp/$body-body")
+    [ -n "$text" ] || { echo "FAIL: missing $body body" >&2; exit 1; }
+    text=${text//\/etc\//$tmp/etc/}
+    text=${text//\/sys\//$tmp/sys/}
+    for active in 1 0; do
+        export RG_ZRAM_TEST_ACTIVE=$active
+        : > "$tmp/commands"
+        printf '0\n' > "$tmp/sys/block/zram0/disksize"
+        (
+            SUDO=''
+            zram_expr=ram
+            ZRAM_CHANGED=1
+            eval "$text"
+            case "$body" in
+                helper) write_zram ;;
+                fallback) write_zram_size 'ram / 4' ;;
+            esac
+        ) > "$tmp/output"
+        if [ "$active" = 1 ]; then
+            if rg -q 'restart|stop|reset-device|swapoff' "$tmp/commands"; then
+                echo "FAIL: $body restarts active swap" >&2
+                exit 1
+            fi
+        else
+            rg -q 'restart.*systemd-zram-setup@zram0.service' "$tmp/commands" || {
+                echo "FAIL: $body does not initialize inactive swap" >&2
+                exit 1
+            }
+        fi
+        rg -q '^daemon-reload$' "$tmp/commands" || { echo "FAIL: $body misses daemon reload" >&2; exit 1; }
+    done
+done
+echo 'ok: four provisioning paths preserve active swap and initialize inactive swap'

@@ -876,7 +876,7 @@ profile_policy_check() {
 }
 
 doctor() {
-    local check_policy="${1:-}" path unit_state profile
+    local check_policy="${1:-}" path profile
 
     unit_state() {
         local unit="$1" label="$2" inactive_note="${3:-inactive}" state
