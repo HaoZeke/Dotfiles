@@ -5,11 +5,13 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 locker=${1:-$here/executable_rg-lockscreen}
 rearm=${2:-$here/executable_rg-sway-input-rearm}
 tmp=$(mktemp -d)
+cleanup_home=$HOME
+cleanup_data=${XDG_DATA_HOME:-$HOME/.local/share}
 cleanup() {
     if [ -r "$tmp/locker.pid" ]; then
         kill "$(cat "$tmp/locker.pid")" 2>/dev/null || true
     fi
-    rtrash -rf "$tmp"
+    HOME="$cleanup_home" XDG_DATA_HOME="$cleanup_data" rtrash -rf "$tmp"
 }
 trap cleanup EXIT
 mkdir -p "$tmp/bin" "$tmp/home" "$tmp/runtime"
@@ -21,6 +23,7 @@ touch "$SWAYSOCK"
 cat > "$tmp/bin/swaymsg" <<'MOCK'
 #!/usr/bin/env bash
 if [ -e "$RG_TEST_ROOT/stall" ]; then exec sleep 30; fi
+if [ -e "$RG_TEST_ROOT/stall-command" ] && [[ "$*" != *get_version* ]]; then exec sleep 30; fi
 printf '{}\n'
 MOCK
 cat > "$tmp/bin/swaylock" <<'MOCK'
@@ -57,6 +60,15 @@ fi
 [ "$((SECONDS - start))" -le 4 ] || { echo 'FAIL: sleep preparation did not stop promptly' >&2; exit 1; }
 [ ! -e "$tmp/starts" ] || { echo 'FAIL: stalled preparation spawned a locker' >&2; exit 1; }
 rtrash "$tmp/stall"
+
+touch "$tmp/stall-command"
+start=$SECONDS
+if "$rearm" --socket "$SWAYSOCK" >"$tmp/command.log" 2>&1; then
+    echo 'FAIL: stalled input command succeeded' >&2
+    exit 1
+fi
+[ "$((SECONDS - start))" -le 4 ] || { echo 'FAIL: stalled input command did not stop promptly' >&2; exit 1; }
+rtrash "$tmp/stall-command"
 
 "$locker" --prepare-sleep &
 first=$!
