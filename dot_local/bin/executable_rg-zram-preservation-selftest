@@ -31,7 +31,7 @@ chezmoi execute-template < "$repo/.chezmoiscripts/run_onchange_linux_memory_tuni
 sed -n '/^write_zram() {/,/^}/p' "$tmp/helper" > "$tmp/helper-body"
 sed -n '/^write_zram_size() {/,/^}/p' "$profile" > "$tmp/fallback-body"
 sed -n '/^install -d -m0755 \/etc\/systemd\/zram-generator.conf.d/,/^damon_enabled=/p' "$tmp/root-script" | sed '$d' > "$tmp/root-body"
-sed -n '/^if \[ "$ZRAM_CHANGED" = "1" \]; then/,/^# Always make sure systemd-oomd/p' "$tmp/provision" | sed '$d' > "$tmp/provision-body"
+sed -n "/^if \\[ \"\$ZRAM_CHANGED\" = \"1\" \\]; then/,/^# Always make sure systemd-oomd/p" "$tmp/provision" | sed '$d' > "$tmp/provision-body"
 
 for body in helper fallback root provision; do
     text=$(cat "$tmp/$body-body")
@@ -43,9 +43,7 @@ for body in helper fallback root provision; do
         : > "$tmp/commands"
         printf '0\n' > "$tmp/sys/block/zram0/disksize"
         (
-            SUDO=''
-            zram_expr=ram
-            ZRAM_CHANGED=1
+            export SUDO='' zram_expr=ram ZRAM_CHANGED=1
             eval "$text"
             case "$body" in
                 helper) write_zram ;;
