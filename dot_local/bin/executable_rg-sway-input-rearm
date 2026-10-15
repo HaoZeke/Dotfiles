@@ -69,8 +69,10 @@ socket_works() {
     local attempt
     socket_exists "$candidate" || return 1
     for (( attempt = 1; attempt <= 5; attempt++ )); do
-        if SWAYSOCK="$candidate" "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1; then
+        if SWAYSOCK="$candidate" timeout 2 "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1; then
             return 0
+        else
+            [ "$?" -eq 124 ] && return 1
         fi
         sleep 0.05
     done
@@ -112,8 +114,10 @@ run_sway() {
     local attempt
     log "swaymsg $*"
     for (( attempt = 1; attempt <= 5; attempt++ )); do
-        if SWAYSOCK="$socket" "$swaymsg_bin" -s "$socket" "$@" >/dev/null; then
+        if SWAYSOCK="$socket" timeout 2 "$swaymsg_bin" -s "$socket" "$@" >/dev/null; then
             return 0
+        else
+            [ "$?" -eq 124 ] && die 'Sway IPC timed out; input recovery stopped'
         fi
         sleep 0.05
     done

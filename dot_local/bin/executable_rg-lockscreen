@@ -295,6 +295,25 @@ log_lock_request() {
     logger -t rg-lockscreen -- "trigger=$trigger pid=$$ ppid=$PPID caffeine=$caffeine_mode" 2>/dev/null || true
 }
 
+# Serialize background startup through the point where swaylock is visible
+# to the other callers. The locker must not inherit the startup lock.
+if [ "$PREPARE_SLEEP" = "1" ] || [[ " $* " == *' --daemonize '* ]] || [[ " $* " == *' -f '* ]]; then
+    startup_dir="${XDG_RUNTIME_DIR:-$XDG_STATE_HOME/rg-lockscreen}"
+    mkdir -p "$startup_dir"
+    exec 9>"$startup_dir/rg-lockscreen-start.lock"
+    flock -w 5 9 || { echo 'rg-lockscreen: lock startup is busy' >&2; exit 1; }
+fi
+
+wake_outputs() {
+    if command -v swaymsg >/dev/null 2>&1; then
+        timeout 2 swaymsg "output * dpms on" >/dev/null 2>&1 || {
+            echo 'rg-lockscreen: cannot wake outputs through Sway IPC' >&2
+            return 1
+        }
+        sleep 0.2
+    fi
+}
+
 if [ "$PREPARE_SLEEP" = "1" ]; then
     log_lock_request prepare-sleep
     # Strip --daemonize / -f: we own the fork. With --daemonize set,
@@ -314,22 +333,16 @@ if [ "$PREPARE_SLEEP" = "1" ]; then
     # second one only stacks a redundant process. Force a live scanout so
     # the hibernate image captures the existing lock surface, then return.
     if pgrep -x swaylock >/dev/null 2>&1; then
-        if command -v swaymsg >/dev/null 2>&1; then
-            swaymsg "output * dpms on" >/dev/null 2>&1 || true
-            sleep 0.2
-        fi
+        wake_outputs
         exit 0
     fi
 
     # Idle hibernate commonly starts with outputs in DPMS-off state.
     # Force a live scanout so the hibernate image captures the lock
     # surface instead of the stale frame held by the display engine.
-    if command -v swaymsg >/dev/null 2>&1; then
-        swaymsg "output * dpms on" >/dev/null 2>&1 || true
-        sleep 0.2
-    fi
+    wake_outputs
 
-    "$@" &
+    "$@" 9>&- &
     swl_pid=$!
     disown "$swl_pid" 2>/dev/null || true
 
@@ -386,7 +399,7 @@ if [ "$DAEMONIZE" = "1" ]; then
     # surface cannot trip oomd and cascade-kill the idle manager.
     if command -v systemd-run >/dev/null 2>&1; then
         if systemd-run --user --scope --quiet --collect \
-            --unit="rg-lockscreen-$$" -- "$@"; then
+            --unit="rg-lockscreen-$$" -- "$@" 9>&-; then
             # swayidle -w keeps the idle ladder stable only when this
             # wrapper stays alive until swaylock is running.
             wait_for_swaylock_ready
@@ -398,4 +411,4 @@ fi
 if [ "$DAEMONIZE" = "0" ]; then
     log_lock_request foreground
 fi
-exec "$@"
+exec "$@" 9>&-
