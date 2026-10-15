@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rglat5340") }}
+# sleep-policy-sha256: {{ include "dot_local/share/rglat5340/executable_install-sleep-policy" | sha256sum }}
+set -euo pipefail
+installer="{{ .chezmoi.homeDir }}/.local/share/rglat5340/install-sleep-policy"
+if [ "$(id -u)" -eq 0 ]; then
+    bash "$installer"
+elif sudo -n -v 2>/dev/null; then
+    sudo -n bash "$installer"
+else
+    printf 'Install the FUSE sleep policy: sudo bash %q\n' "$installer" >&2
+    exit 1
+fi
+{{- end }}

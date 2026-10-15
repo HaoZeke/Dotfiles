@@ -88,6 +88,20 @@ The suspend and hibernate entries run =~/.local/bin/rg-lockscreen
 --prepare-sleep= before calling =systemctl= so the sleep transition captures a
 locked screen. Reboot, power off, and sway exit ask for confirmation in rofi.
 
+* Sleep preparation on the Latitude 5340
+
+The sleep services keep userspace processes running during preparation so
+FUSE filesystem servers can answer requests from processes the kernel is
+freezing. A frozen filesystem server can strand a file search and prevent
+suspend; the graphical login scope can remain frozen when that attempt
+fails. The kernel still performs its normal suspend freezer operation.
+
+The managed installer is =~/.local/share/rglat5340/install-sleep-policy=.
+Run =sudo bash ~/.local/share/rglat5340/install-sleep-policy= to install the
+four sleep-service drop-ins and reload systemd. Each printed =Environment=
+line must contain =SYSTEMD_SLEEP_FREEZE_USER_SESSIONS=false=. This does not
+initiate sleep. The =swayidle= before-sleep hook still locks the desktop.
+
 * Workspaces
 
 Workspaces now have semantic names such as =7: read=, but the keyboard
