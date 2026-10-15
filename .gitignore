@@ -416,6 +416,8 @@ dot_local/bin/executable_rg-net-doctor
 dot_local/bin/executable_rg-net-doctor-alert
 dot_local/bin/executable_rg-net-doctor-alert-selftest
 dot_local/bin/executable_rg-net-heal
+dot_local/bin/executable_rg-net-teachx
+dot_local/bin/executable_rg-net-teachx-selftest
 dot_local/bin/executable_rg-net-recover.tmpl
 dot_local/bin/executable_rg-net-reliability-selftest
 dot_local/bin/executable_rg-net-verify
