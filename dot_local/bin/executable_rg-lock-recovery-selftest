@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Exercise stalled compositor recovery and overlapping sleep locks.
+set -euo pipefail
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+locker=${1:-$here/executable_rg-lockscreen}
+rearm=${2:-$here/executable_rg-sway-input-rearm}
+tmp=$(mktemp -d)
+cleanup() {
+    if [ -r "$tmp/locker.pid" ]; then
+        kill "$(cat "$tmp/locker.pid")" 2>/dev/null || true
+    fi
+    rtrash -rf "$tmp"
+}
+trap cleanup EXIT
+mkdir -p "$tmp/bin" "$tmp/home" "$tmp/runtime"
+export HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" XDG_CONFIG_HOME="$tmp/home/config"
+export XDG_DATA_HOME="$tmp/home/share" XDG_RUNTIME_DIR="$tmp/runtime"
+export RG_TEST_ROOT="$tmp" RG_SWAY_INPUT_REARM_ALLOW_FAKE_SOCKET=1 SWAYSOCK="$tmp/socket"
+export PATH="$tmp/bin:$PATH"
+touch "$SWAYSOCK"
+cat > "$tmp/bin/swaymsg" <<'MOCK'
+#!/usr/bin/env bash
+if [ -e "$RG_TEST_ROOT/stall" ]; then exec sleep 30; fi
+printf '{}\n'
+MOCK
+cat > "$tmp/bin/swaylock" <<'MOCK'
+#!/usr/bin/env bash
+echo start >> "$RG_TEST_ROOT/starts"
+echo "$$" > "$RG_TEST_ROOT/locker.pid"
+exec sleep 30
+MOCK
+cat > "$tmp/bin/pgrep" <<'MOCK'
+#!/usr/bin/env bash
+[ -r "$RG_TEST_ROOT/locker.pid" ] || exit 1
+pid=$(cat "$RG_TEST_ROOT/locker.pid")
+kill -0 "$pid" 2>/dev/null || exit 1
+echo "$pid"
+MOCK
+cat > "$tmp/bin/logger" <<'MOCK'
+#!/usr/bin/env bash
+exit 0
+MOCK
+chmod +x "$tmp/bin/"*
+
+touch "$tmp/stall"
+start=$SECONDS
+if "$rearm" --socket "$SWAYSOCK" >"$tmp/rearm.log" 2>&1; then
+    echo 'FAIL: stalled input recovery succeeded' >&2
+    exit 1
+fi
+[ "$((SECONDS - start))" -le 4 ] || { echo 'FAIL: input recovery did not stop promptly' >&2; exit 1; }
+start=$SECONDS
+if "$locker" --prepare-sleep >"$tmp/lock.log" 2>&1; then
+    echo 'FAIL: stalled sleep preparation succeeded' >&2
+    exit 1
+fi
+[ "$((SECONDS - start))" -le 4 ] || { echo 'FAIL: sleep preparation did not stop promptly' >&2; exit 1; }
+[ ! -e "$tmp/starts" ] || { echo 'FAIL: stalled preparation spawned a locker' >&2; exit 1; }
+rtrash "$tmp/stall"
+
+"$locker" --prepare-sleep &
+first=$!
+"$locker" --prepare-sleep &
+second=$!
+wait "$first"
+wait "$second"
+[ "$(wc -l < "$tmp/starts")" -eq 1 ] || { echo 'FAIL: overlapping requests spawned duplicate lockers' >&2; exit 1; }
+echo 'ok: stalled IPC is bounded; overlapping requests share one locker'
