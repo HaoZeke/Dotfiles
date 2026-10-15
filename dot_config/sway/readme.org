@@ -102,6 +102,11 @@ four sleep-service drop-ins and reload systemd. Each printed =Environment=
 line must contain =SYSTEMD_SLEEP_FREEZE_USER_SESSIONS=false=. This does not
 initiate sleep. The =swayidle= before-sleep hook still locks the desktop.
 
+Profile changes and memory provisioning preserve active compressed swap.
+They save zram sizing for device creation rather than restarting a device
+that holds swapped pages. A live restart can force those pages into memory
+or fail with =Device or resource busy=. Other profile settings apply normally.
+
 * Workspaces
 
 Workspaces now have semantic names such as =7: read=, but the keyboard

@@ -154,7 +154,11 @@ fi
 
 if [ "$ZRAM_CHANGED" = "1" ]; then
     sudo systemctl daemon-reload
-    sudo systemctl restart systemd-zram-setup@zram0.service || true
+    if swapon --show=NAME --noheadings | grep -qx /dev/zram0; then
+        echo 'chezmoi: preserving active zram swap; saved sizing applies when the device is created.'
+    else
+        sudo systemctl restart systemd-zram-setup@zram0.service
+    fi
 fi
 
 # Always make sure systemd-oomd is up; restart if its config moved.

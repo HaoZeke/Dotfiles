@@ -259,6 +259,10 @@ fs-type = swap
     $SUDO mkdir -p "$drop_in_dir"
     printf '%s' "$content" | $SUDO tee "$drop_in" >/dev/null
     $SUDO systemctl daemon-reload
+    if $SUDO swapon --show=NAME --noheadings 2>/dev/null | grep -qx /dev/zram0; then
+        printf 'preserving active zram swap; saved sizing applies when the device is created\n'
+        return 0
+    fi
     $SUDO systemctl restart --no-block systemd-zram-setup@zram0.service 2>/dev/null || true
 }
 
@@ -505,7 +509,11 @@ cat >/etc/systemd/zram-generator.conf.d/10-rg-profile.conf <<'ZRAM'
 $(zram_content "$zram")
 ZRAM
 systemctl daemon-reload
-systemctl restart --no-block systemd-zram-setup@zram0.service 2>/dev/null || true
+if swapon --show=NAME --noheadings | grep -qx /dev/zram0; then
+    printf 'preserving active zram swap; saved sizing applies when the device is created\\n'
+else
+    systemctl restart --no-block systemd-zram-setup@zram0.service
+fi
 
 damon_enabled=${damon@Q}
 damon_policy=${damon_profile@Q}
@@ -677,6 +685,10 @@ fs-type = swap"
     fi
     printf "%s\n" "$desired" >"$conf"
     systemctl daemon-reload
+    if swapon --show=NAME --noheadings | grep -qx /dev/zram0; then
+        printf 'preserving active zram swap; saved sizing applies when the device is created\n'
+        return 0
+    fi
     # A disksize left on an idle (non-swap) zram0 makes the generator's
     # comp_algorithm write fail with EBUSY; reset the device so the rebuild can
     # run. This is the state a killed restart leaves behind.
