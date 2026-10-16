@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Resume config helper sha256: {{ include "dot_local/bin/executable_rg-hibernate-resume-config" | sha256sum }}
+set -Eeuo pipefail
+
+if [[ "$(hostname)" != rglat5340 ]]; then
+    exit 0
+fi
+
+if [[ ${EUID:-$(id -u)} -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+    printf 'sleep setup needs cached root access; run sudo -v and apply the managed files again\n' >&2
+    exit 1
+fi
+
+as_root() {
+    if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
+if [[ -z ${SUDO_USER:-} && ${EUID:-$(id -u)} -eq 0 ]]; then
+    printf 'run through sudo from the login account so the installed helper can be found\n' >&2
+    exit 2
+fi
+
+login_user=${SUDO_USER:-$(id -un)}
+login_home=$(getent passwd "$login_user" | cut -d: -f6)
+helper="$login_home/.local/bin/rg-hibernate-resume-config"
+swapfile=/swap/swapfile
+mkinitcpio_conf=/etc/mkinitcpio.conf
+boot_entries=/boot/loader/entries
+
+[[ -x $helper ]] || { printf 'missing executable helper %s\n' "$helper" >&2; exit 1; }
+as_root test -r "$swapfile" || { printf 'missing hibernation swapfile %s\n' "$swapfile" >&2; exit 1; }
+[[ -r /sys/power/state ]] && rg -qw disk /sys/power/state \
+    || { printf 'kernel does not expose disk sleep state\n' >&2; exit 1; }
+[[ -r /usr/lib/initcpio/hooks/resume ]] \
+    || { printf 'mkinitcpio resume hook is unavailable\n' >&2; exit 1; }
+
+resume_uuid=$(as_root findmnt --noheadings --output UUID --target "$swapfile" | tr -d '[:space:]')
+resume_offset=$(as_root btrfs inspect-internal map-swapfile -r "$swapfile" | tr -d '[:space:]')
+[[ $resume_uuid =~ ^[0-9A-Fa-f-]{36}$ ]] \
+    || { printf 'could not resolve the swapfile filesystem UUID\n' >&2; exit 1; }
+[[ $resume_offset =~ ^[0-9]+$ ]] \
+    || { printf 'could not resolve the Btrfs swapfile offset\n' >&2; exit 1; }
+
+result=$(as_root "$helper" \
+    --mkinitcpio-conf "$mkinitcpio_conf" \
+    --boot-entries-dir "$boot_entries" \
+    --resume-uuid "$resume_uuid" \
+    --resume-offset "$resume_offset")
+printf '%s\n' "$result"
+
+if [[ $result == *$'hooks_changed=1'* ]]; then
+    as_root mkinitcpio -P
+fi
+
+printf 'hibernation resume uses UUID %s and offset %s\n' "$resume_uuid" "$resume_offset"

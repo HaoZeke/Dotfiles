@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Configure early resume from the encrypted Btrfs swapfile."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shlex
+import shutil
+import tempfile
+import time
+from pathlib import Path
+
+
+def normalize_hooks(text: str) -> tuple[str, bool]:
+    lines = text.splitlines(keepends=True)
+    matches = [i for i, line in enumerate(lines) if re.match(r"^[ \t]*HOOKS=\(", line)]
+    if len(matches) != 1:
+        raise ValueError(f"expected one active HOOKS assignment, found {len(matches)}")
+
+    index = matches[0]
+    line = lines[index]
+    ending = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+    body = line[: -len(ending)] if ending else line
+    match = re.fullmatch(r"([ \t]*HOOKS=\()([^)]*)(\).*)", body)
+    if not match:
+        raise ValueError("HOOKS assignment is not a single-line list")
+
+    hooks = match.group(2).split()
+    unlock = next((name for name in ("encrypt", "sd-encrypt") if name in hooks), None)
+    if unlock is None:
+        raise ValueError("HOOKS has no encryption unlock hook")
+    if "filesystems" not in hooks:
+        raise ValueError("HOOKS has no filesystems hook")
+
+    hooks = [name for name in hooks if name != "resume"]
+    insert_at = hooks.index(unlock) + 1
+    if insert_at > hooks.index("filesystems"):
+        raise ValueError("encryption hook must precede filesystems")
+    hooks.insert(insert_at, "resume")
+    updated = match.group(1) + " ".join(hooks) + match.group(3) + ending
+    lines[index] = updated
+    return "".join(lines), updated != line
+
+
+def normalize_entry(text: str, resume_uuid: str, resume_offset: int) -> tuple[str, bool, bool]:
+    lines = text.splitlines(keepends=True)
+    has_root = any(
+        line.lstrip().startswith("options ") and "root=/dev/mapper/root" in line.split()
+        for line in lines
+    )
+    if not has_root:
+        return text, False, False
+
+    changed = False
+    found_options = False
+    output: list[str] = []
+    for line in lines:
+        ending = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+        body = line[: -len(ending)] if ending else line
+        match = re.match(r"^([ \t]*options[ \t]+)(.*)$", body)
+        if not match:
+            output.append(line)
+            continue
+
+        found_options = True
+        prefix, arguments = match.groups()
+        comment = ""
+        if " #" in arguments:
+            arguments, comment_text = arguments.split(" #", 1)
+            comment = " #" + comment_text
+        values = shlex.split(arguments)
+        values = [
+            value
+            for value in values
+            if not value.startswith("resume=") and not value.startswith("resume_offset=")
+        ]
+        values.extend((f"resume=UUID={resume_uuid}", f"resume_offset={resume_offset}"))
+        updated = prefix + " ".join(values) + comment + ending
+        changed = changed or updated != line
+        output.append(updated)
+
+    if not found_options:
+        raise ValueError("boot entry has no options line")
+    return "".join(output), changed, True
+
+
+def write_with_backup(path: Path, content: str) -> Path:
+    stamp = f"{os.getpid()}-{time.time_ns()}"
+    backup = path.with_name(f"{path.name}.bak.{stamp}")
+    shutil.copy2(path, backup)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as stream:
+            stream.write(content)
+        os.chmod(temporary, path.stat().st_mode & 0o7777)
+        os.chown(temporary, path.stat().st_uid, path.stat().st_gid)
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
+    return backup
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mkinitcpio-conf", required=True, type=Path)
+    parser.add_argument("--boot-entries-dir", required=True, type=Path)
+    parser.add_argument("--resume-uuid", required=True)
+    parser.add_argument("--resume-offset", required=True, type=int)
+    args = parser.parse_args()
+
+    if not re.fullmatch(r"[0-9A-Fa-f-]{36}", args.resume_uuid):
+        parser.error("resume UUID is not a canonical UUID")
+    if args.resume_offset < 0:
+        parser.error("resume offset must be non-negative")
+
+    hooks_text = args.mkinitcpio_conf.read_text(encoding="utf-8")
+    new_hooks, hooks_changed = normalize_hooks(hooks_text)
+    updates: list[tuple[Path, str]] = []
+    matched_entries = 0
+    for entry in sorted(args.boot_entries_dir.glob("*.conf")):
+        original = entry.read_text(encoding="utf-8")
+        updated, changed, matches_root = normalize_entry(
+            original, args.resume_uuid, args.resume_offset
+        )
+        matched_entries += int(matches_root)
+        if matches_root and changed:
+            updates.append((entry, updated))
+
+    if matched_entries == 0:
+        raise ValueError("no boot entry targets /dev/mapper/root")
+
+    backups: list[tuple[Path, Path]] = []
+    try:
+        if hooks_changed:
+            backups.append((args.mkinitcpio_conf, write_with_backup(args.mkinitcpio_conf, new_hooks)))
+        for path, updated in updates:
+            backups.append((path, write_with_backup(path, updated)))
+    except Exception:
+        for path, backup in reversed(backups):
+            shutil.copy2(backup, path)
+        raise
+
+    print(f"hooks_changed={int(hooks_changed)}")
+    print(f"boot_entries_changed={len(updates)}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError) as error:
+        print(f"rg-hibernate-resume-config: {error}", file=os.sys.stderr)
+        raise SystemExit(1)
