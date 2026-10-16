@@ -53,6 +53,12 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'hwp_dynamic_boo
     || fail "build-heavy may enable HWP dynamic boost"
 RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'scx_mode: lavd' >/dev/null \
     || fail "focus must select scx_lavd through the scheduler ladder"
+RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'platform_profile: balanced' >/dev/null \
+    || fail "focus must use the balanced platform profile"
+RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'energy_performance_preference: balance_performance' >/dev/null \
+    || fail "focus must select balanced performance EPP"
+RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'scaling_max_freq: cpuinfo_max' >/dev/null \
+    || fail "focus must restore each CPU policy's hardware ceiling"
 RG_X1GEN11_PROFILES="$profiles" "$script" show focus | rg 'hwp_dynamic_boost: 1' >/dev/null \
     || fail "focus may enable HWP dynamic boost"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'damon_reclaim: true' >/dev/null \
@@ -65,7 +71,7 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scx_mode: rusty
     || fail "build-heavy must select scx_rusty"
 
 tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
+trap 'rtrash -rf "$tmpdir"' EXIT
 mkdir -p "$tmpdir/bin" "$tmpdir/home/.local/bin" "$tmpdir/root"
 
 RG_X1GEN11_PROFILES="$profiles" "$script" root-helper-script "$tmpdir/root-helper" >/dev/null \
