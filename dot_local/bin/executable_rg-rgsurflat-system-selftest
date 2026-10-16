@@ -79,6 +79,12 @@ rg -q 'Persistent=true' "$rgsurflat_system" \
     || fail "eduVPN keepalive timer does not catch up after missed runs"
 rg -q 'TimeoutStartSec=60' "$rgsurflat_system" \
     || fail "eduVPN keepalive service is not timeout-bounded"
+rg -F -q 'reauthorization cooldown is active; skipping browser-capable reconnect' "$rgsurflat_system" \
+    || fail "eduVPN ensure helper does not cool down after OAuth authorization times out"
+cooldown_line=$(rg -n -F 'reauthorization cooldown is active; skipping browser-capable reconnect' "$rgsurflat_system" | cut -d: -f1)
+connect_line=$(rg -n -F 'connect_with_cli || cli_rc=$?' "$rgsurflat_system" | cut -d: -f1)
+test "$cooldown_line" -lt "$connect_line" \
+    || fail "eduVPN ensure helper can launch another authorization attempt during cooldown"
 rg -q 'Amsterdam Science Park" connection.autoconnect no' "$rgsurflat_system" \
     || fail "rgSURFLat provisioning does not disable Amsterdam Science Park autoconnect"
 
