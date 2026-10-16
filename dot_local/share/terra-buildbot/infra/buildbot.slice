@@ -8,9 +8,12 @@ Before=slices.target
 # 9950X = 32 threads; leave headroom for sshd/netdata/kernel
 CPUWeight=200
 CPUQuota=3000%
-# ~40G of 46G — leave room for OS + sccache daemon + desktop-less services
-MemoryMax=40G
-MemoryHigh=36G
+# Slurm holds 39G of the 46G for jobs, so this slice runs in the host
+# reserve beside it, not beside the whole machine. The cap covers
+# buildbot-interactive.slice too (a child by name). Overflow pages go to
+# zram; a build that needs more goes through sbatch/srun with --mem.
+MemoryMax=14G
+MemoryHigh=12G
 MemorySwapMax=8G
 TasksMax=49152
 IOWeight=200
