@@ -127,6 +127,9 @@ x-scheme-handler/tg=org.telegram.desktop.desktop;
 x-scheme-handler/tonsite=org.telegram.desktop.desktop;
 x-scheme-handler/webcal=org.gnome.Evolution.desktop;
 x-scheme-handler/webcals=org.gnome.Evolution.desktop;
+{{- if eq .chezmoi.hostname "rgSURFLat" }}
+x-scheme-handler/slack=slack.desktop
+{{- end }}
 
 [Added Associations]
 application/epub+zip=calibre-ebook-viewer.desktop;org.pwmt.zathura-cb.desktop;org.pwmt.zathura-pdf-mupdf.desktop;
