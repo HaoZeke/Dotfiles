@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo=${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)}
+timer="$repo/dot_config/systemd/user/rg-space-sweep.timer"
+refresh="$repo/.chezmoiscripts/run_onchange_after_rg-space-sweep-timer.sh.tmpl"
+
+fail() {
+    printf 'FAIL: %s\n' "$*" >&2
+    exit 1
+}
+
+rg -q '^OnCalendar=hourly$' "$timer" \
+    || fail "space sweep timer must use a recurring calendar schedule"
+rg -q '^Persistent=true$' "$timer" \
+    || fail "space sweep timer must catch up after missed runs"
+if rg -q '^(OnBootSec|OnUnitActiveSec)=' "$timer"; then
+    fail "space sweep timer must not depend on a one-shot relative schedule"
+fi
+rg -q 'systemctl --user daemon-reload' "$refresh" \
+    || fail "timer deployment must reload the user systemd manager"
+rg -q 'systemctl --user enable --now rg-space-sweep\.timer' "$refresh" \
+    || fail "timer deployment must keep the space sweep armed"
+
+printf 'ok\n'

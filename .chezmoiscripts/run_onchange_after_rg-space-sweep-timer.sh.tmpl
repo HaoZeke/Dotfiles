@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Refresh the user timer when its managed schedule changes.
+# hash: {{ include "dot_config/systemd/user/rg-space-sweep.timer" | sha256sum }}
+
+set -euo pipefail
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    exit 0
+fi
+
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+    echo "chezmoi: no user systemd manager; skipping rg-space-sweep.timer refresh." >&2
+    exit 0
+fi
+
+systemctl --user daemon-reload
+systemctl --user enable --now rg-space-sweep.timer
+{{- end }}
