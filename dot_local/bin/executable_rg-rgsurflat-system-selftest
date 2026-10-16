@@ -56,6 +56,11 @@ rg -q 'nmcli radio wifi on' "$rgsurflat_system" \
     || fail "eduVPN recovery does not enable the NetworkManager Wi-Fi radio"
 rg -q 'nmcli connection up eduVPN' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not fall back to the existing NetworkManager profile"
+rg -F -q 'pgrep -u "$uid" -x eduvpn-cli' "$rgsurflat_system" \
+    || fail "eduVPN recovery does not preserve an interactive CLI session"
+if rg -n 'pkill .*eduvpn-cli|killall .*eduvpn-cli' "$rgsurflat_system"; then
+    fail "eduVPN recovery must not terminate user CLI sessions"
+fi
 rg -q 'health()' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not have an end-to-end health check"
 rg -q 'ip route get "\$ip"' "$rgsurflat_system" \
