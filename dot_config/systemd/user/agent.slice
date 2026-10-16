@@ -3,8 +3,8 @@
 # Collective throttle for leftover CLI farm processes. Attach live
 # leftovers with rg-agent-slice-classify; do not kill them. No
 # MemoryMax: a hard ceiling would OOM the farm. MemoryHigh
-# reclaim-throttles. CPU and I/O weights preserve service for
-# interactive workloads when several CLI sessions run together.
+# reclaim-throttles. The CPU cap allows three cores; the low CPU weight
+# preserves interactive workloads when several CLI sessions run together.
 [Unit]
 Description=Agent farm resource class (throttle, never kill)
 Before=shutdown.target
@@ -13,7 +13,7 @@ Before=shutdown.target
 MemoryAccounting=yes
 TasksAccounting=yes
 CPUWeight=5
-CPUQuota=100%
+CPUQuota=300%
 MemoryHigh=10G
 IOWeight=20
 # systemd-oomd must not reap this slice. Pressure is auto (not kill);
