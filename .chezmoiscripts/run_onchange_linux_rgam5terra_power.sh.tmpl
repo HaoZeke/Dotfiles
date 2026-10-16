@@ -160,9 +160,9 @@ WIFI_TIMER_CONTENT='[Unit]
 Description=Watch rgam5terra Wi-Fi association
 
 [Timer]
-OnBootSec=90s
-OnUnitActiveSec=60s
+OnCalendar=*-*-* *:0/1
 AccuracySec=15s
+Persistent=true
 Unit=rg-terra-wifi-watchdog.service
 
 [Install]
