@@ -299,4 +299,34 @@ fi
 
 # --- bluetooth ------------------------------------------------------------
 sudo systemctl enable bluetooth >/dev/null 2>&1 || true
+
+# --- memory: zram sized to RAM over the swapfile, earlyoom that sees swap --
+# rg-x1gen11-profile writes 10-rg-profile.conf with a fractional zram size;
+# this host keeps /swap/swapfile at priority 10 for overflow, so zram is sized
+# to RAM as on rglat5340 and the 20- drop-in wins over the profile's 10-.
+ZRAM_HOST='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_system.sh.tmpl)
+# rgSURFLat: zram sized to RAM; /swap/swapfile at priority 10 takes overflow.
+[zram0]
+zram-size = ram
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+'
+if write_if_diff /etc/systemd/zram-generator.conf.d/20-rgSURFLat.conf 0644 "$ZRAM_HOST"; then
+    sudo systemctl daemon-reload
+    echo "chezmoi: zram resize applies when zram0 is next created (reboot)"
+fi
+# -s 10,5: act only when swap is short too, so free swapfile space is used
+# before anything is killed. A recording in progress is never the victim.
+EARLYOOM_DEFAULTS="$(cat <<'EOF'
+# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_system.sh.tmpl)
+EARLYOOM_ARGS="-m 5,2 -s 10,5 -r 60 -n \
+--avoid '^(systemd|sshd|Xorg|Hyprland|sway|gnome-shell|kwin_wayland|pipewire|pipewire-pulse|wireplumber|emacs|meetrec)$' \
+--prefer '^(vivaldi-bin|chromium|firefox|Isolated Web Co|Web Content|node|cargo|rustc)$'"
+EOF
+)
+"
+if write_if_diff /etc/default/earlyoom 0644 "$EARLYOOM_DEFAULTS"; then
+    sudo systemctl restart earlyoom 2>/dev/null || true
+fi
 {{- end }}
