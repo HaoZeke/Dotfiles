@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "linux" }}
+# Keep rg-space-sweep built from the deployed source without compiling on
+# a laptop. rgam5terra builds it inside Slurm and records the source hash
+# beside the binary; every other host copies that binary only when the
+# recorded hash matches its own source. Runs on every apply and does
+# nothing once the stamp matches, so an update that could not happen (a
+# busy queue, terra unreachable) is retried on the next apply.
+
+set -euo pipefail
+
+SRC="$HOME/.local/share/rg-space-sweep-src"
+BIN="$HOME/.local/bin/rg-space-sweep"
+STAMP="$HOME/.local/state/rg-space-sweep/built-from.sha256"
+
+if [ ! -d "$SRC" ]; then
+    echo "chezmoi: rg-space-sweep source missing at $SRC; skipping install." >&2
+    exit 0
+fi
+
+want=$(cd "$SRC" && cat Cargo.toml Cargo.lock main.rs remote_template.rs remote-sweep.sh btrfs-cleanup.sh \
+    | sha256sum | cut -d' ' -f1)
+have=$(cat "$STAMP" 2>/dev/null || true)
+mkdir -p "$(dirname "$STAMP")" "$(dirname "$BIN")"
+
+if [ -x "$BIN" ] && [ "$have" = "$want" ]; then
+    :
+{{- if eq .chezmoi.hostname "rgam5terra" }}
+elif ! command -v cargo >/dev/null 2>&1 || ! command -v srun >/dev/null 2>&1; then
+    echo "chezmoi: cargo or srun missing; rg-space-sweep left at its current build." >&2
+else
+    echo "chezmoi: building rg-space-sweep inside Slurm ..."
+    # --immediate gives up when no allocation comes within two minutes, so a
+    # full queue skips the build instead of holding the apply.
+    if SLURM_CONF=/etc/slurm-llnl/slurm.conf srun -p cpu -c 4 --mem=4G -t 30 --immediate=120 \
+        -J rg-space-sweep-build \
+        cargo install --path "$SRC" --root "$HOME/.local" --force --locked -j 4; then
+        printf '%s\n' "$want" >"$STAMP"
+    else
+        echo "chezmoi: rg-space-sweep build did not run or failed; retried on the next apply." >&2
+    fi
+{{- else }}
+else
+    # Laptops never compile: take the binary terra built from this source.
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    terra_has=$(ssh -o BatchMode=yes -o ConnectTimeout=10 rg.terra \
+        'cat ~/.local/state/rg-space-sweep/built-from.sha256' 2>/dev/null || true)
+    if [ "$terra_has" != "$want" ]; then
+        echo "chezmoi: rg.terra has no rg-space-sweep built from this source yet;" \
+            "apply there first. Keeping the current binary." >&2
+    elif scp -q -o BatchMode=yes -o ConnectTimeout=10 rg.terra:.local/bin/rg-space-sweep "$tmp/rg-space-sweep"; then
+        install -m 0755 "$tmp/rg-space-sweep" "$BIN"
+        printf '%s\n' "$want" >"$STAMP"
+        echo "chezmoi: rg-space-sweep updated from rg.terra's build."
+    else
+        echo "chezmoi: could not copy rg-space-sweep from rg.terra; retried on the next apply." >&2
+    fi
+{{- end }}
+fi
+
+[ -x "$BIN" ] || { echo "chezmoi: no rg-space-sweep binary; timer left alone." >&2; exit 0; }
+
+# Enable the sweep timer wherever the binary is installed.
+#
+# Installing the cleaner without starting it is the state that let one host
+# reach 97% full while the timer sat disabled: the unit files were deployed
+# and the binary was built, and nothing ever ran them. Enablement belongs
+# next to the install rather than in a manual step.
+#
+# A host without a running user manager (a container build, a chroot) has no
+# systemd to talk to, so a failure here is reported and skipped instead of
+# breaking the apply.
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    if systemctl --user enable --now rg-space-sweep.timer >/dev/null 2>&1; then
+        echo "chezmoi: rg-space-sweep.timer enabled."
+    else
+        echo "chezmoi: could not enable rg-space-sweep.timer; enable it by hand." >&2
+    fi
+else
+    echo "chezmoi: no user systemd manager; skipping rg-space-sweep.timer enable."
+fi
+{{- end }}

@@ -15,5 +15,11 @@ if ! systemctl --user show-environment >/dev/null 2>&1; then
 fi
 
 systemctl --user daemon-reload
+# The install script provides the binary; arming the timer before it exists
+# only queues failed runs.
+if [ ! -x "$HOME/.local/bin/rg-space-sweep" ]; then
+    echo "chezmoi: rg-space-sweep not installed yet; timer not armed." >&2
+    exit 0
+fi
 systemctl --user enable --now rg-space-sweep.timer
 {{- end }}
