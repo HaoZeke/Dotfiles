@@ -32,7 +32,9 @@ printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=90$' \
 printf '%s\n' "$body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
     || fail "x1 baseline must denylist touchpad I2C"
 printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_AC=balanced$' \
-    || fail "x1 baseline must use the balanced ThinkPad profile on AC"
+    || fail "x1 baseline must use the balanced platform profile on AC"
+printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_BAT=quiet$' \
+    || fail "x1 baseline must use a platform profile supported by the Dell firmware on battery"
 
 surf_body=$(RG_TLP_BASELINE="$surf_conf" bash "$script" cat)
 printf '%s\n' "$surf_body" | rg -q '^PLATFORM_PROFILE_ON_AC=cool$' \
