@@ -4,7 +4,7 @@
 set -euo pipefail
 
 if [ $# -gt 1 ]; then
-    printf 'usage: rg-rgsurflat-system-selftest [chezmoi-source]\n' >&2
+    printf 'usage: rg-rgsurflat-system-selftest [source-dir]\n' >&2
     exit 2
 fi
 
@@ -66,8 +66,11 @@ rg -q 'rg-eduvpn-ensure:' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not emit useful journal messages"
 rg -q 'rg-eduvpn-ensure.timer' "$rgsurflat_system" \
     || fail "rgSURFLat provisioning does not install the eduVPN keepalive timer"
-rg -q 'OnUnitActiveSec=120s' "$rgsurflat_system" \
-    || fail "eduVPN keepalive timer cadence is not managed"
+rg -F -q 'OnCalendar=*-*-* *:0/2' "$rgsurflat_system" \
+    || fail "eduVPN keepalive timer does not retry on a calendar schedule"
+if rg -q 'OnUnitActiveSec=120s' "$rgsurflat_system"; then
+    fail "eduVPN keepalive timer can stop rearming after a skipped one-shot"
+fi
 rg -q 'Persistent=true' "$rgsurflat_system" \
     || fail "eduVPN keepalive timer does not catch up after missed runs"
 rg -q 'TimeoutStartSec=60' "$rgsurflat_system" \

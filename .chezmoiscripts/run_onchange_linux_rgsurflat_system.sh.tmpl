@@ -241,8 +241,7 @@ EDUVPN_ENSURE_TIMER='[Unit]
 Description=Run rgSURFLat eduVPN keepalive
 
 [Timer]
-OnBootSec=45s
-OnUnitActiveSec=120s
+OnCalendar=*-*-* *:0/2
 AccuracySec=15s
 Persistent=true
 Unit=rg-eduvpn-ensure.service
