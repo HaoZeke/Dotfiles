@@ -192,6 +192,11 @@ connect_with_cli() {
 health && { log "healthy"; exit 0; }
 [ -x "$cli" ] || { log "missing $cli"; exit 0; }
 systemctl is-active --quiet NetworkManager.service || { log "NetworkManager inactive"; exit 0; }
+airplane_state_file="$home_dir/.local/state/rg-airplane"
+if [ -r "$airplane_state_file" ] && [ "$(cat "$airplane_state_file")" = on ]; then
+    log "airplane mode is active; leaving Wi-Fi disabled"
+    exit 0
+fi
 if ! rfkill unblock wlan >/dev/null 2>&1; then
     log "unable to clear the Wi-Fi rfkill block"
 fi

@@ -50,6 +50,15 @@ rg -q '"\$cli" connect --tcp -n 1' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not reconnect through the official CLI"
 rg -q 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$uid/bus' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not target the user session bus"
+rg -F -q 'airplane_state_file="$home_dir/.local/state/rg-airplane"' "$rgsurflat_system" \
+    || fail "eduVPN recovery does not read the user's airplane-mode state"
+airplane_guard_line=$(rg -n -F 'airplane mode is active; leaving Wi-Fi disabled' "$rgsurflat_system" | cut -d: -f1)
+rfkill_unblock_line=$(rg -n -F 'rfkill unblock wlan' "$rgsurflat_system" | head -1 | cut -d: -f1)
+nm_radio_on_line=$(rg -n -F 'nmcli radio wifi on' "$rgsurflat_system" | head -1 | cut -d: -f1)
+test "$airplane_guard_line" -lt "$rfkill_unblock_line" \
+    || fail "eduVPN recovery can unblock Wi-Fi while airplane mode is active"
+test "$airplane_guard_line" -lt "$nm_radio_on_line" \
+    || fail "eduVPN recovery can enable the Wi-Fi radio while airplane mode is active"
 rg -q 'rfkill unblock wlan' "$rgsurflat_system" \
     || fail "eduVPN recovery does not clear a Wi-Fi rfkill block"
 rg -q 'nmcli radio wifi on' "$rgsurflat_system" \
