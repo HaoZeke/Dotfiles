@@ -73,8 +73,8 @@ set -euo pipefail
 CONF=""
 for c in \
     /etc/rg-terra/power-00-base.conf \
-    "${USER_HOME}/.local/share/rgam5terra/power-00-base.conf" \
-    "${USER_HOME}/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf"; do
+    {{ .chezmoi.homeDir }}/.local/share/rgam5terra/power-00-base.conf \
+    {{ .chezmoi.homeDir }}/.local/share/chezmoi/dot_local/share/rgam5terra/power-00-base.conf; do
     if [[ -r $c ]]; then CONF=$c; break; fi
 done
 if [[ -z $CONF ]]; then
