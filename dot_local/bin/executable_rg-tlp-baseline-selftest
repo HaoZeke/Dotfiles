@@ -19,14 +19,20 @@ path=$(RG_TLP_BASELINE="$x1_conf" bash "$script" --path)
 [[ $path == "$x1_conf" ]] || fail "path mode should return RG_TLP_BASELINE"
 
 body=$(RG_TLP_BASELINE="$x1_conf" bash "$script" cat)
-printf '%s\n' "$body" | rg -q '^CPU_ENERGY_PERF_POLICY_ON_AC=power$' \
-    || fail "x1 baseline must set AC EPP=power"
+printf '%s\n' "$body" | rg -q '^CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance$' \
+    || fail "x1 baseline must allow balanced AC performance"
+! printf '%s\n' "$body" | rg -q '^CPU_SCALING_MAX_FREQ_ON_AC=' \
+    || fail "x1 baseline must not impose a hard AC frequency ceiling"
+printf '%s\n' "$body" | rg -q '^CPU_BOOST_ON_AC=1$' \
+    || fail "x1 baseline must allow AC turbo boost"
+printf '%s\n' "$body" | rg -q '^CPU_HWP_DYN_BOOST_ON_AC=1$' \
+    || fail "x1 baseline must allow AC dynamic boost"
 printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=90$' \
     || fail "x1 baseline must set charge start 90"
 printf '%s\n' "$body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
     || fail "x1 baseline must denylist touchpad I2C"
-printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' \
-    || fail "x1 baseline must use ThinkPad low-power"
+printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_AC=balanced$' \
+    || fail "x1 baseline must use the balanced ThinkPad profile on AC"
 
 surf_body=$(RG_TLP_BASELINE="$surf_conf" bash "$script" cat)
 printf '%s\n' "$surf_body" | rg -q '^PLATFORM_PROFILE_ON_AC=cool$' \
@@ -72,7 +78,7 @@ rg -q 'root-helper-script' "$laptop" \
 # SURF power onchange: host gate + shared conf + never iwd
 surf_power="$repo/.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl"
 test -r "$surf_power" || fail "missing rgsurflat_power onchange"
-rg -q 'eq \.chezmoi\.hostname "rgSURFLat"' "$surf_power" \
+rg -q 'eq .*hostname "rgSURFLat"' "$surf_power" \
     || fail "rgsurflat_power must gate on rgSURFLat"
 rg -q 'rgsurflat/tlp-00-base.conf' "$surf_power" \
     || fail "rgsurflat_power must consume rgsurflat TLP baseline"
