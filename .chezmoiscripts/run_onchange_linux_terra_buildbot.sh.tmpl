@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgam5terra") }}
-# Terra buildbot profile + cgroup infra (slices, buildbot-run, sysctl, tmpfiles, oomd, polkit).
+# Terra buildbot profile + cgroup infra (slices, buildbot-run, sysctl, tmpfiles, oomd).
 # hash: {{ output "bash" "-lc" (printf "cat %q %q %q %q | sha256sum | cut -d' ' -f1" (printf "%s/dot_local/share/terra-buildbot/infra/buildbot.slice" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/infra/buildbot-run" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/hzlinux/buildbot-profile" .chezmoi.sourceDir) (printf "%s/dot_local/share/terra-buildbot/infra/99-buildbot-sysctl.conf" .chezmoi.sourceDir)) | trim }}
 set -euo pipefail
 SHARE="${HOME}/.local/share/terra-buildbot"
@@ -69,13 +69,14 @@ if [[ -d "$INFRA" ]]; then
   install_as_root "$INFRA/99-buildbot-oomd.conf" /etc/systemd/oomd.conf.d/99-buildbot.conf 0644
   install_as_root "$INFRA/99-buildbot-sysctl.conf" /etc/sysctl.d/99-buildbot.conf 0644
   install_as_root "$INFRA/buildbot-tmpfiles.conf" /etc/tmpfiles.d/buildbot.conf 0644
-  install_as_root "$INFRA/50-buildbot-systemd-run.rules" /etc/polkit-1/rules.d/50-buildbot-systemd-run.rules 0644
+  # 50-buildbot-systemd-run.rules is not installed: it grants manage-units on
+  # every system unit, not only buildbot slices, which with systemd-run
+  # --uid=0 is passwordless root for any process of this user.
   run_root /usr/bin/systemd-tmpfiles --create /etc/tmpfiles.d/buildbot.conf || true
   run_root /usr/sbin/sysctl --system >/dev/null 2>&1 || run_root /usr/sbin/sysctl -p /etc/sysctl.d/99-buildbot.conf || true
   run_root /bin/systemctl daemon-reload || true
   run_root /bin/systemctl restart systemd-oomd || true
   run_root /bin/systemctl start buildbot.slice buildbot-interactive.slice || true
-  run_root /bin/systemctl reload polkit 2>/dev/null || run_root /bin/systemctl restart polkit || true
 fi
 echo "chezmoi: terra-buildbot done"
 {{- end }}
