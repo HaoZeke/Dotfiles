@@ -85,9 +85,9 @@ elif field == "max_perf_pct" and field not in spec:
     # restore the full non-turbo range unless they set an explicit cap.
     value = "100"
 elif field == "scaling_max_freq" and field not in spec:
-    # kHz ceiling written to cpufreq scaling_max_freq. Cool profiles set a hard
-    # cap; warmer profiles restore the non-turbo ceiling (1800000 on this host).
-    value = "1800000"
+    # Restore each cpufreq policy's own hardware ceiling. Hybrid CPUs expose
+    # different limits for performance and efficiency cores.
+    value = "cpuinfo_max"
 else:
     value = spec[field]
 if isinstance(value, bool):
@@ -179,12 +179,18 @@ write_max_perf_pct() {
 
 write_scaling_max_freq() {
     local value="$1"
-    local cpu path
-    for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+    local cpu path max_path policy_value
+    for cpu in "$SYSFS_ROOT"/devices/system/cpu/cpu[0-9]*; do
         [ -d "$cpu" ] || continue
         path="$cpu/cpufreq/scaling_max_freq"
         [ -e "$path" ] || continue
-        echo "$value" | $SUDO tee "$path" >/dev/null
+        policy_value="$value"
+        if [ "$value" = cpuinfo_max ]; then
+            max_path="$cpu/cpufreq/cpuinfo_max_freq"
+            [ -r "$max_path" ] || continue
+            policy_value=$(cat "$max_path")
+        fi
+        echo "$policy_value" | $SUDO tee "$path" >/dev/null
     done
 }
 
@@ -573,7 +579,7 @@ values = {
         "1" if spec.get("scaling_governor") == "performance" else "0",
     ),
     "max_perf": str(spec.get("max_perf_pct", "100")),
-    "scaling_max": str(spec.get("scaling_max_freq", "1800000")),
+    "scaling_max": str(spec.get("scaling_max_freq", "cpuinfo_max")),
     "iwl": spec["iwlwifi_power_save"],
     "zram_expr": spec["zram_size"],
     "damon": "Y" if spec["damon_reclaim"] else "N",
@@ -635,17 +641,23 @@ write_platform_profile() {
 
 write_cpufreq_value() {
     local name="$1" value="$2" avail_name="$3"
-    local cpu path avail
+    local cpu path avail max_path policy_value
     for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
         [ -d "$cpu" ] || continue
         path="$cpu/cpufreq/$name"
         avail="$cpu/cpufreq/$avail_name"
         [ -e "$path" ] || continue
+        policy_value="$value"
+        if [ "$name" = scaling_max_freq ] && [ "$value" = cpuinfo_max ]; then
+            max_path="$cpu/cpufreq/cpuinfo_max_freq"
+            [ -r "$max_path" ] || continue
+            policy_value=$(cat "$max_path")
+        fi
         if [ -n "$avail_name" ] && [ -r "$avail" ] && ! grep -qw "$value" "$avail"; then
             printf "skip %s: %s unavailable\n" "$path" "$value" >&2
             continue
         fi
-        if ! write_sysfs_value "$path" "$value"; then
+        if ! write_sysfs_value "$path" "$policy_value"; then
             printf "skip %s: write rejected\n" "$path" >&2
         fi
     done
@@ -830,6 +842,10 @@ profile_policy_check() {
 
     expected=$(profile_field "$profile" scaling_max_freq)
     path=$(sys_path /devices/system/cpu/cpu0/cpufreq/scaling_max_freq)
+    if [ "$expected" = cpuinfo_max ]; then
+        expected_path=$(sys_path /devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
+        expected=$(read_trimmed "$expected_path" || true)
+    fi
     if live=$(read_trimmed "$path"); then
         compare_value scaling_max_freq "$live" "$expected"
     else

@@ -39,8 +39,8 @@ RG_X1GEN11_PROFILES="$profiles" "$script" show undocked-mixed | rg 'hwp_dynamic_
     || fail "undocked-mixed must keep HWP dynamic boost disabled"
 RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'max_perf_pct: 100' >/dev/null \
     || fail "build-heavy must restore full max_perf_pct (default 100)"
-RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scaling_max_freq: 1800000' >/dev/null \
-    || fail "build-heavy must restore full non-turbo scaling_max_freq"
+RG_X1GEN11_PROFILES="$profiles" "$script" show build-heavy | rg 'scaling_max_freq: cpuinfo_max' >/dev/null \
+    || fail "build-heavy must use each policy's cpuinfo_max_freq"
 RG_X1GEN11_PROFILES="$profiles" "$script" show memory-pressure | rg 'scaling_governor: powersave' >/dev/null \
     || fail "memory-pressure must use powersave governor on active intel_pstate"
 RG_X1GEN11_PROFILES="$profiles" "$script" show docked-office | rg 'scaling_governor: powersave' >/dev/null \
@@ -78,6 +78,8 @@ rg -q 'json.load' "$tmpdir/root-helper" \
     || fail "generic root helper must parse profile JSON"
 rg -q 'hwp_dynamic_boost' "$tmpdir/root-helper" \
     || fail "generic root helper must write HWP dynamic boost policy"
+rg -q 'cpuinfo_max_freq' "$tmpdir/root-helper" \
+    || fail "generic root helper must restore each CPU policy's own frequency ceiling"
 if rg -q '^[[:space:]]*(undocked-mixed|build-heavy|focus|memory-pressure|travel|docked-office)[)]' \
     "$tmpdir/root-helper"; then
     fail "generic root helper must not duplicate per-profile policy blocks"
@@ -155,6 +157,41 @@ current)
 esac
 SH
 chmod +x "$tmpdir/home/.local/bin/rg-sched-ladder"
+
+perf_sys="$tmpdir/perf-sys"
+for item in 'cpu0 4700000' 'cpu4 3500000'; do
+    read -r cpu max_freq <<<"$item"
+    cpu_dir="$perf_sys/devices/system/cpu/$cpu/cpufreq"
+    mkdir -p "$cpu_dir"
+    printf '%s\n' "$max_freq" >"$cpu_dir/cpuinfo_max_freq"
+    printf '1800000\n' >"$cpu_dir/scaling_max_freq"
+    printf 'powersave performance\n' >"$cpu_dir/scaling_available_governors"
+    printf 'powersave\n' >"$cpu_dir/scaling_governor"
+    printf 'power balance_power balance_performance performance\n' \
+        >"$cpu_dir/energy_performance_available_preferences"
+    printf 'power\n' >"$cpu_dir/energy_performance_preference"
+done
+mkdir -p "$perf_sys/firmware/acpi" "$perf_sys/devices/system/cpu/intel_pstate" \
+    "$perf_sys/module/iwlwifi/parameters"
+printf 'balanced\n' >"$perf_sys/firmware/acpi/platform_profile"
+printf 'cool quiet balanced performance\n' >"$perf_sys/firmware/acpi/platform_profile_choices"
+printf '100\n' >"$perf_sys/devices/system/cpu/intel_pstate/max_perf_pct"
+printf '1\n' >"$perf_sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost"
+printf 'N\n' >"$perf_sys/module/iwlwifi/parameters/power_save"
+
+RG_X1GEN11_PROFILES="$profiles" \
+    RG_X1GEN11_STATE_DIR="$tmpdir/perf-state" \
+    RG_X1GEN11_ROOT_HELPER="$tmpdir/missing-root-helper" \
+    RG_X1GEN11_SYSFS_ROOT="$perf_sys" \
+    RG_X1GEN11_SUDO="$tmpdir/bin/fake-sudo" \
+    RG_X1GEN11_FAKE_ROOT="$tmpdir/root" \
+    HOME="$tmpdir/home" \
+    PATH="$tmpdir/bin:$PATH" \
+    "$script" apply build-heavy >"$tmpdir/perf-apply.out" 2>&1
+test "$(cat "$perf_sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")" = 4700000 \
+    || fail "build-heavy must restore the performance-core hardware frequency ceiling"
+test "$(cat "$perf_sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq")" = 3500000 \
+    || fail "build-heavy must restore the efficiency-core hardware frequency ceiling"
 
 RG_X1GEN11_PROFILES="$profiles" \
     RG_X1GEN11_STATE_DIR="$tmpdir/state" \
