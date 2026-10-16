@@ -3,7 +3,7 @@ Description=Reclassify leftover agent processes into agent.slice
 
 [Timer]
 OnStartupSec=20s
-OnUnitActiveSec=15s
+OnUnitActiveSec=60s
 AccuracySec=5s
 Persistent=false
 
