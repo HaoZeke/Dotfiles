@@ -192,6 +192,12 @@ connect_with_cli() {
 health && { log "healthy"; exit 0; }
 [ -x "$cli" ] || { log "missing $cli"; exit 0; }
 systemctl is-active --quiet NetworkManager.service || { log "NetworkManager inactive"; exit 0; }
+if ! rfkill unblock wlan >/dev/null 2>&1; then
+    log "unable to clear the Wi-Fi rfkill block"
+fi
+if ! nmcli radio wifi on >/dev/null 2>&1; then
+    log "NetworkManager did not enable Wi-Fi"
+fi
 has_default_route || { log "no default route"; exit 0; }
 
 log "repairing eduVPN"

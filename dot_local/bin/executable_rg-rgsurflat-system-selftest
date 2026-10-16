@@ -50,6 +50,10 @@ rg -q '"\$cli" connect --tcp -n 1' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not reconnect through the official CLI"
 rg -q 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/\$uid/bus' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not target the user session bus"
+rg -q 'rfkill unblock wlan' "$rgsurflat_system" \
+    || fail "eduVPN recovery does not clear a Wi-Fi rfkill block"
+rg -q 'nmcli radio wifi on' "$rgsurflat_system" \
+    || fail "eduVPN recovery does not enable the NetworkManager Wi-Fi radio"
 rg -q 'nmcli connection up eduVPN' "$rgsurflat_system" \
     || fail "eduVPN ensure helper does not fall back to the existing NetworkManager profile"
 rg -q 'health()' "$rgsurflat_system" \
