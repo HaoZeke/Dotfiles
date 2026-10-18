@@ -466,3 +466,4 @@ dot_local/bin/executable_rg-resolver-conf
 .chezmoiscripts/run_onchange_linux_local_dns.sh.tmpl
 dot_config/environment.d/50-packset.conf
 dot_config/systemd/user/packsetd.service
+dot_config/systemd/user/rg-cli-door.service
