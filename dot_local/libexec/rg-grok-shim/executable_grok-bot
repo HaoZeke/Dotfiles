@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/libexec/rg-grok-shim/executable_grok-bot).
 # `grok-bot` on the Livingston hosts: every launch goes through rg-grok-bot
-# and so through the Houston door.
+# and so through the Houston door. Without rg-grok-bot the launch is refused
+# rather than run unwrapped.
 set -euo pipefail
 if [ -x "$HOME/.local/bin/rg-grok-bot" ]; then
     exec "$HOME/.local/bin/rg-grok-bot" "$@"
 fi
-exec "/opt/Grok Bot/grok-bot" "$@"
+echo "grok-bot: rg-grok-bot is missing; refusing to run outside the Houston door" >&2
+exit 2

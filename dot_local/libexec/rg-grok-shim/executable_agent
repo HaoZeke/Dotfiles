@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# `agent` on the Livingston hosts. The Grok CLI installs this name as a second
+# link to its binary (~/.grok/bin/agent), so it reaches the same service as
+# `grok` and goes through rg-grok and the Houston door the same way.
+# Without rg-grok the launch is refused rather than run unwrapped.
+set -euo pipefail
+if [ -x "$HOME/.local/bin/rg-grok" ]; then
+    exec "$HOME/.local/bin/rg-grok" "$@"
+fi
+echo "agent: rg-grok is missing; refusing to run the CLI outside the Houston door" >&2
+exit 2
