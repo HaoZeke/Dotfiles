@@ -128,15 +128,7 @@ for_window {
       border pixel 0
   }
 
-  [app_id="vivaldi-app.slack.com__client_T061A7A7K0U-Default"] {
-      fullscreen enable
-  }
-
   [app_id="vivaldi-app.grok.com.*-Default"] {
-      fullscreen enable
-  }
-
-  [app_id="vivaldi-stable" title=".*TeachxAI - Sla.* - Vivaldi$"] {
       fullscreen enable
   }
 
