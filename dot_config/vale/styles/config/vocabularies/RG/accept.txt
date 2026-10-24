@@ -548,3 +548,9 @@ CernVM-FS
 OnDemand
 EESSI
 PAPI
+sudo
+Ansible
+unixd
+proxpi
+uv
+ACLs
