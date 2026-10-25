@@ -1,0 +1,9 @@
+extends: existence
+message: "'%s' defines the result by denial. State what it is."
+ignorecase: true
+level: warning
+tokens:
+  - '(?:^|[.!?]\s+)(?:it|this|that|they|these)\s+(?:is|are|was|were|does|do)\s+not\b'
+  - '\b(?:is|are)\s+not\s+(?:a|an|the)\s+\w+'
+  - '\b(?:does|do)\s+not\s+\w+'
+  - '\bcannot\s+\w+'
