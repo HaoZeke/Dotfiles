@@ -24,6 +24,11 @@ for cfg in "$STORES"/*/.gmailieer.json; do
     [ -e "$cfg" ] || continue
     store="$(dirname "$cfg")"
     name="$(basename "$store")"
+    # A retired account keeps its archive but is never pulled again.
+    if [ -e "$store/.nosync" ]; then
+        echo "$name: retired, skipped"
+        continue
+    fi
     if (cd "$store" && "$GMI" sync); then
         echo "$name: ok"
     else
