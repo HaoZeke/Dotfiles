@@ -68,9 +68,10 @@ else
   echo "chezmoi: could not restart dovecot (permissions?)" >&2
 fi
 
-# DavMail user instances (properties from nimvault unseal / existing files)
+# DavMail user instances (host-local properties under ~/.config/davmail).
+# EPFL and Queen's are retired: their archives stay, their bridges stay off.
 systemctl --user daemon-reload 2>/dev/null || true
-for inst in rog32hi queensu epfl surf; do
+for inst in rog32hi surf; do
   props="${HOME}/.config/davmail/${inst}.properties"
   if [[ -f "$props" ]]; then
     systemctl --user enable --now "davmail@${inst}.service" 2>/dev/null || \
@@ -80,8 +81,11 @@ for inst in rog32hi queensu epfl surf; do
   fi
 done
 
-systemctl --user enable --now rgsurf-mbsync.timer 2>/dev/null || \
-  echo "chezmoi: enable rgsurf-mbsync.timer failed (unit or mbsync missing?)" >&2
+for unit in rgsurf-mbsync.timer rg-exchange-mbsync.timer rg-gmail-sync.timer \
+    rg-ttech-backup.timer comms-archive-index.timer comms-archive-serve.service; do
+  systemctl --user enable --now "$unit" 2>/dev/null || \
+    echo "chezmoi: enable $unit failed (unit or binary missing?)" >&2
+done
 
 # Daily borg backup of the mail + Terra config into the seeded local copy of
 # the long-standing pCloud repo, then rclone-synced up (remote pcloud-dav).
