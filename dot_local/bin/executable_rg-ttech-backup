@@ -60,3 +60,8 @@ fi
 mkdir -p "$(dirname "$STAMP")"
 touch "$STAMP"
 echo "ttech mirror ${MIRROR}; archive + offsite sync ok"
+
+# The archive above is still worth shipping when the mirror fails, but the run
+# must not read as success: a mirror that fails every day while the unit stays
+# green leaves the archive frozen with nobody told.
+[ "$MIRROR" = ok ] || exit 1
