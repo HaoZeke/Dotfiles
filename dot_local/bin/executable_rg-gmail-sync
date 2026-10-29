@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Pull every gmailieer store under ~/.mail/stores, then index with notmuch.
+#
+# Each store syncs on its own: an expired OAuth grant on one account must not
+# stop the others. A store fails loudly (logger + notify-send) and the loop
+# moves on; the exit status is non-zero when any store failed, so systemd
+# shows the unit as failed instead of quietly succeeding.
+set -uo pipefail
+
+STORES="${RG_GMAIL_STORES:-$HOME/.mail/stores}"
+GMI="${RG_GMAIL_GMI:-$HOME/.mail/.pixi/envs/default/bin/gmi}"
+LOCK="${RG_GMAIL_LOCK:-/run/user/$(id -u)/rg-gmail-sync.lock}"
+
+alert() {
+    notify-send -u critical "Gmail sync" "$1" 2>/dev/null || true
+    logger -t rg-gmail-sync -- "$1"
+}
+
+exec 9>"$LOCK" 2>/dev/null || exit 0
+flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
+
+failed=()
+for cfg in "$STORES"/*/.gmailieer.json; do
+    [ -e "$cfg" ] || continue
+    store="$(dirname "$cfg")"
+    name="$(basename "$store")"
+    if (cd "$store" && "$GMI" sync); then
+        echo "$name: ok"
+    else
+        failed+=("$name")
+        alert "$name: gmi sync failed (expired grant? run gmi auth in $store)"
+    fi
+done
+
+notmuch new
+
+if [ "${#failed[@]}" -gt 0 ]; then
+    echo "failed: ${failed[*]}"
+    exit 1
+fi
+echo "all gmail stores ok"

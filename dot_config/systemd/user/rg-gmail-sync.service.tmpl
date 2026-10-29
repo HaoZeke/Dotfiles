@@ -1,0 +1,17 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Sync Gmail stores via gmailieer, then index with notmuch
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/test -f %h/.notmuch-config
+ExecStart=%h/.local/bin/rg-gmail-sync
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+# A first pull after a long gap moves thousands of messages; a hung API call
+# must still release the slot.
+TimeoutStartSec=40min
+Nice=10
+IOSchedulingClass=idle
+{{- end -}}

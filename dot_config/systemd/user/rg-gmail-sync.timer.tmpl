@@ -1,0 +1,15 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Run Gmail sync periodically
+
+[Timer]
+OnBootSec=3min
+# Re-arm after a user-manager restart, as for the SURF sync timer.
+OnStartupSec=3min
+OnUnitActiveSec=10min
+RandomizedDelaySec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

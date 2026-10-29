@@ -241,6 +241,9 @@ AGENTS.md
 .config/systemd/user/rg-ttech-backup.service
 .config/systemd/user/rg-ttech-backup.timer
 .local/bin/rg-ttech-backup
+.config/systemd/user/rg-gmail-sync.service
+.config/systemd/user/rg-gmail-sync.timer
+.local/bin/rg-gmail-sync
 {{ end }}
 
 # Buildbot Terra is headless and does not run the graphical Astroid client.
