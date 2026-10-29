@@ -29,7 +29,22 @@ for cfg in "$STORES"/*/.gmailieer.json; do
         echo "$name: retired, skipped"
         continue
     fi
-    if (cd "$store" && "$GMI" sync); then
+    # A store marked .proxychains may only reach Google through the proxy
+    # that file names (a proxychains config). If that proxy is down the store
+    # waits; it never falls back to a direct connection.
+    run=("$GMI" sync)
+    if [ -e "$store/.proxychains" ]; then
+        pconf="$(head -n 1 "$store/.proxychains")"
+        pconf="${pconf/#\~/$HOME}"
+        door="$(awk '/^\[ProxyList\]/{f=1;next} f&&NF>=3{print $2":"$3; exit}' "$pconf" 2>/dev/null)"
+        if [ -z "$door" ] || ! timeout 5 bash -c "exec 3<>/dev/tcp/${door%:*}/${door#*:}" 2>/dev/null; then
+            failed+=("$name")
+            alert "$name: proxy ${door:-unset} unreachable; not syncing without it"
+            continue
+        fi
+        run=(proxychains4 -q -f "$pconf" "$GMI" sync)
+    fi
+    if (cd "$store" && "${run[@]}"); then
         echo "$name: ok"
     else
         failed+=("$name")

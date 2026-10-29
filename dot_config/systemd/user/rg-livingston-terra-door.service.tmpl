@@ -1,0 +1,19 @@
+{{- if eq .chezmoi.hostname "rglat5340" -}}
+[Unit]
+Description=Reverse-forward the Livingston SOCKS door to rg.terra (127.0.0.1:11080)
+Documentation=man:ssh(1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Gmail stores on terra marked .proxychains reach Google only through this
+# port. When the Livingston namespace is down the forward refuses every
+# channel, and terra's strict proxychains chain fails instead of going direct.
+ExecStart=/usr/bin/ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R 127.0.0.1:11080:10.201.0.2:1080 rg.terra
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=default.target
+{{- end -}}
