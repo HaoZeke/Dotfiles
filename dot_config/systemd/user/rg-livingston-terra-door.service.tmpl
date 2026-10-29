@@ -10,7 +10,7 @@ Type=simple
 # Gmail stores on terra marked .proxychains reach Google only through this
 # port. When the Livingston namespace is down the forward refuses every
 # channel, and terra's strict proxychains chain fails instead of going direct.
-ExecStart=/usr/bin/ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R 127.0.0.1:11080:10.201.0.2:1080 rg.terra
+ExecStart=/usr/bin/ssh -N -o ControlMaster=no -o ControlPath=none -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R 127.0.0.1:11080:10.201.0.2:1080 rg.terra
 Restart=always
 RestartSec=60
 
