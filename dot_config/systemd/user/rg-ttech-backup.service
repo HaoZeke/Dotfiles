@@ -1,12 +1,15 @@
 [Unit]
 Description=TurtleTech mail mirror + Borg archive, synced to pCloud
-Documentation=file:///home/rgoswami/.config/isync/ttech.rc
+Documentation=man:mbsync(1)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/rgoswami/.local/bin/rg-ttech-backup
+ExecStart=%h/.local/bin/rg-ttech-backup
+# PassCmd in ttech.rc runs nimvault from ~/.local/bin, which the user manager's
+# default PATH does not include.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
 # The mirror talks to a remote IMAP server and the archive ships offsite, so
 # give it room without letting a hung socket occupy the slot forever.
 TimeoutStartSec=45min

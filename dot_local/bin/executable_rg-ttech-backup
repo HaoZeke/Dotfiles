@@ -34,7 +34,9 @@ flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
 
 # Pull-only and append-only; see the comments in ttech.rc. A sync failure is
 # reported and then stepped over.
+MIRROR=ok
 if ! mbsync -c "$RC" ttech; then
+    MIRROR=failed
     alert "mbsync failed; archiving whatever is already mirrored"
 fi
 
@@ -57,4 +59,4 @@ fi
 
 mkdir -p "$(dirname "$STAMP")"
 touch "$STAMP"
-echo "ttech mirror + archive + offsite sync ok"
+echo "ttech mirror ${MIRROR}; archive + offsite sync ok"
