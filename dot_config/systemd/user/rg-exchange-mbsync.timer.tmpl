@@ -1,0 +1,15 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Run the HI and Queen's Exchange sync periodically
+
+[Timer]
+OnBootSec=4min
+# Re-arm after a user-manager restart, as for the SURF sync timer.
+OnStartupSec=4min
+OnUnitActiveSec=15min
+RandomizedDelaySec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

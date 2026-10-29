@@ -1,0 +1,20 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=comms-archive read-only mail archive web UI (loopback)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Git/Github/TurtleTech-ehf/comms-archive
+ExecCondition=/usr/bin/test -x %h/Git/Github/TurtleTech-ehf/comms-archive/target/release/comms-archive
+ExecStart=%h/Git/Github/TurtleTech-ehf/comms-archive/target/release/comms-archive serve
+# Local mode has no login, so the server stays on 127.0.0.1 (the binary's
+# default). Reach it with ssh -L 9090:127.0.0.1:9090 rg.terra.
+Environment=AUTH_MODE=local
+Environment=COMMS_ARCHIVE_WEB_DIR=%h/Git/Github/TurtleTech-ehf/comms-archive/web_build_tmp
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=default.target
+{{- end -}}

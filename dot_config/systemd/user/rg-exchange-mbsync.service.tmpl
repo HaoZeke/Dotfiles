@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Sync the HI and Queen's Exchange mailboxes via DavMail and mbsync
+Wants=network-online.target davmail@rog32hi.service davmail@queensu.service
+After=network-online.target davmail@rog32hi.service davmail@queensu.service
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/test -f %h/.config/isyncrc
+# One channel failing (an expired token on one bridge) must not skip the other.
+ExecStart=-/usr/bin/flock -n %t/rg-exchange-mbsync-rog32.lock /usr/bin/mbsync rog32
+ExecStart=/usr/bin/flock -n %t/rg-exchange-mbsync-rgqueensu.lock /usr/bin/mbsync rgqueensu
+TimeoutStartSec=30min
+{{- end -}}

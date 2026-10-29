@@ -1,0 +1,15 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Refresh the comms-archive index periodically
+
+[Timer]
+OnBootSec=10min
+# Re-arm after a user-manager restart, as for the mail sync timers.
+OnStartupSec=10min
+OnUnitActiveSec=30min
+RandomizedDelaySec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end -}}

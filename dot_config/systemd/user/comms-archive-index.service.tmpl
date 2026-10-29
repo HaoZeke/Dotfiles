@@ -1,0 +1,13 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Index the synced maildirs into comms-archive (read-only)
+After=rg-gmail-sync.service rgsurf-mbsync.service rg-ttech-backup.service
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/test -x %h/Git/Github/TurtleTech-ehf/comms-archive/target/release/comms-archive
+ExecStart=/usr/bin/flock -n %t/comms-archive-index.lock %h/Git/Github/TurtleTech-ehf/comms-archive/target/release/comms-archive sync email
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=idle
+{{- end -}}
