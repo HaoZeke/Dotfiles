@@ -70,8 +70,10 @@ fi
 
 # DavMail user instances (host-local properties under ~/.config/davmail).
 # EPFL and Queen's are retired: their archives stay, their bridges stay off.
+# HI has switched off EWS and IMAP, so it syncs through rg-hi-graph-sync
+# instead of a DavMail bridge.
 systemctl --user daemon-reload 2>/dev/null || true
-for inst in rog32hi surf; do
+for inst in surf; do
   props="${HOME}/.config/davmail/${inst}.properties"
   if [[ -f "$props" ]]; then
     systemctl --user enable --now "davmail@${inst}.service" 2>/dev/null || \
@@ -81,7 +83,7 @@ for inst in rog32hi surf; do
   fi
 done
 
-for unit in rgsurf-mbsync.timer rg-exchange-mbsync.timer rg-gmail-sync.timer \
+for unit in rgsurf-mbsync.timer rg-hi-graph-sync.timer rg-gmail-sync.timer \
     rg-ttech-backup.timer comms-archive-index.timer comms-archive-serve.service; do
   systemctl --user enable --now "$unit" 2>/dev/null || \
     echo "chezmoi: enable $unit failed (unit or binary missing?)" >&2

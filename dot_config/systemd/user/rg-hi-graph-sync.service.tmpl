@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+[Unit]
+Description=Pull the HI mailbox into a Maildir through Microsoft Graph
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# HI has switched off EWS and IMAP; Graph still serves the Office client.
+# The refresh token in ~/.config/rg-hi-oauth/token.json comes from one
+# sign-in (rg-hi-oauth-probe.py) and rotates on every run.
+ExecCondition=/usr/bin/test -f %h/.config/rg-hi-oauth/token.json
+ExecStart=/usr/bin/flock -n %t/rg-hi-graph-sync.lock %h/.local/bin/rg-graph-maildir-sync --token %h/.config/rg-hi-oauth/token.json --maildir %h/.mail/stores/rog32graph
+ExecStartPost=/usr/bin/notmuch new
+TimeoutStartSec=3h
+Nice=10
+IOSchedulingClass=idle
+{{- end -}}

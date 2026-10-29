@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Pull an Exchange Online mailbox into a Maildir through Microsoft Graph.
+
+For tenants that have switched off EWS and IMAP but still serve Graph to the
+Microsoft Office client. One-way and append-only: new messages are written,
+nothing is ever deleted locally and nothing is written back to the server.
+
+  rg-graph-maildir-sync --token ~/.config/rg-hi-oauth/token.json \
+      --maildir ~/.mail/stores/rog32graph
+
+The token file holds a refresh token obtained once with the Office client
+(see rg-hi-oauth-probe.py); every run rotates it. Per-folder Graph delta
+links and the ids already written live in <maildir>/.graph-state.json, so a
+run fetches only what changed since the last one.
+"""
+import argparse
+import hashlib
+import json
+import os
+import socket
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+CLIENT = "d3590ed6-52b3-4102-aeff-aad2292ab01c"
+TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/token"
+GRAPH = "https://graph.microsoft.com/v1.0"
+HOST = socket.gethostname()
+
+
+def write_private(path, payload):
+    tmp = path + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        json.dump(payload, fh)
+    os.replace(tmp, path)
+
+
+def access_token(token_path):
+    with open(token_path) as fh:
+        stored = json.load(fh)
+    body = urllib.parse.urlencode({
+        "client_id": CLIENT, "grant_type": "refresh_token",
+        "refresh_token": stored["refresh_token"],
+        "resource": "https://graph.microsoft.com",
+    }).encode()
+    try:
+        with urllib.request.urlopen(urllib.request.Request(TOKEN_URL, data=body), timeout=60) as r:
+            tok = json.load(r)
+    except urllib.error.HTTPError as e:
+        detail = json.loads(e.read() or b"{}").get("error_description", "")
+        sys.exit("token refresh refused: " + detail[:300])
+    if tok.get("refresh_token"):
+        stored["refresh_token"] = tok["refresh_token"]
+        write_private(token_path, stored)
+    return tok["access_token"]
+
+
+def get(url, at, raw=False, tries=5):
+    for attempt in range(tries):
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + at})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+            return data if raw else json.loads(data)
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503, 504) and attempt + 1 < tries:
+                time.sleep(int(e.headers.get("Retry-After", "10")))
+                continue
+            raise
+
+
+def folders(at):
+    """Every mail folder, depth first, as (id, path)."""
+    out = []
+    stack = [(None, "")]
+    while stack:
+        parent, prefix = stack.pop()
+        url = (GRAPH + "/me/mailFolders?$top=100&includeHiddenFolders=false"
+               if parent is None else
+               GRAPH + f"/me/mailFolders/{parent}/childFolders?$top=100")
+        while url:
+            page = get(url, at)
+            for f in page.get("value", []):
+                path = f"{prefix}/{f['displayName']}" if prefix else f["displayName"]
+                out.append((f["id"], path))
+                if f.get("childFolderCount"):
+                    stack.append((f["id"], path))
+            url = page.get("@odata.nextLink")
+    return out
+
+
+def maildir_for(root, path):
+    safe = "/".join(part.replace(".", "_").strip() or "_" for part in path.split("/"))
+    d = os.path.join(root, safe)
+    for sub in ("cur", "new", "tmp"):
+        os.makedirs(os.path.join(d, sub), exist_ok=True)
+    return d
+
+
+def deliver(folder_dir, message_id, mime):
+    digest = hashlib.sha1(message_id.encode()).hexdigest()[:16]
+    name = f"{int(time.time())}.{digest}.{HOST}"
+    tmp = os.path.join(folder_dir, "tmp", name)
+    with open(tmp, "wb") as fh:
+        fh.write(mime)
+    os.replace(tmp, os.path.join(folder_dir, "new", name))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--token", required=True)
+    ap.add_argument("--maildir", required=True)
+    args = ap.parse_args()
+    token_path = os.path.expanduser(args.token)
+    root = os.path.expanduser(args.maildir)
+    os.makedirs(root, exist_ok=True)
+    state_path = os.path.join(root, ".graph-state.json")
+    state = {"delta": {}, "seen": []}
+    if os.path.exists(state_path):
+        with open(state_path) as fh:
+            state = json.load(fh)
+    seen = set(state.get("seen", []))
+
+    at = access_token(token_path)
+    written = 0
+    for fid, path in folders(at):
+        folder_dir = maildir_for(root, path)
+        url = state["delta"].get(fid) or (
+            GRAPH + f"/me/mailFolders/{fid}/messages/delta?$select=id")
+        while url:
+            page = get(url, at)
+            for m in page.get("value", []):
+                mid = m.get("id")
+                if not mid or "@removed" in m or mid in seen:
+                    continue
+                try:
+                    mime = get(GRAPH + f"/me/messages/{mid}/$value", at, raw=True)
+                except urllib.error.HTTPError as e:
+                    print(f"{path}: skip {mid[:12]}: HTTP {e.code}", file=sys.stderr)
+                    continue
+                deliver(folder_dir, mid, mime)
+                seen.add(mid)
+                written += 1
+            if page.get("@odata.deltaLink"):
+                state["delta"][fid] = page["@odata.deltaLink"]
+                url = None
+            else:
+                url = page.get("@odata.nextLink")
+            # Persist after every page so an interrupted first run resumes.
+            state["seen"] = sorted(seen)
+            write_private(state_path, state)
+    print(f"graph sync: {written} new messages into {root}")
+
+
+if __name__ == "__main__":
+    main()
