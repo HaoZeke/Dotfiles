@@ -15,7 +15,7 @@ STAMP_FILE="${RG_TERRA_STAMP:-$HOME/.local/state/rg-terra-backup.last}"
 STALE_DAYS="${RG_TERRA_STALE_DAYS:-3}"
 LOCK="${RG_TERRA_LOCK:-/run/user/$(id -u)/rg-terra-backup.lock}"
 TODAY=$(date +%Y-%m-%d)
-ARCHIVE="terra-${TODAY}T$(date +%H%M)"
+ARCHIVE="terra-${TODAY}T$(date +%H%M%S)"
 
 alert() {
     notify-send -u critical "Terra tier-1 backup" "$1" 2>/dev/null || true
@@ -28,7 +28,9 @@ stale_check() {
     fi
 }
 
-exec 9>"$LOCK" 2>/dev/null || exit 0
+# The braces keep 2>/dev/null on the open alone; on a bare exec it would
+# silence stderr for the rest of the run.
+{ exec 9>"$LOCK"; } 2>/dev/null || exit 0
 flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
 
 if [ ! -r "$PASSFILE" ] || [ ! -d "$REPO/data" ]; then
@@ -37,28 +39,50 @@ if [ ! -r "$PASSFILE" ] || [ ! -d "$REPO/data" ]; then
 fi
 export BORG_PASSCOMMAND="cat $PASSFILE"
 
-DUMP=""
-if command -v mongodump >/dev/null && pgrep -x mongod >/dev/null; then
-    DUMP=$(mktemp -d "${TMPDIR:-/tmp}/fw-mongodump-XXXXXX")
-    if ! mongodump --quiet --host 127.0.0.1:27017 --db amsel_fw --out "$DUMP"; then
-        alert "mongodump of amsel_fw failed; archiving without the LaunchPad dump"
-        rm -rf "$DUMP"; DUMP=""
+# The FireWorks LaunchPad runs in a podman container with auth on, so the dump
+# runs inside it with the LaunchPad's own credentials. The raw WiredTiger files
+# are owned by the container user and are not a consistent copy of a live
+# database anyway; the dump is the backup of record.
+LAUNCHPAD="${RG_TERRA_LAUNCHPAD:-$HOME/Git/tmp/fw-mongo/configs/my_launchpad_amsel.yaml}"
+MONGO_CTR="${RG_TERRA_MONGO_CTR:-amsel-fw-mongo}"
+DUMP=$(mktemp -d "${TMPDIR:-/tmp}/fw-mongodump-XXXXXX")
+trap 'rm -rf "$DUMP"' EXIT
+if podman container exists "$MONGO_CTR" 2>/dev/null && [ -r "$LAUNCHPAD" ]; then
+    ( umask 077
+      printf 'MU=%s\nMP=%s\nMD=%s\nMA=%s\n' \
+        "$(yq -r .username "$LAUNCHPAD")" "$(yq -r .password "$LAUNCHPAD")" \
+        "$(yq -r .name "$LAUNCHPAD")" "$(yq -r '.authsource // .name' "$LAUNCHPAD")" \
+        > "$DUMP/env" )
+    if ! podman exec --env-file "$DUMP/env" "$MONGO_CTR" sh -c \
+            'mongodump --quiet --host 127.0.0.1 --username "$MU" --password "$MP" --authenticationDatabase "$MA" --db "$MD" --archive --gzip' \
+            > "$DUMP/launchpad.archive.gz" || [ ! -s "$DUMP/launchpad.archive.gz" ]; then
+        alert "LaunchPad mongodump failed; archiving without it"
+        rm -f "$DUMP/launchpad.archive.gz"
     fi
+    rm -f "$DUMP/env"
+else
+    alert "LaunchPad container $MONGO_CTR or $LAUNCHPAD missing; no database dump"
 fi
-trap '[ -n "$DUMP" ] && rm -rf "$DUMP"' EXIT
 
 SOURCES=()
 for p in "$HOME/Documents" "$HOME/jobs" "$HOME/logs" "$HOME/data" \
-         "$HOME/README-BUILDBOT.md" "$HOME/.bashrc" "$HOME/Git/tmp/fw-mongo" \
-         /etc/tmpfiles.d /etc/slurm-llnl ${DUMP:+"$DUMP"}; do
+         "$HOME/.bashrc" "$HOME/Git/tmp/fw-mongo" \
+         /etc/tmpfiles.d /etc/slurm-llnl "$DUMP"; do
     if [ -e "$p" ]; then SOURCES+=("$p"); else echo "warning: skipping missing $p" >&2; fi
 done
 
-if ! borg create --compression zstd,6 --exclude '*/node_modules' --stats \
-        "$REPO::$ARCHIVE" "${SOURCES[@]}"; then
+# borg exits 1 for warnings (a file changed or became unreadable mid-read)
+# with the archive written, and 2 or more when there is no archive.
+borg create --compression zstd,6 --exclude '*/node_modules' \
+    --exclude "$HOME/Git/tmp/fw-mongo/data" --stats \
+    "$REPO::$ARCHIVE" "${SOURCES[@]}"
+rc=$?
+if [ "$rc" -ge 2 ]; then
     stale_check "borg create failed"
-    alert "borg create failed; see journalctl --user -u rg-terra-backup"
+    alert "borg create failed (rc $rc); see journalctl --user -u rg-terra-backup"
     exit 1
+elif [ "$rc" -eq 1 ]; then
+    alert "borg create finished with warnings; archive $ARCHIVE was written"
 fi
 
 borg prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6 "$REPO" || alert "borg prune failed"
