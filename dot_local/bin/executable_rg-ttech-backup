@@ -29,7 +29,9 @@ stale_check() {
     fi
 }
 
-exec 9>"$LOCK" 2>/dev/null || exit 0
+# The braces keep 2>/dev/null on the open alone; on a bare exec it would
+# silence stderr for the rest of the run.
+{ exec 9>"$LOCK"; } 2>/dev/null || exit 0
 flock -n 9 || { echo "another run holds the lock; skipping"; exit 0; }
 
 # Pull-only and append-only; see the comments in ttech.rc. A sync failure is
