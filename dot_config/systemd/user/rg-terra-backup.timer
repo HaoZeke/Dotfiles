@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Terra tier-1 backup
+
+[Timer]
+# After both mail backups (03:45 and 04:30) so the three never share the
+# pCloud link or the disk.
+OnCalendar=*-*-* 05:30:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

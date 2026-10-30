@@ -1,0 +1,12 @@
+[Unit]
+Description=Terra tier-1 Borg archive, synced to pCloud
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/rg-terra-backup
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+TimeoutStartSec=60min
+Nice=10
+IOSchedulingClass=idle
