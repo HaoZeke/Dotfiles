@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# rg-enpass - launch Enpass with its single-instance lock outside /tmp.
+#
+# Enpass refuses a second copy by holding a QtSingleApplication lock file
+# under QDir::tempPath(), which is $TMPDIR or /tmp. On this host /tmp is
+# tmpfs under a 10 day systemd-tmpfiles age rule. That cleaner tests only
+# flock(), Enpass holds an fcntl() lock, and an open descriptor does not
+# count, so the lock file is unlinked out from under the running copy. The
+# next launch creates a fresh lock file, takes it, and becomes a second full
+# instance with its own vault handles and browser port.
+#
+# $XDG_RUNTIME_DIR is also tmpfs but is cleared only at logout and never
+# aged, so the lock lives exactly as long as the session that owns it.
+set -eu
+export TMPDIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+exec /opt/enpass/Enpass "$@"
