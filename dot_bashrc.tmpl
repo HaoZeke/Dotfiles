@@ -95,7 +95,9 @@ export PATH="$PATH:{{ $texlive_dir }}/bin/x86_64-linux"
 # End:
 
 # >>> grok installer >>>
-export PATH="$HOME/.grok/bin:$PATH"
+# The installer line put ~/.grok/bin on PATH. It stays off: rg-grok names the
+# binary by its path, and a bare `grok` or `agent` would run the CLI with no
+# door, no git shim and no hooks guard.
 {{- if has .machine_name (list "rgx1gen11" "rglat5340") }}
 # Ahead of the real binary: grok runs only through the Livingston door.
 export PATH="$HOME/.local/libexec/rg-grok-shim:$PATH"
