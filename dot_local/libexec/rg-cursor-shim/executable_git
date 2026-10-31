@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# `git` ahead of the real binary inside an agent launcher (rg-cursor, rg-grok).
+# A harness signs every commit by writing `--trailer "Co-authored-by: ..."`
+# into the command it runs. This shim drops such an argument before git sees
+# it, says so on stderr, and refuses the two ways round the hooks and the
+# wholesale repository export. The global commit-msg hook removes whatever
+# reaches the message by another route.
+#
+# Which trailer values count as a harness signature is the one list the
+# commit-msg hook keeps, read from its `agent_ident=` line, so the two never
+# drift. With no hook to read, every `--trailer` is dropped.
+#
+# Control then passes to the git wrapper on PATH (gitguard) with this
+# directory removed, so its gates run once and it does not meet this shim
+# again when it walks PATH for the real binary.
+set -euo pipefail
+
+shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+hook="${RG_GIT_SHIM_HOOK:-$HOME/.config/git/hooks/commit-msg}"
+agent_ident=""
+if [ -r "$hook" ]; then
+    agent_ident="$(sed -n "s/^agent_ident='\(.*\)'\$/\1/p" "$hook" | head -n 1)"
+fi
+
+refuse() {
+    echo "git-shim: $*" >&2
+    exit 1
+}
+
+signs_as_harness() {
+    if [ -z "$agent_ident" ]; then
+        return 0
+    fi
+    printf '%s' "$1" | grep -q -i -E "$agent_ident"
+}
+
+args=()
+want_trailer_value=0
+subcommand=""
+for arg in "$@"; do
+    if [ "$want_trailer_value" -eq 1 ]; then
+        want_trailer_value=0
+        if signs_as_harness "$arg"; then
+            echo "git-shim: dropped attribution trailer: --trailer $arg" >&2
+            continue
+        fi
+        args+=("--trailer" "$arg")
+        continue
+    fi
+    case "$arg" in
+        --trailer)
+            want_trailer_value=1
+            continue
+            ;;
+        --trailer=*)
+            if signs_as_harness "${arg#--trailer=}"; then
+                echo "git-shim: dropped attribution trailer: $arg" >&2
+                continue
+            fi
+            ;;
+        --no-verify)
+            refuse "hooks are the attribution and leak gate; --no-verify is refused"
+            ;;
+        *core.hooksPath*|*core.hookspath*)
+            refuse "the shared hooks path is the attribution and leak gate; it is not overridden per command"
+            ;;
+        -*) ;;
+        *)
+            if [ -z "$subcommand" ]; then
+                subcommand="$arg"
+            fi
+            ;;
+    esac
+    args+=("$arg")
+done
+
+if [ "$subcommand" = "bundle" ]; then
+    refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
+fi
+
+# Hand off to the next git on PATH with this directory removed.
+PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -x -F "$shim_dir" | paste -s -d ':')"
+export PATH
+next="$(command -v git || true)"
+if [ -z "$next" ] || [ "$next" = "$shim_dir/git" ]; then
+    refuse "no git wrapper found on PATH after removing $shim_dir"
+fi
+exec "$next" "${args[@]}"
