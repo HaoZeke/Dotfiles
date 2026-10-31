@@ -62,6 +62,7 @@ install -m 0600 "$PROFILE/settings.json" "$HOME_DIR/.claude/settings.json"
 install -Dm 0600 "$PROFILE/leakguard-config.toml" "$HOME_DIR/.config/leakguard/config.toml"
 install -Dm 0700 "$PROFILE/git-hooks/pre-commit"  "$HOME_DIR/.config/git/hooks/pre-commit"
 install -Dm 0700 "$PROFILE/git-hooks/commit-msg"  "$HOME_DIR/.config/git/hooks/commit-msg"
+install -Dm 0700 "$PROFILE/git-hooks/prepare-commit-msg"  "$HOME_DIR/.config/git/hooks/prepare-commit-msg"
 git config --global core.hooksPath "$HOME_DIR/.config/git/hooks"
 
 # proseguard style profiles.
