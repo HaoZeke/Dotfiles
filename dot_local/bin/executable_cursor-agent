@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # `cursor-agent` on the Livingston hosts: every launch goes through rg-cursor
-# and so through the Houston door. `agent` is left as the Grok CLI.
+# and so through the Houston door, with the git shim and hooks guard on PATH.
+# `agent` is refused by name: it is also the Grok CLI.
 set -euo pipefail
 if [ -x "$HOME/.local/bin/rg-cursor" ]; then
     exec "$HOME/.local/bin/rg-cursor" "$@"

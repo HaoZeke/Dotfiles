@@ -9,17 +9,24 @@
 #
 #   rg-cursor [agent args...]     e.g. rg-cursor, rg-cursor login, rg-cursor models
 #
-# The real binary stays at ~/.local/share/cursor-agent/current/cursor-agent.
-# This wrapper does not install itself as `agent`: that name is the Grok CLI
-# at ~/.grok/bin/agent. The PATH name for this CLI is `cursor-agent`.
+# The real binary is the newest install under ~/.local/share/cursor-agent.
+# The CLI's own updater links `cursor-agent` and `agent` in ~/.local/bin
+# straight at that binary, which launches it unwrapped; this launcher puts the
+# managed wrappers back before it runs. `agent` stays refused by name: it is
+# also the Grok CLI, and each CLI has its own launcher.
+#
+# Git inside the session goes through ~/.local/libexec/rg-cursor-shim first:
+# the harness writes an agent attribution trailer into every commit command,
+# and the shim drops it before gitguard and the hooks run.
 #
 # The door is verified as a US exit before every run; a failure refuses the
 # launch rather than falling back to the local address.
 set -euo pipefail
 
 door="${RG_CURSOR_DOOR:-socks5h://10.201.0.2:1080}"
-cursor_bin="${RG_CURSOR_BIN:-$HOME/.local/share/cursor-agent/current/cursor-agent}"
 profile="${RG_CURSOR_PROFILE:-$HOME/.local/bin/rg-livingston-profile}"
+install_root="$HOME/.local/share/cursor-agent"
+shim_dir="$HOME/.local/libexec/rg-cursor-shim"
 
 die() {
     echo "rg-cursor: $*" >&2
@@ -29,7 +36,35 @@ die() {
     exit 2
 }
 
-[ -x "$cursor_bin" ] || die "Cursor CLI not installed at $cursor_bin"
+# Newest installed version, else the `current` link the first install left.
+cursor_bin="${RG_CURSOR_BIN:-}"
+if [ -z "$cursor_bin" ]; then
+    newest="$(ls -1 "$install_root/versions" 2>/dev/null | sort -V | tail -n 1 || true)"
+    if [ -n "$newest" ] && [ -x "$install_root/versions/$newest/cursor-agent" ]; then
+        cursor_bin="$install_root/versions/$newest/cursor-agent"
+    else
+        cursor_bin="$install_root/current/cursor-agent"
+    fi
+fi
+[ -x "$cursor_bin" ] || die "Cursor CLI not installed under $install_root"
+
+# The updater replaces the wrappers in ~/.local/bin with links into its install
+# tree. Put the managed files back so the bare names never launch unwrapped.
+for name in cursor-agent agent; do
+    target="$HOME/.local/bin/$name"
+    [ -L "$target" ] || continue
+    case "$(readlink -f "$target")" in
+        "$install_root"/*) ;;
+        *) continue ;;
+    esac
+    if command -v chezmoi >/dev/null 2>&1 && chezmoi apply --force "$target" >/dev/null 2>&1; then
+        echo "rg-cursor: restored the managed $name wrapper over the updater's link" >&2
+    else
+        echo "rg-cursor: $target is the updater's link and could not be restored; run: chezmoi apply --force $target" >&2
+    fi
+done
+
+[ -x "$shim_dir/git" ] || die "git shim missing at $shim_dir/git"
 
 # The door answers only while the namespace tunnel is up. Verify the exit
 # country through the same path the CLI will use.
@@ -83,4 +118,5 @@ EOF
 proxychains_bin="${RG_CURSOR_PROXYCHAINS:-proxychains4}"
 command -v "$proxychains_bin" >/dev/null 2>&1 || die "proxychains4 is not installed"
 
+export PATH="$shim_dir:$PATH"
 exec "$proxychains_bin" -q -f "$conf" "$cursor_bin" "$@"

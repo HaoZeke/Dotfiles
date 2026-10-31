@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_agent).
+#
+# `agent` on the Livingston hosts. Both the Grok CLI (~/.grok/bin/agent) and
+# the Cursor CLI updater install this name as a link to their binary, so a
+# bare `agent` launches one of them with no door, no git shim and no hooks
+# guard. The name is refused here; inside rg-grok its shim directory provides
+# `agent` for the Grok CLI, and rg-cursor is the Cursor CLI's launcher.
+set -euo pipefail
+echo "agent: ambiguous name; run rg-grok for the Grok CLI or rg-cursor for the Cursor CLI" >&2
+exit 2
