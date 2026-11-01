@@ -17,7 +17,7 @@ narrow_roots_to_projects() {
 CANDIDATES="$(mktemp)"
 SIZES="$(mktemp)"
 SORTED="$(mktemp)"
-trap 'rm -f "$CANDIDATES" "$SIZES" "$SORTED"' EXIT
+trap 'for temporary in "$CANDIDATES" "$SIZES" "$SORTED"; do unlink -- "$temporary"; done' EXIT
 
 format_bytes() {
   awk -v bytes="$1" 'BEGIN { printf "%6.1fG", bytes / 1024 / 1024 / 1024 }'
@@ -213,8 +213,8 @@ verify_untracked_artifact() {
   nested="$(find "$path" -xdev -name .git -print -quit)" || return 1
   [[ -z "$nested" ]] || { echo "artifact contains repository metadata: $path" >&2; return 1; }
   command -v git >/dev/null || return 1
-  if git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    tracked="$(git -C "$path" ls-files -- .)" || return 1
+  if env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    tracked="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C "$path" ls-files -- .)" || return 1
     [[ -z "$tracked" ]] || { echo "artifact contains tracked files: $path" >&2; return 1; }
   else
     # Invalid enclosing Git metadata does not prove a generated copy is
@@ -225,7 +225,7 @@ verify_untracked_artifact() {
       [[ "$ancestor" == / ]] && break
       ancestor="$(dirname "$ancestor")"
     done
-    if message="$(git -C "$path" rev-parse --git-dir 2>&1)"; then status=0; else status=$?; fi
+    if message="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C "$path" rev-parse --git-dir 2>&1)"; then status=0; else status=$?; fi
     [[ "$status" == 128 && "$message" == *'not a git repository'* ]] || return 1
   fi
 }
@@ -238,6 +238,47 @@ verify_artifact_not_open() {
   [[ "$status" == 1 && -z "$inspection" ]] || {
     echo "artifact is open or cannot be inspected: $path" >&2; return 1;
   }
+}
+
+verify_artifact_mounts() {
+  local actual line point decoded separator index
+  local fields=()
+  actual="$(realpath -e "$1")" || return 1
+  [[ -r /proc/self/mountinfo ]] || return 1
+  local seen=0
+  while IFS= read -r line; do
+    read -r -a fields <<< "$line"
+    (( ${#fields[@]} >= 10 )) || return 1
+    [[ "${fields[0]}" =~ ^[0-9]+$ && "${fields[1]}" =~ ^[0-9]+$ ]] || return 1
+    separator=0
+    for (( index=6; index<${#fields[@]}; index++ )); do
+      [[ "${fields[index]}" == - ]] && separator=$index && break
+    done
+    (( separator >= 6 && ${#fields[@]} >= separator + 4 )) || return 1
+    point="${fields[4]}"
+    decoded=""
+    while [[ -n "$point" ]]; do
+      if [[ "$point" == \\* ]]; then
+        case "${point:0:4}" in
+          '\040') decoded+=' ' ;;
+          '\011') decoded+=$'\t' ;;
+          '\012') decoded+=$'\n' ;;
+          '\134') decoded+='\' ;;
+          *) return 1 ;;
+        esac
+        point="${point:4}"
+      else
+        decoded+="${point:0:1}"
+        point="${point:1}"
+      fi
+    done
+    [[ "$decoded" == /* ]] || return 1
+    [[ "$decoded" != "$actual" && "$decoded" != "$actual/"* ]] || {
+      echo "artifact contains a mount point: $decoded" >&2; return 1;
+    }
+    seen=1
+  done < /proc/self/mountinfo
+  [[ "$seen" == 1 ]]
 }
 
 filter_candidates() {
@@ -553,7 +594,8 @@ clean_paths() {
       echo "refusing to remove unexpected path: $path" >&2
       exit 65
     fi
-    verify_untracked_artifact "$path" && verify_artifact_not_open "$path" && candidate_is_stale "$path" "$category" || {
+    verify_untracked_artifact "$path" && verify_artifact_not_open "$path" &&
+      verify_artifact_mounts "$path" && candidate_is_stale "$path" "$category" || {
       echo "refusing active, tracked, recent, or unverified artifact: $path" >&2; exit 65;
     }
   done < "$SORTED"
@@ -561,7 +603,7 @@ clean_paths() {
   while IFS=$'\t' read -r size category path; do
     [[ -n "${path:-}" ]] || continue
     safe_to_remove "$category" "$path" && verify_untracked_artifact "$path" &&
-      verify_artifact_not_open "$path" && candidate_is_stale "$path" "$category" || {
+      verify_artifact_not_open "$path" && verify_artifact_mounts "$path" && candidate_is_stale "$path" "$category" || {
         echo "artifact changed before cleanup: $path" >&2; exit 65;
       }
     label="$(format_bytes "$size")"
@@ -631,10 +673,10 @@ target_check() {
     json_bool "$LOCAL_GS_NETCAT_OK"
     printf '},"tools":{'
     local first=1
-    for tool in bash find du awk sort df stat rm; do
+    for tool in bash find du awk sort df stat unlink git lsof python3 rtrash; do
       if [[ "$first" == 0 ]]; then printf ','; fi
       first=0
-      if command -v "$tool" >/dev/null 2>&1; then
+      if command -v "$tool" >/dev/null 2>&1 || { [[ "$tool" == rtrash ]] && [[ -x "$HOME_DIR/.local/bin/rtrash" ]]; }; then
         printf '"%s":true' "$tool"
       else
         printf '"%s":false' "$tool"
@@ -654,8 +696,8 @@ target_check() {
     echo "Home: $HOME_DIR"
     echo "Host: $(hostname 2>/dev/null || true)"
     echo "Tools:"
-    for tool in bash find du awk sort df stat rm; do
-      if command -v "$tool" >/dev/null 2>&1; then
+    for tool in bash find du awk sort df stat unlink git lsof python3 rtrash; do
+      if command -v "$tool" >/dev/null 2>&1 || { [[ "$tool" == rtrash ]] && [[ -x "$HOME_DIR/.local/bin/rtrash" ]]; }; then
         echo "  $tool: ok"
       else
         echo "  $tool: missing"

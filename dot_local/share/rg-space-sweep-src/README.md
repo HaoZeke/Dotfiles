@@ -56,7 +56,10 @@ age policy. Age alone does not establish that a tree is unused.
 Remote profiles use their existing `exclude` or `prune` paths to protect
 artifacts reserved by queued jobs or otherwise retained without open handles.
 An excluded path protects both its descendants and any candidate containing
-it. A filesystem mount point is never moved into the temporary trash scope.
+it. A filesystem mount point, including a nested bind mount, is never moved
+into the temporary trash scope. Unreadable or malformed mount information
+prevents cleanup. Inherited Git locator variables cannot redirect the
+tracking inspection to a different repository or index.
 
 ## Local Default Profile
 

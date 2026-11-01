@@ -1477,6 +1477,10 @@ fn verify_untracked_artifact(path: &Path) -> Result<(), String> {
         ));
     }
     let output = Command::new("git")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_COMMON_DIR")
         .arg("-C")
         .arg(path)
         .args(["ls-files", "-z", "--", "."])
@@ -1522,6 +1526,60 @@ fn verify_artifact_not_open(path: &Path) -> Result<(), String> {
         "cannot establish that artifact is unused: {}",
         path.display()
     ))
+}
+
+fn verify_no_nested_mounts(path: &Path, mountinfo: &str) -> Result<(), String> {
+    if mountinfo.trim().is_empty() {
+        return Err("mount information is empty".into());
+    }
+    for line in mountinfo.lines() {
+        let fields: Vec<_> = line.split_whitespace().collect();
+        let separator = fields.iter().position(|field| *field == "-");
+        if fields.len() < 10
+            || fields[0].parse::<u64>().is_err()
+            || fields[1].parse::<u64>().is_err()
+            || separator.map_or(true, |index| index < 6 || fields.len() < index + 4)
+        {
+            return Err("cannot parse mount information".into());
+        }
+        let raw = fields[4].as_bytes();
+        let mut decoded = Vec::new();
+        let mut index = 0;
+        while index < raw.len() {
+            if raw[index] != b'\\' {
+                decoded.push(raw[index]);
+                index += 1;
+                continue;
+            }
+            let escape = raw.get(index..index + 4).ok_or("truncated mount escape")?;
+            decoded.push(match escape {
+                b"\\040" => b' ',
+                b"\\011" => b'\t',
+                b"\\012" => b'\n',
+                b"\\134" => b'\\',
+                _ => return Err("unrecognized mount escape".into()),
+            });
+            index += 4;
+        }
+        let mount = PathBuf::from(String::from_utf8(decoded).map_err(|e| e.to_string())?);
+        if !mount.is_absolute() {
+            return Err("mount point is not absolute".into());
+        }
+        if mount.starts_with(path) {
+            return Err(format!(
+                "artifact contains a mount point: {}",
+                mount.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn verify_artifact_mounts(path: &Path) -> Result<(), String> {
+    let actual = fs::canonicalize(path).map_err(|e| e.to_string())?;
+    let mountinfo = fs::read_to_string("/proc/self/mountinfo")
+        .map_err(|e| format!("cannot inspect filesystem mount points: {e}"))?;
+    verify_no_nested_mounts(&actual, &mountinfo)
 }
 
 fn resolve_rtrash(home: &Path) -> Result<PathBuf, String> {
@@ -1742,8 +1800,8 @@ fn is_stale(path: &Path, days: u64, now: u64) -> bool {
         OsString::from("-print"),
         OsString::from("-quit"),
     ];
-    match run_find_output(&args) {
-        Ok(out) => out.trim().is_empty(),
+    match Command::new(FIND_BIN).args(&args).output() {
+        Ok(output) => output.status.success() && output.stdout.is_empty(),
         // An unreadable tree is not a tree we should be deleting unattended.
         Err(_) => false,
     }
@@ -2217,6 +2275,7 @@ fn clean_entries(
         }
         verify_untracked_artifact(&entry.path)?;
         verify_artifact_not_open(&entry.path)?;
+        verify_artifact_mounts(&entry.path)?;
         if entry.age_gated
             && min_age_days > 0
             && !is_stale(
@@ -2238,6 +2297,7 @@ fn clean_entries(
         }
         verify_untracked_artifact(&entry.path)?;
         verify_artifact_not_open(&entry.path)?;
+        verify_artifact_mounts(&entry.path)?;
         if entry.age_gated
             && min_age_days > 0
             && !is_stale(
@@ -2779,6 +2839,10 @@ fn main() {
         process::exit(1);
     }
 }
+
+#[cfg(test)]
+#[path = "tests/native_guards.rs"]
+mod native_guards;
 
 #[cfg(test)]
 mod tests {
