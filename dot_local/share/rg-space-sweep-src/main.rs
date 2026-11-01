@@ -396,7 +396,7 @@ default
     rust python tox
 
 all
-    default + pixi + venv + js + go + java"
+    default + pixi + venv + js + go + java + native"
 }
 
 fn parse_args() -> Result<Options, String> {
