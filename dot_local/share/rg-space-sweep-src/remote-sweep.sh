@@ -615,7 +615,7 @@ clean_paths() {
     }
     before="$(df -B1 --output=avail "$parent" | awk 'NR==2 {print $1}')"
     [[ "$before" =~ ^[0-9]+$ ]] || exit 65
-    scope="$(mktemp -d -p "$parent" .rg-space-sweep-trash.XXXXXXXXXX)" || exit 65
+    scope="$(mktemp -d -p "$parent" .artifact-trash.XXXXXXXXXX)" || exit 65
     [[ -d "$scope" && ! -L "$scope" && "$(stat -c %u "$scope")" == "$(id -u)" &&
        "$(stat -c %a "$scope")" == 700 && "$(dirname "$scope")" == "$parent" ]] || exit 65
     [[ -z "$(find "$scope" -mindepth 1 -print -quit)" ]] || exit 65

@@ -1620,7 +1620,7 @@ fn reclaim_artifact(path: &Path, rtrash: &Path) -> Result<(), String> {
     let created = Command::new("mktemp")
         .args(["-d", "-p"])
         .arg(parent)
-        .arg(".rg-space-sweep-trash.XXXXXXXXXX")
+        .arg(".artifact-trash.XXXXXXXXXX")
         .output()
         .map_err(|e| format!("create isolated trash: {e}"))?;
     if !created.status.success() {

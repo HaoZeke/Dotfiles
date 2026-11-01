@@ -32,7 +32,7 @@ if args[0] == "put":
     (scope / "info" / (source.name + ".trashinfo")).write_text("fixture")
 elif args[0] == "empty":
     assert args[:3] == ["empty", "--plain", "--trash-dir"]
-    assert scope.name.startswith(".rg-space-sweep-trash.")
+    assert scope.name.startswith(".artifact-trash.")
     for item in (scope / "files").iterdir():
         shutil.rmtree(item) if item.is_dir() else item.unlink()
     for item in (scope / "info").iterdir():
