@@ -2841,7 +2841,7 @@ fn main() {
 }
 
 #[cfg(test)]
-#[path = "tests/native_guards.rs"]
+#[path = "tests/unit/native_guards.rs"]
 mod native_guards;
 
 #[cfg(test)]
