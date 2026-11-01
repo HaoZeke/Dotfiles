@@ -4,7 +4,7 @@ narrow_roots_to_projects() {
   # When ROOTS is exactly $HOME (or empty fallback), prefer code-ish subdirs for speed.
   local -a preferred=()
   local name candidate
-  for name in Git git src code Code projects Projects work Work dev Dev repos Repos workspace Workspace lab Lab; do
+  for name in Git git src code Code projects Projects work Work dev Dev repos Repos workspace Workspace lab Lab wt var/scratch build; do
     candidate="$HOME_DIR/$name"
     [[ -d "$candidate" ]] && preferred+=("$candidate")
   done
@@ -58,8 +58,9 @@ path_is_under_roots() {
 path_is_excluded() {
   local path="$1"
   local excluded
-  for excluded in "${EXCLUDE_PATHS[@]}"; do
-    [[ "$path" == "$excluded" || "$path" == "$excluded/"* ]] && return 0
+  for excluded in "${EXCLUDE_PATHS[@]}" "${PRUNE_PATHS[@]}"; do
+    [[ -n "$excluded" ]] || continue
+    [[ "$path" == "$excluded" || "$path" == "$excluded/"* || "$excluded" == "$path/"* ]] && return 0
   done
   return 1
 }
@@ -142,6 +143,121 @@ looks_like_rust_target() {
   [[ -d "$path/debug" || -d "$path/release" || -d "$path/.fingerprint" || -e "$path/.rustc_info.json" || -f "$path/CACHEDIR.TAG" ]]
 }
 
+has_native_build_markers() {
+  local path="$1"
+  [[ -f "$path/meson-private/coredata.dat" && -f "$path/meson-info/meson-info.json" ]] ||
+    [[ -f "$path/CMakeCache.txt" && -d "$path/CMakeFiles" ]]
+}
+
+validate_native_build() {
+  has_native_build_markers "$1" || return 1
+  # JSON is read as data. No pickle, generated build command, or project
+  # script is executed while establishing the source/build relationship.
+  python3 - "$1" <<'PY'
+import json
+import pathlib
+import sys
+
+try:
+    actual = pathlib.Path(sys.argv[1]).resolve(strict=True)
+    if (actual / "meson-private/coredata.dat").is_file():
+        directories = json.loads((actual / "meson-info/meson-info.json").read_text())["directories"]
+        source = pathlib.Path(directories["source"])
+        recorded = pathlib.Path(directories["build"])
+    else:
+        cache = dict(line.split("=", 1) for line in
+                     (actual / "CMakeCache.txt").read_text().splitlines()
+                     if "=" in line and not line.startswith(("#", "//")))
+        source = pathlib.Path(cache["CMAKE_HOME_DIRECTORY:INTERNAL"])
+        recorded = pathlib.Path(cache["CMAKE_CACHEFILE_DIR:INTERNAL"])
+    if not source.is_absolute() or not recorded.is_absolute():
+        raise ValueError("absolute source and build paths are required")
+    source = source.resolve(strict=True)
+    recorded = recorded.resolve(strict=True)
+    if actual != recorded or source == actual or actual in source.parents:
+        raise ValueError("build tree contains source or disagrees with metadata")
+except (OSError, ValueError, KeyError, TypeError) as error:
+    print(f"cannot validate generated build: {error}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
+candidate_is_stale() {
+  local path="$1" category="${2:-}" days="${MIN_AGE_DAYS:-0}" now cutoff recent name max_days
+  [[ "$days" =~ ^[0-9]+$ ]] || return 1
+  [[ "$days" == "0" ]] && return 0
+  name="${path##*/}"
+  if [[ "$category" != native ]]; then
+    case "$name" in
+      target|target-nomount|.venv|.tox|.pytest_cache|.mypy_cache|.ruff_cache|.hypothesis) ;;
+      .cache) [[ "${path%/*}" == */node_modules ]] || return 0 ;;
+      *) return 0 ;;
+    esac
+  fi
+  now="$(date +%s)" || return 1
+  [[ "$now" =~ ^[0-9]+$ ]] || return 1
+  # Saturation avoids signed shell arithmetic overflowing for a large age.
+  max_days=$((now / 86400))
+  if (( ${#days} > ${#max_days} )) ||
+    { (( ${#days} == ${#max_days} )) && [[ "$days" > "$max_days" ]]; }; then
+    cutoff=0
+  else
+    cutoff=$((now - days * 86400))
+  fi
+  recent="$(find "$path" -xdev -newermt "@$cutoff" -print -quit)" || return 1
+  [[ -z "$recent" ]]
+}
+
+verify_untracked_artifact() {
+  local path="$1" nested tracked ancestor message status
+  nested="$(find "$path" -xdev -name .git -print -quit)" || return 1
+  [[ -z "$nested" ]] || { echo "artifact contains repository metadata: $path" >&2; return 1; }
+  command -v git >/dev/null || return 1
+  if git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    tracked="$(git -C "$path" ls-files -- .)" || return 1
+    [[ -z "$tracked" ]] || { echo "artifact contains tracked files: $path" >&2; return 1; }
+  else
+    # Invalid enclosing Git metadata does not prove a generated copy is
+    # unversioned. Every ancestor is checked before accepting that case.
+    ancestor="$path"
+    while :; do
+      [[ ! -e "$ancestor/.git" && ! -L "$ancestor/.git" ]] || return 1
+      [[ "$ancestor" == / ]] && break
+      ancestor="$(dirname "$ancestor")"
+    done
+    if message="$(git -C "$path" rev-parse --git-dir 2>&1)"; then status=0; else status=$?; fi
+    [[ "$status" == 128 && "$message" == *'not a git repository'* ]] || return 1
+  fi
+}
+
+verify_artifact_not_open() {
+  local path="$1" inspection status
+  command -v lsof >/dev/null || { echo 'lsof is required for cleanup inspection' >&2; return 1; }
+  # Warnings or an inspection failure are unknown usage, not an empty set.
+  if inspection="$(lsof -t +D "$path" 2>&1)"; then status=0; else status=$?; fi
+  [[ "$status" == 1 && -z "$inspection" ]] || {
+    echo "artifact is open or cannot be inspected: $path" >&2; return 1;
+  }
+}
+
+filter_candidates() {
+  local category path parent skip output
+  local native_roots=()
+  output="$(mktemp)"
+  while IFS=$'\t' read -r category path; do
+    [[ -n "$path" ]] || continue
+    skip=0
+    for parent in "${native_roots[@]}"; do
+      [[ "$path" == "$parent" || "$path" == "$parent/"* ]] && skip=1
+    done
+    [[ "$skip" == 0 ]] || continue
+    native_roots+=("$path")
+    candidate_is_stale "$path" "$category" || continue
+    printf '%s\t%s\n' "$category" "$path" >> "$output"
+  done < <(sort -t $'\t' -k2,2 -k1,1 -u "$CANDIDATES")
+  mv -- "$output" "$CANDIDATES"
+}
+
 add_fixed() {
   local category="$1"
   shift
@@ -153,7 +269,7 @@ add_fixed() {
 
 collect_candidates() {
   narrow_roots_to_projects
-  local category names=() need_js=0
+  local category names=() need_js=0 need_native=0
   for category in $CATEGORIES; do
     case "$category" in
       rust)
@@ -192,6 +308,9 @@ collect_candidates() {
       java)
         add_fixed java "$HOME_DIR/.gradle/caches" "$HOME_DIR/.m2/repository"
         ;;
+      native)
+        need_native=1
+        ;;
       *)
         echo "unknown category in remote script: $category" >&2
         exit 64
@@ -226,8 +345,21 @@ collect_candidates() {
         .venv)
           add_candidate venv "$path"
           ;;
+        meson-private|CMakeFiles)
+          local build_root
+          build_root="$(dirname "$path")"
+          if has_native_build_markers "$build_root"; then add_candidate native "$build_root"; fi
+          ;;
       esac
     done < <(find_named_any "${deduped[@]}")
+  fi
+
+  if [[ "$need_native" == 1 ]]; then
+    local marker build_root
+    while IFS= read -r marker; do
+      build_root="$(dirname "$marker")"
+      if has_native_build_markers "$build_root"; then add_candidate native "$build_root"; fi
+    done < <(find_named_any meson-private CMakeFiles)
   fi
 
   if [[ "$need_js" == "1" ]]; then
@@ -353,6 +485,13 @@ safe_to_remove() {
   path_is_under_roots "$path" || return 1
   [[ "$path" != "$HOME_DIR" ]] || return 1
   path_is_excluded "$path" && return 1
+  local canonical_home canonical_path protected
+  canonical_home="$(realpath -e "$HOME_DIR")" || return 1
+  canonical_path="$(realpath -e "$path")" || return 1
+  [[ "$canonical_path" != "$canonical_home" && "$canonical_path" == "$canonical_home/"* ]] || return 1
+  for protected in "$HOME_DIR/.local/bin" "$HOME_DIR/.cargo/bin" "$HOME_DIR/.local/pipx" "$HOME_DIR/.local/share/pipx"; do
+    [[ "$protected" != "$path" && "$protected" != "$path/"* ]] || return 1
+  done
   case "$path" in
     "$HOME_DIR/.local/bin"|"$HOME_DIR/.local/bin/"*|"$HOME_DIR/.cargo/bin"|"$HOME_DIR/.cargo/bin/"*|"$HOME_DIR/.local/pipx"|"$HOME_DIR/.local/pipx/"*|"$HOME_DIR/.local/share/pipx"|"$HOME_DIR/.local/share/pipx/"*)
       return 1
@@ -389,6 +528,9 @@ safe_to_remove() {
     java)
       [[ "$path" == "$HOME_DIR/.gradle/caches" || "$path" == "$HOME_DIR/.m2/repository" ]]
       ;;
+    native)
+      validate_native_build "$path"
+      ;;
     *)
       return 1
       ;;
@@ -396,11 +538,14 @@ safe_to_remove() {
 }
 
 clean_paths() {
-  local size category path label display
+  local size category path label display rtrash scope before after parent
   if [[ "${YES:-0}" != "1" ]]; then
     echo "refusing to clean without --yes; use --dry-run to preview first" >&2
     exit 64
   fi
+  rtrash="$(command -v rtrash || true)"
+  if [[ -z "$rtrash" && -x "$HOME_DIR/.local/bin/rtrash" ]]; then rtrash="$HOME_DIR/.local/bin/rtrash"; fi
+  [[ -n "$rtrash" ]] || { echo 'rtrash is required for cleanup' >&2; exit 65; }
 
   while IFS=$'\t' read -r size category path; do
     [[ -n "${path:-}" ]] || continue
@@ -408,14 +553,40 @@ clean_paths() {
       echo "refusing to remove unexpected path: $path" >&2
       exit 65
     fi
+    verify_untracked_artifact "$path" && verify_artifact_not_open "$path" && candidate_is_stale "$path" "$category" || {
+      echo "refusing active, tracked, recent, or unverified artifact: $path" >&2; exit 65;
+    }
   done < "$SORTED"
 
   while IFS=$'\t' read -r size category path; do
     [[ -n "${path:-}" ]] || continue
+    safe_to_remove "$category" "$path" && verify_untracked_artifact "$path" &&
+      verify_artifact_not_open "$path" && candidate_is_stale "$path" "$category" || {
+        echo "artifact changed before cleanup: $path" >&2; exit 65;
+      }
     label="$(format_bytes "$size")"
     display="$(display_path "$path")"
     printf 'removing %s  %-6s  %s\n' "$label" "$category" "$display"
-    rm -rf -- "$path"
+    parent="$(dirname "$path")"
+    [[ "$(stat -c %d "$parent")" == "$(stat -c %d "$path")" ]] || {
+      echo "refusing filesystem mount point: $path" >&2; exit 65;
+    }
+    before="$(df -B1 --output=avail "$parent" | awk 'NR==2 {print $1}')"
+    [[ "$before" =~ ^[0-9]+$ ]] || exit 65
+    scope="$(mktemp -d -p "$parent" .rg-space-sweep-trash.XXXXXXXXXX)" || exit 65
+    [[ -d "$scope" && ! -L "$scope" && "$(stat -c %u "$scope")" == "$(id -u)" &&
+       "$(stat -c %a "$scope")" == 700 && "$(dirname "$scope")" == "$parent" ]] || exit 65
+    [[ -z "$(find "$scope" -mindepth 1 -print -quit)" ]] || exit 65
+    # This fresh private scope contains only this operation's entries.
+    # A failed put retains its partial scope and never requests a purge.
+    "$rtrash" put --trash-dir "$scope" --json -rf -- "$path" >/dev/null || exit 65
+    "$rtrash" empty --plain --trash-dir "$scope" --json >/dev/null || exit 65
+    # Empty control directories belong to this operation; unexpected
+    # contents stay in place rather than entering a wider removal pass.
+    rmdir -- "$scope/files" "$scope/info" "$scope" 2>/dev/null || true
+    after="$(df -B1 --output=avail "$parent" | awk 'NR==2 {print $1}')"
+    [[ "$after" =~ ^[0-9]+$ ]] || exit 65
+    printf 'post-clean free=%s (%s bytes observed change)\n' "$(format_bytes "$after")" "$((after-before))"
   done < "$SORTED"
 }
 
@@ -510,6 +681,7 @@ case "$MODE" in
     ;;
   report|clean)
     collect_candidates
+    filter_candidates
     size_candidates
     if [[ "$MODE" == "report" ]]; then
       if [[ "$OUTPUT_FORMAT" == "json" ]]; then print_report_json; else print_report_text; fi

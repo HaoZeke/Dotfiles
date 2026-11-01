@@ -3,6 +3,8 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command, Stdio};
 
@@ -98,6 +100,8 @@ enum Category {
     Go,
     /// JVM dependency caches (Gradle/Maven) under the home tree (rebuildable).
     Java,
+    /// Generated out-of-source Meson and CMake build trees.
+    Native,
 }
 
 impl Category {
@@ -111,6 +115,7 @@ impl Category {
             Self::Js => "js",
             Self::Go => "go",
             Self::Java => "java",
+            Self::Native => "native",
         }
     }
 
@@ -126,6 +131,7 @@ impl Category {
                 Self::Js,
                 Self::Go,
                 Self::Java,
+                Self::Native,
             ]),
             "rust" => Ok(vec![Self::Rust]),
             "python" => Ok(vec![Self::Python]),
@@ -135,6 +141,7 @@ impl Category {
             "js" => Ok(vec![Self::Js]),
             "go" => Ok(vec![Self::Go]),
             "java" => Ok(vec![Self::Java]),
+            "native" => Ok(vec![Self::Native]),
             other => Err(format!("unknown category: {other}")),
         }
     }
@@ -356,7 +363,7 @@ fn ensure_script_parent(path: &Path) -> Result<(), String> {
 
 fn usage() -> &'static str {
     "\
-usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--min-age-days N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js|go|java]
+usage: rg-space-sweep [--target local|NAME] [--target-config PATH] [--json] [report|clean|auto-clean|snapshots|pressure] [--dry-run] [--yes] [--aggressive] [--limit N] [--min-free-gb N] [--min-age-days N] [--script-path PATH] [default|all|rust|python|pixi|tox|venv|js|go|java|native]
        rg-space-sweep target list|show NAME|check NAME [--json] [--target-config PATH]
 
 report
@@ -1176,6 +1183,9 @@ fn project_scan_roots(home: &Path) -> Vec<PathBuf> {
         "lab",
         "Lab",
         "src-git",
+        "wt",
+        "var/scratch",
+        "build",
     ];
     let mut roots = Vec::new();
     let mut seen = BTreeSet::new();
@@ -1389,6 +1399,247 @@ fn looks_like_rust_target(path: &Path) -> bool {
         || path.join("CACHEDIR.TAG").is_file()
 }
 
+fn has_native_build_markers(path: &Path) -> bool {
+    (path.join("meson-private/coredata.dat").is_file()
+        && path.join("meson-info/meson-info.json").is_file())
+        || (path.join("CMakeCache.txt").is_file() && path.join("CMakeFiles").is_dir())
+}
+
+/// Marker discovery is independent of the user's build directory name.
+/// Cleanup additionally verifies the recorded source/build relationship.
+fn validate_native_build(path: &Path) -> Result<(), String> {
+    if !has_native_build_markers(path) {
+        return Err(format!(
+            "missing generated build markers: {}",
+            path.display()
+        ));
+    }
+    let actual = fs::canonicalize(path).map_err(|e| format!("inspect build tree: {e}"))?;
+    let (source, recorded_build) = if path.join("meson-private/coredata.dat").is_file() {
+        let input = fs::read(path.join("meson-info/meson-info.json"))
+            .map_err(|e| format!("read Meson metadata: {e}"))?;
+        let value: serde_json::Value =
+            serde_json::from_slice(&input).map_err(|e| format!("parse Meson metadata: {e}"))?;
+        let dirs = &value["directories"];
+        let source = dirs["source"]
+            .as_str()
+            .ok_or("missing Meson source directory")?;
+        let build = dirs["build"]
+            .as_str()
+            .ok_or("missing Meson build directory")?;
+        (PathBuf::from(source), PathBuf::from(build))
+    } else {
+        let input = fs::read_to_string(path.join("CMakeCache.txt"))
+            .map_err(|e| format!("read CMake metadata: {e}"))?;
+        let source = input
+            .lines()
+            .find_map(|line| line.strip_prefix("CMAKE_HOME_DIRECTORY:INTERNAL="))
+            .ok_or("missing CMake source directory")?;
+        let build = input
+            .lines()
+            .find_map(|line| line.strip_prefix("CMAKE_CACHEFILE_DIR:INTERNAL="))
+            .ok_or("missing CMake build directory")?;
+        (PathBuf::from(source), PathBuf::from(build))
+    };
+    if !source.is_absolute() || !recorded_build.is_absolute() {
+        return Err("build metadata requires absolute source and build paths".into());
+    }
+    let source = fs::canonicalize(source).map_err(|e| format!("inspect source tree: {e}"))?;
+    let recorded_build = fs::canonicalize(recorded_build)
+        .map_err(|e| format!("inspect recorded build tree: {e}"))?;
+    if recorded_build != actual || source.starts_with(&actual) {
+        return Err("build tree contains source or disagrees with its metadata".into());
+    }
+    Ok(())
+}
+
+fn verify_untracked_artifact(path: &Path) -> Result<(), String> {
+    // Nested repositories can contain tracked source or local changes even
+    // when their containing build tree is ignored by another repository.
+    let nested = Command::new(FIND_BIN)
+        .args([
+            path.as_os_str().to_os_string(),
+            OsString::from("-xdev"),
+            OsString::from("-name"),
+            OsString::from(".git"),
+            OsString::from("-print"),
+            OsString::from("-quit"),
+        ])
+        .output()
+        .map_err(|e| format!("inspect nested repositories: {e}"))?;
+    if !nested.status.success() {
+        return Err(format!("cannot inspect repositories in {}", path.display()));
+    }
+    if !nested.stdout.is_empty() {
+        return Err(format!(
+            "artifact contains repository metadata: {}",
+            path.display()
+        ));
+    }
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .args(["ls-files", "-z", "--", "."])
+        .output()
+        .map_err(|e| format!("inspect Git tracking: {e}"))?;
+    if output.status.success() {
+        if output.stdout.is_empty() {
+            return Ok(());
+        }
+        return Err(format!(
+            "artifact contains tracked files: {}",
+            path.display()
+        ));
+    }
+    // A genuinely unversioned generated tree has no tracked files. A broken
+    // enclosing worktree is unknown, rather than evidence of untracked data.
+    let has_git_ancestor = path
+        .ancestors()
+        .any(|p| fs::symlink_metadata(p.join(".git")).is_ok());
+    if !has_git_ancestor && String::from_utf8_lossy(&output.stderr).contains("not a git repository")
+    {
+        return Ok(());
+    }
+    Err(format!(
+        "cannot establish Git tracking for {}",
+        path.display()
+    ))
+}
+
+fn verify_artifact_not_open(path: &Path) -> Result<(), String> {
+    let output = Command::new("lsof")
+        .args(["-t", "+D"])
+        .arg(path)
+        .output()
+        .map_err(|e| format!("inspect active artifacts with lsof: {e}"))?;
+    if !output.stdout.is_empty() {
+        return Err(format!("artifact is open or in use: {}", path.display()));
+    }
+    if output.status.code() == Some(1) && output.stderr.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "cannot establish that artifact is unused: {}",
+        path.display()
+    ))
+}
+
+fn resolve_rtrash(home: &Path) -> Result<PathBuf, String> {
+    if local_command_exists("rtrash") {
+        return Ok(PathBuf::from("rtrash"));
+    }
+    let installed = home.join(".local/bin/rtrash");
+    let executable = fs::metadata(&installed)
+        .map(|metadata| {
+            #[cfg(unix)]
+            {
+                metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+            }
+            #[cfg(not(unix))]
+            {
+                metadata.is_file()
+            }
+        })
+        .unwrap_or(false);
+    if executable {
+        Ok(installed)
+    } else {
+        Err("rtrash is required for cleanup".into())
+    }
+}
+
+/// A fresh private trash root owns exactly this operation's entries. A
+/// pinned purge cannot reach a pre-existing home or volume trash entry.
+fn reclaim_artifact(path: &Path, rtrash: &Path) -> Result<(), String> {
+    let parent = path.parent().ok_or("artifact has no parent")?;
+    #[cfg(unix)]
+    if fs::metadata(path).map_err(|e| e.to_string())?.dev()
+        != fs::metadata(parent).map_err(|e| e.to_string())?.dev()
+    {
+        return Err("refusing to reclaim a filesystem mount point".into());
+    }
+    let before = free_bytes_for(parent)?;
+    let created = Command::new("mktemp")
+        .args(["-d", "-p"])
+        .arg(parent)
+        .arg(".rg-space-sweep-trash.XXXXXXXXXX")
+        .output()
+        .map_err(|e| format!("create isolated trash: {e}"))?;
+    if !created.status.success() {
+        return Err("cannot create isolated trash".into());
+    }
+    let scope = PathBuf::from(
+        String::from_utf8(created.stdout)
+            .map_err(|e| e.to_string())?
+            .trim_end_matches('\n'),
+    );
+    let metadata = fs::symlink_metadata(&scope).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    if !metadata.is_dir()
+        || metadata.permissions().mode() & 0o077 != 0
+        || metadata.uid() != unsafe { libc::geteuid() }
+    {
+        return Err("isolated trash is not private and owned".into());
+    }
+    if scope.parent() != Some(parent)
+        || !fs::read_dir(&scope)
+            .map_err(|e| e.to_string())?
+            .next()
+            .is_none()
+    {
+        return Err("isolated trash is not an empty sibling directory".into());
+    }
+    let put = Command::new(rtrash)
+        .args(["put", "--trash-dir"])
+        .arg(&scope)
+        .args(["--json", "-rf", "--"])
+        .arg(path)
+        .output()
+        .map_err(|e| format!("rtrash put failed: {e}"))?;
+    if !put.status.success() {
+        return Err(format!("rtrash put failed; retained {}", scope.display()));
+    }
+    let purge = Command::new(rtrash)
+        .args(["empty", "--plain", "--trash-dir"])
+        .arg(&scope)
+        .arg("--json")
+        .output()
+        .map_err(|e| format!("rtrash scoped purge failed: {e}"))?;
+    if !purge.status.success() {
+        return Err(format!("rtrash purge failed; retained {}", scope.display()));
+    }
+    // Only empty control directories created by this operation are removed.
+    // Unexpected contents remain available for inspection rather than being
+    // included in a broader deletion pass.
+    for directory in [scope.join("files"), scope.join("info"), scope.clone()] {
+        if directory.is_dir() {
+            let _ = fs::remove_dir(directory);
+        }
+    }
+    let after = free_bytes_for(parent)?;
+    println!(
+        "post-clean free={} ({} bytes observed change)",
+        format_bytes(after),
+        i128::from(after) - i128::from(before)
+    );
+    Ok(())
+}
+
+fn collapse_native_descendants(mut candidates: Vec<Candidate>) -> Vec<Candidate> {
+    candidates.sort_by(|a, b| a.path.cmp(&b.path).then(a.category.cmp(&b.category)));
+    let mut kept: Vec<Candidate> = Vec::new();
+    for candidate in candidates {
+        if kept
+            .iter()
+            .any(|parent| candidate.path.starts_with(&parent.path))
+        {
+            continue;
+        }
+        kept.push(candidate);
+    }
+    kept
+}
+
 /// Names that require a project-root walk, keyed by whether any selected category needs them.
 fn walk_names_for(categories: &[Category]) -> Vec<&'static str> {
     let mut names = Vec::new();
@@ -1406,6 +1657,9 @@ fn walk_names_for(categories: &[Category]) -> Vec<&'static str> {
     }
     if wants(Category::Venv) {
         names.push(".venv");
+    }
+    if wants(Category::Native) {
+        names.extend(["meson-private", "CMakeFiles"]);
     }
     names.sort_unstable();
     names.dedup();
@@ -1428,7 +1682,7 @@ fn fixed_paths_for(home: &Path, category: Category) -> Vec<PathBuf> {
             home.join(".local/share/hatch"),
         ],
         Category::Pixi => vec![home.join(".cache/rattler/cache")],
-        Category::Tox | Category::Venv => Vec::new(),
+        Category::Tox | Category::Venv | Category::Native => Vec::new(),
         Category::Js => vec![home.join(".npm")],
         Category::Go => vec![home.join(".cache/go-build"), home.join(".cache/go-mod")],
         Category::Java => vec![home.join(".gradle/caches"), home.join(".m2/repository")],
@@ -1453,6 +1707,10 @@ fn classify_walked_path(path: &Path, categories: &[Category]) -> Option<Category
         }
         ".tox" if wants(Category::Tox) => Some(Category::Tox),
         ".venv" if wants(Category::Venv) => Some(Category::Venv),
+        "meson-private" | "CMakeFiles" if wants(Category::Native) => path
+            .parent()
+            .filter(|p| has_native_build_markers(p))
+            .map(|_| Category::Native),
         _ => None,
     }
 }
@@ -1524,11 +1782,21 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
     }
 
     // Parallel multi-root walk for project-local dirs.
-    let names = walk_names_for(categories);
+    let names: Vec<_> = walk_names_for(categories)
+        .into_iter()
+        .filter(|name| !matches!(*name, "meson-private" | "CMakeFiles"))
+        .collect();
     if !names.is_empty() {
         for path in find_named_any(home, &names)? {
             let Some(category) = classify_walked_path(&path, categories) else {
                 continue;
+            };
+            let path = if category == Category::Native {
+                path.parent()
+                    .ok_or("build marker has no parent")?
+                    .to_path_buf()
+            } else {
+                path
             };
             if !path.exists() || !seen.insert(path.clone()) {
                 continue;
@@ -1602,6 +1870,31 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
         }
     }
 
+    // A separate marker walk must enter a directory named "target" even
+    // when its parent has no Cargo manifest and the Rust walk prunes it.
+    if categories.contains(&Category::Native) {
+        for root in project_scan_roots(home) {
+            for marker in find_named_in_root(
+                home,
+                &root,
+                &["meson-private", "CMakeFiles"],
+                &["node_modules", ".venv", ".tox"],
+            )? {
+                let path = marker
+                    .parent()
+                    .ok_or("build marker has no parent")?
+                    .to_path_buf();
+                if has_native_build_markers(&path) && seen.insert(path.clone()) {
+                    entries.push(Candidate {
+                        category: Category::Native,
+                        path,
+                        age_gated: true,
+                    });
+                }
+            }
+        }
+    }
+
     // JS node_modules/.cache under project roots only.
     if categories.contains(&Category::Js) {
         for path in find_path_dirs(home, "*/node_modules/.cache")? {
@@ -1616,7 +1909,7 @@ fn collect_candidates(home: &Path, categories: &[Category]) -> Result<Vec<Candid
         }
     }
 
-    Ok(entries)
+    Ok(collapse_native_descendants(entries))
 }
 
 fn path_size_bytes(path: &Path) -> Result<u64, String> {
@@ -1822,6 +2115,14 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
     if !entry.path.starts_with(home) || entry.path == home {
         return false;
     }
+    let (Ok(canonical_home), Ok(canonical_path)) =
+        (fs::canonicalize(home), fs::canonicalize(&entry.path))
+    else {
+        return false;
+    };
+    if canonical_path == canonical_home || !canonical_path.starts_with(canonical_home) {
+        return false;
+    }
     // Never remove the dirs that back installed CLI tools: ~/.local/bin and
     // ~/.cargo/bin shims, and the pipx tool venvs they point into. Losing a
     // pipx venv leaves a dangling ~/.local/bin symlink and an uninstalled tool.
@@ -1829,6 +2130,10 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
         || entry.path.starts_with(home.join(".cargo/bin"))
         || entry.path.starts_with(home.join(".local/pipx"))
         || entry.path.starts_with(home.join(".local/share/pipx"))
+        || home.join(".local/bin").starts_with(&entry.path)
+        || home.join(".cargo/bin").starts_with(&entry.path)
+        || home.join(".local/pipx").starts_with(&entry.path)
+        || home.join(".local/share/pipx").starts_with(&entry.path)
     {
         return false;
     }
@@ -1888,13 +2193,20 @@ fn safe_to_remove(home: &Path, entry: &Candidate) -> bool {
             entry.path.ends_with(Path::new(".gradle/caches"))
                 || entry.path.ends_with(Path::new(".m2/repository"))
         }
+        Category::Native => validate_native_build(&entry.path).is_ok(),
     }
 }
 
-fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), String> {
+fn clean_entries(
+    home: &Path,
+    entries: &[Candidate],
+    yes: bool,
+    min_age_days: u64,
+) -> Result<(), String> {
     if !yes {
         return Err("refusing to clean without --yes".to_string());
     }
+    let rtrash = resolve_rtrash(home)?;
 
     for entry in entries {
         if !safe_to_remove(home, entry) {
@@ -1903,16 +2215,45 @@ fn clean_entries(home: &Path, entries: &[Candidate], yes: bool) -> Result<(), St
                 entry.path.display()
             ));
         }
+        verify_untracked_artifact(&entry.path)?;
+        verify_artifact_not_open(&entry.path)?;
+        if entry.age_gated
+            && min_age_days > 0
+            && !is_stale(
+                &entry.path,
+                min_age_days,
+                now_unix().ok_or("cannot establish cleanup age")?,
+            )
+        {
+            return Err(format!("artifact is recent: {}", entry.path.display()));
+        }
     }
 
     for entry in entries {
+        if !safe_to_remove(home, entry) {
+            return Err(format!(
+                "artifact changed before cleanup: {}",
+                entry.path.display()
+            ));
+        }
+        verify_untracked_artifact(&entry.path)?;
+        verify_artifact_not_open(&entry.path)?;
+        if entry.age_gated
+            && min_age_days > 0
+            && !is_stale(
+                &entry.path,
+                min_age_days,
+                now_unix().ok_or("cannot establish cleanup age")?,
+            )
+        {
+            return Err(format!("artifact became recent: {}", entry.path.display()));
+        }
         println!(
             "removing {:<6}  {}",
             entry.category.label(),
             display_path(home, &entry.path)
         );
-        fs::remove_dir_all(&entry.path)
-            .map_err(|err| format!("failed to remove {}: {err}", entry.path.display()))?;
+        reclaim_artifact(&entry.path, &rtrash)?;
     }
 
     Ok(())
@@ -2113,6 +2454,11 @@ fn remote_script_for(profile: &RemoteProfile, options: &Options) -> Result<Strin
         push_shell_var(&mut script, "YES", "1");
     }
     push_shell_var(&mut script, "MIN_FREE_GB", &profile.min_free_gb.to_string());
+    push_shell_var(
+        &mut script,
+        "MIN_AGE_DAYS",
+        &options.min_age_days.to_string(),
+    );
     push_shell_array(
         &mut script,
         "ROOTS",
@@ -2303,7 +2649,7 @@ fn run_local_auto_clean(options: &Options) -> Result<(), String> {
         format_bytes(free),
         options.min_free_gb
     );
-    clean_entries(&home, &entries, true)?;
+    clean_entries(&home, &entries, true, options.min_age_days)?;
     let after = free_bytes_for(&home)?;
     println!(
         "post-clean free={} ({} reclaimed)",
@@ -2386,7 +2732,7 @@ fn run_local_mode(options: &Options) -> Result<(), String> {
                         }
                     } else {
                         // Skip du entirely for destructive clean — only existence + safety matter.
-                        clean_entries(&home, &entries, options.yes)?;
+                        clean_entries(&home, &entries, options.yes, options.min_age_days)?;
                     }
                 }
                 Mode::AutoClean => {

@@ -18,11 +18,45 @@ rust python tox
 `all` expands the target set to:
 
 ```text
-rust python tox pixi venv js
+rust python tox pixi venv js go java native
 ```
 
 Category sets map to rebuildable directories only. The cleaner refuses unexpected
 paths and will not remove `$HOME`, `.local/bin`, or `.cargo/bin`.
+
+`native` recognizes generated Meson and CMake build trees independently of
+their directory names. Meson requires `meson-private/coredata.dat` and
+`meson-info/meson-info.json`; CMake requires `CMakeCache.txt` and `CMakeFiles`.
+Nested candidates are counted once. Project scans include `~/wt`,
+`~/var/scratch`, and `~/build` as well as the source checkout roots.
+
+Cleanup verifies the recorded source/build relationship, refuses a build tree
+that contains its source, and checks Git tracking. Tracked files, nested
+repositories, broken worktree metadata, and unreadable metadata prevent
+cleanup. A genuinely unversioned generated tree is eligible when its source
+and build locations are independently established. Reports and dry runs do
+not require successful cleanup inspection and never invoke the trash tool.
+
+`clean --yes` and `auto-clean` reclaim disk space through `rtrash`. Each
+artifact enters a fresh, private trash directory on its own filesystem;
+only that operation's isolated directory is then purged. Existing home and
+volume trash entries are untouched. This purge is permanent, preserving the
+cleanup command's disk-reclamation semantics. The displayed free-space
+change is measured from the filesystem, not inferred from candidate sizes.
+
+Cleanup requires `git`, `lsof`, and `rtrash`; remote native-build validation
+also requires `python3`. The executable resolver accepts `rtrash` on `PATH`
+or the existing `~/.local/bin/rtrash`. No package is installed automatically.
+Open files, running executables, active working directories, and inspection
+errors prevent cleanup. The checks run at the cleanup decision, including
+after candidate sizing. `--min-age-days` applies to project artifacts on
+both local and remote targets; fixed shared caches retain their separate
+age policy. Age alone does not establish that a tree is unused.
+
+Remote profiles use their existing `exclude` or `prune` paths to protect
+artifacts reserved by queued jobs or otherwise retained without open handles.
+An excluded path protects both its descendants and any candidate containing
+it. A filesystem mount point is never moved into the temporary trash scope.
 
 ## Local Default Profile
 
