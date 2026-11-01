@@ -2999,6 +2999,7 @@ mod tests {
                 Category::Js,
                 Category::Go,
                 Category::Java,
+                Category::Native,
             ]
         );
     }
