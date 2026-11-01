@@ -3154,7 +3154,9 @@ mod tests {
         let invocation = remote_invocation_for(&profile, &clean).expect("remote invocation");
         assert!(invocation.stdin.contains("MODE='clean'"));
         assert!(invocation.stdin.contains("YES='1'"));
-        assert!(invocation.stdin.contains("rm -rf --"));
+        assert!(invocation.stdin.contains("\"$rtrash\" put --trash-dir"));
+        assert!(invocation.stdin.contains("\"$rtrash\" empty --plain --trash-dir"));
+        assert!(!invocation.stdin.contains("rm -rf --"));
     }
 
     #[cfg(unix)]
