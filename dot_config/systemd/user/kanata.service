@@ -26,17 +26,15 @@ Restart=on-failure
 RestartSec=3
 # Keyboard remapper; losing it makes the user's layout unusable mid-
 # session and can strand them with no way to type out of the freeze.
-OOMScoreAdjust=-1000
 ManagedOOMPreference=avoid
 # The input path must not wait on a thrashing machine: the remapper's
-# pages never go to swap, and it runs round-robin realtime at nice -11.
-# Both fit the user's limits here (RLIMIT_RTPRIO 95, RLIMIT_NICE 31);
-# IOSchedulingClass=realtime would need CAP_SYS_ADMIN, so best-effort 0.
+# pages never go to swap and it gets the largest CPU share. No realtime
+# policy, negative nice or OOMScoreAdjust below the manager's: this
+# user's RLIMIT_RTPRIO and RLIMIT_NICE are 0 and lowering the OOM score
+# needs CAP_SYS_RESOURCE, so systemd refuses the start (214/SETSCHEDULER)
+# and the remapper never runs.
 MemorySwapMax=0
 CPUWeight=10000
-Nice=-11
-CPUSchedulingPolicy=rr
-CPUSchedulingPriority=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=0
 
