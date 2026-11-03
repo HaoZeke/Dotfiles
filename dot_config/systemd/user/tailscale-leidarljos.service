@@ -1,0 +1,25 @@
+[Unit]
+Description=Isolated outbound-only development mesh client
+Documentation=https://tailscale.com/docs/concepts/userspace-networking
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+RuntimeDirectory=leidarljos-mesh
+RuntimeDirectoryMode=0700
+StateDirectory=leidarljos-mesh
+StateDirectoryMode=0700
+UMask=0077
+ExecStart=/usr/bin/tailscaled --tun=userspace-networking --socks5-server=127.0.0.1:1065 --port=0 --statedir=%S/leidarljos-mesh --socket=%t/leidarljos-mesh/tailscaled.sock
+Environment=ALL_PROXY= HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= all_proxy=
+NoNewPrivileges=true
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=45
+MemoryMax=384M
+
+[Install]
+WantedBy=default.target

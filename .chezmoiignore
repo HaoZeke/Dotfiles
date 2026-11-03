@@ -78,6 +78,7 @@ Pictures/Walls/*
 {{ if ne .chezmoi.hostname "rglat5340" }}
 # Dell Latitude 5340 TLP baseline, read by its power script only
 .local/share/rglat5340
+.config/systemd/user/tailscale-leidarljos.service
 {{ end }}
 # No encryption, so don't try to restore..
 {{ if eq .encrypted "no" }}
