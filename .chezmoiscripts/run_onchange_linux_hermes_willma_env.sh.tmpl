@@ -1,7 +1,7 @@
 {{- if eq .chezmoi.os "linux" -}}
 #!/usr/bin/env bash
 # Hermes SURF/Willma: inject OPENAI_API_KEY + OPENAI_BASE_URL into ~/.hermes/.env
-# Hash: hermes-willma-env-v2
+# Hash: hermes-willma-env-v3
 set -euo pipefail
 log() { printf 'chezmoi hermes-willma: %s\n' "$*"; }
 
@@ -11,9 +11,14 @@ mkdir -p "${HERMES_HOME}"
 chmod 700 "${HERMES_HOME}" 2>/dev/null || true
 
 token=""
+# The key file is the local copy rg-willma-rotate writes; it wins so a stale
+# pass entry cannot push a revoked key back out. pass seeds a fresh host.
+if [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
+  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
+fi
 # Live Willma key is surf/ai-hub/rg.surf. surf/ai-hub/token still decrypts
 # but ComputeAPI rejects it (401 this key does not exist).
-if command -v pass >/dev/null 2>&1; then
+if [[ -z "${token}" ]] && command -v pass >/dev/null 2>&1; then
   for entry in surf/ai-hub/rg.surf surf/ai-hub/token; do
     if pass show "$entry" >/dev/null 2>&1; then
       token=$(pass show "$entry" | head -n1 | tr -d '\r\n')

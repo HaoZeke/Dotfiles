@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/private_agent/
-# Hash: specialize-v16-willma-rgsurf-key
+# Hash: specialize-v17-willma-opencode-merge
 # Re-run whenever a target carrying an injected secret changes, so a freshly
 # applied models.yml / config.yml / mcp.json never keeps its PLACEHOLDER value:
 #   models.yml {{ include "dot_omp/private_agent/encrypted_private_models.yml.tmpl.age" | sha256sum }}
@@ -223,9 +223,14 @@ fi
 # ---------- resolve Willma token ----------
 models="${AGENT}/models.yml"
 token=""
+# The key file is the local copy rg-willma-rotate writes; it wins so a stale
+# pass entry cannot push a revoked key back out. pass seeds a fresh host.
+if [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
+  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
+fi
 # Live Willma key is surf/ai-hub/rg.surf. surf/ai-hub/token still decrypts
 # but ComputeAPI rejects it (401 this key does not exist).
-if command -v pass >/dev/null 2>&1; then
+if [[ -z "${token}" ]] && command -v pass >/dev/null 2>&1; then
   for entry in surf/ai-hub/rg.surf surf/ai-hub/token; do
     if pass show "$entry" >/dev/null 2>&1; then
       token=$(pass show "$entry" | head -n1 | tr -d '\r\n')
@@ -301,38 +306,49 @@ PY
 fi
 
 # ---------- OpenCode Willma config (secondary) ----------
-if [[ -n "${token}" ]]; then
-  export WILLMA_TOKEN="$token"
-  python3 - <<'PY'
-import json, os
+# Merge into the existing file so MCP servers and other local keys survive.
+# The key stays out of the file: opencode reads it from the key file.
+python3 - <<'PY'
+import json
 from pathlib import Path
-tok = os.environ["WILLMA_TOKEN"]
 p = Path.home() / ".config/opencode/opencode.json"
-doc = {
-  "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "willma": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "SURF Willma",
-      "options": {
-        "baseURL": "https://willma.surf.nl/api/v0",
-        "apiKey": tok,
-      },
-      "models": {
-        "openai/gpt-oss-120b": {
-          "name": "GPT-OSS 120B (Willma)",
-        }
-      },
-    }
+doc = json.loads(p.read_text()) if p.exists() else {}
+doc["$schema"] = "https://opencode.ai/config.json"
+# Qwen reasoning models are left out: opencode 1.17.18 loops on empty steps
+# with them, while omp and the raw API drive them fine.
+models = {
+  "openai/gpt-oss-120b": {
+    "name": "GPT-OSS 120B (always-on, default)",
+    "reasoning": True, "tool_call": True,
+    "limit": {"context": 131072, "output": 32768},
   },
-  "model": "willma/openai/gpt-oss-120b",
+  "mistralai/Mistral-Small-3.2-24B-Instruct-2506": {
+    "name": "Mistral Small 3.2 24B (always-on, titles and quick answers)",
+    "tool_call": True,
+    "limit": {"context": 131072, "output": 16384},
+  },
+  "Qwen/Qwen2.5-VL-32B-Instruct-AWQ": {
+    "name": "Qwen2.5 VL 32B (always-on, images)",
+    "attachment": True, "tool_call": True,
+    "modalities": {"input": ["text", "image"], "output": ["text"]},
+    "limit": {"context": 131072, "output": 16384},
+  },
 }
+w = doc.setdefault("provider", {}).setdefault("willma", {})
+w["npm"] = "@ai-sdk/openai-compatible"
+w["name"] = "SURF Willma"
+w.setdefault("options", {}).update({
+  "baseURL": "https://willma.surf.nl/api/v0",
+  "apiKey": "{file:~/.config/surf-ai-hub/api_key}",
+})
+w.setdefault("models", {}).update(models)
+doc["model"] = "willma/openai/gpt-oss-120b"
+doc["small_model"] = "willma/mistralai/Mistral-Small-3.2-24B-Instruct-2506"
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(json.dumps(doc, indent=2) + "\n")
 p.chmod(0o600)
-print("opencode.json Willma written")
+print("opencode.json Willma merged")
 PY
-fi
 
 # ---------- inject Context7 key into mcp.json; drop eb-stack MCP if bin missing ----------
 mcp="${AGENT}/mcp.json"
