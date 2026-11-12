@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# willma-key: print the live SURF Willma API key on stdout and nothing else.
+#
+# The one place that names where the key lives. Every Willma consumer (omp,
+# opencode, hermes, meetrec, the writing-voice rewrite, rg-willma-health)
+# asks this, so a rotation is one `pass` update on the broker and nothing on
+# any client. The key is never written to disk: callers hold it in memory for
+# the life of one process.
+set -euo pipefail
+entry="${WILLMA_PASS_ENTRY:-surf/ai-hub/rg.surf}"
+key=$(pass show "$entry" | head -n1 | tr -d '\r\n')
+[[ -n "$key" ]] || { printf 'willma-key: %s is empty or unreadable\n' "$entry" >&2; exit 1; }
+printf '%s\n' "$key"

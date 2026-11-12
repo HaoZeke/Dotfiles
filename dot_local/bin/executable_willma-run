@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# willma-run CMD [ARGS...]: run CMD with the Willma key in its environment.
+#
+# For tools that read the key from an environment variable rather than a
+# command (opencode {env:WILLMA_API_KEY}, hermes ${OPENAI_API_KEY}). The key
+# comes from willma-key and lives only in this process tree's environment.
+set -euo pipefail
+[[ $# -gt 0 ]] || { printf 'usage: willma-run CMD [ARGS...]\n' >&2; exit 2; }
+key=$(willma-key)
+export WILLMA_API_KEY="$key" OPENAI_API_KEY="$key"
+export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://willma.surf.nl/api/v0}"
+unset key
+exec "$@"

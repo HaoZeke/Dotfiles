@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 # rgSURFLat: runtime deps + secret injection.
 # Host config/AGENTS/mcp/models structure: git-tracked .tmpl under dot_omp/private_agent/
-# Hash: specialize-v17-willma-opencode-merge
+# Hash: specialize-v18-willma-key-from-pass
 # Re-run whenever a target carrying an injected secret changes, so a freshly
 # applied models.yml / config.yml / mcp.json never keeps its PLACEHOLDER value:
 #   models.yml {{ include "dot_omp/private_agent/encrypted_private_models.yml.tmpl.age" | sha256sum }}
@@ -25,7 +25,7 @@ OPENCODE_VER="${OPENCODE_VERSION:-1.17.18}"
 mkdir -p "${AGENT}/extensions" "${HOME}/.omp/extensions" \
   "${HOME}/.local/bin" "${HOME}/.claude/hooks" \
   "${HOME}/.config/context7" "${HOME}/.config/ookcite" \
-  "${HOME}/.config/surf-ai-hub" "${HOME}/.config/opencode" "${TOOLS}"
+  "${HOME}/.config/opencode" "${TOOLS}"
 
 # ---------- PATH durability (bash) ----------
 # posix.d/05_paths.sh carries these for both shells. Appending to .bashrc as
@@ -220,94 +220,28 @@ if [[ -f "${SHARE}/puppeteer/puppeteer_mcp.js" ]]; then
   fi
 fi
 
-# ---------- resolve Willma token ----------
-models="${AGENT}/models.yml"
-token=""
-# The key file is the local copy rg-willma-rotate writes; it wins so a stale
-# pass entry cannot push a revoked key back out. pass seeds a fresh host.
-if [[ -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
-  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
-fi
-# Live Willma key is surf/ai-hub/rg.surf. surf/ai-hub/token still decrypts
-# but ComputeAPI rejects it (401 this key does not exist).
-if [[ -z "${token}" ]] && command -v pass >/dev/null 2>&1; then
-  for entry in surf/ai-hub/rg.surf surf/ai-hub/token; do
-    if pass show "$entry" >/dev/null 2>&1; then
-      token=$(pass show "$entry" | head -n1 | tr -d '\r\n')
-      [[ -n "${token}" ]] && break
-    fi
-  done
-fi
-if [[ -z "${token}" && -f "${HOME}/.config/surf-ai-hub/api_key" ]]; then
-  token=$(tr -d '\r\n' < "${HOME}/.config/surf-ai-hub/api_key")
-elif [[ -z "${token}" && -n "${SURF_AI_HUB_TOKEN:-}" ]]; then
-  token="${SURF_AI_HUB_TOKEN}"
-elif [[ -z "${token}" && -f "$models" ]]; then
-  token=$(python3 - <<'PY' 2>/dev/null || true
-import re
-from pathlib import Path
-t=Path.home().joinpath(".omp/agent/models.yml").read_text()
-m=re.search(r'apiKey:\s*["\']?([^"\'\n]+)', t)
-if m and "PLACEHOLDER" not in m.group(1):
-    print(m.group(1).strip())
-PY
-)
-fi
-if [[ -n "${token}" ]]; then
-  printf '%s\n' "$token" > "${HOME}/.config/surf-ai-hub/api_key"
-  chmod 600 "${HOME}/.config/surf-ai-hub/api_key"
-fi
-if [[ -f "$models" && -n "${token}" ]]; then
-  export WILLMA_TOKEN="$token" WILLMA_MODELS="$models"
-  python3 - <<'PY'
-import os, re
-from pathlib import Path
-p=Path(os.environ["WILLMA_MODELS"])
-tok=os.environ["WILLMA_TOKEN"]
-t=p.read_text()
-t2,n=re.subn(r'(apiKey:\s*)(["\']?)[^"\'\n]+\2',
-             lambda m: m.group(1)+'"'+tok.replace("\\","\\\\").replace('"','\\"')+'"',
-             t, count=1)
-if n==0:
-    t2=t.replace("WILLMA_TOKEN_PLACEHOLDER", tok)
-p.write_text(t2)
-print("models.yml token injected")
-PY
-else
-  log "WARN: could not inject Willma token"
-fi
-
-# ---------- inject Willma token into config mnemopi embeddingApiKey ----------
+# ---------- Willma key: pass only, never on disk ----------
+# The key lives in pass (surf/ai-hub/rg.surf) and reaches tools at launch:
+# omp runs willma-key through models.yml `apiKey: "!willma-key"`; opencode and
+# hermes read it from the environment that willma-run (or the posix.d/08 shell
+# wrappers) sets. Older revisions of this script wrote the key into a key file,
+# models.yml and the mnemopi embeddingApiKey; scrub those copies.
+rm -f "${HOME}/.config/surf-ai-hub/api_key"
+rmdir "${HOME}/.config/surf-ai-hub" 2>/dev/null || true
 cfg="${AGENT}/config.yml"
-if [[ -f "$cfg" && -n "${token}" ]]; then
-  export WILLMA_TOKEN="$token" WILLMA_CFG="$cfg"
-  python3 - <<'PY'
-import os, re
-from pathlib import Path
-p = Path(os.environ["WILLMA_CFG"])
-tok = os.environ["WILLMA_TOKEN"]
-t = p.read_text()
-esc = tok.replace("\\", "\\\\").replace('"', '\\"')
-t2, n = re.subn(
-    r'(embeddingApiKey:\s*)(["\']?)[^"\'\n]+\2',
-    lambda m: m.group(1) + '"' + esc + '"',
-    t,
-    count=1,
-)
-if n == 0 and "WILLMA_TOKEN_PLACEHOLDER" in t:
-    t2 = t.replace("WILLMA_TOKEN_PLACEHOLDER", tok)
-    n = 1
-if n:
-    p.write_text(t2)
-    print("config.yml mnemopi embeddingApiKey injected")
-else:
-    print("config.yml: no embeddingApiKey placeholder to inject")
-PY
+if [[ -f "$cfg" ]] && grep -q '^\s*embeddingApiKey:' "$cfg"; then
+  sed -i '/^\s*embeddingApiKey:/d' "$cfg"
+  log "config.yml: removed literal mnemopi embeddingApiKey (the omp wrapper supplies it)"
+fi
+if command -v willma-key >/dev/null 2>&1 && willma-key >/dev/null 2>&1; then
+  log "willma-key: pass entry readable"
+else
+  log "WARN: willma-key cannot read the pass entry (broker or gate)"
 fi
 
 # ---------- OpenCode Willma config (secondary) ----------
 # Merge into the existing file so MCP servers and other local keys survive.
-# The key stays out of the file: opencode reads it from the key file.
+# The key stays out of the file: opencode reads it from WILLMA_API_KEY.
 python3 - <<'PY'
 import json
 from pathlib import Path
@@ -339,7 +273,7 @@ w["npm"] = "@ai-sdk/openai-compatible"
 w["name"] = "SURF Willma"
 w.setdefault("options", {}).update({
   "baseURL": "https://willma.surf.nl/api/v0",
-  "apiKey": "{file:~/.config/surf-ai-hub/api_key}",
+  "apiKey": "{env:WILLMA_API_KEY}",
 })
 w.setdefault("models", {}).update(models)
 doc["model"] = "willma/openai/gpt-oss-120b"
@@ -427,7 +361,7 @@ log "omp=$(omp --version 2>/dev/null | head -1)"
 log "mcp=$(python3 -c 'import json;from pathlib import Path;print(sorted(json.loads(Path.home().joinpath(".omp/agent/mcp.json").read_text()).get("mcpServers",{})))' 2>/dev/null || echo missing)"
 log "eb-stack=$(command -v eb-stack || echo missing)"
 log "opencode=$(command -v opencode || echo missing)"
-if command -v omp >/dev/null 2>&1 && [[ -f "$models" ]] && ! grep -q PLACEHOLDER "$models" 2>/dev/null; then
+if command -v omp >/dev/null 2>&1 && [[ -f "${AGENT}/models.yml" ]]; then
   out=$(omp -p --mode text --no-session --allow-home "Reply with exactly: pong" 2>&1 | tail -2 || true)
   log "smoke: ${out//$'\n'/ | }"
 fi

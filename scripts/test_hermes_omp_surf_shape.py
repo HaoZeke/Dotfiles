@@ -102,8 +102,15 @@ def main() -> None:
             for line in env_path.read_text().splitlines()
             if "=" in line and not line.strip().startswith("#")
         }
-        if "OPENAI_API_KEY" not in keys:
-            fail(".env missing OPENAI_API_KEY")
+        # The key comes from pass at launch (willma-run / willma-key); .env
+        # carries only the base URL and must never hold the key itself.
+        leaked = keys & {"OPENAI_API_KEY", "WILLMA_API_KEY"}
+        if leaked:
+            fail(f".env holds the key in plain text: {sorted(leaked)}")
+        if TOKEN_RE.search(env_path.read_text()):
+            fail(".env holds a plaintext Willma token")
+        if "OPENAI_BASE_URL" not in keys:
+            fail(".env missing OPENAI_BASE_URL")
     else:
         fail("missing ~/.hermes/.env")
 
