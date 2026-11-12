@@ -54,6 +54,8 @@ if [ -d $shellHome/posix.d ]; then
 	# Sealed local environment. Absent on hosts that do not carry it, so the
 	# read test keeps a fresh clone from erroring before the vault is opened.
 	[ -r "$shellHome/posix.d/07_local_env.sh" ] && . "$shellHome/posix.d/07_local_env.sh"
+	# Willma agents read the key from pass at launch (willma-key); nothing on disk.
+	[ -r "$shellHome/posix.d/08_willma.sh" ] && . "$shellHome/posix.d/08_willma.sh"
 fi
 
 {{- if (has .chezmoi.hostname (list "rgx1gen11" "rglat5340")) }}
