@@ -246,10 +246,33 @@ for link in "$home/.local/bin"/* "$home/.bun/bin"/*; do
     [ -L "$link" ] || continue
     resolved="$(readlink -f -- "$link" 2>/dev/null)" || continue
     case "$resolved" in "$home"/*) ;; *) continue ;; esac
-    if in_checkout "$resolved"; then
+    bind_dir="$(dirname -- "$resolved")"
+    if [ -e "$bind_dir/../pyvenv.cfg" ]; then
+        # A Python virtualenv (uv tool, pipx): the script's shebang names the
+        # venv's python, which needs the venv's lib and the interpreter
+        # installation that python links to.
+        bind_path="$(cd "$bind_dir/.." && pwd -P)"
+        venv_python="$(readlink -f -- "$bind_path/bin/python" 2>/dev/null || true)"
+        case "$venv_python" in
+            "$home"/*/bin/*)
+                interp_root="${venv_python%/bin/*}"
+                # uv links a venv to a minor-version alias in its store
+                # (cpython-3.13-...) that points at the patch-level build, so
+                # the store directory, which holds only interpreters, is bound.
+                case "$(basename -- "$(dirname -- "$interp_root")")" in
+                    python) interp_root="$(dirname -- "$interp_root")" ;;
+                esac
+                case ":$seen:" in *":$interp_root:"*) ;; *)
+                    seen="$seen:$interp_root"
+                    ro_if_present "$interp_root"
+                    ;;
+                esac
+                ;;
+        esac
+    elif in_checkout "$resolved"; then
         bind_path="$resolved"
     else
-        bind_path="$(dirname -- "$resolved")"
+        bind_path="$bind_dir"
     fi
     case ":$seen:" in *":$bind_path:"*) continue ;; esac
     seen="$seen:$bind_path"
@@ -263,6 +286,7 @@ done
 # deliberately absent, so signing is switched off for this process tree only;
 # the hooks still run.
 for p in "$home/.local/libexec/rg-git-shim" "$home/.local/libexec/rg-grok-shim" \
+    "$home/.local/libexec/rg-cursor-shim" \
     "$home/.gitconfig" "$home/.config/git" "$home/.config/leakguard"; do
     ro_if_present "$p"
 done

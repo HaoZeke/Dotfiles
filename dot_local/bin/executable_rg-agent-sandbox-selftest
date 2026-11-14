@@ -97,6 +97,24 @@ case "$dry_cmd" in
     *) pass "a ~/.local/bin command binds itself, not ~/.local" ;;
 esac
 
+# A Python tool installed as a virtualenv (uv tool, pipx) runs inside: its
+# shebang interpreter and the installation that interpreter links to are
+# bound along with the venv.
+venv_tool=""
+for link in "$HOME/.local/bin"/*; do
+    [ -L "$link" ] || continue
+    t="$(readlink -f -- "$link")"
+    [ -e "$(dirname -- "$t")/../pyvenv.cfg" ] && { venv_tool="$link"; break; }
+done
+if [ -n "$venv_tool" ]; then
+    interp="$(head -1 "$(readlink -f -- "$venv_tool")" | sed 's/^#![[:space:]]*//; s/[[:space:]].*//')"
+    out="$(sbx_run --net none -- "$interp" -c 'import sys; print("venv-ok", sys.prefix)' 2>&1 || true)"
+    case "$out" in
+        venv-ok*) pass "venv tool interpreter runs inside ($(basename -- "$venv_tool"))" ;;
+        *) bad "venv tool $(basename -- "$venv_tool"): $out" ;;
+    esac
+fi
+
 # Network isolation.
 netprobe='
 import socket
