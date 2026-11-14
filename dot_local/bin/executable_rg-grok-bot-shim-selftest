@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-grok-bot-shim-selftest).
+#
+# Behaviour checks for the desktop agent's browser shims
+# (~/.local/libexec/rg-grok-bot-shim): web opens go to the location profile,
+# and are refused when it is missing; other opens pass through. The profile
+# and the real openers are stand-ins.
+set -euo pipefail
+
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+dir=""
+for c in "$here/../libexec/rg-grok-bot-shim" "$HOME/.local/libexec/rg-grok-bot-shim"; do
+    [ -d "$c" ] && { dir="$(cd "$c" && pwd)"; break; }
+done
+[ -n "$dir" ] || { echo "no rg-grok-bot-shim directory found" >&2; exit 1; }
+shim() {
+    local name=$1
+    if [ -f "$dir/$name" ]; then printf '%s' "$dir/$name"; else printf '%s' "$dir/executable_$name"; fi
+}
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/rg-grok-bot-shim-selftest.XXXXXX")"
+trap 'rm -rf -- "$tmp"' EXIT
+printf '#!/bin/sh\necho "profile $*"\n' >"$tmp/profile"
+chmod 755 "$tmp/profile"
+
+fail=0
+expect() {
+    local label=$1 want=$2 code_want=$3 out code
+    shift 3
+    set +e
+    out="$("$@" 2>&1)"
+    code=$?
+    set -e
+    if [ "$code" -eq "$code_want" ] && [[ "$out" == *"$want"* ]]; then
+        printf 'ok   %s\n' "$label"
+    else
+        printf 'FAIL %s: exit %s: %s\n' "$label" "$code" "$out" >&2
+        fail=1
+    fi
+}
+
+for name in vivaldi vivaldi-stable; do
+    expect "$name routes to the profile" "profile vivaldi https://example.com" 0 \
+        env RG_GROK_PROFILE="$tmp/profile" bash "$(shim "$name")" https://example.com
+    expect "$name refuses without the profile" "refusing to open outside the Houston door" 2 \
+        env RG_GROK_PROFILE="$tmp/missing" bash "$(shim "$name")" https://example.com
+done
+expect "xdg-open routes https to the profile" "profile vivaldi https://example.com" 0 \
+    env RG_GROK_PROFILE="$tmp/profile" bash "$(shim xdg-open)" https://example.com
+expect "xdg-open refuses https without the profile" "refusing to open https://example.com" 2 \
+    env RG_GROK_PROFILE="$tmp/missing" bash "$(shim xdg-open)" https://example.com
+expect "gio open routes https to the profile" "profile vivaldi https://example.com" 0 \
+    env RG_GROK_PROFILE="$tmp/profile" bash "$(shim gio)" open https://example.com
+expect "gio open refuses https without the profile" "refusing to open https://example.com" 2 \
+    env RG_GROK_PROFILE="$tmp/missing" bash "$(shim gio)" open https://example.com
+
+# A non-web open is not the shim's business: it goes to the real opener. The
+# real binary is replaced here so the check does not open anything.
+mkdir -p "$tmp/root/usr/bin"
+for name in xdg-open gio; do
+    sed "s#/usr/bin/$name#$tmp/root/usr/bin/$name#" "$(shim "$name")" >"$tmp/$name-shim"
+    printf '#!/bin/sh\necho "real %s $*"\n' "$name" >"$tmp/root/usr/bin/$name"
+    chmod 755 "$tmp/root/usr/bin/$name"
+done
+expect "xdg-open passes a file through" "real xdg-open /tmp/file.pdf" 0 \
+    env RG_GROK_PROFILE="$tmp/missing" bash "$tmp/xdg-open-shim" /tmp/file.pdf
+expect "gio passes a non-open command through" "real gio info /tmp" 0 \
+    env RG_GROK_PROFILE="$tmp/missing" bash "$tmp/gio-shim" info /tmp
+
+[ "$fail" -eq 0 ] && echo ok
+exit "$fail"

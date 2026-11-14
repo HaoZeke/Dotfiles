@@ -431,6 +431,7 @@ dot_local/bin/executable_rg-network-status-json
 dot_local/bin/executable_rg-networkd-apply
 dot_local/bin/executable_rg-networkd-apply-selftest
 dot_local/bin/executable_rg-socks-auth-relay
+dot_local/bin/executable_rg-socks-auth-relay-selftest
 dot_local/bin/executable_rg-surf-tailnet-watchdog
 dot_local/bin/executable_rg-surf-vpn
 dot_local/bin/executable_rg-surf-vpn-install

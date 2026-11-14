@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-grok-purge-vault-sessions-selftest).
+#
+# Behaviour checks for rg-grok-purge-vault-sessions in a throwaway home: which
+# session directories it matches, what it keeps when a remote delete fails,
+# and its exit status. rg-grok is a stand-in; nothing leaves the machine.
+set -euo pipefail
+
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+script="${1:-}"
+if [ -z "$script" ]; then
+    script="$here/rg-grok-purge-vault-sessions"
+    [ -f "$script" ] || script="$here/executable_rg-grok-purge-vault-sessions"
+fi
+
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/rg-grok-purge-selftest.XXXXXX")"
+trap 'rm -rf -- "$tmp"' EXIT
+mkdir -p "$tmp/home/.config/ttech" "$tmp/home/.grok/sessions" "$tmp/bin"
+printf '%s\n' "$tmp/repos/notes" >"$tmp/home/.config/ttech/sync-repos"
+
+enc() { python3 -I -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"; }
+sessions="$tmp/home/.grok/sessions"
+repo_dir="$sessions/$(enc "$tmp/repos/notes")"
+sub_dir="$sessions/$(enc "$tmp/repos/notes/sub")"
+lookalike_a="$sessions/$(enc "$tmp/repos/othernotes")"
+lookalike_b="$sessions/$(enc "$tmp/work/notes-archive")"
+mkdir -p "$repo_dir/s-ok" "$repo_dir/s-fail" "$sub_dir/s-sub" "$lookalike_a/s-a" "$lookalike_b/s-b"
+touch "$repo_dir/prompt_history.jsonl" "$sub_dir/prompt_history.jsonl"
+
+cat >"$tmp/bin/rg-grok" <<'SH'
+#!/bin/sh
+[ "$3" = s-fail ] && { echo "remote refused"; exit 1; }
+echo "deleted $3"
+SH
+chmod 755 "$tmp/bin/rg-grok"
+
+fail=0
+check() {
+    if eval "$1"; then printf 'ok   %s\n' "$2"; else printf 'FAIL %s\n' "$2" >&2; fail=1; fi
+}
+
+set +e
+out="$(HOME="$tmp/home" PATH="$tmp/bin:/usr/bin:/bin" bash "$script" 2>&1)"
+code=$?
+set -e
+
+check '[ "$code" -ne 0 ]' "exits non-zero when a remote delete failed"
+check '[[ "$out" == *"1 session(s) could not be deleted remotely"* ]]' "names the count of kept sessions"
+check '[ -d "$lookalike_a/s-a" ]' "a repository whose name contains the configured one is left alone"
+check '[ -d "$lookalike_b/s-b" ]' "a path that merely contains the name is left alone"
+check '[ ! -e "$sub_dir" ]' "a session inside the configured repository is purged"
+check '[ ! -e "$repo_dir/s-ok" ]' "a session whose remote delete succeeded is removed"
+check '[ -d "$repo_dir/s-fail" ]' "a session whose remote delete failed is kept"
+check '[ -e "$repo_dir/prompt_history.jsonl" ]' "prompt history is kept while a session remains"
+
+[ "$fail" -eq 0 ] && echo ok
+exit "$fail"
