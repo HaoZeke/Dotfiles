@@ -2,7 +2,7 @@
 # `git` ahead of the real binary inside an agent launcher (rg-cursor, rg-grok).
 # A harness signs every commit by writing `--trailer "Co-authored-by: ..."`
 # into the command it runs. This shim drops such an argument before git sees
-# it, says so on stderr, and refuses the two ways round the hooks and the
+# it, says so on stderr, and refuses the ways round the hooks and the
 # wholesale repository export. The global commit-msg hook removes whatever
 # reaches the message by another route.
 #
@@ -10,9 +10,16 @@
 # commit-msg hook keeps, read from its `agent_ident=` line, so the two never
 # drift. With no hook to read, every `--trailer` is dropped.
 #
-# Control then passes to the git wrapper on PATH (gitguard) with this
-# directory removed, so its gates run once and it does not meet this shim
-# again when it walks PATH for the real binary.
+# Refused:
+#   --no-verify, and `commit -n` (its short form, also inside -an, -nm ...);
+#   overriding core.hooksPath by -c, --config-env, GIT_CONFIG_* or
+#   `git config`; reading it is allowed;
+#   `git bundle`, wherever the subcommand sits after global options.
+#
+# The rg-grok-shim and rg-cursor-shim directories link here, so the three
+# names run one file. Control then passes to the git wrapper on PATH
+# (gitguard) with this directory removed, so its gates run once and it does
+# not meet this shim again when it walks PATH for the real binary.
 set -euo pipefail
 
 shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,6 +34,8 @@ refuse() {
     exit 1
 }
 
+hooks_refusal="the shared hooks path is the attribution and leak gate; it is not overridden per command"
+
 signs_as_harness() {
     if [ -z "$agent_ident" ]; then
         return 0
@@ -34,8 +43,21 @@ signs_as_harness() {
     printf '%s' "$1" | grep -q -i -E "$agent_ident"
 }
 
+names_hooks_path() {
+    printf '%s' "$1" | grep -q -i -F 'core.hookspath'
+}
+
+# An override in the environment: GIT_CONFIG_KEY_<n> or GIT_CONFIG_PARAMETERS
+# naming core.hooksPath.
+while IFS= read -r name; do
+    names_hooks_path "${!name}" && refuse "$hooks_refusal"
+done < <(compgen -e | grep -E '^GIT_CONFIG_KEY_[0-9]+$' || true)
+names_hooks_path "${GIT_CONFIG_PARAMETERS:-}" && refuse "$hooks_refusal"
+
 args=()
+sub_args=()
 want_trailer_value=0
+want_global_value=""
 subcommand=""
 for arg in "$@"; do
     if [ "$want_trailer_value" -eq 1 ]; then
@@ -45,6 +67,16 @@ for arg in "$@"; do
             continue
         fi
         args+=("--trailer" "$arg")
+        sub_args+=("$arg")
+        continue
+    fi
+    if [ -n "$want_global_value" ]; then
+        # The value of a global option such as -C DIR or -c KEY=VALUE.
+        case "$want_global_value" in
+            -c | --config-env) names_hooks_path "$arg" && refuse "$hooks_refusal" ;;
+        esac
+        want_global_value=""
+        args+=("$arg")
         continue
     fi
     case "$arg" in
@@ -61,22 +93,65 @@ for arg in "$@"; do
         --no-verify)
             refuse "hooks are the attribution and leak gate; --no-verify is refused"
             ;;
-        *core.hooksPath*|*core.hookspath*)
-            refuse "the shared hooks path is the attribution and leak gate; it is not overridden per command"
-            ;;
-        -*) ;;
-        *)
-            if [ -z "$subcommand" ]; then
-                subcommand="$arg"
-            fi
-            ;;
     esac
+    if [ -z "$subcommand" ]; then
+        case "$arg" in
+            -C | -c | --git-dir | --work-tree | --namespace | --super-prefix | --config-env)
+                want_global_value="$arg"
+                ;;
+            -c* | --config-env=*)
+                names_hooks_path "$arg" && refuse "$hooks_refusal"
+                ;;
+            -*) ;;
+            *) subcommand="$arg" ;;
+        esac
+    else
+        sub_args+=("$arg")
+    fi
     args+=("$arg")
 done
 
-if [ "$subcommand" = "bundle" ]; then
-    refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
-fi
+case "$subcommand" in
+    bundle)
+        refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
+        ;;
+    commit)
+        for a in ${sub_args+"${sub_args[@]}"}; do
+            [ "$a" = "--" ] && break
+            case "$a" in
+                --*) ;;
+                -*)
+                    # -n is --no-verify for commit; a cluster such as -an or
+                    # -nm carries it too. A letter that takes a value ends the
+                    # cluster, since the rest is that value.
+                    cluster="${a#-}"
+                    while [ -n "$cluster" ]; do
+                        c="${cluster:0:1}"
+                        cluster="${cluster:1}"
+                        case "$c" in
+                            n) refuse "commit -n is --no-verify; hooks are the attribution and leak gate" ;;
+                            m | F | C | c | t | S | u) break ;;
+                        esac
+                    done
+                    ;;
+            esac
+        done
+        ;;
+    config)
+        # Reading the key is fine; setting, unsetting or editing it is not.
+        reads=0
+        names=0
+        for a in ${sub_args+"${sub_args[@]}"}; do
+            case "$a" in
+                --get | --get-all | --get-regexp | --get-urlmatch | -l | --list | get | list) reads=1 ;;
+            esac
+            names_hooks_path "$a" && names=1
+        done
+        if [ "$names" -eq 1 ] && [ "$reads" -eq 0 ]; then
+            refuse "$hooks_refusal"
+        fi
+        ;;
+esac
 
 # Hand off to the next git on PATH with this directory removed.
 PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -x -F "$shim_dir" | paste -s -d ':')"

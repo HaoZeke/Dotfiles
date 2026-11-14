@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-git-shim-selftest).
+#
+# Behaviour checks for the agent git shim (~/.local/libexec/rg-git-shim/git):
+# what it refuses, what it lets through, and which trailers it drops. A stub
+# `git` after the shim on PATH records what would have reached gitguard.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+shim=""
+for c in "$here/../libexec/rg-git-shim/executable_git" "$HOME/.local/libexec/rg-git-shim/git"; do
+    [ -f "$c" ] && { shim="$c"; break; }
+done
+[ -n "$shim" ] || { echo "no git shim found" >&2; exit 1; }
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/rg-git-shim-selftest.XXXXXX")"
+trap 'rm -rf -- "$work"' EXIT
+mkdir -p "$work/shim" "$work/next"
+cp "$shim" "$work/shim/git"
+chmod 755 "$work/shim/git"
+cat >"$work/next/git" <<'EOF'
+#!/bin/sh
+printf 'reached'
+for a in "$@"; do printf ' [%s]' "$a"; done
+printf '\n'
+EOF
+chmod 755 "$work/next/git"
+printf "agent_ident='(noreply@example\\.invalid|Some Harness)'\n" >"$work/commit-msg"
+
+fail=0
+run() {
+    env -u GIT_CONFIG_PARAMETERS RG_GIT_SHIM_HOOK="$work/commit-msg" \
+        PATH="$work/shim:$work/next:/usr/bin:/bin" "$@" 2>&1
+}
+refused() {
+    local label=$1 out
+    shift
+    if out="$(run "$@")"; then
+        printf 'FAIL %s was let through: %s\n' "$label" "$out" >&2
+        fail=1
+    else
+        case "$out" in
+            git-shim:*) printf 'ok   %s refused\n' "$label" ;;
+            *) printf 'FAIL %s failed another way: %s\n' "$label" "$out" >&2; fail=1 ;;
+        esac
+    fi
+}
+passes() {
+    local label=$1 want=$2 out
+    shift 2
+    if out="$(run "$@")" && [[ "$out" == *"$want"* ]]; then
+        printf 'ok   %s\n' "$label"
+    else
+        printf 'FAIL %s: %s\n' "$label" "$out" >&2
+        fail=1
+    fi
+}
+
+refused "commit --no-verify" git commit --no-verify -m x
+refused "push --no-verify" git push --no-verify
+refused "commit -n" git commit -n -m x
+refused "commit -an" git commit -an -m x
+refused "commit -nm" git commit -nm x
+refused "-c core.hooksPath=" git -c core.hooksPath=/dev/null commit -m x
+refused "-ccore.hooksPath=" git -ccore.hooksPath=/dev/null commit -m x
+refused "--config-env core.hooksPath" git --config-env core.hooksPath=X commit -m x
+refused "GIT_CONFIG_KEY_0=core.hooksPath" env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x
+refused "config core.hooksPath VALUE" git config core.hooksPath /dev/null
+refused "config --unset core.hooksPath" git config --unset core.hooksPath
+refused "bundle" git bundle create x.bundle --all
+refused "-C DIR bundle" git -C /tmp bundle create x.bundle --all
+refused "-c k=v bundle" git -c user.name=x bundle create x.bundle --all
+
+passes "config --get core.hooksPath" "reached [config] [--get] [core.hooksPath]" git config --get core.hooksPath
+passes "commit -m with n in the message" "[-m] [nonsense]" git commit -m nonsense
+passes "commit -am" "[-am]" git commit -am x
+passes "push -n (dry run)" "[push] [-n]" git push -n
+passes "add -n (dry run)" "[add] [-n]" git add -n .
+passes "harness trailer dropped" "reached [commit] [-m] [x]" git commit -m x --trailer "Co-authored-by: Some Harness <noreply@example.invalid>"
+passes "other trailer kept" "[--trailer] [Reviewed-by: A Person <a@example.org>]" git commit -m x --trailer "Reviewed-by: A Person <a@example.org>"
+passes "-C DIR status" "reached [-C] [/tmp] [status]" git -C /tmp status
+
+[ "$fail" -eq 0 ] && echo ok
+exit "$fail"
