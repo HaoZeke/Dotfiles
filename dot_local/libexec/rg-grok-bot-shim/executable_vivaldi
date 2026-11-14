@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/libexec/rg-grok-bot-shim/executable_vivaldi).
 #
-# Intercept vivaldi launches from Grok Bot and route to Livingston Vivaldi profile.
+# Route vivaldi launches from Grok Bot to the Livingston Vivaldi profile. Without
+# the profile the launch is refused: the plain browser would load the page
+# from the local address.
 set -euo pipefail
 
 profile="${RG_GROK_PROFILE:-$HOME/.local/bin/rg-livingston-profile}"
 if [ -x "$profile" ]; then
     exec "$profile" vivaldi "$@"
 fi
-
-exec /usr/bin/vivaldi "$@"
+echo "vivaldi (grok-bot shim): rg-livingston-profile is missing; refusing to open outside the Houston door" >&2
+exit 2

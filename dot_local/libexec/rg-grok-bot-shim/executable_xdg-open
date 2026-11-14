@@ -11,6 +11,8 @@ case "$url" in
         if [ -x "$profile" ]; then
             exec "$profile" vivaldi "$@"
         fi
+        echo "xdg-open (grok-bot shim): rg-livingston-profile is missing; refusing to open $url outside the Houston door" >&2
+        exit 2
         ;;
 esac
 

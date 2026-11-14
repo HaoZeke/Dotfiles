@@ -9,6 +9,8 @@ if [ "${1:-}" = "open" ] && [[ "${2:-}" =~ ^https?:// ]]; then
     if [ -x "$profile" ]; then
         exec "$profile" vivaldi "${@:2}"
     fi
+    echo "gio (grok-bot shim): rg-livingston-profile is missing; refusing to open $2 outside the Houston door" >&2
+    exit 2
 fi
 
 exec /usr/bin/gio "$@"
