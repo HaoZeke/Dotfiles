@@ -92,7 +92,9 @@ for d in dirs:
         print(f"  [{s}] {out}")
 
     prompt_history = os.path.join(full_path, "prompt_history.jsonl")
-    if os.path.exists(prompt_history):
+    if any(os.path.isdir(os.path.join(full_path, s)) for s in sessions if s in failed):
+        print(f"  Kept prompt_history.jsonl for {d}: sessions there still exist remotely")
+    elif os.path.exists(prompt_history):
         os.remove(prompt_history)
         print(f"  Removed prompt_history.jsonl for {d}")
 
