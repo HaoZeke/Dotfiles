@@ -5,9 +5,14 @@
 # to private sync repositories specified in ~/.config/ttech/sync-repos.
 # Invokes `rg-grok sessions delete <id>` with repository CWD to trigger
 # remote backend x.ai/session/delete RPCs, then purges local session directories.
+#
+# A session directory is the URL-encoded working directory; it matches when
+# that path is a configured repository or lies inside one, never by substring.
+# A session whose remote delete fails is kept locally, so the purge can be run
+# again, and the script exits non-zero naming how many remain.
 set -euo pipefail
 
-python3 - <<'EOF'
+python3 -I - <<'EOF'
 import os
 import shutil
 import subprocess
@@ -20,21 +25,27 @@ if not os.path.isdir(base):
     sys.exit(0)
 
 sync_repos = os.path.expanduser("~/.config/ttech/sync-repos")
-target_keywords = []
+targets = []
 if os.path.exists(sync_repos):
     with open(sync_repos, "r") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#"):
-                target_keywords.append(os.path.basename(os.path.expanduser(line)))
+                targets.append(os.path.normpath(os.path.expanduser(line)))
 
-if not target_keywords:
+if not targets:
     print("No repositories configured in ~/.config/ttech/sync-repos.")
     sys.exit(0)
 
+
+def in_target(encoded):
+    path = os.path.normpath(urllib.parse.unquote(encoded))
+    return any(path == t or path.startswith(t + os.sep) for t in targets)
+
+
 dirs = [
     d for d in os.listdir(base)
-    if any(k in d for k in target_keywords) and os.path.isdir(os.path.join(base, d))
+    if in_target(d) and os.path.isdir(os.path.join(base, d))
 ]
 
 if not dirs:
@@ -42,6 +53,7 @@ if not dirs:
     sys.exit(0)
 
 print(f"Found {len(dirs)} target vault directories in ~/.grok/sessions/.")
+failed = []
 
 for d in dirs:
     full_path = os.path.join(base, d)
@@ -65,9 +77,16 @@ for d in dirs:
                 timeout=12
             )
             out = (res.stdout + res.stderr).strip()
+            deleted = res.returncode == 0
         except Exception as e:
             out = f"delete error: {e}"
+            deleted = False
 
+        if not deleted:
+            # Keep the local copy: it is the only record of the id to retry.
+            failed.append(s)
+            print(f"  [{s}] remote delete failed, kept locally: {out}")
+            continue
         if os.path.exists(s_path):
             shutil.rmtree(s_path)
         print(f"  [{s}] {out}")
@@ -84,5 +103,8 @@ for d in dirs:
     else:
         print(f"  Remaining in {d}: {remaining}")
 
-print("\nVault session purge completed successfully.")
+if failed:
+    print(f"\n{len(failed)} session(s) could not be deleted remotely and were kept: {' '.join(failed)}")
+    sys.exit(1)
+print("\nVault session purge completed.")
 EOF
