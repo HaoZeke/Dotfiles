@@ -11,7 +11,7 @@
 # list of things bound back in, so anything not named below is not merely
 # unreadable, it does not exist.
 #
-#   rg-agent-sandbox [--allow PATH]... [--env NAME]... [--net isolated|none|share]
+#   rg-agent-sandbox [--allow PATH]... [--env NAME]... [--net isolated|door|none|share]
 #                    [--workdir DIR] -- COMMAND [ARGS...]
 #
 # The working directory is bound read-write. Everything else defaults to out.
@@ -20,6 +20,10 @@
 # through pasta: outbound connections work, but the host's loopback services,
 # its abstract unix sockets (the X server among them) and its interfaces are
 # not there. Only the egress door, 127.0.0.1:11081, is forwarded in.
+# --net door leaves the sandbox with no network at all except the egress door:
+# its namespace has only loopback, and 127.0.0.1:11081 inside is forwarded over
+# a unix socket to the host's door. A tool that ignores proxy settings (ssh,
+# nc, a raw socket) has no route and fails instead of leaving from here.
 # --net none is offline. --net share joins the host network, X server and
 # loopback services included; it exists for a tool that cannot work otherwise
 # and says so on stderr.
@@ -64,7 +68,7 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --net)
-            [ $# -ge 2 ] || die "--net needs isolated, none or share"
+            [ $# -ge 2 ] || die "--net needs isolated, door, none or share"
             net_mode="$2"
             shift 2
             ;;
@@ -89,8 +93,8 @@ done
 
 [ $# -gt 0 ] || die "no command given (use -- COMMAND ...)"
 case "$net_mode" in
-    isolated | none | share) ;;
-    *) die "--net takes isolated, none or share" ;;
+    isolated | door | none | share) ;;
+    *) die "--net takes isolated, door, none or share" ;;
 esac
 
 # Paths whose contents must never be inside, and whose ancestors would carry
@@ -357,6 +361,76 @@ if [ "${RG_AGENT_SANDBOX_DRY_RUN:-0}" = "1" ]; then
     printf '%q ' bwrap "${args[@]}" --chdir "$workdir" -- "$@"
     printf '\n'
     exit 0
+fi
+
+if [ "$net_mode" = "door" ]; then
+    # Two forwarders bridge the door into a namespace with only loopback: one
+    # on the host from a unix socket to the door's TCP port, one inside from
+    # 127.0.0.1:$door_port to that socket. bwrap runs as a child so the host
+    # side is stopped and removed when it exits.
+    bridge="$(mktemp -d "${TMPDIR:-/tmp}/rg-agent-sandbox-door.XXXXXX")"
+    cat >"$bridge/pump.py" <<'PY'
+import os, socket, sys, threading
+
+
+def pump(a, b):
+    try:
+        while True:
+            d = a.recv(65536)
+            if not d:
+                break
+            b.sendall(d)
+    except OSError:
+        pass
+    finally:
+        for s in (a, b):
+            try:
+                s.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+
+def serve(listener, connect, ready=None):
+    listener.listen(64)
+    if ready:
+        open(ready, "w").close()
+    while True:
+        c, _ = listener.accept()
+        try:
+            u = connect()
+        except OSError:
+            c.close()
+            continue
+        threading.Thread(target=pump, args=(c, u), daemon=True).start()
+        threading.Thread(target=pump, args=(u, c), daemon=True).start()
+
+
+mode, sock_path, port = sys.argv[1], sys.argv[2], int(sys.argv[3])
+if mode == "host":
+    l = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    l.bind(sock_path)
+    serve(l, lambda: socket.create_connection(("127.0.0.1", port), timeout=15))
+else:
+    l = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    l.bind(("127.0.0.1", port))
+
+    def to_host():
+        u = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        u.connect(sock_path)
+        return u
+    serve(l, to_host, sys.argv[4])
+PY
+    python3 -I "$bridge/pump.py" host "$bridge/door.sock" "$door_port" &
+    host_pump=$!
+    trap 'kill "$host_pump" 2>/dev/null; rm -rf -- "$bridge"' EXIT
+    for _ in $(seq 50); do [ -S "$bridge/door.sock" ] && break; sleep 0.05; done
+    [ -S "$bridge/door.sock" ] || die "the door bridge did not start"
+    status=0
+    bwrap "${args[@]}" --bind "$bridge" /run/rg-sandbox-door --chdir "$workdir" -- \
+        /bin/sh -c 'python3 -I /run/rg-sandbox-door/pump.py inner /run/rg-sandbox-door/door.sock "$1" /tmp/.rg-door-ready &
+            i=0; while [ ! -e /tmp/.rg-door-ready ] && [ "$i" -lt 100 ]; do sleep 0.02; i=$((i + 1)); done
+            shift; exec "$@"' rg-agent-sandbox "$door_port" "$@" || status=$?
+    exit "$status"
 fi
 
 if [ "$net_mode" = "isolated" ]; then

@@ -136,6 +136,37 @@ fi
 out="$(sbx_run --net none -- python3 -I -c "$netprobe" 2>/dev/null)"
 case "$out" in *"x11 closed"*"ssh closed"*) pass "none: X socket and loopback unreachable" ;; *) bad "none: $out" ;; esac
 
+# --net door: only loopback inside, and 127.0.0.1:PORT forwarded to the host's
+# door. A local echo server stands in for the door.
+doorprobe='
+import socket, sys
+port = int(sys.argv[1])
+c = socket.create_connection(("127.0.0.1", port), timeout=5)
+c.sendall(b"ping"); print("door", c.recv(10).decode())
+try:
+    socket.create_connection(("192.0.2.1", 80), timeout=3); print("direct open")
+except OSError:
+    print("direct closed")
+'
+echo_port="$(python3 -I -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1])')"
+python3 -I -c '
+import socket, sys, threading
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(("127.0.0.1", int(sys.argv[1]))); s.listen(4)
+def h(c):
+    d = c.recv(10); c.sendall(b"E" + d); c.close()
+for _ in range(4):
+    c, _ = s.accept(); threading.Thread(target=h, args=(c,)).start()
+' "$echo_port" &
+echo_pid=$!
+sleep 0.3
+out="$(RG_AGENT_SANDBOX_DOOR_PORT="$echo_port" sbx_run --net door -- python3 -I -c "$doorprobe" "$echo_port" 2>&1 || true)"
+kill "$echo_pid" 2>/dev/null || true
+case "$out" in *"door Eping"*) pass "door: loopback port reaches the host door" ;; *) bad "door: $out" ;; esac
+case "$out" in *"direct closed"*) pass "door: no other route" ;; *) bad "door: direct route ($out)" ;; esac
+leftover="$( (ls -d "${TMPDIR:-/tmp}"/rg-agent-sandbox-door.* 2>/dev/null || true) | wc -l)"
+[ "$leftover" -eq 0 ] && pass "door: bridge directory removed" || bad "door: $leftover bridge directories left"
+
 # The git gates come along: the shim is first on PATH and the shared hooks
 # path is configured, with signing off because the key is absent.
 gitprobe='
