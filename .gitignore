@@ -409,6 +409,7 @@ dot_local/bin/executable_rg-haozeke-derp-targets-selftest
 dot_local/bin/executable_rg-haozeke-tunnel-carveout.tmpl
 dot_local/bin/executable_rg-livingston-egress.tmpl
 dot_local/bin/executable_rg-livingston-netns.tmpl
+dot_local/bin/executable_rg-livingston-netns-selftest
 dot_local/bin/executable_rg-livingston-profile
 dot_local/bin/executable_rg-livingston-profile-selftest
 dot_local/bin/executable_rg-net
