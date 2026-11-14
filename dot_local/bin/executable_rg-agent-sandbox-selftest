@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-agent-sandbox-selftest).
+#
+# Behaviour checks for rg-agent-sandbox, run against the real bubblewrap and
+# pasta. Each check names what must be absent or refused inside the sandbox.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+sbx="$here/rg-agent-sandbox"
+[ -f "$sbx" ] || sbx="$here/executable_rg-agent-sandbox"
+
+# Run through bash: the source file in the dotfiles tree has no execute bit, and a
+# "Permission denied" must not pass for a refusal.
+sbx_run() { bash "$sbx" "$@"; }
+
+fail=0
+pass() { printf 'ok   %s\n' "$1"; }
+bad() { printf 'FAIL %s\n' "$1" >&2; fail=1; }
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/rg-agent-sandbox-selftest.XXXXXX")"
+trap 'rm -rf -- "$work"' EXIT
+cd "$work"
+
+refused() {
+    local label=$1
+    shift
+    local err
+    if err="$(cd "${RUN_IN:-$work}" && sbx_run "$@" -- true 2>&1)"; then
+        bad "$label was not refused"
+    else
+        case "$err" in
+            rg-agent-sandbox:*) pass "$label refused" ;;
+            *) bad "$label failed for another reason: $err" ;;
+        esac
+    fi
+}
+
+RUN_IN="$HOME" refused "working directory = home"
+refused "--allow \$HOME" --allow "$HOME"
+refused "--allow /" --allow /
+refused "--allow ~/.ssh" --allow "$HOME/.ssh"
+[ -d "$HOME/Git" ] && refused "--allow ~/Git (contains ~/Git/Private)" --allow "$HOME/Git"
+refused "--allow ~/.local (contains the dotfiles source)" --allow "$HOME/.local"
+refused "--env with a bad name" --env 'A=B'
+refused "--net bogus" --net bogus
+
+# Inside, what must be absent.
+probe='
+for p in "$HOME/.ssh" "$HOME/.gnupg" "$HOME/.password-store" "$HOME/.local/share/chezmoi" "$HOME/Git/Private"; do
+    [ -e "$p" ] && echo "visible $p"
+done
+if [ -d "$HOME/.config" ]; then
+    extra="$(ls -A "$HOME/.config" | grep -vxE "git|leakguard" || true)"
+    [ -n "$extra" ] && echo "visible in ~/.config: $(echo $extra)"
+fi
+for v in DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS SSH_AUTH_SOCK SWAYSOCK RG_SELFTEST_SECRET_TOKEN; do
+    [ -n "${!v:-}" ] && echo "env $v"
+done
+[ -e "$HOME/.grok/hooks" ] && { touch "$HOME/.grok/hooks/.selftest-probe" 2>/dev/null && { echo "writable ~/.grok/hooks"; rm -f "$HOME/.grok/hooks/.selftest-probe"; }; }
+[ -e "$HOME/.grok/config.toml" ] && { ( : >>"$HOME/.grok/config.toml" ) 2>/dev/null && echo "writable ~/.grok/config.toml"; }
+unshare -U true 2>/dev/null && echo "nested user namespace allowed"
+echo probe-done
+'
+out="$(DISPLAY=:0 RG_SELFTEST_SECRET_TOKEN=x sbx_run --net none -- bash -c "$probe" 2>&1)"
+case "$out" in *probe-done*) ;; *) bad "probe did not run: $out" ;; esac
+leaks="$(printf '%s\n' "$out" | grep -v '^probe-done$' || true)"
+if [ -n "$leaks" ]; then
+    while IFS= read -r l; do bad "inside: $l"; done <<<"$leaks"
+else
+    pass "keys, vault, dotfiles, display/bus/token env and seat hooks are absent or read-only"
+fi
+
+# A launcher symlinked out of a checkout binds the file, not the repository.
+dry="$(RG_AGENT_SANDBOX_DRY_RUN=1 sbx_run -- true)"
+for link in "$HOME/.local/bin"/*; do
+    [ -L "$link" ] || continue
+    t="$(readlink -f -- "$link")"
+    d="$(dirname -- "$t")"
+    while [ "$d" != "$HOME" ] && [ "$d" != / ]; do
+        if [ -e "$d/.git" ]; then
+            case "$dry" in
+                *"--ro-bind $(printf '%q' "$d") "*) bad "checkout $d bound whole for $link" ;;
+                *) pass "checkout $d not bound for $(basename -- "$link")" ;;
+            esac
+            break
+        fi
+        d="$(dirname -- "$d")"
+    done
+done
+case "$dry" in
+    *"--ro-bind $(printf '%q' "$HOME/.local") "*) bad "~/.local bound whole" ;;
+    *) pass "~/.local not bound whole" ;;
+esac
+dry_cmd="$(RG_AGENT_SANDBOX_DRY_RUN=1 sbx_run -- rg-agent-sandbox --help 2>/dev/null || true)"
+case "$dry_cmd" in
+    *"--ro-bind $(printf '%q' "$HOME/.local") "*) bad "a ~/.local/bin command binds ~/.local" ;;
+    *) pass "a ~/.local/bin command binds itself, not ~/.local" ;;
+esac
+
+# Network isolation.
+netprobe='
+import socket
+def tcp(port):
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=3).close(); return "open"
+    except OSError: return "closed"
+def x11():
+    try:
+        s = socket.socket(socket.AF_UNIX); s.settimeout(2); s.connect("\0/tmp/.X11-unix/X0"); return "open"
+    except OSError: return "closed"
+print("x11", x11()); print("ssh", tcp(22))
+'
+if command -v pasta >/dev/null 2>&1; then
+    out="$(sbx_run -- python3 -I -c "$netprobe" 2>/dev/null)"
+    case "$out" in *"x11 closed"*) pass "isolated: host X socket unreachable" ;; *) bad "isolated: X socket reachable ($out)" ;; esac
+    case "$out" in *"ssh closed"*) pass "isolated: host loopback services unreachable" ;; *) bad "isolated: host loopback reachable ($out)" ;; esac
+fi
+out="$(sbx_run --net none -- python3 -I -c "$netprobe" 2>/dev/null)"
+case "$out" in *"x11 closed"*"ssh closed"*) pass "none: X socket and loopback unreachable" ;; *) bad "none: $out" ;; esac
+
+# The git gates come along: the shim is first on PATH and the shared hooks
+# path is configured, with signing off because the key is absent.
+gitprobe='
+case "$(command -v git)" in *rg-git-shim/git|*rg-grok-shim/git) echo shim ;; *) echo "bare $(command -v git)" ;; esac
+command git config --get core.hooksPath || echo "no-hooks-path"
+command git config --get commit.gpgsign
+'
+out="$(PATH="$HOME/.local/libexec/rg-git-shim:$PATH" sbx_run --net none -- bash -c "$gitprobe" 2>&1)"
+case "$out" in *shim*) pass "git resolves to the shim" ;; *) bad "git inside: $out" ;; esac
+case "$out" in *"/.config/git/hooks"*) pass "shared hooks path configured" ;; *) bad "hooks path missing: $out" ;; esac
+case "$out" in *false*) pass "signing off inside (key absent)" ;; *) bad "signing state: $out" ;; esac
+
+[ "$fail" -eq 0 ] && echo ok
+exit "$fail"

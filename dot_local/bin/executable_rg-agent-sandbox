@@ -11,9 +11,25 @@
 # list of things bound back in, so anything not named below is not merely
 # unreadable, it does not exist.
 #
-#   rg-agent-sandbox [--allow PATH]... [--net none] -- COMMAND [ARGS...]
+#   rg-agent-sandbox [--allow PATH]... [--env NAME]... [--net isolated|none|share]
+#                    [--workdir DIR] -- COMMAND [ARGS...]
 #
 # The working directory is bound read-write. Everything else defaults to out.
+#
+# --net isolated (the default) gives the sandbox its own network namespace
+# through pasta: outbound connections work, but the host's loopback services,
+# its abstract unix sockets (the X server among them) and its interfaces are
+# not there. Only the egress door, 127.0.0.1:11081, is forwarded in.
+# --net none is offline. --net share joins the host network, X server and
+# loopback services included; it exists for a tool that cannot work otherwise
+# and says so on stderr.
+#
+# The environment is cleared. A short list of names crosses (terminal,
+# locale, proxy, and the agents' own settings); --env NAME passes one more.
+#
+# A working directory or --allow path is refused when it is the home directory
+# or /, an ancestor of a protected path, or inside one: ssh and gpg keys, the
+# password store, the dotfiles source and vault, mail, and browser profiles.
 
 set -euo pipefail
 
@@ -27,9 +43,12 @@ if [ "$(uname -s)" = Darwin ]; then
 fi
 command -v bwrap >/dev/null 2>&1 || die "bubblewrap (bwrap) is not installed"
 
+home="$HOME"
 allow_paths=()
-net_mode="share"
+extra_env=()
+net_mode="isolated"
 workdir="$PWD"
+door_port="${RG_AGENT_SANDBOX_DOOR_PORT:-11081}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,8 +57,14 @@ while [ $# -gt 0 ]; do
             allow_paths+=("$2")
             shift 2
             ;;
+        --env)
+            [ $# -ge 2 ] || die "--env needs a variable name"
+            [[ "$2" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || die "--env takes a variable name, not $2"
+            extra_env+=("$2")
+            shift 2
+            ;;
         --net)
-            [ $# -ge 2 ] || die "--net needs share or none"
+            [ $# -ge 2 ] || die "--net needs isolated, none or share"
             net_mode="$2"
             shift 2
             ;;
@@ -53,7 +78,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
         -h | --help)
-            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
@@ -63,15 +88,68 @@ while [ $# -gt 0 ]; do
 done
 
 [ $# -gt 0 ] || die "no command given (use -- COMMAND ...)"
-[ -d "$workdir" ] || die "working directory does not exist: $workdir"
+case "$net_mode" in
+    isolated | none | share) ;;
+    *) die "--net takes isolated, none or share" ;;
+esac
 
-home="$HOME"
+# Paths whose contents must never be inside, and whose ancestors would carry
+# them in.
+protected=(
+    "$home/.ssh"
+    "$home/.gnupg"
+    "$home/.password-store"
+    "$home/.local/share/chezmoi"
+    "$home/Git/Private"
+    "$home/.config"
+    "$home/Mail"
+    "$home/.mail"
+    "$home/.local/share/keyrings"
+    "$home/.mozilla"
+    "$home/.cache"
+)
+
+# Resolve a path and refuse it when it would expose a protected one.
+checked_path() {
+    local what=$1 raw=$2 path p
+    [ -e "$raw" ] || die "$what does not exist: $raw"
+    path="$(readlink -f -- "$raw")"
+    case "$path" in
+        / | "$home") die "$what $raw is $path; bind the project, not the home directory or /" ;;
+    esac
+    case "$home/" in
+        "$path"/*) die "$what $raw ($path) contains the home directory" ;;
+    esac
+    for p in "${protected[@]}"; do
+        case "$path/" in
+            "$p"/*) die "$what $raw ($path) is inside $p" ;;
+        esac
+        case "$p/" in
+            "$path"/*) die "$what $raw ($path) contains $p" ;;
+        esac
+    done
+    printf '%s' "$path"
+}
+
+[ -d "$workdir" ] || die "working directory does not exist: $workdir"
+workdir="$(checked_path "working directory" "$workdir")"
+resolved_allow=()
+for extra in ${allow_paths+"${allow_paths[@]}"}; do
+    resolved_allow+=("$(checked_path "--allow path" "$extra")")
+done
+
 runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+case "$workdir/" in
+    "$runtime"/*) die "working directory $workdir is under $runtime, which the sandbox replaces" ;;
+esac
 
 args=(
     --unshare-all
+    --unshare-user
+    --disable-userns
     --die-with-parent
     --new-session
+    --clearenv
     # System, read-only. The agent needs an interpreter and CA roots, not the
     # ability to modify either.
     --ro-bind /usr /usr
@@ -94,19 +172,41 @@ args=(
     --setenv HOME "$home"
     --setenv GROKOS_SANDBOX 1
 )
+# The runtime directory is replaced by an empty one before anything is bound,
+# so no host socket (D-Bus, Wayland, ssh-agent, gpg-agent, pipewire) is there.
+[ -d "$runtime" ] && args+=(--tmpfs "$runtime" --setenv XDG_RUNTIME_DIR "$runtime")
+
+# The environment crosses by name only. Display, bus, agent-socket and token
+# variables are not on the list.
+pass_env() {
+    local name=$1
+    [ -n "${!name+x}" ] && args+=(--setenv "$name" "${!name}")
+    return 0
+}
+for name in PATH USER LOGNAME SHELL TERM COLORTERM LANG LANGUAGE TZ \
+    EDITOR VISUAL PAGER NO_COLOR \
+    HTTPS_PROXY HTTP_PROXY ALL_PROXY NO_PROXY https_proxy http_proxy all_proxy no_proxy \
+    DISABLE_TELEMETRY DISABLE_ERROR_REPORTING; do
+    pass_env "$name"
+done
+while IFS= read -r name; do
+    pass_env "$name"
+done < <(compgen -e | grep -E '^(LC_[A-Z_]+|GROK_[A-Z0-9_]+|RG_GROK_[A-Z0-9_]+)$' || true)
+for name in ${extra_env+"${extra_env[@]}"}; do
+    pass_env "$name"
+done
 
 if [ "$net_mode" = "share" ]; then
+    echo "rg-agent-sandbox: --net share joins the host network: its loopback services and X server are reachable" >&2
     args+=(--share-net)
-elif [ "$net_mode" != "none" ]; then
-    die "--net takes share or none"
+elif [ "$net_mode" = "isolated" ]; then
+    command -v pasta >/dev/null 2>&1 || die "pasta (passt) is not installed; use --net none, or --net share knowing what it exposes"
+    # bwrap joins the namespace pasta made rather than leaving it.
+    args+=(--share-net)
 fi
 
 # The work itself.
 args+=(--bind "$workdir" "$workdir")
-
-# Runtime sockets the seat protocol needs, without exposing the rest of the
-# runtime directory.
-[ -d "$runtime" ] && args+=(--tmpfs "$runtime")
 
 ro_if_present() {
     [ -e "$1" ] && args+=(--ro-bind "$1" "$1")
@@ -118,6 +218,17 @@ rw_if_present() {
     return 0
 }
 
+# Inside a git work tree under the home directory: a checkout, whose history
+# and neighbours are not the work.
+in_checkout() {
+    local d=$1
+    while [ "$d" != "$home" ] && [ "$d" != "/" ] && [ -n "$d" ]; do
+        [ -e "$d/.git" ] && return 0
+        d="$(dirname -- "$d")"
+    done
+    return 1
+}
+
 # Interpreters and the agent's own code, read-only: it should run from these,
 # not rewrite them.
 ro_if_present "$home/.local/bin"
@@ -127,47 +238,89 @@ ro_if_present "$home/.nvm"
 # Where the tools are actually installed. A launcher on PATH is usually a
 # symlink into a versioned directory elsewhere, and binding the link without its
 # target fails with "No such file or directory" naming a command that plainly
-# exists. Resolved rather than listed, so a tool installed anywhere under the
-# home directory works without being named here and nothing goes stale when an
-# installer changes its layout. Read-only: a tool should run from its
-# installation, not rewrite it.
-seen_dirs=""
+# exists. The target's directory is bound when it is an installation; when it
+# sits in a git checkout only the target file is, so a launcher symlinked out
+# of a repository does not carry the repository in.
+seen=""
 for link in "$home/.local/bin"/* "$home/.bun/bin"/*; do
     [ -L "$link" ] || continue
     resolved="$(readlink -f -- "$link" 2>/dev/null)" || continue
     case "$resolved" in "$home"/*) ;; *) continue ;; esac
-    dir="$(dirname -- "$resolved")"
-    case ":$seen_dirs:" in *":$dir:"*) continue ;; esac
-    seen_dirs="$seen_dirs:$dir"
-    ro_if_present "$dir"
+    if in_checkout "$resolved"; then
+        bind_path="$resolved"
+    else
+        bind_path="$(dirname -- "$resolved")"
+    fi
+    case ":$seen:" in *":$bind_path:"*) continue ;; esac
+    seen="$seen:$bind_path"
+    ro_if_present "$bind_path"
 done
 
-# Seat state, writable because sessions and caches are written here.
-rw_if_present "$home/.grok"
-rw_if_present "$home/.pi"
-rw_if_present "$home/.hermes"
+# The git gates, read-only: the shims that drop harness trailers and refuse
+# hook bypasses, the global config with its shared hooks path, the hooks, and
+# leakguard's allow list. Without them git inside here is the bare binary and
+# a commit skips the attribution and leak checks. The commit-signing key is
+# deliberately absent, so signing is switched off for this process tree only;
+# the hooks still run.
+for p in "$home/.local/libexec/rg-git-shim" "$home/.local/libexec/rg-grok-shim" \
+    "$home/.gitconfig" "$home/.config/git" "$home/.config/leakguard"; do
+    ro_if_present "$p"
+done
+args+=(
+    --setenv GIT_CONFIG_COUNT 2
+    --setenv GIT_CONFIG_KEY_0 commit.gpgsign
+    --setenv GIT_CONFIG_VALUE_0 false
+    --setenv GIT_CONFIG_KEY_1 tag.gpgsign
+    --setenv GIT_CONFIG_VALUE_1 false
+)
 
-for extra in ${allow_paths+"${allow_paths[@]}"}; do
-    [ -e "$extra" ] || die "--allow path does not exist: $extra"
+# Seat state. Sessions, caches and credentials refresh are written here, so
+# the directories are writable; what the host seat later runs or obeys (hooks,
+# skills, plugins, agent definitions, configuration, installed binaries) is
+# bound back read-only on top, so the agent cannot plant code for the host.
+rw_if_present "$home/.grok"
+for p in hooks skills agents installed-plugins bin downloads bundled \
+    config.toml trusted_folders.toml; do
+    ro_if_present "$home/.grok/$p"
+done
+# Top-level scripts and instruction files are read by the host seat too.
+for p in "$home"/.grok/*.sh "$home"/.grok/*.md; do
+    [ -e "$p" ] && ro_if_present "$p"
+done
+rw_if_present "$home/.pi"
+for p in agent/mcp.json agent/skills; do
+    ro_if_present "$home/.pi/$p"
+done
+rw_if_present "$home/.hermes"
+for p in agent-hooks hooks plugins skills cron config.yaml SOUL.md HOUSE.md; do
+    ro_if_present "$home/.hermes/$p"
+done
+
+for extra in ${resolved_allow+"${resolved_allow[@]}"}; do
     args+=(--bind "$extra" "$extra")
 done
 
 # Bind whatever the command actually resolves to. Launchers are commonly
 # symlinks on PATH pointing into a checkout elsewhere, and binding the link
 # without its target produces "No such file or directory" naming the command
-# that plainly exists, because inside here it points at nothing.
+# that plainly exists, because inside here it points at nothing. This is the
+# command being run, so its project comes along read-only.
 target="$(command -v -- "$1" 2>/dev/null || true)"
 if [ -n "$target" ]; then
     real="$(readlink -f -- "$target" 2>/dev/null || printf '%s' "$target")"
     real_dir="$(dirname -- "$real")"
     case "$real_dir" in
         "$home"/*)
-            # Bind the project the launcher lives in, not just its bin
-            # directory, since a launcher generally reads files beside itself.
             project="$real_dir"
             [ "$(basename -- "$real_dir")" = "bin" ] && project="$(dirname -- "$real_dir")"
-            printf '%s\n' "${allow_paths[@]:-}" | grep -qxF "$project" 2>/dev/null \
-                || args+=(--ro-bind "$project" "$project")
+            # ~/.local/bin/x would make the project ~/.local, which holds the
+            # dotfiles source and keyrings: bind the command alone then.
+            if checked="$(checked_path "command project" "$project" 2>/dev/null)"; then
+                printf '%s\n' "${resolved_allow[@]:-}" | grep -qxF "$checked" 2>/dev/null \
+                    || args+=(--ro-bind "$checked" "$checked")
+            else
+                ro_if_present "$real"
+            fi
             ;;
     esac
 fi
@@ -176,4 +329,16 @@ fi
 # implied: ssh keys, gpg keys, the password store, the dotfiles vault, mail,
 # browser profiles, and every repository other than the working directory.
 
+if [ "${RG_AGENT_SANDBOX_DRY_RUN:-0}" = "1" ]; then
+    printf '%q ' bwrap "${args[@]}" --chdir "$workdir" -- "$@"
+    printf '\n'
+    exit 0
+fi
+
+if [ "$net_mode" = "isolated" ]; then
+    # --no-map-gw: the gateway address is not the host. -T forwards the
+    # namespace's loopback port to the host's, for the egress door only.
+    exec pasta --config-net --quiet --no-map-gw -T "$door_port" -- \
+        bwrap "${args[@]}" --chdir "$workdir" -- "$@"
+fi
 exec bwrap "${args[@]}" --chdir "$workdir" -- "$@"
