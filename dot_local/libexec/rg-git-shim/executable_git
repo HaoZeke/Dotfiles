@@ -10,11 +10,16 @@
 # commit-msg hook keeps, read from its `agent_ident=` line, so the two never
 # drift. With no hook to read, every `--trailer` is dropped.
 #
-# Refused:
-#   --no-verify, and `commit -n` (its short form, also inside -an, -nm ...);
+# Refused, for the command as typed and for an alias it expands to:
+#   --no-verify and any abbreviation git would accept for it (--no-veri...),
+#   and `commit -n` (its short form, also inside -an, -nm ...);
 #   overriding core.hooksPath by -c, --config-env, GIT_CONFIG_* or
-#   `git config`; reading it is allowed;
+#   `git config` (set, unset, edit); reading it is allowed;
 #   `git bundle`, wherever the subcommand sits after global options.
+#
+# This is a gate for well-behaved callers, not a sandbox: a process that runs
+# the real binary by its full path is not stopped here. The hooks are the
+# second gate.
 #
 # The rg-grok-shim and rg-cursor-shim directories link here, so the three
 # names run one file. Control then passes to the git wrapper on PATH
@@ -22,7 +27,7 @@
 # not meet this shim again when it walks PATH for the real binary.
 set -euo pipefail
 
-shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 hook="${RG_GIT_SHIM_HOOK:-$HOME/.config/git/hooks/commit-msg}"
 agent_ident=""
 if [ -r "$hook" ]; then
@@ -35,6 +40,7 @@ refuse() {
 }
 
 hooks_refusal="the shared hooks path is the attribution and leak gate; it is not overridden per command"
+verify_refusal="hooks are the attribution and leak gate; --no-verify is refused"
 
 signs_as_harness() {
     if [ -z "$agent_ident" ]; then
@@ -47,6 +53,86 @@ names_hooks_path() {
     printf '%s' "$1" | grep -q -i -F 'core.hookspath'
 }
 
+# git accepts any unambiguous prefix of a long option; --no-ve is the
+# shortest that can only grow into --no-verify or --no-verbose, so every
+# prefix from there on is treated as --no-verify.
+is_no_verify() {
+    case "$1" in
+        --no-ve | --no-ver | --no-veri | --no-verif | --no-verify | --no-verify=*) return 0 ;;
+    esac
+    return 1
+}
+
+check_config() {
+    local a positional=() read=0 write=0 names=0 skip=0
+    for a in "$@"; do
+        if [ "$skip" -eq 1 ]; then
+            skip=0
+            names_hooks_path "$a" && names=1
+            continue
+        fi
+        names_hooks_path "$a" && names=1
+        case "$a" in
+            --get | --get-all | --get-regexp | --get-urlmatch | --get-color | --get-colorbool | -l | --list) read=1 ;;
+            --unset | --unset-all | --add | --replace-all | --rename-section | --remove-section | -e | --edit) write=1 ;;
+            -f | --file | --blob | --type | --default | --comment | --value) skip=1 ;;
+            -*) ;;
+            *) positional+=("$a") ;;
+        esac
+    done
+    # New-style subcommand form: `git config get KEY`, `git config set KEY V`.
+    case "${positional[0]:-}" in
+        get | list) read=1 ;;
+        set | unset | rename-section | remove-section | edit | replace-all) write=1 ;;
+    esac
+    [ "$names" -eq 1 ] || return 0
+    [ "$write" -eq 1 ] && refuse "$hooks_refusal"
+    [ "$read" -eq 1 ] && return 0
+    # Legacy form: one positional is a read, two or more set a value.
+    [ "${#positional[@]}" -le 1 ] && return 0
+    refuse "$hooks_refusal"
+}
+
+# Refuse what a subcommand and its arguments would do.
+check_subcommand() {
+    local sub=$1 a cluster c
+    shift
+    for a in "$@"; do
+        [ "$a" = "--" ] && break
+        is_no_verify "$a" && refuse "$verify_refusal"
+    done
+    case "$sub" in
+        bundle)
+            refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
+            ;;
+        commit)
+            for a in "$@"; do
+                [ "$a" = "--" ] && break
+                case "$a" in
+                    --*) ;;
+                    -*)
+                        # -n is --no-verify for commit; a cluster such as -an
+                        # or -nm carries it too. A letter that takes a value
+                        # ends the cluster, since the rest is that value.
+                        cluster="${a#-}"
+                        while [ -n "$cluster" ]; do
+                            c="${cluster:0:1}"
+                            cluster="${cluster:1}"
+                            case "$c" in
+                                n) refuse "commit -n is --no-verify; $verify_refusal" ;;
+                                m | F | C | c | t | S | u) break ;;
+                            esac
+                        done
+                        ;;
+                esac
+            done
+            ;;
+        config)
+            check_config "$@"
+            ;;
+    esac
+}
+
 # An override in the environment: GIT_CONFIG_KEY_<n> or GIT_CONFIG_PARAMETERS
 # naming core.hooksPath.
 while IFS= read -r name; do
@@ -55,6 +141,7 @@ done < <(compgen -e | grep -E '^GIT_CONFIG_KEY_[0-9]+$' || true)
 names_hooks_path "${GIT_CONFIG_PARAMETERS:-}" && refuse "$hooks_refusal"
 
 args=()
+global_args=()
 sub_args=()
 want_trailer_value=0
 want_global_value=""
@@ -67,7 +154,7 @@ for arg in "$@"; do
             continue
         fi
         args+=("--trailer" "$arg")
-        sub_args+=("$arg")
+        sub_args+=("--trailer" "$arg")
         continue
     fi
     if [ -n "$want_global_value" ]; then
@@ -75,9 +162,37 @@ for arg in "$@"; do
         case "$want_global_value" in
             -c | --config-env) names_hooks_path "$arg" && refuse "$hooks_refusal" ;;
         esac
+        global_args+=("$want_global_value" "$arg")
         want_global_value=""
         args+=("$arg")
         continue
+    fi
+    if [ -z "$subcommand" ]; then
+        case "$arg" in
+            --trailer | --trailer=*) ;;
+            -C | -c | --git-dir | --work-tree | --namespace | --super-prefix | --config-env)
+                want_global_value="$arg"
+                args+=("$arg")
+                continue
+                ;;
+            -c* | --config-env=*)
+                names_hooks_path "$arg" && refuse "$hooks_refusal"
+                global_args+=("$arg")
+                args+=("$arg")
+                continue
+                ;;
+            -*)
+                is_no_verify "$arg" && refuse "$verify_refusal"
+                global_args+=("$arg")
+                args+=("$arg")
+                continue
+                ;;
+            *)
+                subcommand="$arg"
+                args+=("$arg")
+                continue
+                ;;
+        esac
     fi
     case "$arg" in
         --trailer)
@@ -90,74 +205,56 @@ for arg in "$@"; do
                 continue
             fi
             ;;
-        --no-verify)
-            refuse "hooks are the attribution and leak gate; --no-verify is refused"
-            ;;
     esac
-    if [ -z "$subcommand" ]; then
-        case "$arg" in
-            -C | -c | --git-dir | --work-tree | --namespace | --super-prefix | --config-env)
-                want_global_value="$arg"
-                ;;
-            -c* | --config-env=*)
-                names_hooks_path "$arg" && refuse "$hooks_refusal"
-                ;;
-            -*) ;;
-            *) subcommand="$arg" ;;
-        esac
-    else
-        sub_args+=("$arg")
-    fi
+    sub_args+=("$arg")
     args+=("$arg")
 done
 
-case "$subcommand" in
-    bundle)
-        refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
-        ;;
-    commit)
-        for a in ${sub_args+"${sub_args[@]}"}; do
-            [ "$a" = "--" ] && break
-            case "$a" in
-                --*) ;;
-                -*)
-                    # -n is --no-verify for commit; a cluster such as -an or
-                    # -nm carries it too. A letter that takes a value ends the
-                    # cluster, since the rest is that value.
-                    cluster="${a#-}"
-                    while [ -n "$cluster" ]; do
-                        c="${cluster:0:1}"
-                        cluster="${cluster:1}"
-                        case "$c" in
-                            n) refuse "commit -n is --no-verify; hooks are the attribution and leak gate" ;;
-                            m | F | C | c | t | S | u) break ;;
-                        esac
-                    done
-                    ;;
-            esac
-        done
-        ;;
-    config)
-        # Reading the key is fine; setting, unsetting or editing it is not.
-        reads=0
-        names=0
-        for a in ${sub_args+"${sub_args[@]}"}; do
-            case "$a" in
-                --get | --get-all | --get-regexp | --get-urlmatch | -l | --list | get | list) reads=1 ;;
-            esac
-            names_hooks_path "$a" && names=1
-        done
-        if [ "$names" -eq 1 ] && [ "$reads" -eq 0 ]; then
-            refuse "$hooks_refusal"
-        fi
-        ;;
-esac
-
-# Hand off to the next git on PATH with this directory removed.
-PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -x -F "$shim_dir" | paste -s -d ':')"
+# Hand off to the next git on PATH with this directory removed. Entries are
+# compared by resolved path, so a trailing slash or a symlinked spelling of
+# this directory cannot bring the shim back.
+new_path=""
+IFS=':' read -r -a path_entries <<<"$PATH"
+for entry in "${path_entries[@]}"; do
+    [ -n "$entry" ] || continue
+    resolved="$(cd "$entry" 2>/dev/null && pwd -P || printf '%s' "$entry")"
+    [ "$resolved" = "$shim_dir" ] && continue
+    new_path="${new_path:+$new_path:}$entry"
+done
+PATH="$new_path"
 export PATH
 next="$(command -v git || true)"
-if [ -z "$next" ] || [ "$next" = "$shim_dir/git" ]; then
+if [ -z "$next" ] || [ "$(cd "$(dirname "$next")" 2>/dev/null && pwd -P)" = "$shim_dir" ]; then
     refuse "no git wrapper found on PATH after removing $shim_dir"
 fi
+
+# git never lets an alias shadow a built-in, so these skip the alias lookup.
+builtins=" add am apply bisect blame branch bundle cat-file checkout cherry-pick clean clone commit config describe diff fetch for-each-ref format-patch gc grep hash-object help init log ls-files ls-remote ls-tree merge merge-base mv notes pull push rebase reflog remote reset restore rev-list rev-parse rm shortlog show show-ref stash status submodule switch symbolic-ref tag update-index var version worktree "
+
+if [ -n "$subcommand" ]; then
+    check_subcommand "$subcommand" ${sub_args+"${sub_args[@]}"}
+    case "$builtins" in *" $subcommand "*) exec "$next" "${args[@]}" ;; esac
+    # An alias, from any config or from -c alias.NAME=... on this command
+    # line, is checked as what it expands to.
+    alias_value="$("$next" ${global_args+"${global_args[@]}"} config --get "alias.$subcommand" 2>/dev/null || true)"
+    if [ -n "$alias_value" ]; then
+        case "$alias_value" in
+            '!'*)
+                # A shell alias cannot be parsed into git arguments; refuse the
+                # spellings that would get round the gates.
+                if printf '%s' "$alias_value" | grep -q -E -e '--no-ve' -e 'bundle' \
+                    || { printf '%s' "$alias_value" | grep -q -w 'commit' \
+                        && printf '%s' "$alias_value" | grep -q -E '(^|[[:space:]])-[a-zA-Z]*n'; }; then
+                    refuse "alias $subcommand runs '$alias_value', which could skip the hooks"
+                fi
+                names_hooks_path "$alias_value" && refuse "$hooks_refusal"
+                ;;
+            *)
+                read -r -a alias_words <<<"$alias_value"
+                check_subcommand "${alias_words[@]}" ${sub_args+"${sub_args[@]}"}
+                ;;
+        esac
+    fi
+fi
+
 exec "$next" "${args[@]}"

@@ -19,7 +19,19 @@ mkdir -p "$work/shim" "$work/next"
 cp "$shim" "$work/shim/git"
 chmod 755 "$work/shim/git"
 cat >"$work/next/git" <<'EOF'
-#!/bin/sh
+#!/usr/bin/env bash
+# Answer `config --get alias.NAME` from -c alias.NAME=VALUE the way git does;
+# everything else records what would have reached gitguard.
+prev=""; want=""; value=""
+for a in "$@"; do
+    [ "$prev" = "-c" ] && case "$a" in alias.*=*) n="${a%%=*}"; printf -v "alias_${n#alias.}" '%s' "${a#*=}" ;; esac
+    prev="$a"
+done
+if [ "$#" -ge 3 ] && [ "${*: -3:1}" = "config" ] && [ "${*: -2:1}" = "--get" ]; then
+    key="${@: -1}"; name="${key#alias.}"; var="alias_$name"
+    [ -n "${!var:-}" ] && { printf '%s\n' "${!var}"; exit 0; }
+    exit 1
+fi
 printf 'reached'
 for a in "$@"; do printf ' [%s]' "$a"; done
 printf '\n'
@@ -71,6 +83,19 @@ refused "bundle" git bundle create x.bundle --all
 refused "-C DIR bundle" git -C /tmp bundle create x.bundle --all
 refused "-c k=v bundle" git -c user.name=x bundle create x.bundle --all
 
+refused "config core.hooksPath get (sets it to 'get')" git config core.hooksPath get
+refused "config set core.hooksPath" git config set core.hooksPath /dev/null
+refused "commit --no-verif (abbreviation)" git commit --no-verif -m x
+refused "push --no-ver (abbreviation)" git push --no-ver
+refused "command-line alias to commit -n" git -c "alias.c=commit --allow-empty -n -m y" c
+refused "command-line shell alias to commit -n" git -c "alias.s=!git commit -n -m y" s
+refused "command-line alias to bundle" git -c "alias.b=bundle create x.bundle --all" b
+refused "command-line alias to config core.hooksPath" git -c "alias.h=config core.hooksPath /dev/null" h
+
+passes "bare config core.hooksPath (read)" "reached [config] [core.hooksPath]" git config core.hooksPath
+passes "config get core.hooksPath (new style read)" "reached [config] [get] [core.hooksPath]" git config get core.hooksPath
+passes "alias to log -n" "[lg]" git -c "alias.lg=log -n 5" lg
+passes "shell alias to log -n" "[sl]" git -c "alias.sl=!git log -n 5" sl
 passes "config --get core.hooksPath" "reached [config] [--get] [core.hooksPath]" git config --get core.hooksPath
 passes "commit -m with n in the message" "[-m] [nonsense]" git commit -m nonsense
 passes "commit -am" "[-am]" git commit -am x
@@ -79,6 +104,16 @@ passes "add -n (dry run)" "[add] [-n]" git add -n .
 passes "harness trailer dropped" "reached [commit] [-m] [x]" git commit -m x --trailer "Co-authored-by: Some Harness <noreply@example.invalid>"
 passes "other trailer kept" "[--trailer] [Reviewed-by: A Person <a@example.org>]" git commit -m x --trailer "Reviewed-by: A Person <a@example.org>"
 passes "-C DIR status" "reached [-C] [/tmp] [status]" git -C /tmp status
+
+# A PATH entry naming the shim directory with a trailing slash must still be
+# removed, or the shim would exec itself.
+if out="$(env RG_GIT_SHIM_HOOK="$work/commit-msg" PATH="$work/shim/:$work/next:/usr/bin:/bin" timeout 10 git status 2>&1)" \
+    && [[ "$out" == "reached [status]"* ]]; then
+    printf 'ok   trailing-slash PATH entry for the shim is removed\n'
+else
+    printf 'FAIL trailing-slash PATH entry: %s\n' "$out" >&2
+    fail=1
+fi
 
 [ "$fail" -eq 0 ] && echo ok
 exit "$fail"
