@@ -41,7 +41,8 @@ printf "agent_ident='(noreply@example\\.invalid|Some Harness)'\n" >"$work/commit
 
 fail=0
 run() {
-    env -u GIT_CONFIG_PARAMETERS RG_GIT_SHIM_HOOK="$work/commit-msg" \
+    env -u GIT_CONFIG_PARAMETERS -u GIT_CONFIG_GLOBAL -u GIT_CONFIG_SYSTEM -u GIT_CONFIG \
+        RG_GIT_SHIM_HOOK="$work/commit-msg" \
         PATH="$work/shim:$work/next:/usr/bin:/bin" "$@" 2>&1
 }
 refused() {
@@ -91,6 +92,17 @@ refused "command-line alias to commit -n" git -c "alias.c=commit --allow-empty -
 refused "command-line shell alias to commit -n" git -c "alias.s=!git commit -n -m y" s
 refused "command-line alias to bundle" git -c "alias.b=bundle create x.bundle --all" b
 refused "command-line alias to config core.hooksPath" git -c "alias.h=config core.hooksPath /dev/null" h
+
+refused "-c include.path= (config include)" git -c include.path=/tmp/x.gitconfig commit -m x
+refused "-c includeIf...path= (conditional include)" git -c "includeIf.gitdir:/tmp/.path=/tmp/x.gitconfig" commit -m x
+refused "GIT_CONFIG_KEY_0=include.path" env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=include.path GIT_CONFIG_VALUE_0=/tmp/x git commit -m x
+refused "GIT_CONFIG_GLOBAL replacement config" env GIT_CONFIG_GLOBAL=/tmp/x.gitconfig git commit -m x
+refused "GIT_CONFIG_SYSTEM replacement config" env GIT_CONFIG_SYSTEM=/tmp/x.gitconfig git status
+refused "config include.path VALUE" git config include.path /tmp/x.gitconfig
+refused "commit-tree (no hooks)" git commit-tree -m x HEAD^{tree}
+refused "fast-import (no hooks)" git fast-import
+refused "fast-export (wholesale export)" git fast-export --all
+refused "archive (snapshot export)" git archive HEAD
 
 passes "bare config core.hooksPath (read)" "reached [config] [core.hooksPath]" git config core.hooksPath
 passes "config get core.hooksPath (new style read)" "reached [config] [get] [core.hooksPath]" git config get core.hooksPath

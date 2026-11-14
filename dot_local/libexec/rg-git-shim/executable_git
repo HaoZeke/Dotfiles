@@ -15,7 +15,11 @@
 #   and `commit -n` (its short form, also inside -an, -nm ...);
 #   overriding core.hooksPath by -c, --config-env, GIT_CONFIG_* or
 #   `git config` (set, unset, edit); reading it is allowed;
-#   `git bundle`, wherever the subcommand sits after global options.
+#   a config include (-c include.path=..., includeIf) or a replacement config
+#   (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG), which can set it;
+#   `git bundle`, `fast-export` and `archive`, wherever the subcommand sits
+#   after global options; `commit-tree` and `fast-import`, which write
+#   commits without hooks.
 #
 # This is a gate for well-behaved callers, not a sandbox: a process that runs
 # the real binary by its full path is not stopped here. The hooks are the
@@ -49,8 +53,10 @@ signs_as_harness() {
     printf '%s' "$1" | grep -q -i -E "$agent_ident"
 }
 
+# core.hooksPath itself, or a config include, which can pull in a file that
+# sets it.
 names_hooks_path() {
-    printf '%s' "$1" | grep -q -i -F 'core.hookspath'
+    printf '%s' "$1" | grep -q -i -E 'core\.hookspath|(^|[[:space:]=])include(if\.[^=]*)?\.path'
 }
 
 # git accepts any unambiguous prefix of a long option; --no-ve is the
@@ -102,8 +108,11 @@ check_subcommand() {
         is_no_verify "$a" && refuse "$verify_refusal"
     done
     case "$sub" in
-        bundle)
-            refuse "blocked git bundle (wholesale repository uploads/snapshots are disabled)"
+        bundle | fast-export | archive)
+            refuse "blocked git $sub (wholesale repository uploads/snapshots are disabled)"
+            ;;
+        commit-tree | fast-import)
+            refuse "git $sub writes commits without running the hooks; $verify_refusal"
             ;;
         commit)
             for a in "$@"; do
@@ -133,8 +142,14 @@ check_subcommand() {
     esac
 }
 
+# A whole replacement config file in the environment can set its own hooks
+# path, so these are refused outright.
+for name in GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG; do
+    [ -n "${!name+x}" ] && refuse "$name replaces the config that carries the shared hooks path"
+done
+
 # An override in the environment: GIT_CONFIG_KEY_<n> or GIT_CONFIG_PARAMETERS
-# naming core.hooksPath.
+# naming core.hooksPath or an include.
 while IFS= read -r name; do
     names_hooks_path "${!name}" && refuse "$hooks_refusal"
 done < <(compgen -e | grep -E '^GIT_CONFIG_KEY_[0-9]+$' || true)
@@ -229,7 +244,7 @@ if [ -z "$next" ] || [ "$(cd "$(dirname "$next")" 2>/dev/null && pwd -P)" = "$sh
 fi
 
 # git never lets an alias shadow a built-in, so these skip the alias lookup.
-builtins=" add am apply bisect blame branch bundle cat-file checkout cherry-pick clean clone commit config describe diff fetch for-each-ref format-patch gc grep hash-object help init log ls-files ls-remote ls-tree merge merge-base mv notes pull push rebase reflog remote reset restore rev-list rev-parse rm shortlog show show-ref stash status submodule switch symbolic-ref tag update-index var version worktree "
+builtins=" add am apply archive bisect blame branch bundle cat-file commit-tree fast-export fast-import checkout cherry-pick clean clone commit config describe diff fetch for-each-ref format-patch gc grep hash-object help init log ls-files ls-remote ls-tree merge merge-base mv notes pull push rebase reflog remote reset restore rev-list rev-parse rm shortlog show show-ref stash status submodule switch symbolic-ref tag update-index var version worktree "
 
 if [ -n "$subcommand" ]; then
     check_subcommand "$subcommand" ${sub_args+"${sub_args[@]}"}
