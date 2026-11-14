@@ -27,6 +27,14 @@ for a in "$@"; do
     [ "$prev" = "-c" ] && case "$a" in alias.*=*) n="${a%%=*}"; printf -v "alias_${n#alias.}" '%s' "${a#*=}" ;; esac
     prev="$a"
 done
+if [ "$#" -ge 3 ] && [ "${*: -3:1}" = "config" ] && [ "${*: -2:1}" = "--get" ] && [ "${*: -1}" = "core.hooksPath" ]; then
+    # Like git: a hooks path exists only if the config home carries one, or
+    # the repository sets its own.
+    if [ -e "$HOME/.selftest-hooks" ] || [ -n "${SELFTEST_LOCAL_HOOKS:-}" ]; then
+        echo "$HOME/.config/git/hooks"; exit 0
+    fi
+    exit 1
+fi
 if [ "$#" -ge 3 ] && [ "${*: -3:1}" = "config" ] && [ "${*: -2:1}" = "--get" ]; then
     key="${@: -1}"; name="${key#alias.}"; var="alias_$name"
     [ -n "${!var:-}" ] && { printf '%s\n' "${!var}"; exit 0; }
@@ -38,11 +46,13 @@ printf '\n'
 EOF
 chmod 755 "$work/next/git"
 printf "agent_ident='(noreply@example\\.invalid|Some Harness)'\n" >"$work/commit-msg"
+mkdir -p "$work/home" "$work/elsewhere"
+touch "$work/home/.selftest-hooks"
 
 fail=0
 run() {
     env -u GIT_CONFIG_PARAMETERS -u GIT_CONFIG_GLOBAL -u GIT_CONFIG_SYSTEM -u GIT_CONFIG \
-        RG_GIT_SHIM_HOOK="$work/commit-msg" \
+        HOME="$work/home" RG_GIT_SHIM_HOOK="$work/commit-msg" \
         PATH="$work/shim:$work/next:/usr/bin:/bin" "$@" 2>&1
 }
 refused() {
@@ -104,11 +114,19 @@ refused "fast-import (no hooks)" git fast-import
 refused "fast-export (wholesale export)" git fast-export --all
 refused "archive (snapshot export)" git archive HEAD
 
+refused "commit with HOME moved (no hooks path in effect)" env HOME="$work/elsewhere" git commit -m x
+refused "push with HOME moved" env HOME="$work/elsewhere" git push
+refused "shell alias running commit-tree" git -c "alias.ct=!git commit-tree -m x HEAD^{tree}" ct
+refused "shell alias setting GIT_CONFIG_GLOBAL" git -c "alias.g=!GIT_CONFIG_GLOBAL=/tmp/x git commit -m y" g
+refused "alias to commit with HOME moved" env HOME="$work/elsewhere" git -c "alias.ci=commit" ci -m x
+passes "commit with a repository-local hooks path and HOME moved" "reached [commit] [-m] [x]" env HOME="$work/elsewhere" SELFTEST_LOCAL_HOOKS=1 git commit -m x
+passes "status with HOME moved (no history written)" "reached [status]" env HOME="$work/elsewhere" git status
+
 passes "bare config core.hooksPath (read)" "reached [config] [core.hooksPath]" git config core.hooksPath
 passes "config get core.hooksPath (new style read)" "reached [config] [get] [core.hooksPath]" git config get core.hooksPath
 passes "alias to log -n" "[lg]" git -c "alias.lg=log -n 5" lg
 passes "shell alias to log -n" "[sl]" git -c "alias.sl=!git log -n 5" sl
-passes "config --get core.hooksPath" "reached [config] [--get] [core.hooksPath]" git config --get core.hooksPath
+passes "config --get core.hooksPath" "/.config/git/hooks" git config --get core.hooksPath
 passes "commit -m with n in the message" "[-m] [nonsense]" git commit -m nonsense
 passes "commit -am" "[-am]" git commit -am x
 passes "push -n (dry run)" "[push] [-n]" git push -n

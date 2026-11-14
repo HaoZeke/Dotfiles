@@ -19,7 +19,9 @@
 #   (GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM, GIT_CONFIG), which can set it;
 #   `git bundle`, `fast-export` and `archive`, wherever the subcommand sits
 #   after global options; `commit-tree` and `fast-import`, which write
-#   commits without hooks.
+#   commits without hooks; a history-writing command (commit, merge, am,
+#   rebase, cherry-pick, revert, push, pull) when no core.hooksPath is in
+#   effect, e.g. because HOME or XDG_CONFIG_HOME hides the global config.
 #
 # This is a gate for well-behaved callers, not a sandbox: a process that runs
 # the real binary by its full path is not stopped here. The hooks are the
@@ -246,8 +248,21 @@ fi
 # git never lets an alias shadow a built-in, so these skip the alias lookup.
 builtins=" add am apply archive bisect blame branch bundle cat-file commit-tree fast-export fast-import checkout cherry-pick clean clone commit config describe diff fetch for-each-ref format-patch gc grep hash-object help init log ls-files ls-remote ls-tree merge merge-base mv notes pull push rebase reflog remote reset restore rev-list rev-parse rm shortlog show show-ref stash status submodule switch symbolic-ref tag update-index var version worktree "
 
+# Commands that write history run the hooks; one of them with no hooks path
+# in effect (HOME or XDG_CONFIG_HOME moved so the global config is not read)
+# would skip them. A repository-local core.hooksPath is allowed, as the global
+# config says; none at all is not.
+require_hooks_path() {
+    local hp
+    hp="$("$next" ${global_args+"${global_args[@]}"} config --get core.hooksPath 2>/dev/null || true)"
+    [ -n "$hp" ] || refuse "no core.hooksPath is in effect (HOME or XDG_CONFIG_HOME hides the global config); hooks are the attribution and leak gate"
+}
+
 if [ -n "$subcommand" ]; then
     check_subcommand "$subcommand" ${sub_args+"${sub_args[@]}"}
+    case "$subcommand" in
+        commit | merge | am | rebase | cherry-pick | revert | push | pull) require_hooks_path ;;
+    esac
     case "$builtins" in *" $subcommand "*) exec "$next" "${args[@]}" ;; esac
     # An alias, from any config or from -c alias.NAME=... on this command
     # line, is checked as what it expands to.
@@ -257,7 +272,9 @@ if [ -n "$subcommand" ]; then
             '!'*)
                 # A shell alias cannot be parsed into git arguments; refuse the
                 # spellings that would get round the gates.
-                if printf '%s' "$alias_value" | grep -q -E -e '--no-ve' -e 'bundle' \
+                if printf '%s' "$alias_value" | grep -q -i -E -e '--no-ve' -e 'bundle' \
+                    -e 'commit-tree' -e 'fast-(import|export)' -e '(^|[^[:alnum:]-])archive' \
+                    -e 'GIT_CONFIG' -e 'include(if)?[^[:space:]]*\.path' \
                     || { printf '%s' "$alias_value" | grep -q -w 'commit' \
                         && printf '%s' "$alias_value" | grep -q -E '(^|[[:space:]])-[a-zA-Z]*n'; }; then
                     refuse "alias $subcommand runs '$alias_value', which could skip the hooks"
@@ -267,6 +284,9 @@ if [ -n "$subcommand" ]; then
             *)
                 read -r -a alias_words <<<"$alias_value"
                 check_subcommand "${alias_words[@]}" ${sub_args+"${sub_args[@]}"}
+                case "${alias_words[0]}" in
+                    commit | merge | am | rebase | cherry-pick | revert | push | pull) require_hooks_path ;;
+                esac
                 ;;
         esac
     fi
