@@ -5,7 +5,8 @@
 Description=A highly configurable, multi-protocol DNS forwarding proxy
 ConditionFileIsExecutable=/usr/local/bin/ctrld
 Wants=nss-lookup.target
-After=network.target nss-lookup.target
+Before=nss-lookup.target
+After=network.target
 
 [Service]
 StartLimitInterval=5
