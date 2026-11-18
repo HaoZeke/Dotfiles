@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/share/rg-power/rg-rapl-watts).
+#
+# Print average power per RAPL domain over a short interval, in watts.
+# Installed root-owned as /usr/local/sbin/rg-rapl-watts and allowed through
+# sudoers without a password, so the energy counters themselves stay
+# root-only (readable counters leak information to unprivileged code).
+#
+#   sudo -n /usr/local/sbin/rg-rapl-watts [SECONDS]   (1-10, default 2)
+set -euo pipefail
+PATH=/usr/bin:/bin
+secs="${1:-2}"
+case "$secs" in [1-9] | 10) ;; *) echo "rg-rapl-watts: interval must be 1-10 seconds" >&2; exit 2 ;; esac
+
+declare -A name e1 max
+for d in /sys/class/powercap/intel-rapl:*; do
+    [ -r "$d/energy_uj" ] || continue
+    k="${d##*/}"
+    name[$k]="$(cat "$d/name")"
+    e1[$k]="$(cat "$d/energy_uj")"
+    max[$k]="$(cat "$d/max_energy_range_uj")"
+done
+[ "${#name[@]}" -gt 0 ] || { echo "rg-rapl-watts: no RAPL domains" >&2; exit 1; }
+sleep "$secs"
+for k in $(printf '%s\n' "${!name[@]}" | sort); do
+    e2="$(cat "/sys/class/powercap/$k/energy_uj")"
+    d=$((e2 - e1[$k]))
+    [ "$d" -lt 0 ] && d=$((d + max[$k]))
+    awk -v n="${name[$k]}" -v d="$d" -v s="$secs" 'BEGIN { printf "%-8s %5.1f W\n", n, d / s / 1e6 }'
+done

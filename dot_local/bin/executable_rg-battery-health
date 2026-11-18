@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-battery-health).
+#
+# Is the battery worn, is the charger good enough, and is charging being held
+# back right now? Reads only sysfs, so it runs without root.
+#
+#   rg-battery-health [--samples N] [--log]
+#
+# --samples N  average the charge rate over N one-second readings (default 5)
+# --log        also append one line to $XDG_STATE_HOME/rg-battery-health.log,
+#              so wear and charger power can be compared over months
+#
+# The USB-C port's voltage_now/current_now are not used for the charger: on
+# this firmware they keep the 5 V default after a higher contract is agreed.
+# What the charger can deliver comes from its advertised source capabilities.
+set -euo pipefail
+
+samples=5
+log=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --samples) samples="${2:?--samples needs a number}"; shift 2 ;;
+        --log) log=1; shift ;;
+        -h | --help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "rg-battery-health: unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
+
+bat=""
+for d in /sys/class/power_supply/*; do
+    [ "$(cat "$d/type" 2>/dev/null)" = Battery ] && { bat="$d"; break; }
+done
+[ -n "$bat" ] || { echo "rg-battery-health: no battery found" >&2; exit 1; }
+
+read_or() { cat "$1" 2>/dev/null || printf '%s' "$2"; }
+wh() { awk -v v="$1" 'BEGIN { printf "%.1f", v / 1e6 }'; }
+
+full=$(read_or "$bat/energy_full" 0)
+design=$(read_or "$bat/energy_full_design" 0)
+now=$(read_or "$bat/energy_now" 0)
+cycles=$(read_or "$bat/cycle_count" "?")
+status=$(read_or "$bat/status" "?")
+cap=$(read_or "$bat/capacity" "?")
+start=$(read_or "$bat/charge_control_start_threshold" "")
+end=$(read_or "$bat/charge_control_end_threshold" "")
+
+health=0
+[ "$design" -gt 0 ] && health=$(awk -v f="$full" -v d="$design" 'BEGIN { printf "%.0f", 100 * f / d }')
+
+# Average the battery's own charge or discharge rate.
+total=0
+for _ in $(seq 1 "$samples"); do
+    total=$((total + $(read_or "$bat/power_now" 0)))
+    sleep 1
+done
+rate=$(awk -v t="$total" -v n="$samples" 'BEGIN { printf "%.1f", t / n / 1e6 }')
+
+# Largest supply the attached charger advertises (fixed and PPS entries).
+charger_w=0
+charger_desc="none attached"
+for pd in /sys/class/usb_power_delivery/pd*; do
+    for c in "$pd"/source-capabilities/*; do
+        [ -d "$c" ] || continue
+        mv=$(read_or "$c/voltage" ""); [ -n "$mv" ] || mv=$(read_or "$c/maximum_voltage" "")
+        ma=$(read_or "$c/maximum_current" "")
+        mv=${mv%mV}; ma=${ma%mA}
+        case "$mv$ma" in *[!0-9]* | "") continue ;; esac
+        [ "$mv" -gt 0 ] && [ "$ma" -gt 0 ] || continue
+        w=$((mv * ma / 1000000))
+        if [ "$w" -gt "$charger_w" ]; then
+            charger_w=$w
+            charger_desc="$((mv / 1000)) V x $(awk -v a="$ma" 'BEGIN { printf "%.1f", a / 1000 }') A"
+        fi
+    done
+done
+ac_online=0
+for d in /sys/class/power_supply/*; do
+    [ "$(cat "$d/type" 2>/dev/null)" = Mains ] && [ "$(cat "$d/online" 2>/dev/null)" = 1 ] && ac_online=1
+done
+
+cpu_temp=""
+for z in /sys/class/thermal/thermal_zone*; do
+    case "$(cat "$z/type" 2>/dev/null)" in
+        x86_pkg_temp | TCPU) cpu_temp=$(( $(cat "$z/temp") / 1000 )); break ;;
+    esac
+done
+load=$(cut -d' ' -f1 /proc/loadavg)
+
+printf 'Battery      %s%% %s, %s of %s Wh (design %s Wh)\n' "$cap" "$status" "$(wh "$now")" "$(wh "$full")" "$(wh "$design")"
+printf 'Health       %s%% of design, %s cycles\n' "$health" "$cycles"
+case "$status" in
+    Discharging) dir="out of" ;;
+    *) dir="into" ;;
+esac
+printf 'Rate         %s W %s the battery (avg of %s s)\n' "$rate" "$dir" "$samples"
+if [ "$ac_online" = 1 ]; then
+    printf 'Charger      up to %s W (%s)\n' "$charger_w" "$charger_desc"
+else
+    printf 'Charger      not connected\n'
+fi
+[ -n "$start$end" ] && printf 'Thresholds   start %s%%, stop %s%%\n' "${start:-?}" "${end:-?}"
+printf 'System       CPU %s°C, load %s\n' "${cpu_temp:-?}" "$load"
+# Package power needs the root-owned RAPL reader (see rg-rapl-watts).
+if sudo -n /usr/local/sbin/rg-rapl-watts 2 >/tmp/rg-rapl.$$ 2>/dev/null; then
+    printf 'Power        %s\n' "$(paste -sd, /tmp/rg-rapl.$$ | sed 's/  */ /g; s/,/, /g')"
+fi
+rm -f /tmp/rg-rapl.$$
+
+verdict=()
+if [ "$health" -gt 0 ]; then
+    if [ "$health" -lt 70 ]; then
+        verdict+=("battery worn out (${health}% of design): replace it")
+    elif [ "$health" -lt 85 ]; then
+        verdict+=("battery worn (${health}% of design, ${cycles} cycles): plan a replacement")
+    fi
+fi
+if [ "$ac_online" = 1 ]; then
+    if [ "$charger_w" -gt 0 ] && [ "$charger_w" -lt 45 ]; then
+        verdict+=("charger offers only ${charger_w} W: use a 60-65 W USB-PD charger")
+    fi
+    if [ "$status" = Charging ] && [ "${cap:-0}" -lt 80 ] 2>/dev/null; then
+        slow=$(awk -v r="$rate" 'BEGIN { print (r < 15) ? 1 : 0 }')
+        if [ "$slow" = 1 ]; then
+            if [ -n "$cpu_temp" ] && [ "$cpu_temp" -ge 70 ]; then
+                verdict+=("charging slowly (${rate} W) while the CPU is at ${cpu_temp}°C: heat or load is holding it back")
+            else
+                verdict+=("charging slowly (${rate} W) below 80% with the machine cool: suspect the charger or cable")
+            fi
+        fi
+    fi
+fi
+if [ "${#verdict[@]}" -eq 0 ]; then
+    printf 'Verdict      ok\n'
+else
+    for v in "${verdict[@]}"; do printf 'Verdict      %s\n' "$v"; done
+fi
+
+if [ "$log" = 1 ]; then
+    state="${XDG_STATE_HOME:-$HOME/.local/state}"
+    mkdir -p "$state"
+    printf '%s health=%s cycles=%s full_wh=%s rate_w=%s status=%s cap=%s charger_w=%s cpu_c=%s\n' \
+        "$(date -Iseconds)" "$health" "$cycles" "$(wh "$full")" "$rate" "$status" "$cap" \
+        "$charger_w" "${cpu_temp:-?}" >>"$state/rg-battery-health.log"
+fi
