@@ -1,0 +1,9 @@
+{{- if eq .chezmoi.hostname "rgx1gen11" -}}
+# Managed by chezmoi (dot_config/systemd/user/agent.slice.d/50-efficiency-cores.conf.tmpl).
+# i7-1365U: threads 0-3 are the two performance cores, 4-11 the efficiency
+# cores. Agent work runs on the efficiency cores, which reach the same
+# throughput for background jobs at far less heat, and leaves the
+# performance cores to the compositor and terminals.
+[Slice]
+AllowedCPUs=4-11
+{{- end }}
