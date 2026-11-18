@@ -48,8 +48,8 @@ interval = 15
 # by default, and a charge threshold holds the pack in not-charging while
 # it still has a level worth reading. The icon face is named because the
 # bar font's fallback does not cover this private-use glyph.
-format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}"
-charging_format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}"
+format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}{$power |}"
+charging_format = " $icon $percentage {$time_remaining.dur(hms:true, min_unit:m) |}{$power |}"
 full_format = " $icon $percentage "
 empty_format = " $icon $percentage "
 not_charging_format = " $icon $percentage "
