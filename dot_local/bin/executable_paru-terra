@@ -127,16 +127,22 @@ def install_packages(packages, dependencies):
 
 def upgrades():
     result = subprocess.run(
-        ["/usr/bin/paru", "-Quaq"], stdout=subprocess.PIPE, text=True
+        ["/usr/bin/paru", "-Quaq"], capture_output=True, text=True,
+        env={**os.environ, "LC_ALL": "C"},
     )
-    if result.returncode not in {0, 1}:
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+    if result.returncode != 1 or any(
+        line.startswith("error:") for line in result.stderr.splitlines()
+    ):
         result.check_returncode()
     return [package_name(name) for name in result.stdout.splitlines()]
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Review and build AUR packages on Terra, then install the binaries locally."
+        description="Review and build AUR packages on Terra, then install the binaries locally.",
+        epilog="Run paru -Syu to update official packages before installing AUR upgrades.",
     )
     parser.add_argument(
         "--build-only", type=Path, metavar="DIRECTORY",
