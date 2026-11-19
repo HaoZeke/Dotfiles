@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""Build AUR packages on Terra and install the resulting archives with pacman."""
+
+import argparse
+import os
+from pathlib import Path
+import platform
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+HOST = "rg.terra"
+SSH = ["ssh", "-F", str(Path.home() / ".ssh/config"), "-o", "BatchMode=yes"]
+RUNNER = Path.home() / ".local/share/paru-terra/build.sh"
+NAME = re.compile(r"[a-z0-9@_+][a-z0-9@._+-]*")
+ARCHIVE = re.compile(r"[a-zA-Z0-9@._+:~%-]+\.pkg\.tar(?:\.(?:zst|xz|gz|bz2|lz4|lrz|lzo|Z))?")
+DEPENDENCIES = "runtime-dependencies"
+
+
+def package_name(value):
+    if not NAME.fullmatch(value):
+        raise argparse.ArgumentTypeError(f"invalid AUR package name: {value!r}")
+    return value
+
+
+def extract_bundle(stream, destination):
+    with tarfile.open(fileobj=stream, mode="r|") as bundle:
+        for member in bundle:
+            if not member.isfile() or not (
+                ARCHIVE.fullmatch(member.name) or member.name == DEPENDENCIES
+            ):
+                raise ValueError(f"invalid bundle member: {member.name!r}")
+            with bundle.extractfile(member) as source:
+                with (destination / member.name).open("xb") as target:
+                    shutil.copyfileobj(source, target)
+
+
+def package_info(path):
+    output = subprocess.check_output(
+        ["/usr/bin/pacman", "-Qip", "--", str(path)],
+        env={**os.environ, "LC_ALL": "C"}, text=True,
+    )
+    fields = {}
+    for line in output.splitlines():
+        key, _, value = line.partition(":")
+        fields.setdefault(key.strip(), value.strip())
+    return fields["Name"], fields["Architecture"]
+
+
+def read_packages(directory, requested):
+    packages = {}
+    for path in sorted(directory.iterdir()):
+        if path.name == DEPENDENCIES:
+            continue
+        name, architecture = package_info(path)
+        if architecture not in {"any", platform.machine()}:
+            raise ValueError(f"{name} has incompatible architecture {architecture}")
+        if name in packages:
+            raise ValueError(f"Terra returned multiple archives for {name}")
+        packages[name] = path
+    missing = set(requested) - packages.keys()
+    if missing:
+        raise ValueError("Terra did not return: " + ", ".join(sorted(missing)))
+    dependencies = set((directory / DEPENDENCIES).read_text().splitlines())
+    if dependencies - packages.keys() or dependencies.intersection(requested):
+        raise ValueError("Terra returned an inconsistent dependency list")
+    return packages, dependencies
+
+
+def remote(*command, tty=False, **options):
+    mode = ["-tt"] if tty else ["-T"]
+    return subprocess.run(
+        [*SSH, *mode, HOST, shlex.join(command)],
+        check=True, **options,
+    )
+
+
+def build_on_terra(requested, destination):
+    job = remote(
+        "mktemp", "-d", "/tmp/paru-terra.XXXXXXXX", capture_output=True, text=True
+    ).stdout.strip()
+    if not re.fullmatch(r"/tmp/paru-terra\.[A-Za-z0-9]{8}", job):
+        raise ValueError(f"invalid Terra job directory: {job!r}")
+    runner = f"{job}/build.sh"
+    try:
+        with RUNNER.open("rb") as script:
+            remote("tee", runner, stdin=script, stdout=subprocess.DEVNULL)
+        remote("bash", runner, "build", *requested, tty=True)
+        with subprocess.Popen(
+            [*SSH, "-T", HOST, shlex.join(("bash", runner, "export"))],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        ) as transfer:
+            with transfer.stdout as stream:
+                extract_bundle(stream, destination)
+                # Drain the tar padding before checking the remote exit status.
+                for _ in iter(lambda: stream.read(65536), b""):
+                    pass
+            if transfer.wait() != 0:
+                raise ValueError("Terra package transfer failed")
+    finally:
+        try:
+            remote("find", job, "-depth", "-delete", stdout=subprocess.DEVNULL)
+        except (OSError, subprocess.CalledProcessError):
+            print(f"Terra scratch remains at {HOST}:{job}", file=sys.stderr)
+
+
+def install_packages(packages, dependencies):
+    already_installed = subprocess.check_output(
+        ["/usr/bin/pacman", "-Qq"], text=True
+    ).splitlines()
+    subprocess.run(
+        ["sudo", "/usr/bin/pacman", "-U", "--needed", "--",
+         *(str(path) for path in packages.values())],
+        check=True,
+    )
+    new_dependencies = sorted(dependencies - set(already_installed))
+    if new_dependencies:
+        subprocess.run(
+            ["sudo", "/usr/bin/pacman", "-D", "--asdeps", "--", *new_dependencies],
+            check=True,
+        )
+
+
+def upgrades():
+    result = subprocess.run(
+        ["/usr/bin/paru", "-Quaq"], stdout=subprocess.PIPE, text=True
+    )
+    if result.returncode not in {0, 1}:
+        result.check_returncode()
+    return [package_name(name) for name in result.stdout.splitlines()]
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Review and build AUR packages on Terra, then install the binaries locally."
+    )
+    parser.add_argument(
+        "--build-only", type=Path, metavar="DIRECTORY",
+        help="save verified packages into an empty directory",
+    )
+    parser.add_argument("--upgrade", action="store_true", help="build available AUR upgrades")
+    parser.add_argument("packages", nargs="*", type=package_name)
+    args = parser.parse_args()
+    if args.upgrade == bool(args.packages):
+        parser.error("provide package names or --upgrade")
+    if platform.machine() != "x86_64":
+        parser.error("the Terra builder targets x86_64")
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        parser.error("a terminal is required for package review")
+    if args.build_only and args.build_only.exists():
+        if not args.build_only.is_dir() or any(args.build_only.iterdir()):
+            parser.error("--build-only requires an empty directory")
+    try:
+        requested = upgrades() if args.upgrade else list(dict.fromkeys(args.packages))
+        if not requested:
+            print("No AUR upgrades reported.")
+            return 0
+        with tempfile.TemporaryDirectory(prefix="paru-terra-") as work:
+            scratch = Path(work)
+            build_on_terra(requested, scratch)
+            packages, dependencies = read_packages(scratch, requested)
+            if args.build_only:
+                args.build_only.mkdir(mode=0o700, parents=True, exist_ok=True)
+                for path in packages.values():
+                    with path.open("rb") as source:
+                        with (args.build_only / path.name).open("xb") as target:
+                            shutil.copyfileobj(source, target)
+                    print(args.build_only / path.name)
+            else:
+                install_packages(packages, dependencies)
+        return 0
+    except (OSError, KeyError, ValueError, argparse.ArgumentTypeError,
+            tarfile.TarError, subprocess.CalledProcessError) as error:
+        print(f"paru-terra: {error}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main())

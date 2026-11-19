@@ -1,0 +1,8 @@
+Include = /etc/paru.conf
+
+[options]
+# Run AUR builds with paru-terra. Keep plain paru on the official repositories.
+RepoOnly
+
+[bin]
+Makepkg = {{ .chezmoi.homeDir }}/.local/bin/paru-terra-no-local

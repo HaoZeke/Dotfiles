@@ -75,6 +75,12 @@ Pictures/Walls/*
 .local/bin/rgpower
 .local/bin/turtleback-push
 {{ end }}
+{{ if ne .chezmoi.hostname "rgx1gen11" }}
+.config/paru/paru.conf
+.local/bin/paru-terra
+.local/bin/paru-terra-no-local
+.local/share/paru-terra
+{{ end }}
 {{ if ne .chezmoi.hostname "rglat5340" }}
 # Dell Latitude 5340 TLP baseline, read by its power script only
 .local/share/rglat5340
