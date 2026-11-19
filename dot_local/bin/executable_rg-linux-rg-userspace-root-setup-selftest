@@ -87,7 +87,7 @@ root-helper-script)
     cat >"$out" <<'ROOT'
 #!/usr/bin/env bash
 set -euo pipefail
-PROFILES_JSON="${RG_X1GEN11_PROFILES:-/home/rgoswami/.config/rg-x1gen11/profiles.json}"
+PROFILES_JSON="${RG_X1GEN11_PROFILES:-/home/fake-user/.config/rg-x1gen11/profiles.json}"
 python3 - <<'PY'
 import json
 PY
@@ -127,8 +127,8 @@ ConditionPathExists=/sys/module/damon_reclaim/parameters/enabled
 Type=oneshot
 RemainAfterExit=yes
 Environment=RG_DAMON_SUDO=
-ExecStart=/home/rgoswami/.local/bin/rg-damon-reclaim enable $profile
-ExecStop=/home/rgoswami/.local/bin/rg-damon-reclaim disable
+ExecStart=/home/fake-user/.local/bin/rg-damon-reclaim enable $profile
+ExecStop=/home/fake-user/.local/bin/rg-damon-reclaim disable
 
 [Install]
 WantedBy=multi-user.target
@@ -264,10 +264,10 @@ rg -q 'rg-zswap-tune laptop' "$fake_root/commands.log" \
     || fail "setup must apply the laptop zswap policy"
 test -r "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must install the managed TLP profile baseline"
-rg -q '^PLATFORM_PROFILE_ON_AC=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
-    || fail "setup must keep the TLP AC platform profile aligned with undocked-mixed"
-rg -q '^PLATFORM_PROFILE_ON_BAT=low-power$' "$fake_root/etc/tlp.d/00-base.conf" \
-    || fail "setup must keep the TLP battery platform profile aligned with undocked-mixed"
+rg -q '^PLATFORM_PROFILE_ON_AC=balanced$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must install the balanced TLP AC platform profile"
+rg -q '^PLATFORM_PROFILE_ON_BAT=quiet$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must install the quiet TLP battery platform profile"
 rg -q '^RUNTIME_PM_ON_AC=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must enable PCIe runtime PM on AC"
 rg -q '^RUNTIME_PM_ON_BAT=auto$' "$fake_root/etc/tlp.d/00-base.conf" \
@@ -280,20 +280,20 @@ rg -q '^DISK_IDLE_SECS_ON_BAT=2$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep the laptop disk idle battery policy"
 rg -q '^USB_AUTOSUSPEND=1$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep USB autosuspend enabled"
-rg -q '^START_CHARGE_THRESH_BAT0=90$' "$fake_root/etc/tlp.d/00-base.conf" \
+rg -q '^START_CHARGE_THRESH_BAT0=75$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep ThinkPad BAT0 start threshold (90)"
-rg -q '^STOP_CHARGE_THRESH_BAT0=98$' "$fake_root/etc/tlp.d/00-base.conf" \
+rg -q '^STOP_CHARGE_THRESH_BAT0=80$' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must keep ThinkPad BAT0 stop threshold (98)"
 rg -q 'RUNTIME_PM_DENYLIST="00:15.0 00:15.1"' "$fake_root/etc/tlp.d/00-base.conf" \
     || fail "setup must denylist touchpad I2C controllers in TLP"
-rg -q '^CPU_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
-    || fail "setup must disable AC turbo boost in the daily TLP baseline"
-rg -q '^CPU_HWP_DYN_BOOST_ON_AC=0$' "$fake_root/etc/tlp.d/00-base.conf" \
-    || fail "setup must disable AC HWP dynamic boost in the daily TLP baseline"
+rg -q '^CPU_BOOST_ON_AC=1$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must allow AC turbo boost in the daily TLP baseline"
+rg -q '^CPU_HWP_DYN_BOOST_ON_AC=1$' "$fake_root/etc/tlp.d/00-base.conf" \
+    || fail "setup must allow AC dynamic boost in the daily TLP baseline"
 rg -q '^ConditionPathExists=/sys/module/damon_reclaim/parameters/enabled$' \
     "$fake_root/etc/systemd/system/rg-damon-reclaim-memory-pressure.service" \
     || fail "DAMON unit must guard on reclaim sysfs"
-rg -q '^ExecStop=/home/rgoswami/.local/bin/rg-damon-reclaim disable$' \
+rg -q '^ExecStop=/home/fake-user/.local/bin/rg-damon-reclaim disable$' \
     "$fake_root/etc/systemd/system/rg-damon-reclaim-memory-pressure.service" \
     || fail "DAMON unit stop must disable reclaim"
 
