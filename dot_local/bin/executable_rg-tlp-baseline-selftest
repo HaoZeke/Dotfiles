@@ -27,8 +27,8 @@ printf '%s\n' "$body" | rg -q '^CPU_BOOST_ON_AC=1$' \
     || fail "x1 baseline must allow AC turbo boost"
 printf '%s\n' "$body" | rg -q '^CPU_HWP_DYN_BOOST_ON_AC=1$' \
     || fail "x1 baseline must allow AC dynamic boost"
-printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=90$' \
-    || fail "x1 baseline must set charge start 90"
+printf '%s\n' "$body" | rg -q '^START_CHARGE_THRESH_BAT0=75$' \
+    || fail "x1 baseline must set charge start 75"
 printf '%s\n' "$body" | rg -q '^RUNTIME_PM_DENYLIST="00:15.0 00:15.1"$' \
     || fail "x1 baseline must denylist touchpad I2C"
 printf '%s\n' "$body" | rg -q '^PLATFORM_PROFILE_ON_AC=balanced$' \
@@ -58,7 +58,7 @@ surf_path=$(unset RG_TLP_BASELINE; bash "$script" --host rgSURFLat --path)
 for f in \
     "$repo/dot_local/bin/executable_rg-linux-rg-cool-sync" \
     "$repo/dot_local/bin/executable_rg-linux-rg-userspace-root-setup"; do
-    if rg -q 'START_CHARGE_THRESH_BAT0=90' "$f" \
+    if rg -q 'START_CHARGE_THRESH_BAT0=' "$f" \
         && ! rg -q 'rg-tlp-baseline' "$f"; then
         fail "$f still embeds TLP keys without using rg-tlp-baseline"
     fi
