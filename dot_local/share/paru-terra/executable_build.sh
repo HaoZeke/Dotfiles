@@ -53,14 +53,51 @@ container_build() {
     done < <(pacman -Qmdq) > /out/runtime-dependencies
 }
 
+job_dir=$(cd -- "$(dirname -- "$0")" && pwd -P)
+session="paru-terra-${job_dir##*.}"
+state="$job_dir/exit"
+mux=(tmux -L paru-terra)
+
 case "$1" in
+    start)
+        shift
+        printf '%s\n' "$@" > "$job_dir/packages"
+        printf -v command '%q ' /usr/bin/bash "$0" supervise "$@"
+        "${mux[@]}" new-session -d -s "$session" -- \
+            /usr/bin/script --quiet --flush --return --command "$command" "$job_dir/build.log"
+        ;;
+    supervise)
+        shift
+        status=0
+        bash "$0" build "$@" || status=$?
+        printf '%d\n' "$status" > "$state.pending"
+        mv -T -- "$state.pending" "$state"
+        exit "$status"
+        ;;
+    status)
+        if [[ -f "$state" ]]; then
+            printf 'exit %s\n' "$(cat -- "$state")"
+        elif "${mux[@]}" has-session -t "=$session" 2>/dev/null; then
+            printf 'running\n'
+        else
+            printf 'missing\n'
+        fi
+        ;;
+    attach)
+        exec "${mux[@]}" attach-session -t "=$session"
+        ;;
+    packages)
+        cat -- "$job_dir/packages"
+        ;;
+    log)
+        tail -n 48 -- "$job_dir/build.log"
+        ;;
     inside)
         shift
         container_build "$@"
         ;;
     build)
         shift
-        job_dir=$(cd -- "$(dirname -- "$0")" && pwd -P)
         mkdir -m 0700 -- "$job_dir/out"
         srun --partition=cpu --time=02:00:00 --cpus-per-task=6 --mem=8G --pty \
             podman run --rm --pull=newer --cgroups=disabled --userns=keep-id --user=0 --interactive --tty \

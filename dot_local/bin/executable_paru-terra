@@ -19,6 +19,8 @@ RUNNER = Path.home() / ".local/share/paru-terra/build.sh"
 NAME = re.compile(r"[a-z0-9@_+][a-z0-9@._+-]*")
 ARCHIVE = re.compile(r"[a-zA-Z0-9@._+:~%-]+\.pkg\.tar(?:\.(?:zst|xz|gz|bz2|lz4|lrz|lzo|Z))?")
 DEPENDENCIES = "runtime-dependencies"
+JOB_ID = re.compile(r"[A-Za-z0-9]{8}")
+JOB_DIR = "/tmp/paru-terra."
 
 
 def package_name(value):
@@ -72,40 +74,84 @@ def read_packages(directory, requested):
 
 
 def remote(*command, tty=False, **options):
-    mode = ["-tt"] if tty else ["-T"]
+    mode = ["-S", "none", "-tt"] if tty else ["-T"]
     return subprocess.run(
         [*SSH, *mode, HOST, shlex.join(command)],
         check=True, **options,
     )
 
 
-def build_on_terra(requested, destination):
-    job = remote(
-        "mktemp", "-d", "/tmp/paru-terra.XXXXXXXX", capture_output=True, text=True
+def job_identifier(value):
+    if not JOB_ID.fullmatch(value):
+        raise argparse.ArgumentTypeError("expected the eight-character Terra job ID")
+    return value
+
+
+def allocate_job():
+    path = remote(
+        "mktemp", "-d", JOB_DIR + "XXXXXXXX", capture_output=True, text=True
     ).stdout.strip()
-    if not re.fullmatch(r"/tmp/paru-terra\.[A-Za-z0-9]{8}", job):
-        raise ValueError(f"invalid Terra job directory: {job!r}")
-    runner = f"{job}/build.sh"
-    try:
-        with RUNNER.open("rb") as script:
-            remote("tee", runner, stdin=script, stdout=subprocess.DEVNULL)
-        remote("bash", runner, "build", *requested, tty=True)
-        with subprocess.Popen(
-            [*SSH, "-T", HOST, shlex.join(("bash", runner, "export"))],
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-        ) as transfer:
-            with transfer.stdout as stream:
-                extract_bundle(stream, destination)
-                # Drain the tar padding before checking the remote exit status.
-                for _ in iter(lambda: stream.read(65536), b""):
-                    pass
-            if transfer.wait() != 0:
-                raise ValueError("Terra package transfer failed")
-    finally:
+    if not path.startswith(JOB_DIR) or not JOB_ID.fullmatch(path[len(JOB_DIR):]):
+        raise ValueError(f"invalid Terra job directory: {path!r}")
+    return path[len(JOB_DIR):]
+
+
+def job_command(job, mode, *args, **options):
+    return remote("bash", f"{JOB_DIR}{job}/build.sh", mode, *args, **options)
+
+
+def start_job(job, requested):
+    print(f"Terra job {job}. Resume with: paru-terra --resume {job}", flush=True)
+    with RUNNER.open("rb") as script:
+        remote("tee", f"{JOB_DIR}{job}/build.sh", stdin=script, stdout=subprocess.DEVNULL)
+    job_command(job, "start", *requested)
+
+
+def wait_for_job(job):
+    status = job_command(job, "status", capture_output=True, text=True).stdout.strip()
+    if status == "running":
         try:
-            remote("find", job, "-depth", "-delete", stdout=subprocess.DEVNULL)
-        except (OSError, subprocess.CalledProcessError):
-            print(f"Terra scratch remains at {HOST}:{job}", file=sys.stderr)
+            job_command(job, "attach", tty=True)
+        except subprocess.CalledProcessError as error:
+            if error.returncode != 1:
+                raise
+        status = job_command(job, "status", capture_output=True, text=True).stdout.strip()
+    if status == "running":
+        raise ValueError("build is still running on Terra")
+    if status.startswith("exit ") and status != "exit 0":
+        job_command(job, "log")
+        raise ValueError(f"build finished unsuccessfully on Terra ({status})")
+    if status != "exit 0":
+        raise ValueError(f"no completed build found on Terra ({status})")
+
+
+def read_requested(job):
+    output = job_command(job, "packages", capture_output=True, text=True).stdout
+    requested = [package_name(name) for name in output.splitlines()]
+    if not requested:
+        raise ValueError("Terra job has no requested package list")
+    return requested
+
+
+def receive_job(job, destination):
+    with subprocess.Popen(
+        [*SSH, "-T", HOST, shlex.join(("bash", f"{JOB_DIR}{job}/build.sh", "export"))],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+    ) as transfer:
+        with transfer.stdout as stream:
+            extract_bundle(stream, destination)
+            # Drain the tar padding before checking the remote exit status.
+            for _ in iter(lambda: stream.read(65536), b""):
+                pass
+        if transfer.wait() != 0:
+            raise ValueError("Terra package transfer failed")
+
+
+def clean_job(job):
+    try:
+        remote("find", f"{JOB_DIR}{job}", "-depth", "-delete", stdout=subprocess.DEVNULL)
+    except (OSError, subprocess.CalledProcessError):
+        print(f"Terra scratch remains at {HOST}:{JOB_DIR}{job}", file=sys.stderr)
 
 
 def install_packages(packages, dependencies):
@@ -149,10 +195,12 @@ def main():
         help="save verified packages into an empty directory",
     )
     parser.add_argument("--upgrade", action="store_true", help="build available AUR upgrades")
+    parser.add_argument("--resume", type=job_identifier, metavar="JOB",
+                        help="reattach to or collect a Terra job by ID")
     parser.add_argument("packages", nargs="*", type=package_name)
     args = parser.parse_args()
-    if args.upgrade == bool(args.packages):
-        parser.error("provide package names or --upgrade")
+    if sum((args.upgrade, bool(args.packages), bool(args.resume))) != 1:
+        parser.error("provide package names, --upgrade, or --resume JOB")
     if platform.machine() != "x86_64":
         parser.error("the Terra builder targets x86_64")
     if not sys.stdin.isatty() or not sys.stdout.isatty():
@@ -160,14 +208,20 @@ def main():
     if args.build_only and args.build_only.exists():
         if not args.build_only.is_dir() or any(args.build_only.iterdir()):
             parser.error("--build-only requires an empty directory")
+    job = args.resume
     try:
-        requested = upgrades() if args.upgrade else list(dict.fromkeys(args.packages))
-        if not requested:
-            print("No AUR upgrades reported.")
-            return 0
+        if job is None:
+            requested = upgrades() if args.upgrade else list(dict.fromkeys(args.packages))
+            if not requested:
+                print("No AUR upgrades reported.")
+                return 0
+            job = allocate_job()
+            start_job(job, requested)
+        wait_for_job(job)
+        requested = read_requested(job)
         with tempfile.TemporaryDirectory(prefix="paru-terra-") as work:
             scratch = Path(work)
-            build_on_terra(requested, scratch)
+            receive_job(job, scratch)
             packages, dependencies = read_packages(scratch, requested)
             if args.build_only:
                 args.build_only.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -178,12 +232,18 @@ def main():
                     print(args.build_only / path.name)
             else:
                 install_packages(packages, dependencies)
+        clean_job(job)
         return 0
     except (OSError, KeyError, ValueError, argparse.ArgumentTypeError,
             tarfile.TarError, subprocess.CalledProcessError) as error:
         print(f"paru-terra: {error}", file=sys.stderr)
+        if job:
+            print(f"Terra job {job} is retained. Resume with: paru-terra --resume {job}",
+                  file=sys.stderr)
         return 1
     except KeyboardInterrupt:
+        if job:
+            print(f"Terra job {job}. Check with: paru-terra --resume {job}", file=sys.stderr)
         return 130
 
 
