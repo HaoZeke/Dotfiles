@@ -1,0 +1,31 @@
+{{- if eq .chezmoi.hostname "rgam5terra" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+set +x
+umask 077
+
+store="${XDG_CONFIG_HOME:-$HOME/.config}/credstore.encrypted"
+credential="$store/huggingface-token"
+
+case "${1:-}" in
+    enroll)
+        mkdir -p -- "$store"
+        # Read the complete pass record so a failed decrypt aborts enrollment.
+        token=$(pass show websites/huggingface/token | sed -n '1p')
+        [[ -n "$token" ]] || { echo "Empty Hub credential" >&2; exit 1; }
+        printf '%s' "$token" | systemd-creds encrypt --user --name=huggingface-token - "$credential"
+        ;;
+    run)
+        shift
+        (( $# )) || { echo "A command is required" >&2; exit 2; }
+        HF_TOKEN=$(systemd-creds decrypt --user --name=huggingface-token "$credential" -)
+        [[ -n "$HF_TOKEN" ]] || { echo "Empty Hub credential" >&2; exit 1; }
+        export HF_TOKEN
+        exec "$@"
+        ;;
+    *)
+        echo "Usage: rg-terra-hf enroll | rg-terra-hf run COMMAND [ARG ...]" >&2
+        exit 2
+        ;;
+esac
+{{ end -}}
