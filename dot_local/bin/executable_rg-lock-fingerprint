@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-lock-fingerprint).
+#
+# Unlock swaylock with a fingerprint, without pressing Enter first.
+#
+# swaylock runs PAM only after Enter, so pam_fprintd in /etc/pam.d/swaylock
+# needs Enter on an empty field before it asks for a finger. This runs beside
+# the locker instead: while a swaylock is up it calls fprintd-verify, and on a
+# match sends SIGUSR1, which swaylock takes as "unlock". A typed password
+# keeps working the whole time; while this holds the sensor, pam_fprintd
+# fails over to the password.
+#
+# fprintd-verify accepts only this user's enrolled fingers, and only this
+# user can signal this user's swaylock.
+#
+#   rg-lock-fingerprint            # run as the user service
+#   rg-lock-fingerprint --once     # one verify attempt against a running swaylock
+set -uo pipefail
+
+poll="${RG_LOCK_FP_POLL:-1}"
+verify="${RG_LOCK_FP_VERIFY:-fprintd-verify}"
+once=0
+[ "${1:-}" = "--once" ] && once=1
+
+swaylock_pid() { pgrep -u "$(id -u)" -n -x swaylock 2>/dev/null; }
+
+attempt() {
+    local pid="$1" out
+    # One verify; fprintd-verify exits 0 only on verify-match.
+    if out=$("$verify" 2>&1); then
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -USR1 "$pid" 2>/dev/null && logger -t rg-lock-fingerprint -- "unlocked swaylock $pid by fingerprint" 2>/dev/null
+        fi
+        return 0
+    fi
+    case "$out" in
+        *verify-no-match*|*verify-retry*) return 1 ;;
+    esac
+    # Sensor busy (PAM is using it), gone after suspend, or lid shut: the
+    # caller backs off instead of spinning.
+    return 2
+}
+
+backoff=1
+while :; do
+    pid=$(swaylock_pid)
+    if [ -z "$pid" ]; then
+        [ "$once" = 1 ] && { echo "rg-lock-fingerprint: no swaylock running" >&2; exit 1; }
+        backoff=1
+        sleep "$poll"
+        continue
+    fi
+    attempt "$pid"
+    rc=$?
+    [ "$once" = 1 ] && exit "$rc"
+    case "$rc" in
+        0) backoff=1; sleep "$poll" ;;
+        1) backoff=1 ;;
+        *) sleep "$backoff"; [ "$backoff" -lt 16 ] && backoff=$((backoff * 2)) ;;
+    esac
+done

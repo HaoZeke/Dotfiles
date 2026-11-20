@@ -1,0 +1,16 @@
+# Managed by chezmoi (dot_config/systemd/user/rg-lock-fingerprint.service).
+#
+# Unlocks swaylock on a fingerprint match without pressing Enter first.
+# See ~/.local/bin/rg-lock-fingerprint.
+[Unit]
+Description=Unlock swaylock by fingerprint
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/rg-lock-fingerprint
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
