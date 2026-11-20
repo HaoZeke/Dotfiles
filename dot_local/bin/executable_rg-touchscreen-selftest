@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Selftest for rg-touchscreen inhibit + Sway sequence.
+
+set -euo pipefail
+
+self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+repo_root="$(cd -- "$self_dir/../.." >/dev/null 2>&1 && pwd)"
+script="${1:-"$repo_root/dot_local/bin/executable_rg-touchscreen"}"
+
+if [ ! -x "$script" ]; then
+    printf 'not executable: %s\n' "$script" >&2
+    exit 1
+fi
+
+tmpdir="$(mktemp -d)"
+trap 'rtrash -rf "$tmpdir" >/dev/null 2>&1 || trash-put "$tmpdir" >/dev/null 2>&1 || true' EXIT
+
+inhibited="$tmpdir/inhibited"
+printf '1\n' >"$inhibited"
+
+log="$tmpdir/swaymsg.log"
+fake_swaymsg="$tmpdir/swaymsg"
+fake_socket="$tmpdir/sway.sock"
+: > "$fake_socket"
+
+cat > "$fake_swaymsg" <<'FAKE_SWAYMSG'
+#!/usr/bin/env bash
+set -eu
+printf '%s|%s\n' "${SWAYSOCK:-}" "$*" >> "$RG_SWAYMSG_LOG"
+if [ "$#" -eq 4 ] && [ "$1" = "-s" ] && [ "$2" = "$RG_FAKE_SWAYSOCK" ] && [ "$3" = "-t" ] && [ "$4" = "get_version" ]; then
+    printf '{"human_readable":"sway fake"}\n'
+fi
+FAKE_SWAYMSG
+chmod +x "$fake_swaymsg"
+
+run_case() {
+    : > "$log"
+    RG_SWAYMSG="$fake_swaymsg" \
+    RG_SWAYMSG_LOG="$log" \
+    RG_FAKE_SWAYSOCK="$fake_socket" \
+    RG_TOUCHSCREEN_ALLOW_FAKE_SOCKET=1 \
+    RG_TOUCHSCREEN_INHIBITED="$inhibited" \
+    SWAYSOCK="$fake_socket" \
+        "$script" --no-notify "$@"
+}
+
+out=$(run_case status)
+[ "$out" = "disabled" ] || { printf 'status off: got %s\n' "$out" >&2; exit 1; }
+
+out=$(run_case toggle)
+[ "$out" = "enabled" ] || { printf 'toggle on: got %s\n' "$out" >&2; exit 1; }
+[ "$(cat "$inhibited")" = "0" ] || { printf 'inhibit not cleared\n' >&2; exit 1; }
+grep -q 'input type:touch events enabled' "$log" || { printf 'toggle did not enable sway\n' >&2; exit 1; }
+
+out=$(run_case toggle)
+[ "$out" = "disabled" ] || { printf 'toggle off: got %s\n' "$out" >&2; exit 1; }
+[ "$(cat "$inhibited")" = "1" ] || { printf 'inhibit not set\n' >&2; exit 1; }
+grep -q 'input type:touch events disabled' "$log" || { printf 'toggle did not disable sway\n' >&2; exit 1; }
+
+out=$(run_case on)
+[ "$out" = "enabled" ] || { printf 'on: got %s\n' "$out" >&2; exit 1; }
+out=$(run_case off)
+[ "$out" = "disabled" ] || { printf 'off: got %s\n' "$out" >&2; exit 1; }
+
+printf 'ok\n'

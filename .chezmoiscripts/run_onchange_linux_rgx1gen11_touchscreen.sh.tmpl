@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgx1gen11") }}
+# Touchscreen toggle, ThinkPad X1 Gen 11 only.
+#
+# The ELAN901C digitizer has at times reported a contact at one fixed
+# coordinate about ten times a second with nothing near the screen, each a
+# click wherever the pointer is. On the current kernel it reports nothing when
+# untouched, so the panel stays on by default.
+#
+# Older rule set LIBINPUT_IGNORE_DEVICE=1, which hid the node from Sway so a
+# session toggle could not bring it back. Instead the kernel's inhibited
+# attribute is made writable by group input, and rg-touchscreen flips it off
+# if the ghost contact returns.
+set -euo pipefail
+
+RULE=/etc/udev/rules.d/99-rg-touchscreen-inhibit.rules
+OLD=/etc/udev/rules.d/99-rg-stuck-touchscreen.rules
+WANT='# ELAN901C: on by default, toggleable by group input through inhibited.
+# Written by chezmoi run_onchange_linux_rgx1gen11_touchscreen.
+ACTION=="add", SUBSYSTEM=="input", KERNEL=="input*", ATTR{name}=="ELAN901C:00 04F3:2C4E*", RUN+="/bin/sh -c '\''chmod 0664 /sys$devpath/inhibited; chgrp input /sys$devpath/inhibited'\''"
+'
+
+tmp=$(mktemp)
+printf '%s\n' "$WANT" >"$tmp"
+
+if ! sudo test -f "$RULE" || ! sudo cmp -s "$tmp" "$RULE"; then
+    sudo install -D -m 0644 -o root -g root "$tmp" "$RULE"
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    printf 'touchscreen: toggle rule installed at %s\n' "$RULE"
+fi
+rm -f "$tmp"
+
+if sudo test -f "$OLD"; then
+    sudo rm -f "$OLD"
+    sudo udevadm control --reload-rules 2>/dev/null || true
+    printf 'touchscreen: removed %s (libinput ignore hid the toggle)\n' "$OLD"
+fi
+
+# Make the toggle usable now, without a reboot; the panel is left as it is.
+for node in /sys/class/input/input*/name; do
+    [ -e "$node" ] || continue
+    case "$(cat "$node" 2>/dev/null || true)" in
+        ELAN901C:00\ 04F3:2C4E*)
+            inh="${node%/name}/inhibited"
+            [ -e "$inh" ] || continue
+            sudo chmod 0664 "$inh" 2>/dev/null || true
+            sudo chgrp input "$inh" 2>/dev/null || true
+            ;;
+    esac
+done
+{{- end }}

@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Toggle the ELAN901C touchscreen on rgx1gen11.
+#
+# The digitizer ghosts a stuck contact about ten times a second. Default is
+# off via sysfs inhibited (udev pins that on device add). This is the session
+# override: write inhibited, then tell Sway. A reboot returns to off.
+#
+# Needs the udev rule from run_onchange_linux_rgx1gen11_touchscreen so
+# inhibited is group-input writable. No sudo on the toggle path.
+
+set -euo pipefail
+
+swaymsg_bin="${RG_SWAYMSG:-swaymsg}"
+socket_override=""
+notify=1
+name_glob='ELAN901C:00 04F3:2C4E*'
+
+usage() {
+    cat <<'USAGE'
+Usage: rg-touchscreen [on|off|toggle|status] [--socket PATH] [--no-notify]
+
+Control the laptop touchscreen. Default action is toggle.
+
+  on           Enable the touchscreen
+  off          Disable the touchscreen
+  toggle       Flip the current state
+  status       Print enabled or disabled
+
+  --socket PATH  Use a specific Sway IPC socket
+  -h, --help     Show this help
+USAGE
+}
+
+die() {
+    printf 'rg-touchscreen: %s\n' "$*" >&2
+    exit 1
+}
+
+notify_state() {
+    local state=$1
+    [ "$notify" -eq 1 ] || return 0
+    command -v notify-send >/dev/null 2>&1 || return 0
+    case "$state" in
+        enabled) notify-send -u low "Touchscreen" "on" >/dev/null 2>&1 || true ;;
+        disabled) notify-send -u low "Touchscreen" "off" >/dev/null 2>&1 || true ;;
+    esac
+}
+
+socket_exists() {
+    local candidate=$1
+    [ -S "$candidate" ] || [ "${RG_TOUCHSCREEN_ALLOW_FAKE_SOCKET:-0}" = "1" ]
+}
+
+socket_works() {
+    local candidate=$1
+    socket_exists "$candidate" || return 1
+    SWAYSOCK="$candidate" "$swaymsg_bin" -s "$candidate" -t get_version >/dev/null 2>&1
+}
+
+find_socket() {
+    local candidate uid
+    if [ -n "$socket_override" ]; then
+        socket_works "$socket_override" || return 1
+        printf '%s\n' "$socket_override"
+        return 0
+    fi
+    if [ -n "${SWAYSOCK:-}" ] && socket_works "$SWAYSOCK"; then
+        printf '%s\n' "$SWAYSOCK"
+        return 0
+    fi
+    uid=$(id -u)
+    shopt -s nullglob
+    for candidate in /run/user/"$uid"/sway-ipc."$uid".*.sock; do
+        if socket_works "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+    return 1
+}
+
+inhibited_nodes() {
+    if [ -n "${RG_TOUCHSCREEN_INHIBITED:-}" ]; then
+        printf '%s\n' "$RG_TOUCHSCREEN_INHIBITED"
+        return 0
+    fi
+    local node name
+    shopt -s nullglob
+    for node in /sys/class/input/input*/inhibited; do
+        name=$(cat "${node%/inhibited}/name" 2>/dev/null || true)
+        case "$name" in
+            $name_glob) printf '%s\n' "$node" ;;
+        esac
+    done
+    shopt -u nullglob
+}
+
+any_uninhibited() {
+    local node
+    for node in $(inhibited_nodes); do
+        [ -r "$node" ] || continue
+        [ "$(cat "$node")" = "0" ] && return 0
+    done
+    return 1
+}
+
+udev_still_ignores() {
+    local ev
+    shopt -s nullglob
+    for ev in /sys/class/input/event*/device/name; do
+        case "$(cat "$ev" 2>/dev/null || true)" in
+            $name_glob)
+                if udevadm info -q property -p "${ev%/device/name}" 2>/dev/null \
+                    | grep -qx 'LIBINPUT_IGNORE_DEVICE=1'; then
+                    shopt -u nullglob
+                    return 0
+                fi
+                ;;
+        esac
+    done
+    shopt -u nullglob
+    return 1
+}
+
+set_inhibited() {
+    local want=$1
+    local node wrote=0
+    local nodes
+    nodes=$(inhibited_nodes)
+    [ -n "$nodes" ] || die 'no ELAN901C input node'
+    for node in $nodes; do
+        if [ ! -w "$node" ]; then
+            die "cannot write $node (install the rgx1gen11 touchscreen udev rule, then replug or reboot)"
+        fi
+        printf '%s\n' "$want" >"$node" || die "failed to write $node"
+        wrote=1
+    done
+    [ "$wrote" -eq 1 ]
+}
+
+sway_set_touch() {
+    local want=$1
+    local socket
+    socket=$(find_socket) || return 0
+    SWAYSOCK="$socket" "$swaymsg_bin" -s "$socket" input type:touch events "$want" >/dev/null || true
+}
+
+current_state() {
+    if [ -z "${RG_TOUCHSCREEN_INHIBITED:-}" ] && udev_still_ignores; then
+        printf 'disabled\n'
+        return
+    fi
+    if any_uninhibited; then
+        printf 'enabled\n'
+    else
+        printf 'disabled\n'
+    fi
+}
+
+action=toggle
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        on|off|toggle|status) action=$1 ;;
+        --socket)
+            shift
+            [ "$#" -gt 0 ] || die '--socket requires a path'
+            socket_override=$1
+            ;;
+        --no-notify) notify=0 ;;
+        --help|-h) usage; exit 0 ;;
+        *) usage >&2; exit 2 ;;
+    esac
+    shift
+done
+
+state=$(current_state)
+if [ "$action" = "status" ]; then
+    printf '%s\n' "$state"
+    exit 0
+fi
+
+case "$action" in
+    on) want_inhibited=0; want_sway=enabled ;;
+    off) want_inhibited=1; want_sway=disabled ;;
+    toggle)
+        if [ "$state" = "enabled" ]; then
+            want_inhibited=1; want_sway=disabled
+        else
+            want_inhibited=0; want_sway=enabled
+        fi
+        ;;
+esac
+
+if [ "$want_inhibited" -eq 0 ] && [ -z "${RG_TOUCHSCREEN_INHIBITED:-}" ] && udev_still_ignores; then
+    die 'udev still sets LIBINPUT_IGNORE_DEVICE; apply the rgx1gen11 touchscreen udev rule'
+fi
+
+if [ "$want_inhibited" -eq 0 ]; then
+    set_inhibited 0
+    sway_set_touch enabled
+    printf 'enabled\n'
+    notify_state enabled
+else
+    sway_set_touch disabled
+    set_inhibited 1
+    printf 'disabled\n'
+    notify_state disabled
+fi
