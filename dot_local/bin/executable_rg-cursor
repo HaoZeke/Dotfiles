@@ -36,8 +36,13 @@ die() {
     exit 2
 }
 
-# Newest installed version, else the `current` link the first install left.
+# The archbuilds package (cursor-agent-cli) puts a pinned, door-fetched build
+# at /opt/cursor-agent; prefer it. Otherwise the newest installed version,
+# else the `current` link the first install left.
 cursor_bin="${RG_CURSOR_BIN:-}"
+if [ -z "$cursor_bin" ] && [ -x /opt/cursor-agent/cursor-agent ]; then
+    cursor_bin=/opt/cursor-agent/cursor-agent
+fi
 if [ -z "$cursor_bin" ]; then
     newest="$(ls -1 "$install_root/versions" 2>/dev/null | sort -V | tail -n 1 || true)"
     if [ -n "$newest" ] && [ -x "$install_root/versions/$newest/cursor-agent" ]; then

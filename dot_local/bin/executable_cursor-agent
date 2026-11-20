@@ -6,4 +6,7 @@ set -euo pipefail
 if [ -x "$HOME/.local/bin/rg-cursor" ]; then
     exec "$HOME/.local/bin/rg-cursor" "$@"
 fi
-exec "$HOME/.local/share/cursor-agent/current/cursor-agent" "$@"
+# Without rg-cursor there is no door: refuse rather than run the raw CLI from
+# the local address.
+echo "cursor-agent: refusing to start without $HOME/.local/bin/rg-cursor" >&2
+exit 2
