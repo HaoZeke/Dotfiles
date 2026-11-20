@@ -81,8 +81,11 @@ cmd = "~/.local/bin/rg-caffeine off"
 block = "time"
 interval = 60
 [block.format]
-# full = " $icon $timestamp.datetime(f:'%a %R %Z') "
-short = " $icon $timestamp.datetime(f:%R) "
+# swaybar switches every block to its short form once the bar is wider
+# than the output, which nine workspaces and the tray now make routine,
+# so the short form carries the date too.
+full = " $icon $timestamp.datetime(f:'%a %d %b %R') "
+short = " $icon $timestamp.datetime(f:'%a %d %R') "
 
 [[block]]
 block = "sound"
