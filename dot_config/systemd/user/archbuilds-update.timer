@@ -1,0 +1,11 @@
+# Managed by chezmoi (dot_config/systemd/user/archbuilds-update.timer).
+[Unit]
+Description=Daily archbuilds channel update
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

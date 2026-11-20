@@ -1,0 +1,16 @@
+# Managed by chezmoi (dot_config/systemd/user/archbuilds-update.service).
+#
+# Track the Grok Build alpha and Cursor CLI channels through the Livingston
+# door: fetch, pin, build on rg.terra and publish into /srv/archbuilds, where
+# the root archbuilds-autoinstall unit checks and installs the new builds.
+# Also refreshes the Grok CLI plugins through rg-grok. Replaces the
+# self-updating grok-daily-update.
+[Unit]
+Description=Update the archbuilds channel packages and Grok plugins
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/Git/Github/AUR/archbuilds/update-all.sh
+TimeoutStartSec=40min
+Nice=10
