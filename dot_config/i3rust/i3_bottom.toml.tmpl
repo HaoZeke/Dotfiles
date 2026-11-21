@@ -9,6 +9,14 @@ theme = "active"
 [icons]
 icons = "awesome5"
 
+# The date lives here: the top bar runs out of width and falls back to
+# short forms, and this bar has room on its left. swaybar right-aligns the
+# status line, so the first block sits furthest left.
+[[block]]
+block = "time"
+format = " $icon $timestamp.datetime(f:'%A %d %B %Y') "
+interval = 60
+
 [[block]]
 block = "custom"
 command = "~/.local/bin/rg-weather-json reykjavik"
