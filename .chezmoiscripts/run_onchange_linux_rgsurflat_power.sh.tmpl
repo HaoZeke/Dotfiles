@@ -3,7 +3,8 @@
 # Laptop power management, Dell Latitude 7430 (rgSURFLat / rg.surf) ONLY.
 # Intentionally separate from run_onchange_linux_laptop_power.sh.tmpl (X1 Gen 11):
 #   * Dell platform_profile=cool (not ThinkPad low-power)
-#   * charge 50/90 (desk longevity; already used on this pack)
+#   * charge 75/80, in Dell's Custom charge mode (the firmware ignores the
+#     thresholds in any other mode and charges to 100%)
 #   * NetworkManager stays owner of Wi-Fi (campus + eduVPN)
 #   * Cirque + ELAN900C on LPSS I2C 00:15.*; i915 for Iris Xe 46a8
 #
@@ -93,6 +94,13 @@ ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/scheduler}="bfq"
 ACTION=="add|change", KERNEL=="mmcblk[0-9]*", ATTR{queue/scheduler}="bfq"
 '
 
+# Dell firmware applies charge_control_*_threshold only in Custom mode; in
+# Fast (the factory default) the pack charges to 100% with the thresholds
+# still reading as set.
+CHARGE_MODE_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
+ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", TEST=="charge_types", ATTR{charge_types}="Custom"
+'
+
 TOUCHPAD_PM_CONTENT='# Managed by chezmoi (.chezmoiscripts/run_onchange_linux_rgsurflat_power.sh.tmpl)
 # Keep Intel LPSS I2C controllers powered so the Cirque precision touchpad
 # (00:15.0) and ELAN900C touchscreen (00:15.1) do not freeze when runtime PM
@@ -163,6 +171,7 @@ I915_CHANGED=0
 
 write_if_diff /etc/udev/rules.d/60-ioschedulers.rules "$IOSCHED_CONTENT" && UDEV_CHANGED=1 || true
 write_if_diff /etc/udev/rules.d/99-rg-touchpad-no-runtime-pm.rules "$TOUCHPAD_PM_CONTENT" && UDEV_CHANGED=1 || true
+write_if_diff /etc/udev/rules.d/99-rg-battery-custom-charge.rules "$CHARGE_MODE_CONTENT" && UDEV_CHANGED=1 || true
 write_if_diff /etc/modprobe.d/i915-rg-power.conf "$I915_MODPROBE_CONTENT" && I915_CHANGED=1 || true
 write_if_diff /etc/systemd/logind.conf.d/50-lid.conf "$LOGIND_CONTENT" && LOGIND_CHANGED=1 || true
 
@@ -217,6 +226,15 @@ if [ -x "$profile_bin" ]; then
 fi
 
 # --- post-deploy activation ----------------------------------------------
+# Custom first, then the thresholds: TLP's values only hold in Custom mode.
+types=/sys/class/power_supply/BAT0/charge_types
+if [ -e "$types" ]; then
+    if ! grep -q '\[Custom\]' "$types"; then
+        echo Custom | as_root tee "$types" >/dev/null
+    fi
+    as_root tlp setcharge >/dev/null || true
+fi
+
 if [ "$I915_CHANGED" = "1" ]; then
     echo "chezmoi: i915-rg-power.conf updated; module params take effect on next reboot (or i915 reload)."
 fi
