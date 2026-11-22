@@ -230,7 +230,14 @@ fi
 types=/sys/class/power_supply/BAT0/charge_types
 if [ -e "$types" ]; then
     if ! grep -q '\[Custom\]' "$types"; then
-        echo Custom | as_root tee "$types" >/dev/null
+        # With a BIOS admin password set the firmware refuses the switch
+        # (EIO). That is a BIOS setting to change, not a reason to fail the
+        # rest of this host's setup.
+        if ! echo Custom | as_root tee "$types" >/dev/null 2>&1; then
+            echo "chezmoi: WARNING firmware refused Custom charge mode (BIOS admin password set?);" >&2
+            echo "chezmoi:   the 75/80 thresholds do nothing until Primary Battery Charge Configuration" >&2
+            echo "chezmoi:   is set to Custom in BIOS setup (F2), which needs that password." >&2
+        fi
     fi
     as_root tlp setcharge >/dev/null || true
 fi
