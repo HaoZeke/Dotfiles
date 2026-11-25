@@ -2274,16 +2274,18 @@ fn clean_entries(
 
     // One artifact that cannot be removed safely must not stop the others:
     // check each entry on its own, report the ones that fail, and reclaim the
-    // rest. An unexpected path is still a hard error, because it means the
-    // candidate list itself is wrong.
+    // rest. Refusing a path is the safe outcome, so an unexpected path is
+    // skipped and reported like any other failed check.
     let mut ready = Vec::new();
     let mut skipped = 0usize;
     for entry in entries {
         if !safe_to_remove(home, entry) {
-            return Err(format!(
-                "refusing to remove unexpected path: {}",
-                entry.path.display()
-            ));
+            skipped += 1;
+            eprintln!(
+                "skipping {}: refusing to remove unexpected path",
+                display_path(home, &entry.path)
+            );
+            continue;
         }
         match check_entry(entry, min_age_days, false) {
             Ok(()) => ready.push(entry),
@@ -2296,10 +2298,12 @@ fn clean_entries(
 
     for entry in ready {
         if !safe_to_remove(home, entry) {
-            return Err(format!(
-                "artifact changed before cleanup: {}",
-                entry.path.display()
-            ));
+            skipped += 1;
+            eprintln!(
+                "skipping {}: artifact changed before cleanup",
+                display_path(home, &entry.path)
+            );
+            continue;
         }
         if let Err(reason) = check_entry(entry, min_age_days, true) {
             skipped += 1;
