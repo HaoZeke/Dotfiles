@@ -1668,7 +1668,13 @@ fn reclaim_artifact(path: &Path, rtrash: &Path) -> Result<(), String> {
     }
     // Only empty control directories created by this operation are removed.
     // Unexpected contents remain available for inspection rather than being
-    // included in a broader deletion pass.
+    // included in a broader deletion pass. rtrash leaves an empty lock file in
+    // the scope; without removing it the scope directory is never empty and
+    // every clean leaves a `.artifact-trash.*` directory behind.
+    let lock = scope.join(".rtrash.lock");
+    if fs::symlink_metadata(&lock).is_ok_and(|m| m.is_file() && m.len() == 0) {
+        let _ = fs::remove_file(&lock);
+    }
     for directory in [scope.join("files"), scope.join("info"), scope.clone()] {
         if directory.is_dir() {
             let _ = fs::remove_dir(directory);
@@ -2266,6 +2272,12 @@ fn clean_entries(
     }
     let rtrash = resolve_rtrash(home)?;
 
+    // One artifact that cannot be removed safely must not stop the others:
+    // check each entry on its own, report the ones that fail, and reclaim the
+    // rest. An unexpected path is still a hard error, because it means the
+    // candidate list itself is wrong.
+    let mut ready = Vec::new();
+    let mut skipped = 0usize;
     for entry in entries {
         if !safe_to_remove(home, entry) {
             return Err(format!(
@@ -2273,40 +2285,26 @@ fn clean_entries(
                 entry.path.display()
             ));
         }
-        verify_untracked_artifact(&entry.path)?;
-        verify_artifact_not_open(&entry.path)?;
-        verify_artifact_mounts(&entry.path)?;
-        if entry.age_gated
-            && min_age_days > 0
-            && !is_stale(
-                &entry.path,
-                min_age_days,
-                now_unix().ok_or("cannot establish cleanup age")?,
-            )
-        {
-            return Err(format!("artifact is recent: {}", entry.path.display()));
+        match check_entry(entry, min_age_days, false) {
+            Ok(()) => ready.push(entry),
+            Err(reason) => {
+                skipped += 1;
+                eprintln!("skipping {}: {reason}", display_path(home, &entry.path));
+            }
         }
     }
 
-    for entry in entries {
+    for entry in ready {
         if !safe_to_remove(home, entry) {
             return Err(format!(
                 "artifact changed before cleanup: {}",
                 entry.path.display()
             ));
         }
-        verify_untracked_artifact(&entry.path)?;
-        verify_artifact_not_open(&entry.path)?;
-        verify_artifact_mounts(&entry.path)?;
-        if entry.age_gated
-            && min_age_days > 0
-            && !is_stale(
-                &entry.path,
-                min_age_days,
-                now_unix().ok_or("cannot establish cleanup age")?,
-            )
-        {
-            return Err(format!("artifact became recent: {}", entry.path.display()));
+        if let Err(reason) = check_entry(entry, min_age_days, true) {
+            skipped += 1;
+            eprintln!("skipping {}: {reason}", display_path(home, &entry.path));
+            continue;
         }
         println!(
             "removing {:<6}  {}",
@@ -2316,6 +2314,39 @@ fn clean_entries(
         reclaim_artifact(&entry.path, &rtrash)?;
     }
 
+    if skipped > 0 {
+        eprintln!("{skipped} artifact(s) skipped");
+    }
+    Ok(())
+}
+
+/// Safety checks for one cleanup candidate.
+///
+/// Project build trees (`age_gated`) are checked for nested repositories and
+/// tracked files, since a build directory can hide source. The fixed shared
+/// caches are package-manager download stores: they hold `.git` checkouts of
+/// dependencies by design and are always re-fetchable, so the repository
+/// check does not apply to them.
+fn check_entry(entry: &Candidate, min_age_days: u64, again: bool) -> Result<(), String> {
+    if entry.age_gated {
+        verify_untracked_artifact(&entry.path)?;
+    }
+    verify_artifact_not_open(&entry.path)?;
+    verify_artifact_mounts(&entry.path)?;
+    if entry.age_gated
+        && min_age_days > 0
+        && !is_stale(
+            &entry.path,
+            min_age_days,
+            now_unix().ok_or("cannot establish cleanup age")?,
+        )
+    {
+        return Err(if again {
+            format!("artifact became recent: {}", entry.path.display())
+        } else {
+            format!("artifact is recent: {}", entry.path.display())
+        });
+    }
     Ok(())
 }
 
