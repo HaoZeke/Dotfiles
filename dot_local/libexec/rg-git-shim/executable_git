@@ -146,8 +146,17 @@ check_subcommand() {
 
 # A whole replacement config file in the environment can set its own hooks
 # path, so these are refused outright.
+# makepkg exports exactly GIT_CONFIG_GLOBAL=/dev/null and
+# GIT_CONFIG_SYSTEM=/etc/makepkg.d/gitconfig while it clones a source. An empty
+# global config and a root-owned system file cannot set a hooks path, and the
+# history-writing gate below still refuses commit, push and the rest while no
+# hooks path is in effect, so those two values alone pass.
 for name in GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG; do
-    [ -n "${!name+x}" ] && refuse "$name replaces the config that carries the shared hooks path"
+    [ -n "${!name+x}" ] || continue
+    case "$name=${!name}" in
+        GIT_CONFIG_GLOBAL=/dev/null|GIT_CONFIG_SYSTEM=/etc/makepkg.d/gitconfig) continue ;;
+    esac
+    refuse "$name replaces the config that carries the shared hooks path"
 done
 
 # An override in the environment: GIT_CONFIG_KEY_<n> or GIT_CONFIG_PARAMETERS
