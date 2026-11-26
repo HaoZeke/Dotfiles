@@ -22,7 +22,9 @@
 
 set -uo pipefail
 
-BROKER="${PASS_REMOTE_BROKER:-rglat5340.broker}"
+# Brokers are asked in order. rgx1gen11 has no ssh alias on every host, so it
+# is named by its tailnet address; rg.terra is the always-on fallback.
+BROKER="${PASS_REMOTE_BROKER:-rgoswami@100.85.75.117}"
 FALLBACK="${PASS_REMOTE_FALLBACK:-rg.terra}"
 SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-new)
 
@@ -43,7 +45,7 @@ ask() {
     printf '%s\n' "$out"
 }
 
-# Try the primary broker (rglat5340, over the gated broker key), then the
+# Try the primary broker (rgx1gen11, over the gated broker key), then the
 # always-on one. A laptop that is asleep is the expected case, not an error
 # worth failing on before trying the other.
 broker_ask() {
