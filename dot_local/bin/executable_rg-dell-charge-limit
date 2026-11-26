@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Managed by chezmoi (dot_local/bin/executable_rg-dell-charge-limit).
+#
+# Hold a Dell battery between two charge levels by writing the firmware's own
+# setup attributes (dell-wmi-sysman): PrimaryBattChargeCfg=Custom plus
+# CustomChargeStart / CustomChargeStop. The values live in the firmware, so
+# they hold across reboots and operating systems.
+#
+# With a BIOS Admin password set, the firmware refuses the charge-mode and
+# threshold writes that TLP and /sys/class/power_supply/BAT0 make, and the
+# pack charges to 100%. This path authenticates with that password, which is
+# read from the terminal and never stored.
+#
+#   sudo rg-dell-charge-limit [START STOP]
+#
+# START and STOP default to START_CHARGE_THRESH_BAT0 / STOP_CHARGE_THRESH_BAT0
+# in /etc/tlp.d/00-base.conf. STOP must exceed START by at least 5.
+set -euo pipefail
+
+me=rg-dell-charge-limit
+sysman=/sys/class/firmware-attributes/dell-wmi-sysman
+attrs=$sysman/attributes
+auth=$sysman/authentication/Admin
+tlp_conf=${RG_TLP_CONF:-/etc/tlp.d/00-base.conf}
+
+die() { echo "$me: $*" >&2; exit 1; }
+
+case "${1:-}" in
+    -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+[ "$(id -u)" -eq 0 ] || die "needs root: sudo $me $*"
+[ -d "$attrs/PrimaryBattChargeCfg" ] || die "no dell-wmi-sysman battery attributes on this machine"
+
+conf_value() { sed -n "s/^$1=\"\{0,1\}\([0-9]\{1,3\}\)\"\{0,1\}\$/\1/p" "$tlp_conf" 2>/dev/null | tail -n 1; }
+start=${1:-$(conf_value START_CHARGE_THRESH_BAT0)}
+stop=${2:-$(conf_value STOP_CHARGE_THRESH_BAT0)}
+[[ $start =~ ^[0-9]+$ && $stop =~ ^[0-9]+$ ]] || die "no START/STOP given and none found in $tlp_conf"
+[ $((stop - start)) -ge 5 ] || die "STOP ($stop) must exceed START ($start) by at least 5"
+
+authed=0
+clear_password() { [ "$authed" = 1 ] && printf '\n' >"$auth/current_password" 2>/dev/null || true; }
+trap clear_password EXIT
+
+if [ "$(cat "$auth/is_enabled")" = 1 ]; then
+    [ -t 0 ] || die "a BIOS Admin password is set; run from a terminal to enter it"
+    read -rs -p "BIOS Admin password: " password
+    echo
+    printf '%s' "$password" >"$auth/current_password" || die "the firmware rejected the password"
+    unset password
+    authed=1
+fi
+
+put() { printf '%s' "$2" >"$attrs/$1/current_value" || die "the firmware refused $1=$2"; }
+
+put PrimaryBattChargeCfg Custom
+# The firmware keeps STOP - START >= 5 at every step, so pick the order that
+# never crosses the level still in place.
+if [ "$start" -lt "$(cat "$attrs/CustomChargeStop/current_value")" ]; then
+    put CustomChargeStart "$start"
+    put CustomChargeStop "$stop"
+else
+    put CustomChargeStop "$stop"
+    put CustomChargeStart "$start"
+fi
+
+echo "$me: firmware charge mode $(cat "$attrs/PrimaryBattChargeCfg/current_value")," \
+    "$(cat "$attrs/CustomChargeStart/current_value")-$(cat "$attrs/CustomChargeStop/current_value")%"
+bat=/sys/class/power_supply/BAT0
+echo "$me: kernel view $(cat $bat/charge_types 2>/dev/null || echo '?')," \
+    "$(cat $bat/charge_control_start_threshold 2>/dev/null || echo '?')-$(cat $bat/charge_control_end_threshold 2>/dev/null || echo '?')%"
