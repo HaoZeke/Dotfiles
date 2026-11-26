@@ -28,9 +28,17 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=accept-n
 
 die() { printf 'pass-remote: %s\n' "$*" >&2; exit 1; }
 
+# The gate on a broker host pins the broker key to its forced command. A plain
+# host alias authenticates with the login key (and a shared master) and lands
+# in an ordinary shell with no `secret-list`, so a host without a dedicated
+# `.broker` alias is asked with the broker key and no multiplexing named here.
+BROKER_KEY="${PASS_REMOTE_KEY:-$HOME/.ssh/id_broker_ed25519}"
+KEY_OPTS=(-i "$BROKER_KEY" -o IdentitiesOnly=yes -o IdentityAgent=none -o ControlMaster=no -o ControlPath=none)
+
 ask() {
-    local host="$1" cmd="$2" out rc
-    out=$(ssh "${SSH_OPTS[@]}" "$host" "$cmd" 2>/dev/null); rc=$?
+    local host="$1" cmd="$2" out rc opts=()
+    case "$host" in *.broker) ;; *) opts=("${KEY_OPTS[@]}") ;; esac
+    out=$(ssh "${SSH_OPTS[@]}" "${opts[@]}" "$host" "$cmd" 2>/dev/null); rc=$?
     [ "$rc" -eq 0 ] && [ -n "$out" ] || return 1
     printf '%s\n' "$out"
 }
