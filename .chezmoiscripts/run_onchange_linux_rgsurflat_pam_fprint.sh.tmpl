@@ -1,0 +1,59 @@
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.hostname "rgSURFLat") -}}
+#!/usr/bin/env bash
+# rgSURFLat (Dell Latitude 7430): fingerprint as a first PAM factor.
+#
+# swaylock carries its own pam_fprintd line (written by hand, with a longer
+# timeout, for the lock screen); this script covers sudo, console login, the
+# greetd greeter and polkit prompts. `sufficient` means a mismatch, a timeout
+# or no enrolled finger falls through to the password chain, so the typed
+# password always works. The sensor is a Broadcom ControlVault 3 (0a5c:5843),
+# driven by libfprint-2-tod1-broadcom.
+#
+# Idempotent: a file that already names pam_fprintd is left alone, and the
+# first edit of each file keeps a *.pre-fprint backup.
+set -euo pipefail
+
+# Root provisioning must never hang a plain `chezmoi apply` on a password
+# prompt. Exit non-zero so chezmoi does not record the onchange as applied.
+if [[ ${EUID:-$(id -u)} -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+    echo "chezmoi: no cached sudo credentials; deferring rgSURFLat fingerprint PAM" >&2
+    echo "chezmoi: re-run with: sudo -v && chezmoi apply" >&2
+    exit 1
+fi
+as_root() { if [[ ${EUID:-$(id -u)} -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
+
+line='auth      sufficient pam_fprintd.so max-tries=1 timeout=5'
+
+for f in sudo login greetd; do
+    p=/etc/pam.d/$f
+    as_root test -f "$p" || { echo "chezmoi: skip $p (absent)"; continue; }
+    if as_root grep -q pam_fprintd "$p"; then echo "chezmoi: $p already set"; continue; fi
+    tmp=$(mktemp)
+    # Before the first `auth include` line, so pam_nologin and friends run first.
+    as_root awk -v l="$line" '!done && $1=="auth" && $2=="include" { print l; done=1 } { print }' "$p" >"$tmp"
+    if ! grep -q pam_fprintd "$tmp"; then
+        echo "chezmoi: no auth include line in $p, left alone" >&2; rm -f "$tmp"; continue
+    fi
+    as_root cp -p "$p" "$p.pre-fprint"
+    as_root install -m 0644 -o root -g root "$tmp" "$p"
+    rm -f "$tmp"
+    echo "chezmoi: set $p"
+done
+
+p=/etc/pam.d/polkit-1
+if ! as_root test -f "$p"; then
+    tmp=$(mktemp)
+    cat >"$tmp" <<'EOP'
+#%PAM-1.0
+# Graphical auth prompts (polkit agent) accept fingerprint, then the password.
+auth      sufficient pam_fprintd.so max-tries=1 timeout=5
+auth      include    system-auth
+account   include    system-auth
+password  include    system-auth
+session   include    system-auth
+EOP
+    as_root install -m 0644 -o root -g root "$tmp" "$p"
+    rm -f "$tmp"
+    echo "chezmoi: made $p"
+fi
+{{- end }}
