@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # Managed by chezmoi (dot_local/bin/executable_battery-warn).
 #
-# Fires one-shot dunst notifications when battery crosses a threshold
-# on the way DOWN. Keeps a tiny state file so it does not re-alert
-# every minute once below a threshold; clears state when the AC is
-# plugged back in so the next discharge cycle can alert again.
+# Fires one-shot dunst notifications when the battery crosses a threshold.
+# On the way DOWN: find-a-charger warnings. On the way UP, while on AC: an
+# unplug nudge at the stop threshold, because the firmware on this host keeps
+# the pack charging to 100% (the charge limit needs a BIOS Admin password
+# nobody here holds), so the longevity band is held by hand instead.
+#
+# Keeps tiny state files so it does not re-alert every minute once past a
+# threshold; the up-state and down-state each reset when the current reverses,
+# so the next cycle alerts again.
 #
 # Invoked from a user-level systemd timer (battery-warn.timer).
 
@@ -13,24 +18,13 @@ set -u
 STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/battery-warn"
 mkdir -p "$STATE_DIR"
 STATE="$STATE_DIR/last-threshold"
+UP_STATE="$STATE_DIR/unplug-nudged"
 
 BAT=/sys/class/power_supply/BAT0
 [ -d "$BAT" ] || exit 0
 
 capacity=$(cat "$BAT/capacity" 2>/dev/null || echo 100)
 status=$(cat "$BAT/status" 2>/dev/null || echo Unknown)
-
-# Reset the state file when AC is back so the next discharge can
-# fire alerts again.
-if [ "$status" = "Charging" ] || [ "$status" = "Full" ] || [ "$status" = "Not charging" ]; then
-    rm -f "$STATE"
-    exit 0
-fi
-
-# Only alert on the way down (Discharging state).
-[ "$status" = "Discharging" ] || exit 0
-
-prior=$(cat "$STATE" 2>/dev/null || echo 100)
 
 notify() {
     local urgency="$1" icon="$2" title="$3" body="$4"
@@ -40,6 +34,40 @@ notify() {
         --expire-time="${5:-10000}" \
         "$title" "$body"
 }
+
+# Stop threshold: the level to unplug at. Read from the deployed TLP baseline
+# so it tracks STOP_CHARGE_THRESH_BAT0 (a single source of truth); default 80.
+stop_thresh=80
+for conf in /etc/tlp.d/00-base.conf \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/rgsurflat/tlp-00-base.conf"; do
+    v=$(sed -n 's/^STOP_CHARGE_THRESH_BAT0=\"\{0,1\}\([0-9]\{1,3\}\)\"\{0,1\}$/\1/p' "$conf" 2>/dev/null | tail -n 1)
+    [ -n "$v" ] && { stop_thresh=$v; break; }
+done
+
+# On AC: the firmware will not stop at the band, so nudge to unplug once the
+# pack is at or above the stop threshold. Clear the down-state so the next
+# discharge can warn again.
+if [ "$status" = "Charging" ] || [ "$status" = "Full" ] || [ "$status" = "Not charging" ]; then
+    rm -f "$STATE"
+    if [ "$capacity" -ge "$stop_thresh" ]; then
+        if [ ! -e "$UP_STATE" ]; then
+            notify normal battery-full "Battery ${capacity}%" \
+                "At or above ${stop_thresh}% stop level -- unplug to spare the pack." 15000
+            : > "$UP_STATE"
+        fi
+    else
+        rm -f "$UP_STATE"
+    fi
+    exit 0
+fi
+
+# Only the find-a-charger warnings run on the way down.
+[ "$status" = "Discharging" ] || exit 0
+
+# Back on battery: let the next charge cycle nudge to unplug again.
+rm -f "$UP_STATE"
+
+prior=$(cat "$STATE" 2>/dev/null || echo 100)
 
 # Thresholds and the messages for each. Compare as integers.
 if   [ "$capacity" -le 5 ]  && [ "$prior" -gt 5 ]; then
