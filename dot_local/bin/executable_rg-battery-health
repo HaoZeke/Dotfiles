@@ -35,9 +35,17 @@ done
 read_or() { cat "$1" 2>/dev/null || printf '%s' "$2"; }
 wh() { awk -v v="$1" 'BEGIN { printf "%.1f", v / 1e6 }'; }
 
-full=$(read_or "$bat/energy_full" 0)
-design=$(read_or "$bat/energy_full_design" 0)
-now=$(read_or "$bat/energy_now" 0)
+# Some firmwares (Dell) expose charge in uAh and current in uA instead of
+# energy in uWh and power in uW; scale by the live voltage in uV.
+volt=$(read_or "$bat/voltage_now" 0)
+uwh() { # name_energy name_charge
+    if [ -r "$bat/$1" ]; then cat "$bat/$1"
+    elif [ -r "$bat/$2" ]; then awk -v c="$(cat "$bat/$2")" -v v="$volt" 'BEGIN { printf "%.0f", c * v / 1e6 }'
+    else printf 0; fi
+}
+full=$(uwh energy_full charge_full)
+design=$(uwh energy_full_design charge_full_design)
+now=$(uwh energy_now charge_now)
 cycles=$(read_or "$bat/cycle_count" "?")
 status=$(read_or "$bat/status" "?")
 cap=$(read_or "$bat/capacity" "?")
@@ -50,7 +58,9 @@ health=0
 # Average the battery's own charge or discharge rate.
 total=0
 for _ in $(seq 1 "$samples"); do
-    total=$((total + $(read_or "$bat/power_now" 0)))
+    if [ -r "$bat/power_now" ]; then p=$(cat "$bat/power_now")
+    else p=$(awk -v i="$(read_or "$bat/current_now" 0)" -v v="$(read_or "$bat/voltage_now" 0)" 'BEGIN { printf "%.0f", i * v / 1e6 }'); fi
+    total=$((total + p))
     sleep 1
 done
 rate=$(awk -v t="$total" -v n="$samples" 'BEGIN { printf "%.1f", t / n / 1e6 }')
