@@ -9,6 +9,7 @@ theme = "active"
 [icons]
 icons = "awesome5"
 
+{{ if ne .chezmoi.hostname "rgSURFLat" -}}
 # The date lives here: the top bar runs out of width and falls back to
 # short forms, and this bar has room on its left. swaybar right-aligns the
 # status line, so the first block sits furthest left.
@@ -16,6 +17,7 @@ icons = "awesome5"
 block = "time"
 format = " $icon $timestamp.datetime(f:'%A %d %B %Y') "
 interval = 60
+{{ end -}}
 
 [[block]]
 block = "custom"
